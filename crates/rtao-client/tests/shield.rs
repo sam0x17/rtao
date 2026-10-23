@@ -656,6 +656,51 @@ async fn ordinary_inner_noninclusion_requires_finalized_expiry_and_complete_cano
 }
 
 #[tokio::test]
+async fn incomplete_finalized_inner_body_never_authorizes_resealing() {
+    for body in [json!({"block":{}}), json!({"block":{"extrinsics":null}})] {
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| {
+            state.set_handler("chain_getBlockHash", |state, request| {
+                if !state.submissions.is_empty()
+                    && let Some(height) = request.params[0].as_u64()
+                    && height > state.block
+                    && height <= 108
+                {
+                    state.advance(height - state.block);
+                }
+                state.dispatch(request)
+            });
+            state.set_handler("chain_getBlock", move |state, request| {
+                if state.block >= 108
+                    && request.params[0].as_str() == state.block_hash(100).as_deref()
+                {
+                    Reply::result(body.clone())
+                } else {
+                    state.dispatch(request)
+                }
+            });
+        });
+        let options = ShieldOptions {
+            dropped_inner_retries: 1,
+            submit: SubmitOptions {
+                deadline: Some(Duration::from_secs(2)),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let error = assert_unknown(
+            client
+                .submit_shielded(call(&client, 1).await, &signer, &options)
+                .await,
+            &fake,
+        );
+        assert!(error.to_string().contains("complete extrinsics array"));
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        client.close().await;
+    }
+}
+
+#[tokio::test]
 async fn proven_dropped_inner_is_resealed_with_a_fresh_carrier() {
     let (client, fake, signer) = fixture().await;
     fake.mutate_state(|state| {
@@ -1341,7 +1386,9 @@ impl Signer for PreparingSigner {
     }
 }
 
-#[tokio::test]
+// The three refused-lag cases each exercise the real default finality wait.
+// Advance that clock virtually instead of waiting three wall-clock minutes.
+#[tokio::test(start_paused = true)]
 async fn shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard() {
     for wrapper in ["direct", "arc", "dyn_arc"] {
         for lag in [2, 6] {
@@ -1363,11 +1410,13 @@ async fn shield_preparation_precedes_fresh_nonce_anchor_and_finality_guard() {
             });
             let initial_finalized = fake.state().lock().unwrap().finalized;
             let inner_call = call(&client, 3).await;
+            let started = tokio::time::Instant::now();
             let result = client
                 .submit_shielded(inner_call.clone(), selected, &pool())
                 .await;
             assert_eq!(signer.calls.load(std::sync::atomic::Ordering::SeqCst), 1);
             if lag == 6 {
+                assert!(started.elapsed() >= rtao_client::SHIELD_FINALITY_WAIT);
                 assert!(matches!(
                     result,
                     Err(SubmitFailure::ShieldEraExpired {

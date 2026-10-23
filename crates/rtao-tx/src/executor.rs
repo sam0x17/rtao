@@ -68,6 +68,8 @@ pub struct PlanOptions {
 /// Python execution defaults plus bounded waiting and fate reconciliation.
 #[derive(Clone, Debug)]
 pub struct ExecuteOptions {
+    /// Optional logical operation journal, retained across physical attempts.
+    pub journal: Option<rtao_client::journal::JournalBinding>,
     /// Require the rebuilt outer call to match these reviewed bytes and both
     /// runtime stamps before resolving a private signer. No wrapper is added.
     pub expected_call: Option<CallBytes>,
@@ -108,6 +110,7 @@ pub struct ExecuteOptions {
 impl Default for ExecuteOptions {
     fn default() -> Self {
         Self {
+            journal: None,
             expected_call: None,
             period: Some(128),
             wait_for_inclusion: true,
@@ -152,6 +155,7 @@ impl ExecuteOptions {
     }
     pub(crate) fn submit_options(&self) -> SubmitOptions {
         SubmitOptions {
+            journal: self.journal.clone(),
             mortality: self.period.map_or(Mortality::Immortal, |period| {
                 Mortality::Mortal(Period::new(u64::from(period)))
             }),
@@ -1019,6 +1023,24 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
+        if let Some(journal) = &opts.journal {
+            journal
+                .can_dispatch()
+                .map_err(rtao_client::ClientError::Journal)?;
+            if opts.shielded
+                || intent
+                    .semantic_intent_dyn()
+                    .safety_dyn()?
+                    .mev_shield_required
+            {
+                return Err(rtao_client::ClientError::Journal(
+                    rtao_client::journal::JournalError::Blocked(
+                        "journaled paired shield recovery requires a dedicated adapter".into(),
+                    ),
+                )
+                .into());
+            }
+        }
         if intent
             .semantic_intent_dyn()
             .safety_dyn()?

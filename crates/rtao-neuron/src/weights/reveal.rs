@@ -19,7 +19,7 @@ use rtao_runtime::storage::subtensor_module as st;
 use std::collections::{BTreeMap, VecDeque};
 
 /// Chain epoch changes retained beside reveal outcomes for attribution.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum EpochNotice {
     /// Global epoch capacity delayed this subnet's processing.
     Deferred(u64),
@@ -30,7 +30,7 @@ pub enum EpochNotice {
 }
 
 /// First observed reason a committed row could not reveal.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum RevealMissReason {
     /// The committing hotkey was deregistered.
     NotRegistered,
@@ -69,7 +69,7 @@ impl RevealMissReason {
 }
 
 /// A bounded, completed reveal outcome for operator inspection.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RevealOutcome {
     /// Mechanism whose row was committed.
     pub mechanism: MechId,
@@ -85,11 +85,30 @@ pub struct RevealOutcome {
     pub observed_block: u64,
     /// No miss reason when a matching success event was observed.
     pub missed: Option<RevealMissReason>,
+    /// The exact native queue entry was absent after its observed processing
+    /// window, with no attributable success in complete replayed history.
+    /// This does not claim the application operation was completed or replaced.
+    pub native_queue_absent: bool,
     /// Relevant epoch events observed between inclusion and completion.
     pub epoch_notices: Vec<EpochNotice>,
 }
 
-#[derive(Clone, Debug)]
+/// Redacted pending-commit diagnostics, including unresolved event attribution.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingReveal {
+    /// Mechanism whose native commitment remains under observation.
+    pub mechanism: MechId,
+    /// Actual finalized inclusion height.
+    pub inclusion_block: u64,
+    /// Current observed reveal epoch, unknown until inclusion is located.
+    pub reveal_epoch: Option<u64>,
+    /// A finalized event could not uniquely identify this ciphertext. It stays
+    /// unresolved even when its old queue disappears.
+    pub attribution_unresolved: bool,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Pending {
     netuid: NetUid,
     mechanism: MechId,
@@ -101,6 +120,7 @@ struct Pending {
     reveal_epoch: u64,
     predicted_first_block: u64,
     round: u64,
+    ciphertext: Vec<u8>,
     inclusion_block: u64,
     first_check: Option<RevealMissReason>,
     first_checked: bool,
@@ -108,22 +128,26 @@ struct Pending {
     last_round: u64,
     notices: Vec<EpochNotice>,
     warned_permit: bool,
+    ambiguous_reveal: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Unlocated {
     netuid: NetUid,
     mechanism: MechId,
     hotkey: AccountId,
     row: (Vec<Uid>, Vec<u16>),
     version_key: u64,
-    state: WeightPreflight,
+    state: RevealPreparation,
+    #[serde(with = "super::durable::commit_codec")]
     commit: PreparedWeightCommit,
     report: super::submit::WeightSubmission,
 }
 
 /// Retains outstanding reveals and the last 256 completed outcomes.
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RevealWatcher {
     pending: Vec<Pending>,
     unlocated: Vec<Unlocated>,
@@ -131,6 +155,28 @@ pub struct RevealWatcher {
     last_observed_block: Option<u64>,
 }
 impl RevealWatcher {
+    /// Inspect pending native obligations without exposing ciphertext or keys.
+    pub fn outstanding(&self) -> Vec<PendingReveal> {
+        self.pending
+            .iter()
+            .map(|p| PendingReveal {
+                mechanism: p.mechanism,
+                inclusion_block: p.inclusion_block,
+                reveal_epoch: Some(p.reveal_epoch),
+                attribution_unresolved: p.ambiguous_reveal,
+            })
+            .chain(self.unlocated.iter().map(|p| PendingReveal {
+                mechanism: p.mechanism,
+                inclusion_block: p.report.block_number,
+                reveal_epoch: None,
+                attribution_unresolved: false,
+            }))
+            .collect()
+    }
+    /// Whether retained finalized replay reached the requested observation height.
+    pub fn caught_up(&self, height: u64) -> bool {
+        self.last_observed_block.is_some_and(|last| last >= height)
+    }
     /// Number of included commitments still awaiting an outcome.
     pub fn pending(&self) -> usize {
         self.pending.len() + self.unlocated.len()
@@ -166,6 +212,52 @@ impl RevealWatcher {
         report: &super::submit::WeightSubmission,
         metrics: &Metrics,
     ) -> anyhow::Result<()> {
+        self.record_prepared(
+            client,
+            netuid,
+            mechanism,
+            hotkey,
+            row,
+            version_key,
+            RevealPreparation::from(&state),
+            commit,
+            report,
+            metrics,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(super) async fn record_prepared(
+        &mut self,
+        client: &Client,
+        netuid: NetUid,
+        mechanism: MechId,
+        hotkey: AccountId,
+        row: (Vec<Uid>, Vec<u16>),
+        version_key: u64,
+        state: RevealPreparation,
+        commit: PreparedWeightCommit,
+        report: &super::submit::WeightSubmission,
+        metrics: &Metrics,
+    ) -> anyhow::Result<()> {
+        if self.pending.iter().any(|p| {
+            p.netuid == netuid
+                && p.mechanism == mechanism
+                && p.hotkey == hotkey
+                && p.inclusion_block == report.block_number
+                && p.ciphertext == commit.ciphertext
+                && p.round == commit.reveal_round
+        }) {
+            return Ok(());
+        }
+        self.unlocated.retain(|p| {
+            !(p.netuid == netuid
+                && p.mechanism == mechanism
+                && p.hotkey == hotkey
+                && p.report.block_hash == report.block_hash
+                && p.commit == commit)
+        });
         self.unlocated.push(Unlocated {
             netuid,
             mechanism,
@@ -205,7 +297,7 @@ impl RevealWatcher {
         hotkey: AccountId,
         row: (Vec<Uid>, Vec<u16>),
         version_key: u64,
-        state: WeightPreflight,
+        state: RevealPreparation,
         commit: PreparedWeightCommit,
         report: &super::submit::WeightSubmission,
         metrics: &Metrics,
@@ -214,11 +306,11 @@ impl RevealWatcher {
         let inclusion = report.block_number;
         let index = NetUidStorageIndex::new(netuid, mechanism)?;
         let assumed_inclusion = state
-            .at
-            .number
+            .prepared_block
             .checked_add(1)
             .ok_or_else(|| anyhow::anyhow!("commit prediction height overflow"))?;
-        let after = simulate_run_coinbase(&state.schedule, assumed_inclusion);
+        let schedule = state.schedule();
+        let after = simulate_run_coinbase(&schedule, assumed_inclusion);
         let predicted_epoch = current_epoch_pre_run_coinbase(&after, assumed_inclusion);
         let next_epoch = predicted_epoch
             .checked_add(1)
@@ -273,11 +365,9 @@ impl RevealWatcher {
             version_key,
             commit_epoch: actual,
             reveal_epoch,
-            predicted_first_block: predict_first_reveal_block(
-                &state.schedule,
-                state.reveal_period,
-            )?,
+            predicted_first_block: predict_first_reveal_block(&schedule, state.reveal_period)?,
             round: commit.reveal_round,
+            ciphertext: commit.ciphertext,
             inclusion_block: inclusion,
             first_check: None,
             first_checked: false,
@@ -285,6 +375,7 @@ impl RevealWatcher {
             last_round: 0,
             notices: Vec::new(),
             warned_permit: false,
+            ambiguous_reveal: false,
         });
         // Reconciliation may discover an inclusion older than the head that
         // triggered submission. Replay finalized history from that inclusion
@@ -332,6 +423,10 @@ impl RevealWatcher {
             && !self.pending.is_empty()
         {
             for number in previous.saturating_add(1)..head.number {
+                if number.saturating_sub(previous) > 256 {
+                    // Retain the cursor; another call continues this finite replay.
+                    return Ok(());
+                }
                 let snapshot = client.at(BlockRef::Number(number)).await?;
                 let hash = snapshot.block().hash;
                 let raw = client
@@ -406,6 +501,15 @@ impl RevealWatcher {
                 }
             }
             let index = NetUidStorageIndex::new(pending.netuid, pending.mechanism)?;
+            // Runtime reveal processing selects the queue using its current
+            // period, not a period frozen when our process prepared the commit.
+            let period = parent
+                .storage(&st::REVEAL_PERIOD_EPOCHS, (pending.netuid,))
+                .await?;
+            pending.reveal_epoch = pending
+                .commit_epoch
+                .checked_add(period)
+                .ok_or_else(|| anyhow::anyhow!("reveal epoch overflow"))?;
             let epoch = if let Some(epoch) = observed_epochs.get(&pending.netuid) {
                 *epoch
             } else {
@@ -419,7 +523,27 @@ impl RevealWatcher {
                         && reveal_matches(&event.attributes, index, pending.hotkey)
                 })
             {
-                completed.push((pending.mechanism, pending.inclusion_block, None));
+                let queue = parent
+                    .storage(
+                        &st::TIMELOCKED_WEIGHT_COMMITS,
+                        (index, pending.commit_epoch),
+                    )
+                    .await?;
+                let candidates = queue
+                    .iter()
+                    .filter(|entry| entry.0 == pending.hotkey)
+                    .collect::<Vec<_>>();
+                // The event identifies account/mechanism, not ciphertext. Only
+                // a unique matching parent-queue entry binds it to this attempt.
+                if candidates.len() == 1
+                    && candidates[0].1 == pending.inclusion_block
+                    && candidates[0].2 == pending.ciphertext
+                    && candidates[0].3 == pending.round
+                {
+                    completed.push((pending.mechanism, pending.inclusion_block, None));
+                } else {
+                    pending.ambiguous_reveal = true;
+                }
                 continue;
             }
             if epoch < pending.reveal_epoch {
@@ -438,6 +562,25 @@ impl RevealWatcher {
                     }
                 }
                 continue;
+            }
+            if epoch > pending.reveal_epoch {
+                if pending.ambiguous_reveal {
+                    continue;
+                }
+                let queue = snapshot
+                    .storage(
+                        &st::TIMELOCKED_WEIGHT_COMMITS,
+                        (index, pending.commit_epoch),
+                    )
+                    .await?;
+                if queue.iter().any(|entry| {
+                    entry.0 == pending.hotkey
+                        && entry.1 == pending.inclusion_block
+                        && entry.2 == pending.ciphertext
+                        && entry.3 == pending.round
+                }) {
+                    continue;
+                }
             }
             if !pending.first_checked {
                 let hash = *pending.first_reveal_hash.get_or_insert(head.hash);
@@ -506,6 +649,7 @@ impl RevealWatcher {
                     round: pending.round,
                     observed_block: head.number,
                     missed,
+                    native_queue_absent: missed.is_some(),
                     epoch_notices: pending.notices,
                 });
             }
@@ -673,6 +817,14 @@ mod tests {
             seed_at(
                 state,
                 110,
+                "SubtensorModule",
+                "TimelockedWeightCommits",
+                (NetUidStorageIndex(1), 6u64),
+                vec![(HOTKEY, 110u64, commit.ciphertext.clone(), 500u64)],
+            )?;
+            seed_at(
+                state,
+                119,
                 "SubtensorModule",
                 "TimelockedWeightCommits",
                 (NetUidStorageIndex(1), 6u64),
@@ -1135,5 +1287,196 @@ mod tests {
         );
         client.close().await;
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn durable_restart_replays_missed_heads_and_recomputes_changed_reveal_period()
+    -> anyhow::Result<()> {
+        use crate::{ChainClock, ClockGuard, WeightPolicy, WeightScheduler};
+        use rtao_client::journal::OperationJournal;
+        use std::{path::PathBuf, sync::Arc};
+        let (chain, client, watcher, metrics) = slipped().await?;
+        let root = PathBuf::from(
+            std::env::var_os("RTAO_TEST_TMPDIR").ok_or_else(|| anyhow::anyhow!("task scratch"))?,
+        )
+        .join(format!("durable-reveal-{}", std::process::id()));
+        std::fs::create_dir_all(&root)?;
+        let journal = OperationJournal::open(root.join("journal.json"))?;
+        let mut scheduler = WeightScheduler::new(
+            WeightPolicy::default(),
+            Arc::new(ChainClock::new(1_000_000)),
+            ClockGuard::default(),
+        )?
+        .with_journal(journal.clone(), client.genesis(), NetUid(1), HOTKEY)?;
+        scheduler.reveals = watcher;
+        scheduler.persist(None)?;
+        assert!(
+            WeightScheduler::new(
+                WeightPolicy::default(),
+                Arc::new(ChainClock::new(1_000_000)),
+                ClockGuard::default()
+            )?
+            .with_journal(journal.clone(), client.genesis(), NetUid(1), HOTKEY)
+            .is_err()
+        );
+        drop(scheduler);
+        drop(journal);
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            for number in 110..130 {
+                seed_at(
+                    state,
+                    number,
+                    "SubtensorModule",
+                    "RevealPeriodEpochs",
+                    (NetUid(1),),
+                    2u64,
+                )?;
+            }
+            let hash = state
+                .block_hash(130)
+                .ok_or_else(|| anyhow::anyhow!("head"))?;
+            seed_at(
+                state,
+                129,
+                "SubtensorModule",
+                "TimelockedWeightCommits",
+                (NetUidStorageIndex(1), 6u64),
+                vec![(HOTKEY, 110u64, vec![4u8, 5, 6], 500u64)],
+            )?;
+            state.seed_events(hash, success_event())?;
+            Ok(())
+        })?;
+        let journal = OperationJournal::open(root.join("journal.json"))?;
+        let mut restored = WeightScheduler::new(
+            WeightPolicy::default(),
+            Arc::new(ChainClock::new(1_000_000)),
+            ClockGuard::default(),
+        )?
+        .with_journal(journal.clone(), client.genesis(), NetUid(1), HOTKEY)?;
+        assert_eq!(restored.reveals.pending(), 1);
+        restored
+            .reveals
+            .observe(&client, &header(&chain, 130)?, &metrics)
+            .await?;
+        assert_eq!(restored.reveals.pending(), 0);
+        let outcome = restored
+            .reveals
+            .outcomes()
+            .back()
+            .ok_or_else(|| anyhow::anyhow!("reveal outcome"))?;
+        assert_eq!(
+            (
+                outcome.commit_epoch,
+                outcome.reveal_epoch,
+                outcome.observed_block
+            ),
+            (6, 8, 130)
+        );
+        assert!(outcome.missed.is_none());
+        restored.persist(None)?;
+        restored
+            .reveals
+            .observe(&client, &header(&chain, 130)?, &metrics)
+            .await?;
+        assert_eq!(restored.reveals.outcomes().len(), 1);
+        drop(restored);
+        drop(journal);
+        client.close().await;
+        std::fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn account_only_event_cannot_disambiguate_two_commitments_and_queued_work_is_not_expired()
+    -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = slipped().await?;
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            seed_at(
+                state,
+                119,
+                "SubtensorModule",
+                "TimelockedWeightCommits",
+                (NetUidStorageIndex(1), 6u64),
+                vec![
+                    (HOTKEY, 110u64, vec![4u8, 5, 6], 500u64),
+                    (HOTKEY, 111u64, vec![7u8], 501u64),
+                ],
+            )?;
+            let hash = state
+                .block_hash(120)
+                .ok_or_else(|| anyhow::anyhow!("head"))?;
+            state.seed_events(hash, success_event())?;
+            seed_at(
+                state,
+                130,
+                "SubtensorModule",
+                "TimelockedWeightCommits",
+                (NetUidStorageIndex(1), 6u64),
+                vec![(HOTKEY, 110u64, vec![4u8, 5, 6], 500u64)],
+            )?;
+            Ok(())
+        })?;
+        watcher
+            .observe(&client, &header(&chain, 120)?, &metrics)
+            .await?;
+        assert_eq!(watcher.pending(), 1);
+        assert!(watcher.outcomes().is_empty());
+        // A current queue proves retention despite the predicted window ending.
+        watcher.last_observed_block = Some(129);
+        watcher
+            .observe(&client, &header(&chain, 130)?, &metrics)
+            .await?;
+        assert_eq!(watcher.pending(), 1);
+        assert!(watcher.outcomes().is_empty());
+        client.close().await;
+        Ok(())
+    }
+}
+
+/// Historical client projection sufficient to locate an already signed commitment.
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RevealPreparation {
+    prepared_block: u64,
+    uid: Option<Uid>,
+    reveal_period: u64,
+    schedule_fields: (u16, u64, u64, u64, u64, u64),
+}
+impl From<&WeightPreflight> for RevealPreparation {
+    fn from(state: &WeightPreflight) -> Self {
+        let s = &state.schedule;
+        Self {
+            prepared_block: state.at.number,
+            uid: state.uid,
+            reveal_period: state.reveal_period,
+            schedule_fields: (
+                s.tempo,
+                s.last_epoch_block,
+                s.pending_epoch_at,
+                s.subnet_epoch_index,
+                s.blocks_since_last_step,
+                s.current_block,
+            ),
+        }
+    }
+}
+impl RevealPreparation {
+    fn schedule(&self) -> rtao_core::timelock::epoch_schedule::EpochScheduleState {
+        let (
+            tempo,
+            last_epoch_block,
+            pending_epoch_at,
+            subnet_epoch_index,
+            blocks_since_last_step,
+            current_block,
+        ) = self.schedule_fields;
+        rtao_core::timelock::epoch_schedule::EpochScheduleState {
+            tempo,
+            last_epoch_block,
+            pending_epoch_at,
+            subnet_epoch_index,
+            blocks_since_last_step,
+            current_block,
+        }
     }
 }
