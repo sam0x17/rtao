@@ -9,6 +9,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
+mod receipt_conflicts;
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
