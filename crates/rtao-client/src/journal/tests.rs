@@ -45,7 +45,7 @@ async fn journal_process_child() {
     let j = OperationJournal::open(root.join("journal.json")).unwrap();
     let (client, _, signer) = chain().await;
     let b = begin(&j, &client, &signer);
-    b.material(json!({"required":"retained"})).unwrap();
+    let b = b.material(json!({"required":"retained"})).unwrap();
     let (unsigned, bytes, hash) = prepared(&client, &signer).await;
     b.signed(&unsigned, &bytes, hash).await.unwrap();
     std::fs::write(root.join("ready"), b"signed-before-dispatch").unwrap();
@@ -270,7 +270,7 @@ async fn signed_bytes_are_durable_before_actual_dispatch_and_repeated_recovery_n
     let j = f.journal();
     let (client, fake, signer) = chain().await;
     let b = begin(&j, &client, &signer);
-    b.material(json!({"commit":"sensitive-commit"})).unwrap();
+    let b = b.material(json!({"commit":"sensitive-commit"})).unwrap();
     let call = rtao_runtime::calls::system::remark(vec![1])
         .compose(&client.refresh_runtime().await.unwrap())
         .unwrap();
@@ -392,6 +392,130 @@ async fn signed_before_dispatch_crash_and_expiry_require_complete_history() {
     client.close().await;
 }
 #[tokio::test]
+async fn incomplete_or_malformed_bodies_never_prove_expired_absence() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    b.signed(&unsigned, &bytes, hash).await.unwrap();
+    fake.mutate_state(|state| state.advance(unsigned.expiry().unwrap() + 2 - state.block));
+    let next = b.record().unwrap().attempts[0].next;
+    for body in [
+        Value::Null,
+        json!({"block":{}}),
+        json!({"block":{"extrinsics":null}}),
+        json!({"block":{"extrinsics":"not-an-array"}}),
+        json!({"block":{"extrinsics":[null]}}),
+        json!({"block":{"extrinsics":["0xgg"]}}),
+    ] {
+        fake.mutate_state(|state| state.queue_reply("chain_getBlock", Reply::result(body)));
+        assert_eq!(
+            match b.recover(&client, 32).await.unwrap() {
+                RecoveryStatus::Unresolved(reason) => reason,
+                other => panic!("incomplete body resolved an attempt: {other:?}"),
+            },
+            RecoveryReason::HistoryUnavailable { next }
+        );
+        let attempt = &b.record().unwrap().attempts[0];
+        assert_eq!(attempt.next, next);
+        assert_eq!(attempt.outcome, AttemptOutcome::Unresolved);
+        assert_eq!(attempt.bytes, bytes);
+        assert!(b.can_dispatch().is_err());
+    }
+    // Public lookup's inherited Python parity remains unchanged.
+    fake.mutate_state(|state| {
+        state.queue_reply("chain_getBlock", Reply::result(json!({"block":{}})))
+    });
+    assert_eq!(
+        client
+            .find_extrinsic(hash, unsigned.era_block_hash())
+            .await
+            .unwrap(),
+        None
+    );
+    // Actual complete fixture bodies can still prove absence through expiry.
+    assert!(matches!(
+        b.recover(&client, 32).await.unwrap(),
+        RecoveryStatus::Rebuildable
+    ));
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    client.close().await;
+}
+
+#[tokio::test]
+async fn missing_list_at_actual_inclusion_retains_uncertainty_past_expiry() {
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let b = begin(&j, &client, &signer);
+    fake.mutate_state(|state| {
+        state.set_handler("author_submitAndWatchExtrinsic", |state, request| {
+            state.dispatch(request);
+            Reply::silent()
+        })
+    });
+    let call = rtao_runtime::calls::system::remark(vec![1, 2, 3])
+        .compose(&client.refresh_runtime().await.unwrap())
+        .unwrap();
+    assert!(
+        client
+            .submit(
+                call,
+                &signer,
+                &SubmitOptions {
+                    journal: Some(b.clone()),
+                    mortality: Mortality::Mortal(Period::new(4)),
+                    deadline: Some(Duration::from_millis(100)),
+                    ..Default::default()
+                }
+            )
+            .await
+            .is_err()
+    );
+    let attempt = b.record().unwrap().attempts[0].clone();
+    let (number, target) = fake.mutate_state(|state| {
+        let number = state.block;
+        let hash = state.block_hash(number).unwrap();
+        state.advance(attempt.expiry.unwrap() + 2 - state.block);
+        (number, hash)
+    });
+    for body in [json!({"block":{}}), json!({"block":{"extrinsics":null}})] {
+        let target = target.clone();
+        fake.mutate_state(|state| {
+            state.set_handler("chain_getBlock", move |state, request| {
+                if request.params[0].as_str() == Some(target.as_str()) {
+                    Reply::result(body.clone())
+                } else {
+                    state.dispatch(request)
+                }
+            })
+        });
+        assert!(matches!(b.recover(&client, 32).await.unwrap(),
+            RecoveryStatus::Unresolved(RecoveryReason::HistoryUnavailable { next }) if next == number));
+        assert_eq!(b.record().unwrap().attempts[0].next, number);
+        assert!(b.can_dispatch().is_err());
+        assert!(matches!(
+            client
+                .reconcile(attempt.hash, attempt.start, attempt.expiry)
+                .await,
+            Err(crate::SubmitFailure::Client(crate::ClientError::Protocol(
+                _
+            )))
+        ));
+    }
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getBlock", |state, request| state.dispatch(request))
+    });
+    assert!(
+        matches!(b.recover(&client, 32).await.unwrap(), RecoveryStatus::Finalized(r) if r.success)
+    );
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    assert!(b.can_dispatch().is_err());
+    client.close().await;
+}
+
+#[tokio::test]
 async fn stale_finalized_and_rpc_failure_cannot_become_absent() {
     let f = Fixture::new();
     let j = f.journal();
@@ -424,6 +548,104 @@ async fn stale_finalized_and_rpc_failure_cannot_become_absent() {
     assert!(b.can_dispatch().is_err());
     client.close().await;
 }
+#[tokio::test]
+async fn concurrent_material_replacement_during_signing_and_aba_refuse_dispatch() {
+    struct PausedSigner {
+        inner: KeypairSigner,
+        entered: Arc<tokio::sync::Notify>,
+        release: Arc<tokio::sync::Notify>,
+    }
+    impl Signer for PausedSigner {
+        fn account(&self) -> AccountId {
+            self.inner.account()
+        }
+        fn crypto_type(&self) -> rtao_primitives::CryptoType {
+            self.inner.crypto_type()
+        }
+        fn sign<'a>(
+            &'a self,
+            request: &'a rtao_signer::SigningRequest<'a>,
+        ) -> rtao_signer::BoxFuture<'a, Result<rtao_signer::MultiSignature, rtao_signer::SignerError>>
+        {
+            Box::pin(async move {
+                self.entered.notify_one();
+                self.release.notified().await;
+                self.inner.sign(request).await
+            })
+        }
+    }
+    let f = Fixture::new();
+    let j = f.journal();
+    let (client, fake, signer) = chain().await;
+    let material_a = json!({"ciphertext":"A","round":100});
+    let a = begin(&j, &client, &signer)
+        .material(material_a.clone())
+        .unwrap();
+    let (unsigned, bytes, hash) = prepared(&client, &signer).await;
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let slow = PausedSigner {
+        inner: signer,
+        entered: entered.clone(),
+        release: release.clone(),
+    };
+    let call = rtao_runtime::calls::system::remark(vec![1, 2, 3])
+        .compose(&client.refresh_runtime().await.unwrap())
+        .unwrap();
+    let opts = SubmitOptions {
+        journal: Some(a.clone()),
+        ..Default::default()
+    };
+    let replace = async {
+        entered.notified().await;
+        let b = j
+            .bind(a.id())
+            .unwrap()
+            .material(json!({"ciphertext":"B","round":200}))
+            .unwrap();
+        release.notify_one();
+        b
+    };
+    let (result, b) = tokio::join!(client.submit(call.clone(), &slow, &opts), replace);
+    assert!(matches!(
+        result,
+        Err(crate::SubmitFailure::Client(crate::ClientError::Journal(
+            JournalError::Conflict
+        )))
+    ));
+    assert!(a.record().unwrap().attempts.is_empty());
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    // Same bytes returning later cannot revive an earlier generation's signer.
+    let selected_a = b.material(material_a.clone()).unwrap();
+    assert!(matches!(
+        a.check(&client, &unsigned).await,
+        Err(JournalError::Conflict)
+    ));
+    assert!(matches!(
+        a.signed(&unsigned, &bytes, hash).await,
+        Err(JournalError::Conflict)
+    ));
+    assert!(a.record().unwrap().attempts.is_empty());
+    let report = client
+        .submit(
+            call,
+            &slow.inner,
+            &SubmitOptions {
+                journal: Some(selected_a.clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(report.success);
+    let record = selected_a.record().unwrap();
+    assert_eq!(record.material_generation, 3);
+    assert_eq!(record.attempts.len(), 1);
+    assert_eq!(record.attempts[0].material, material_a);
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+    client.close().await;
+}
+
 #[tokio::test]
 async fn concurrent_authorization_only_one_signed_attempt_is_dispatched() {
     let f = Fixture::new();

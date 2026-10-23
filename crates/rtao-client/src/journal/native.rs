@@ -47,13 +47,26 @@ fn options() -> OpenOptions {
 impl NativeJournalStore {
     /// Acquire an exclusive lifetime lock; preserve data on every refusal.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, JournalError> {
+        Self::open_with_directory_sync(path, |directory| File::open(directory)?.sync_all())
+    }
+    fn open_with_directory_sync(
+        path: impl AsRef<Path>,
+        mut sync_directory: impl FnMut(&Path) -> std::io::Result<()>,
+    ) -> Result<Self, JournalError> {
         let path = path.as_ref();
         let parent = path
             .parent()
             .filter(|p| !p.as_os_str().is_empty())
             .unwrap_or_else(|| Path::new("."));
         fs::create_dir_all(parent).map_err(error)?;
-        let path = fs::canonicalize(parent).map_err(error)?.join(
+        let parent = fs::canonicalize(parent).map_err(error)?;
+        // File publication cannot rescue an ancestor name lost after mkdir.
+        // Sync the whole resolved ancestry before any journal publication,
+        // including directories left behind by an interrupted earlier open.
+        for directory in parent.ancestors() {
+            sync_directory(directory).map_err(error)?;
+        }
+        let path = parent.join(
             path.file_name()
                 .ok_or_else(|| error("missing journal filename"))?,
         );
@@ -221,6 +234,64 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::panic)]
     use super::*;
     #[test]
+    fn ancestry_barrier_precedes_publication_and_retries_existing_directories() {
+        let root = PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").unwrap())
+            .join(format!("ancestry-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let root = fs::canonicalize(root).unwrap();
+        let path = root.join("first/second/journal.json");
+        let fail = |directory: &Path| {
+            assert!(
+                !path.exists(),
+                "publication preceded ancestor synchronization"
+            );
+            if directory == root {
+                return Err(std::io::Error::other("injected ancestor sync failure"));
+            }
+            File::open(directory)?.sync_all()
+        };
+        assert!(NativeJournalStore::open_with_directory_sync(&path, fail).is_err());
+        assert!(!path.exists());
+        assert!(path.parent().unwrap().exists());
+        let mut synced = Vec::new();
+        let store = NativeJournalStore::open_with_directory_sync(&path, |directory| {
+            assert!(!path.exists());
+            File::open(directory)?.sync_all()?;
+            synced.push(directory.to_path_buf());
+            Ok(())
+        })
+        .unwrap();
+        let expected = path
+            .parent()
+            .unwrap()
+            .ancestors()
+            .map(Path::to_path_buf)
+            .collect::<Vec<_>>();
+        assert_eq!(synced, expected);
+        assert!(synced.contains(&root));
+        assert!(path.exists());
+        let mut image = store.load().unwrap();
+        image.revision += 1;
+        image
+            .checkpoints
+            .insert("retained".into(), serde_json::json!({"unresolved":true}));
+        store.compare_exchange(0, &image).unwrap();
+        drop(store);
+        let original = fs::read(&path).unwrap();
+        assert!(
+            NativeJournalStore::open_with_directory_sync(&path, |_| {
+                Err(std::io::Error::other("injected reopen barrier failure"))
+            })
+            .is_err()
+        );
+        assert_eq!(fs::read(&path).unwrap(), original);
+        let reopened = NativeJournalStore::open(&path).unwrap();
+        assert_eq!(reopened.load().unwrap().checkpoints, image.checkpoints);
+        drop(reopened);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn interrupted_migration_preserves_original_image_and_extensions() {
         let parent = PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").unwrap())
             .join(format!("migration-{}", std::process::id()));
@@ -249,6 +320,7 @@ mod tests {
                     semantic_policy: None,
                 },
                 material: serde_json::json!({"commit":"retain"}),
+                material_generation: 0,
                 incompatibility: None,
                 extensions: Default::default(),
                 attempts: vec![super::super::SignedAttempt {
@@ -270,6 +342,13 @@ mod tests {
             },
         );
         store.write(&old, false).unwrap();
+        // Real older images have no material-generation field.
+        let mut legacy = serde_json::to_value(&old).unwrap();
+        legacy["operations"]["legacy-op"]
+            .as_object_mut()
+            .unwrap()
+            .remove("material_generation");
+        fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
         let original = fs::read(&path).unwrap();
         let mut candidate = store.read().unwrap();
         candidate.schema_version = JOURNAL_SCHEMA;

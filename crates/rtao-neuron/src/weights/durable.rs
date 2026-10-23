@@ -379,7 +379,7 @@ impl WeightScheduler {
             );
             return Ok(None);
         };
-        binding.material(serde_json::to_value(Material {
+        let binding = binding.material(serde_json::to_value(Material {
             row,
             commit,
             preparation: RevealPreparation::from(preflight),
@@ -449,12 +449,65 @@ mod tests {
         drop(scheduler);
         drop(journal);
         let journal = OperationJournal::open(root.join("journal.json"))?;
-        let restored =
+        let mut restored =
             make()?.with_journal(journal.clone(), client.genesis(), NetUid(1), hotkey)?;
         let slot = &restored.slots[&MechId(0)];
         assert_eq!(slot.last_attempt_epoch, Some(7));
         assert_eq!(slot.last_attempt_block, Some(105));
         assert_eq!(client.at(BlockRef::Best).await?.block().number, 100);
+        restored.slots.entry(MechId(0)).or_default().uncertain = false;
+        let cadence = WeightCadence::OncePerEpoch { offset_blocks: 2 };
+        restored.update_policy(WeightPolicy {
+            version_key: VersionKey::Fixed(0),
+            cadence: Some(cadence),
+        });
+        let snapshot = client.at(BlockRef::Best).await?;
+        let mut view = WeightPreflight::fetch(&snapshot, NetUid(1), MechId(0), hotkey).await?;
+        view.rate_limit = 0;
+        assert_eq!(
+            restored.next_action(MechId(0), hotkey, &view)?,
+            super::super::WeightOpportunity::AwaitBlock {
+                not_before_block: 105
+            }
+        );
+        let slot = &restored.slots[&MechId(0)];
+        assert!(!due(cadence, slot, &view, Uid(0)));
+        // A counter rollback remains blocked even after the block view catches up.
+        view.at.number = 106;
+        view.schedule.subnet_epoch_index = 5;
+        assert_eq!(
+            restored.next_action(MechId(0), hotkey, &view)?,
+            super::super::WeightOpportunity::AwaitEpoch {
+                after_epoch: 7,
+                offset_blocks: 2
+            }
+        );
+        view.schedule.subnet_epoch_index = 7;
+        assert!(!due(cadence, slot, &view, Uid(0)));
+        view.schedule.subnet_epoch_index = 8;
+        view.schedule.last_epoch_block = 104;
+        assert_eq!(
+            restored.next_action(MechId(0), hotkey, &view)?,
+            super::super::WeightOpportunity::Ready
+        );
+        // New chain limits and offsets still govern this newly observed epoch.
+        view.rate_limit = 2;
+        assert_eq!(
+            restored.next_action(MechId(0), hotkey, &view)?,
+            super::super::WeightOpportunity::RateLimited {
+                retry_after_block: 107
+            }
+        );
+        view.at.number = 107;
+        view.schedule.last_epoch_block = 107;
+        assert_eq!(
+            restored.next_action(MechId(0), hotkey, &view)?,
+            super::super::WeightOpportunity::AwaitBlock {
+                not_before_block: 109
+            }
+        );
+        view.at.number = 109;
+        assert!(due(cadence, slot, &view, Uid(0)));
         drop(restored);
         drop(journal);
         client.close().await;
