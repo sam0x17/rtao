@@ -298,6 +298,11 @@ pub enum TxError {
         /// Evidence or authorization still required for this operation.
         reason: rtao_client::journal::RecoveryReason,
     },
+    /// The current request cannot be attributed to a retained historical effect.
+    RecoveryContext {
+        /// Stable missing/mismatched-context reason; the outer error keeps receipt evidence.
+        reason: rtao_client::journal::RecoveryContextError,
+    },
     /// A submitted operation failed while completing its post-inclusion work.
     PostSubmission {
         /// Original observed receipt, without fabricated completion fields.
@@ -366,6 +371,7 @@ impl TxError {
             Self::Rpc(error) => classify(&error.to_string(), None),
             Self::ConnectionNotReady | Self::PendingOperation { .. } => ErrorCode::Internal,
             Self::PostSubmission { cause, .. } => cause.code(),
+            Self::RecoveryContext { .. } => ErrorCode::InvalidArgument,
             Self::Intent(error) => error.code(),
             Self::Signer(_) => ErrorCode::Internal,
             Self::UnitMismatch(_) => ErrorCode::UnitMismatch,
@@ -387,6 +393,7 @@ impl fmt::Display for TxError {
             Self::PendingOperation { pair, .. } => {
                 write!(f, "shield pair {pair} remains unresolved")
             }
+            Self::RecoveryContext { reason } => reason.fmt(f),
             Self::PostSubmission { cause, .. } => cause.fmt(f),
             Self::Intent(error) => error.fmt(f),
             Self::Signer(error) => error.fmt(f),
@@ -444,6 +451,9 @@ impl From<UnitError> for TxError {
 impl From<ClientError> for TxError {
     fn from(error: ClientError) -> Self {
         match error {
+            ClientError::Journal(rtao_client::journal::JournalError::RecoveryContext(reason)) => {
+                Self::RecoveryContext { reason }
+            }
             ClientError::Rpc(RpcError::Policy(policy)) => Self::RpcPolicy(policy),
             ClientError::Rpc(RpcError::Closed) => Self::ConnectionNotReady,
             ClientError::Rpc(error) => Self::Rpc(error),

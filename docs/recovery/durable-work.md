@@ -258,13 +258,21 @@ The original whole-operation and admission deadlines cover all reseals; the
 persisted pair limit survives further calls and process restart.
 
 Executor signing snapshots its reviewed call hash, runtime stamps, intent/args
-and result extras in `rtao_submission_context_v1` beside each signed attempt.
+and result extras in the version-2 value of `rtao_submission_context_v1` beside
+each signed attempt. This value also records explicit `proxy_for` and
+`force_proxy_type` options, including their absent values.
 The SDK captures the actual signed call hash separately. Cached recovery checks
-the unique effect and matching historical adapter context before restoring
-extras; it does not rebuild today's intent or unlock a signer. A missing or
+the unique effect, requested raw payload (for raw/direct Client routes),
+explicit expected-call constraints, and matching historical intent/arguments
+and proxy options before restoring extras; it does not rebuild today's intent or unlock a signer. A missing or
 incompatible context retains the historical receipt in a structured
 `PostSubmission` error for adapter review. This extension fits schema3 and
-requires no new destructive migration; older evidence is never fabricated.
+requires no new destructive migration; older evidence is never fabricated. Version-1 executor values lack explicit
+origin identity and refuse with `MissingExecutorContext`; missing signed-call
+hashes refuse with `MissingCallHash`. A mismatch preserves the original receipt
+in `SubmitFailure::RecoveryContext` or `TxError::PostSubmission` with a typed
+`RecoveryContextError`. None of these checks rebuilds a historical call with
+today's metadata or authorizes a resend.
 `JournalBinding::with_submission_context` is public data, not authorization or
 a place for signer secrets. Existing signed evidence remains immutable.
 

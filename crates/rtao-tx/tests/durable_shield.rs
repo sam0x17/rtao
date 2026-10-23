@@ -730,3 +730,75 @@ async fn paused_obligation_policy_is_checked_again_after_carrier_signing() {
         lab.close().await;
     }
 }
+
+#[tokio::test]
+async fn raw_recovery_never_labels_a_different_requested_call_as_finalized() {
+    for changed in [false, true] {
+        let mut lab = JournalLab::new(FakeState::default(), path(), CryptoType::Ed25519)
+            .await
+            .unwrap();
+        lab.script([Inner::LostAcknowledgment]);
+        let keys = LabKeys::new(lab.signer.clone());
+        let binding = lab
+            .begin("raw-recovery", json!({"op":"raw"}), json!({}))
+            .unwrap();
+        let mut opts = options(binding).execute;
+        opts.shielded = true;
+        opts.period = Some(4);
+        let call = rtao_runtime::calls::system::remark(vec![1, 2, 3])
+            .compose(&lab.client.refresh_runtime().await.unwrap())
+            .unwrap();
+        let ex = Executor::new(lab.client.clone());
+        let pending = {
+            let operation = ex.submit_call::<Coldkey, _>(call, &keys, &opts);
+            tokio::pin!(operation);
+            tokio::select! {
+                early = &mut operation => panic!("unexpected early result: {early:?}"),
+                _ = lab.lost_acknowledgment() => {
+                    lab.node.drop_connection().unwrap();
+                    operation.await
+                }
+            }
+        };
+        assert!(matches!(pending, Err(TxError::PendingOperation { .. })));
+        drop(opts);
+        drop(ex);
+        lab.restart().await.unwrap();
+        let mut opts = options(lab.bind("raw-recovery").unwrap()).execute;
+        opts.shielded = true;
+        opts.period = Some(4);
+        let call = rtao_runtime::calls::system::remark(if changed {
+            vec![9, 8, 7]
+        } else {
+            vec![1, 2, 3]
+        })
+        .compose(&lab.client.refresh_runtime().await.unwrap())
+        .unwrap();
+        opts.expected_call = Some(call.clone());
+        let result = Executor::new(lab.client.clone())
+            .submit_call::<Coldkey, _>(call, &keys, &opts)
+            .await;
+        assert_eq!(lab.authors(), 1);
+        assert_eq!(keys.unlocks(), 1);
+        assert_eq!(lab.signer.signatures(), 2);
+        drop(opts);
+        lab.close().await;
+        if changed {
+            assert!(
+                result.is_err(),
+                "different raw call received old finalized success: {result:?}"
+            );
+        } else {
+            assert!(
+                result.unwrap().success,
+                "unchanged raw recovery must retain positive control"
+            );
+        }
+    }
+}
+
+#[path = "durable_shield/identity.rs"]
+mod identity;
+
+#[path = "durable_shield/causal_identity.rs"]
+mod causal_identity;

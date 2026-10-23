@@ -210,6 +210,12 @@ impl Default for ShieldOptions {
     }
 }
 
+#[derive(Clone, Copy)]
+enum RecoveryRequest<'a> {
+    Raw(&'a CallBytes),
+    Intent(&'a dyn DynIntent),
+}
+
 struct ReviewedIntent {
     built: crate::Built,
     safety: crate::IntentSafety,
@@ -784,7 +790,12 @@ impl Executor {
                     journal_preparation = Some(owner);
                 }
                 Ok(rtao_client::JournalShieldReadiness::Finalized(report)) => {
-                    return self.restore_journal_result(&binding, *report, None);
+                    return self.restore_journal_result(
+                        &binding,
+                        *report,
+                        RecoveryRequest::Raw(&call),
+                        &scoped,
+                    );
                 }
                 Err(error) => return self.lift_submission(Err(error), Map::new()),
             }
@@ -820,13 +831,13 @@ impl Executor {
         let mut submit = opts.submit_options();
         submit.journal = submit
             .journal
-            .map(|binding| executor_context(binding, &call, &Map::new(), None));
+            .map(|binding| executor_context(binding, &call, &Map::new(), None, opts));
         submit.deadline = budget.remaining(&self.client)?;
         submit.submit_deadline = admission.remaining(&self.client)?;
         let result = match shield_period {
             Some(period) => {
                 Box::pin(self.client.submit_shielded(
-                    call,
+                    call.clone(),
                     signer.as_ref(),
                     &ClientShieldOptions {
                         period,
@@ -839,11 +850,15 @@ impl Executor {
                 ))
                 .await
             }
-            None => self.client.submit(call, signer.as_ref(), &submit).await,
+            None => {
+                self.client
+                    .submit(call.clone(), signer.as_ref(), &submit)
+                    .await
+            }
         };
         match (&opts.journal, result) {
             (Some(binding), Ok(report)) if shield_period.is_some() => {
-                self.restore_journal_result(binding, report, None)
+                self.restore_journal_result(binding, report, RecoveryRequest::Raw(&call), opts)
             }
             (_, result) => self.lift_submission(result, Map::new()),
         }
@@ -918,7 +933,12 @@ impl Executor {
                     journal_preparation = Some(owner);
                 }
                 Ok(rtao_client::JournalShieldReadiness::Finalized(report)) => {
-                    let result = self.restore_journal_result(binding, *report, Some(intent))?;
+                    let result = self.restore_journal_result(
+                        binding,
+                        *report,
+                        RecoveryRequest::Intent(intent),
+                        &opts.execute,
+                    )?;
                     return self
                         .complete_intent(intent, keys, result, &opts.execute, true, budget)
                         .await;
@@ -973,6 +993,7 @@ impl Executor {
                     &reviewed.built.call,
                     &reviewed.built.extras,
                     Some(intent),
+                    &opts.execute,
                 )
             });
             submit.deadline = budget.remaining(&self.client)?;
@@ -1012,9 +1033,12 @@ impl Executor {
             // Python's explicit shield path keeps creation coordinates in the
             // receipt; only ordinary execute enriches pure-proxy result data.
             let result = match (&opts.execute.journal, result) {
-                (Some(binding), Ok(report)) => {
-                    self.restore_journal_result(binding, report, Some(intent))?
-                }
+                (Some(binding), Ok(report)) => self.restore_journal_result(
+                    binding,
+                    report,
+                    RecoveryRequest::Intent(intent),
+                    &opts.execute,
+                )?,
                 (_, result) => self.lift_submission(result, reviewed.built.extras)?,
             };
             if opts.execute.journal.is_none()
@@ -1035,7 +1059,8 @@ impl Executor {
         &self,
         binding: &rtao_client::journal::JournalBinding,
         report: rtao_client::ExtrinsicReport,
-        intent: Option<&dyn DynIntent>,
+        request: RecoveryRequest<'_>,
+        opts: &ExecuteOptions,
     ) -> Result<ExtrinsicResult, TxError> {
         let receipt =
             ExtrinsicResult::from_report(report.clone(), self.client.network().label(), Map::new());
@@ -1050,30 +1075,72 @@ impl Executor {
                 .ok_or_else(|| {
                     rtao_client::ClientError::Journal(rtao_client::journal::JournalError::Identity)
                 })?;
-            let context=attempt.extensions.get("rtao_submission_context_v1")
-                .ok_or_else(||IntentError::InvalidArgument("retained executor context is unavailable; inspect the historical receipt before updating the adapter".into()))?;
-            let kind = if intent.is_some() { "intent" } else { "raw" };
-            if context.get("version") != Some(&json!(1))
+            use rtao_client::journal::{JournalError, RecoveryContextError as Reason};
+            let refuse = |reason| TxError::RecoveryContext { reason };
+            match request {
+                RecoveryRequest::Raw(call) => {
+                    opts.check_expected_call(call)
+                        .map_err(|_| refuse(Reason::ExpectedCallMismatch))?;
+                    binding
+                        .check_recovered_call(&report, call)
+                        .map_err(rtao_client::ClientError::Journal)?;
+                }
+                RecoveryRequest::Intent(_) => {}
+            }
+            if let Some(expected) = &opts.expected_call {
+                binding
+                    .check_recovered_call(&report, expected)
+                    .map_err(|error| match error {
+                        JournalError::RecoveryContext(Reason::CallMismatch) => {
+                            refuse(Reason::ExpectedCallMismatch)
+                        }
+                        error => rtao_client::ClientError::Journal(error).into(),
+                    })?;
+                if expected.stamp().spec_version != attempt.spec_version
+                    || expected.stamp().transaction_version != attempt.transaction_version
+                {
+                    return Err(refuse(Reason::ExpectedCallMismatch));
+                }
+            }
+            let original: [u8; 32] = attempt
+                .extensions
+                .get("call_hash")
+                .cloned()
+                .and_then(|v| serde_json::from_value(v).ok())
+                .ok_or_else(|| refuse(Reason::MissingCallHash))?;
+            let context = attempt
+                .extensions
+                .get("rtao_submission_context_v1")
+                .ok_or_else(|| refuse(Reason::MissingExecutorContext))?;
+            if context.get("version") != Some(&json!(2))
+                || context.get("proxy_for").is_none()
+                || context.get("force_proxy_type").is_none()
+            {
+                return Err(refuse(Reason::MissingExecutorContext));
+            }
+            if context.get("proxy_for") != Some(&json!(opts.proxy_for))
+                || context.get("force_proxy_type") != Some(&json!(opts.force_proxy_type))
+            {
+                return Err(refuse(Reason::OriginMismatch));
+            }
+            let kind = match request {
+                RecoveryRequest::Intent(_) => "intent",
+                RecoveryRequest::Raw(_) => "raw",
+            };
+            if context.get("version") != Some(&json!(2))
                 || context.get("kind") != Some(&json!(kind))
-                || context.get("call_hash") != attempt.extensions.get("call_hash")
+                || context.get("call_hash") != Some(&json!(original))
                 || context.get("spec_version") != Some(&json!(attempt.spec_version))
                 || context.get("transaction_version") != Some(&json!(attempt.transaction_version))
-                || intent.is_some_and(|intent| {
-                    context.get("intent") != Some(&json!(intent.semantic_intent_dyn().spec().name))
-                        || context.get("args") != Some(&intent.to_json_dyn())
-                })
+                || matches!(request,RecoveryRequest::Intent(intent) if context.get("intent")!=Some(&json!(intent.semantic_intent_dyn().spec().name)) || context.get("args")!=Some(&intent.to_json_dyn()))
             {
-                return Err(TxError::Intent(IntentError::InvalidArgument("retained executor context differs; use a compatible historical adapter for this operation".into())));
+                return Err(refuse(Reason::ExecutorMismatch));
             }
             let extras = context
                 .get("extras")
                 .and_then(Value::as_object)
                 .cloned()
-                .ok_or_else(|| {
-                    IntentError::InvalidArgument(
-                        "retained executor result data is unavailable".into(),
-                    )
-                })?;
+                .ok_or_else(|| refuse(Reason::MissingExecutorContext))?;
             self.lift_submission(Ok(report), extras)
         };
         restore().map_err(|error| error.with_submitted_receipt(receipt))
@@ -1110,6 +1177,15 @@ impl Executor {
                 ChainError::from_pool(&error),
                 None,
             )),
+            Err(SubmitFailure::RecoveryContext { receipt, cause }) => {
+                let result = ExtrinsicResult::from_report(
+                    *receipt,
+                    self.client.network().label(),
+                    Map::new(),
+                );
+                Err(TxError::from(rtao_client::ClientError::Journal(cause))
+                    .with_submitted_receipt(result))
+            }
             Err(SubmitFailure::PendingShield {
                 operation,
                 pair,
@@ -1277,9 +1353,9 @@ impl Executor {
                 )));
             }
             let mut submit_options = opts.submit_options();
-            submit_options.journal = submit_options
-                .journal
-                .map(|binding| executor_context(binding, plan.call(), &plan.extras, Some(intent)));
+            submit_options.journal = submit_options.journal.map(|binding| {
+                executor_context(binding, plan.call(), &plan.extras, Some(intent), opts)
+            });
             submit_options.deadline = budget.remaining(&self.client)?;
             submit_options.submit_deadline = admission.remaining(&self.client)?;
             // The Client now owns the remaining deadline and attempted hash.
@@ -1482,9 +1558,11 @@ fn executor_context(
     call: &CallBytes,
     extras: &Map<String, Value>,
     intent: Option<&dyn DynIntent>,
+    opts: &ExecuteOptions,
 ) -> rtao_client::journal::JournalBinding {
-    binding.with_submission_context(json!({"version":1,"kind":if intent.is_some(){"intent"}else{"raw"},
+    binding.with_submission_context(json!({"version":2,"kind":if intent.is_some(){"intent"}else{"raw"},
         "intent":intent.map(|i|i.semantic_intent_dyn().spec().name),"args":intent.map(|i|i.to_json_dyn()),
+        "proxy_for":opts.proxy_for,"force_proxy_type":opts.force_proxy_type,
         "call_hash":call.hash(),"spec_version":call.stamp().spec_version,"transaction_version":call.stamp().transaction_version,"extras":extras}))
 }
 

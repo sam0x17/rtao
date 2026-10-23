@@ -170,6 +170,20 @@ pub enum JournalShieldReadiness {
     Finalized(Box<ExtrinsicReport>),
 }
 
+fn recovered_call_result(
+    binding: &crate::journal::JournalBinding,
+    call: &CallBytes,
+    report: Box<ExtrinsicReport>,
+) -> Result<ExtrinsicReport, SubmitFailure> {
+    if let Err(cause) = binding.check_recovered_call(&report, call) {
+        return Err(SubmitFailure::RecoveryContext {
+            receipt: report,
+            cause,
+        });
+    }
+    Ok(*report)
+}
+
 impl Client {
     /// Price the maximum-size carrier with public identity and a fresh nonce.
     pub async fn estimate_shielded_carrier_fee(
@@ -210,7 +224,28 @@ impl Client {
                 .prepare_journal_shield_with_limits(opts, limits)
                 .await?
             {
-                JournalShieldReadiness::Finalized(report) => return Ok(*report),
+                JournalShieldReadiness::Finalized(report) => {
+                    let verify = || {
+                        let binding = opts
+                            .submit
+                            .journal
+                            .as_ref()
+                            .ok_or(crate::journal::JournalError::Identity)?;
+                        if binding.record()?.intent.account != signer.account() {
+                            return Err(crate::journal::JournalError::RecoveryContext(
+                                crate::journal::RecoveryContextError::AccountMismatch,
+                            ));
+                        }
+                        binding.check_recovered_call(&report, &call)
+                    };
+                    if let Err(cause) = verify() {
+                        return Err(SubmitFailure::RecoveryContext {
+                            receipt: report,
+                            cause,
+                        });
+                    }
+                    return Ok(*report);
+                }
                 JournalShieldReadiness::Ready(owner) => {
                     return Box::pin(
                         self.submit_journal_shield_owned(call, signer, opts, owner, limits),
@@ -400,7 +435,9 @@ impl Client {
                 )
                 .await
             {
-                Ok(crate::journal::RecoveryStatus::Finalized(report)) => return Ok(*report),
+                Ok(crate::journal::RecoveryStatus::Finalized(report)) => {
+                    return recovered_call_result(binding, &call, report);
+                }
                 Ok(crate::journal::RecoveryStatus::Rebuildable) => last = Some(error),
                 Ok(crate::journal::RecoveryStatus::Unresolved(reason)) => {
                     return Err(pending(reason));
@@ -508,7 +545,9 @@ impl Client {
                         })
                         .await?
                     {
-                        crate::journal::RecoveryStatus::Finalized(report) => return Ok(*report),
+                        crate::journal::RecoveryStatus::Finalized(report) => {
+                            return recovered_call_result(binding, &call, report);
+                        }
                         crate::journal::RecoveryStatus::Rebuildable => {}
                         crate::journal::RecoveryStatus::Unresolved(reason) => {
                             return Err(SubmitFailure::PendingShield {
