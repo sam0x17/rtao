@@ -2,7 +2,7 @@
   "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
   "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
   "host": "x86_64-unknown-linux-gnu",
-  "measured_unix_seconds": 1792749424,
+  "measured_unix_seconds": 1792754368,
   "method": {
     "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
     "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1447,24 +1447,24 @@
       "crates/rtao-evm/Cargo.toml": "d848f120554a01218e1284e29cf3d274de2e9f89afcf4c3e781bf3cbed2c91a2",
       "crates/rtao-intents/Cargo.toml": "5b153c7c494e280d478b2990f046ee867bacd93250e8d933a52eae751faf4dae",
       "crates/rtao-metagraph/Cargo.toml": "9b5dd870dc26de5a78d19f82638b68400c9aa1a8b4a072461d74da39c233f9e0",
-      "crates/rtao-neuron/Cargo.toml": "dd505dd2a58aadf4f0bb55d17283d5773ee8ad231b00e39a51c2176b3cf8946c",
+      "crates/rtao-neuron/Cargo.toml": "d177ea8231d3c5350126ddc6282b187bebea114be1d361a5137b85f0434ecec9",
       "crates/rtao-primitives/Cargo.toml": "0cc9a952f3b3153979bb84c41bbc48b766c046001d370302948cb3c7f54c7b75",
       "crates/rtao-reads/Cargo.toml": "b9d8791a6074a483c1e7805073a33ce40743d52a7c9d51b2dab34994ce5b6640",
       "crates/rtao-remote-signer/Cargo.toml": "1902e063439a34fab8b156636f4f6acabf3c8b9b21e8d6f77557be140b374380",
       "crates/rtao-rpc/Cargo.toml": "a814c91f46d40e2acbc43f913c0d007659c82c5e183bbf5cdb1695b08cb04f52",
       "crates/rtao-runtime/Cargo.toml": "d91ca09dff5272de81b854d7f9c8cbf1735819869709c3bca86d5c65b7a1cdcd",
       "crates/rtao-signer/Cargo.toml": "c60519f6febb062177e6e42e363d528b124e3afba74b60d97c4a87e0b4d1be0a",
-      "crates/rtao-testkit/Cargo.toml": "feabdb1c7d999fb5d3bad79991ebb9c2ea09b9fe45fbc4c8d35e4bb8bc600909",
+      "crates/rtao-testkit/Cargo.toml": "6157a2fa675059f3732f57ef2072dfbee317cd0502ae9494bc475260037c1248",
       "crates/rtao-transport-quic/Cargo.toml": "c72c99623b01e055ed8307a3b1359ef60852892e2d2df4a845c7416ab17339bd",
-      "crates/rtao-tx/Cargo.toml": "0c9c304bb1f8f4d3646bce5af40d5544d501a03251db84796e5dfce769e5c035",
+      "crates/rtao-tx/Cargo.toml": "9ed0bd496ab8f48c6d3e9966bd130321e81d490a9bbc4f83d87f51e0d209f72f",
       "crates/rtao-wallet/Cargo.toml": "a956707a77f207cbb4d3bba6fbc935e4337c6886ec612c61a8ddbfe3ecaeee97",
       "crates/rtao/Cargo.toml": "7063fc567ec64639f77e2b13b2ef659163c6fe42fc4b4e0e31578fcdd55699aa",
-      "upstream.toml": "2f23fe4db1960d927e44a65a4206c16af7737002f823f3aeeaac18c0f864b8e2",
+      "upstream.toml": "bde3e40ad7431ffbbc7ce7a4a50debc3094e8c623bced7023cc12660e5bd4a83",
       "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
     },
-    "dependency_inputs_sha256": "687f5c178ed4fa59be04d2a3c1646dc6ad4ca92c3eb93dbe4d85ff4a16514318",
+    "dependency_inputs_sha256": "18b9dc4f52a0a628bf4fd04ad206d77ea3078b4f13e6c5ffe6ba98fc93856468",
     "dirty": false,
-    "head_commit": "0ff4f326a5d0635c32ad99e6aefd986f4c696209"
+    "head_commit": "3907e95c39d98fa2a9f3dc897bdde917b03ce33a"
   },
   "target": "aarch64-apple-darwin"
 }

@@ -3,11 +3,11 @@
 
 | rtao | core tag (commit) | parity tag (Python source version) | validated spec range | btauth | interop target |
 |---|---|---|---|---|---|
-| 0.1.0 | v478 (`850f2755bb05a3851f948489f0ab27b0645cebce`) | v481 (11.3.1.dev0) | 481-481 | btauth/1 | `bittensor` @ v481 (`6a972693ae9580541225bd37696ac2fee26b8ae9`) |
+| 0.1.0 | v478 (`850f2755bb05a3851f948489f0ab27b0645cebce`) | v482 (11.3.1.dev0) | None recorded | btauth/1 | `bittensor` @ v482 (`8cf229f8ef969389d054a4c161b53ffd164a041f`) |
 
 No PyPI release has been verified from the pinned Python commit. The Python version above is the source project version.
 
-The validated identities and immutable report checksums are listed in [compat.json](compat.json). Validation requires passing drift, e2e and interop reports for each runtime and every listed localnet digest. Clients match by genesis, spec and metadata hash and warn on a pinned public network outside those identities; per-call surface checks determine which operations are available.
+No runtime range has passed the required drift, e2e and interop validation. Clients warn for every runtime on a pinned public network. Metadata pins describe fetched inputs; per-call surface checks still determine which operations are available.
 
 ## Metadata inputs
 
@@ -21,6 +21,8 @@ The validated identities and immutable report checksums are listed in [compat.js
 | finney | 479 | `0x07ff6dbc0cf575696f0a4037ee3d7b5ae088c871fef9330273ba7b285faae496` | v16 | [406248](vendor/metadata/finney/479.v16.scale) | `0fc79dbdd1ff5c3bbd42828bd5450894745fde4a72b32314e5412958c1f80d6b` | `0x75740c9388100dfdbd35e1c0c0d1ed558c12a67ef8239b6ed28bafe66007acaf` |
 | finney | 481 | `0x80f3788feefb5453a794a70bf242e41e0e1fc4a94adc2405b55bc6782b09c149` | v15 | [407900](vendor/metadata/finney/481.v15.scale) | `025da0822b26fd7dbff2e04fe0a88e2ee1073ae38d96ad4730c3724aa01af0f0` | `0xb915fe11da46ee515a06a0d27a0a70a995ef4127ee01b6b40aec038a07e26df4` |
 | finney | 481 | `0x80f3788feefb5453a794a70bf242e41e0e1fc4a94adc2405b55bc6782b09c149` | v16 | [411945](vendor/metadata/finney/481.v16.scale) | `0fce0674c994e6de24a4ee496f9a404bd64274f30f93a934a41de8a24fed170a` | `0x933cc1dd0946eaf6771eb200d5d4f8d7d7a4961eb8fc896874fe090881aa4727` |
+| finney | 482 | `0xc565db18d6b580eb2769f563fcad41077fea53f0af555711bfd03fe7e1c09b75` | v15 | [411511](vendor/metadata/finney/482.v15.scale) | `e1104feeb153ca201da1d1e88174c4c6d52d9d9e12e54e463778900136afb1fc` | `0xd31d5ed4b70b1cafc38b313c43ef6189e2b6c33ba77ed4f5c94e37d15dffa545` |
+| finney | 482 | `0xc565db18d6b580eb2769f563fcad41077fea53f0af555711bfd03fe7e1c09b75` | v16 | [415559](vendor/metadata/finney/482.v16.scale) | `6d662b835afe9c02132cff8fe46c24d9cc93d3bcc5d77c039a99384cf18e88fb` | `0x3c982165f0a3ca4f1df12bce8807c265ae37a1228c88c907e063eabc85f0a468` |
 
 Runtime metadata hashes use BLAKE2b with a 256-bit output over the complete raw metadata blob, including its SCALE prefix and version byte. SHA-256 verifies the stored file. These hashes are independent of structural surface hashes and the runtime's transaction metadata commitment. [compat.json](compat.json) records the hash kind and each input's chain, code hash and source provenance.
 
@@ -30,11 +32,11 @@ Image repository: `ghcr.io/raofoundation/subtensor-localnet`.
 
 | role | tag | digest |
 |---|---|---|
-| pinned | `v481` | `sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e` |
-| mainnet | `mainnet` | `sha256:c2eb81b1a39d89ad7bcca5e36a3e7f39f589a6fa422be66d5d03b59a8584957e` |
-| testnet | `testnet` | `sha256:e5d3f7c3ceb8c380033d03df17505f6d008ef43f877d88edac41b005d2f8bf9f` |
-| devnet | `devnet` | `sha256:111ebdbead406a3c11a6c357caf3d67106e030c83e7ce2fa83b35ba16bacd45e` |
-| main | `main` | `sha256:36e323ef303711c3d6447b70615a09ba122fc78f998b6e94587f2c11c5476432` |
+| pinned | `v482` | `sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8` |
+| mainnet | `mainnet` | `sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8` |
+| testnet | `testnet` | `sha256:c55447365f752826d366101fce0dec458b4b61fe0ad7332ae2efa29e112dfc3c` |
+| devnet | `devnet` | `sha256:0dd5335b49ed3a20431dc404ddf375f17d2219094457f00e12c12181959f9345` |
+| main | `main` | `sha256:24aa318a945b3cccd87c05a07b88f986933dcb59dfedd7e877c82b081a38a2e6` |
 
 ## Measured build weight
 
@@ -47,6 +49,6 @@ Distinct package identities reached through normal and build edges, excluding de
 | `aarch64-apple-darwin` | `miner` | 366 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 | `aarch64-apple-darwin` | `owner` | 417 | true | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 
-Measured on `x86_64-unknown-linux-gnu` with `rustc 1.99.0 (b940084d7 2026-09-28)`, source `0ff4f326a5d0635c32ad99e6aefd986f4c696209`; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
+Measured on `x86_64-unknown-linux-gnu` with `rustc 1.99.0 (b940084d7 2026-09-28)`, source `3907e95c39d98fa2a9f3dc897bdde917b03ce33a`; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
 
 Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. Validation evidence comes from `pr-gates` with `validate_compat=true` and is adopted with `ci/compat/adopt.sh`. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).

@@ -94,8 +94,8 @@ fn context(
 }
 fn runtime() -> Result<RuntimeHandle, Box<dyn std::error::Error>> {
     Ok(RuntimeHandle::parse(
-        include_bytes!("../../../../../vendor/metadata/finney/478.v15.scale"),
-        478,
+        include_bytes!("../../../../../vendor/metadata/finney/482.v15.scale"),
+        482,
         1,
         42,
     )?)

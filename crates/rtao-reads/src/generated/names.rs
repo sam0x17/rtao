@@ -53,7 +53,7 @@ pub enum ReadName {
     Children,
     #[doc = "Lock state for a coldkey on a subnet, or None if no lock exists."]
     ColdkeyLock,
-    #[doc = "A coldkey's pending swap announcement (execute block, new-key hash, disputed), or None."]
+    #[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None."]
     ColdkeySwapAnnouncement,
     #[doc = "A subnet's collateral configuration."]
     CollateralPolicy,
@@ -179,7 +179,7 @@ pub enum ReadName {
     SubnetCollateral,
     #[doc = "Every hotkey with locked stake on a subnet, rolled forward to now."]
     SubnetConvictions,
-    #[doc = "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent)."]
+    #[doc = "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). New registrations start enabled. When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent)."]
     SubnetEmissionEnabled,
     #[doc = "The subnet's emission weight vector `[burn, recycle, owner, validator,"]
     SubnetEmissionWeights,

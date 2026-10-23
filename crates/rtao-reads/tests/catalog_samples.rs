@@ -22,7 +22,7 @@ const SAMPLE_PATH: &str = "sdk/python/tests/harness/samples.py";
 fn samples() -> TestResult<BTreeMap<String, Map<String, Value>>> {
     let table = rtao_catalog::py::table(SAMPLE_PATH, "READ_SAMPLES")
         .ok_or("authenticated READ_SAMPLES table missing")?;
-    assert_eq!(table.blob, "91ff2aff459b6ea8e51f4ad3b17e59005451191b");
+    assert_eq!(table.blob, "987cfa63d8b94b7f18440fc5c7d81bd256fbf613");
     let encoded: Value = rtao_primitives::json::from_str(table.value_json)?;
     let decoded = literal(&encoded)?;
     decoded

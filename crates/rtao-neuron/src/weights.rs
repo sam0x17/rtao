@@ -432,6 +432,7 @@ pub struct WeightScheduler {
     semantic_policy: Option<String>,
     semantic_guard: Option<Arc<dyn rtao_client::journal::SemanticGuard>>,
     shield_protocol: Option<Arc<dyn rtao_client::journal::ShieldProtocolGuard>>,
+    shield_period: Option<rtao_client::ShieldPeriod>,
 }
 impl WeightScheduler {
     /// Construct a scheduler with explicit wall time and a best-head skew guard.
@@ -452,7 +453,16 @@ impl WeightScheduler {
             semantic_policy: None,
             semantic_guard: None,
             shield_protocol: None,
+            shield_period: None,
         })
+    }
+    /// Explicitly request shielded weight submission through the same public
+    /// executor/journal. Ordinary scheduling remains the default. Reinstall on
+    /// restart; the journal retains the original per-operation shield policy.
+    /// The client release guard and trusted protocol checks still apply.
+    pub fn with_shielded_submission(mut self, period: rtao_client::ShieldPeriod) -> Self {
+        self.shield_period = Some(period);
+        self
     }
     /// Borrow retained reveal outcomes and outstanding commitment state.
     pub fn reveals(&self) -> &RevealWatcher {
@@ -484,9 +494,13 @@ impl WeightScheduler {
         let pending = self.pending_work(mechanism)?;
         if self.reveals.pending_for(mechanism) >= 10
             || self.slots.get(&mechanism).is_some_and(|s| s.uncertain)
-            || pending
-                .as_ref()
-                .is_some_and(|(b, _)| b.can_dispatch().is_err())
+            || pending.as_ref().is_some_and(|(binding, _)| {
+                match self.shield_period {
+                    Some(period) => binding.can_prepare_shield(period),
+                    None => binding.can_dispatch(),
+                }
+                .is_err()
+            })
         {
             return Ok(WeightOpportunity::Reconcile);
         }
@@ -534,8 +548,7 @@ impl WeightScheduler {
                 "scheduler context differs from durable identity"
             );
         }
-        self.recover_finalized(&cx.client, finalized, &cx.metrics)
-            .await?;
+        Box::pin(self.recover_finalized(&cx.client, finalized, &cx.metrics)).await?;
         if !self.reveals.caught_up(finalized.number) {
             return Ok(());
         }
@@ -567,19 +580,20 @@ impl WeightScheduler {
             let mech = MechId(mechanism);
             let preflight = WeightPreflight::fetch(&snapshot, cx.netuid, mech, hotkey).await?;
             let best_block = preflight.at.number;
-            if let Err(error) = self
-                .attempt(
-                    cx,
-                    hotkey,
-                    *owner,
-                    auxiliary.1,
-                    auxiliary.2,
-                    mechanisms,
-                    mech,
-                    preflight,
-                    &mut proposals,
-                )
-                .await
+            // Keep the callback future and native debug polling stack bounded
+            // across the preparation/signing/recovery state machines.
+            if let Err(error) = Box::pin(self.attempt(
+                cx,
+                hotkey,
+                *owner,
+                auxiliary.1,
+                auxiliary.2,
+                mechanisms,
+                mech,
+                preflight,
+                &mut proposals,
+            ))
+            .await
             {
                 let outcome = if let Some(refusal) = error.downcast_ref::<WeightRefusal>() {
                     WeightAttemptOutcome::Refused(refusal.clone())
@@ -834,7 +848,10 @@ impl WeightScheduler {
             version_key,
             commit.as_ref(),
             block_time,
-            binding.clone(),
+            submit::SubmissionOptions {
+                journal: binding.clone(),
+                shield_period: self.shield_period,
+            },
         )
         .await;
         let report = match result {
@@ -904,7 +921,10 @@ impl WeightScheduler {
                     version_key,
                     commit.as_ref(),
                     block_time,
-                    None,
+                    submit::SubmissionOptions {
+                        journal: None,
+                        shield_period: self.shield_period,
+                    },
                 )
                 .await;
                 let report = match retry {

@@ -468,7 +468,7 @@ impl SyncLocks<'_> {
     }
 }
 impl SyncBalances<'_> {
-    #[doc = "A coldkey's pending swap announcement (execute block, new-key hash, disputed), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to."]
+    #[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending."]
     pub fn coldkey_swap_announcement(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
@@ -1154,7 +1154,7 @@ impl SyncLocks<'_> {
     }
 }
 impl SyncHyperparameters<'_> {
-    #[doc = "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent)."]
+    #[doc = "Root-controlled pool-side TAO emission flag for a subnet (1 = enabled). New registrations start enabled. When 0, the subnet earns no TAO emission share even while subnet_is_active is true; only root can flip it (see the set_subnet_emission_enabled intent)."]
     pub fn subnet_emission_enabled(
         &self,
         netuid: rtao_primitives::NetUid,

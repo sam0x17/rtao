@@ -356,6 +356,14 @@ pub enum SubmitFailure {
         /// A later failure while trying to reconcile the original outcome.
         reconciliation: Option<Box<SubmitFailure>>,
     },
+    /// A known historical receipt cannot fulfill the supplied recovery request.
+    /// This is a refusal with retained evidence, never unknown fate or success.
+    RecoveryContext {
+        /// Exact original finalized effect, not attributed to the current call.
+        receipt: Box<ExtrinsicReport>,
+        /// Missing or different request identity/context, or a journal refusal.
+        cause: crate::journal::JournalError,
+    },
     /// A durably authorized shield pair has no published finalized inner result.
     /// Carrier acceptance/failure and local retirement are not logical outcomes.
     PendingShield {
@@ -411,6 +419,10 @@ impl fmt::Display for SubmitFailure {
                 }
                 Ok(())
             }
+            Self::RecoveryContext { cause, .. } => write!(
+                f,
+                "historical receipt does not fulfill this request: {cause}"
+            ),
             Self::PendingShield {
                 pair, carrier_hash, ..
             } => write!(
@@ -444,6 +456,7 @@ impl std::error::Error for SubmitFailure {
             Self::Client(error) => Some(error),
             Self::Submit(error) => Some(error),
             Self::Unresolved { cause, .. } => Some(cause.as_ref()),
+            Self::RecoveryContext { cause, .. } => Some(cause),
             _ => None,
         }
     }

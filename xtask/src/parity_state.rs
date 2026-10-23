@@ -1077,7 +1077,7 @@ pub(super) fn e2e_evidence(name: &str, row: &Item) -> Result<Value> {
             "unverified",
             vec!["hosted-runtime-execution-not-recorded"],
         )
-    } else if target == "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+    } else if target == "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
     {
         (
             "intent-plan",
@@ -1105,7 +1105,7 @@ fn e2e_target(name: &str, value: &str, index: &Index) -> Result<String> {
     let target = if value.starts_with("e2e::") || value.starts_with("interop::") {
         format!("rtao_testkit::{value}")
     } else {
-        if value == "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain" {
+        if value == "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain" {
             ensure!(
                 name.strip_prefix("intent_")
                     .is_some_and(|op| { rtao_catalog::INTENTS.iter().any(|spec| spec.name == op) }),
@@ -1716,7 +1716,7 @@ mod tests {
                 source.replace(fixture.target, "e2e::test_plan_simulates_real_fee"),
                 source.replace(
                     fixture.target,
-                    "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain",
+                    "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain",
                 ),
                 format!("{source}extra = \"unsupported\"\n"),
                 format!("{source}pending = \"M5\"\n"),
@@ -1900,7 +1900,7 @@ mod tests {
     #[test]
     fn ordinary_plan_mapping_requires_catalog_plan_key_and_actual_all_feature_test_body()
     -> Result<()> {
-        let test = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain";
+        let test = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain";
         let mut index = Index::default();
         assert!(e2e_target("intent_transfer", test, &index).is_err());
         index.feature_tests.insert(test.into());

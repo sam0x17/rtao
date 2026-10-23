@@ -1,24 +1,19 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/coldkey.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Coldkey migration announcements, execution, cancellation and disputes.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/coldkey.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
+//! Coldkey migration announcements, execution, cancellation, disputes and
+//! destination reservations.
+//!
+//! Announcing publishes the cleartext destination through
+//! `announce_coldkey_swap_v2`, which the chain validates and reserves before
+//! charging the swap cost. The legacy hash-only `announce_coldkey_swap`
+//! extrinsic stays raw-only for callers that must keep the destination secret.
 
 use rtao_client::View;
-use rtao_primitives::{H256, Ss58Address};
-use rtao_runtime::calls::subtensor_module;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
 
 pub use crate::{
-    AnnounceColdkeySwap, ClearColdkeySwapAnnouncement, DisputeColdkeySwap, SwapColdkeyAnnounced,
+    AnnounceColdkeySwap, ClearColdkeySwapAnnouncement, DisputeColdkeySwap,
+    ReleaseOwnColdkeySwapDestinationReservation, SwapColdkeyAnnounced,
 };
-
-/// Hash the decoded public key with BLAKE2b-256, independently of its SS58 prefix.
-#[doc(alias = "bittensor.intents.coldkey.coldkey_hash")]
-pub fn coldkey_hash(address: &Ss58Address) -> Result<H256, IntentError> {
-    let hash = rtao_core::codec::storage::hash_param("Blake2_256", address.as_bytes())?;
-    let hash = hash.try_into().map_err(|_| {
-        IntentError::validation("Blake2_256 returned a coldkey hash with an invalid length")
-    })?;
-    Ok(H256(hash))
-}
 
 impl Intent for AnnounceColdkeySwap {
     fn summary(&self) -> String {
@@ -26,10 +21,7 @@ impl Intent for AnnounceColdkeySwap {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        Ok(Built::new(
-            subtensor_module::announce_coldkey_swap(coldkey_hash(&self.new_coldkey_ss58)?)
-                .compose(cx.runtime)?,
-        ))
+        crate::generated::passthrough::announce_coldkey_swap(self, cx).await
     }
 
     async fn warnings<V: View + ?Sized>(
@@ -39,6 +31,7 @@ impl Intent for AnnounceColdkeySwap {
         Ok(vec![
             "after the announcement delay, swap_coldkey_announced will move EVERYTHING this coldkey owns (balance, stake, subnets) to the new coldkey".into(),
             "make sure you control the new coldkey and have its mnemonic backed up".into(),
+            "if the destination already holds assets, the swap merges into it".into(),
         ])
     }
 }
@@ -80,6 +73,17 @@ impl Intent for ClearColdkeySwapAnnouncement {
     }
 }
 
+impl Intent for ReleaseOwnColdkeySwapDestinationReservation {
+    fn summary(&self) -> String {
+        "release this account's coldkey-swap destination reservation".into()
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::generated::passthrough::release_own_coldkey_swap_destination_reservation(self, cx)
+            .await
+    }
+}
+
 impl Intent for DisputeColdkeySwap {
     fn summary(&self) -> String {
         "dispute the pending coldkey swap (freezes it for governance)".into()
@@ -103,17 +107,13 @@ impl Intent for DisputeColdkeySwap {
 mod tests {
     use super::*;
     use rtao_client::{BlockRef, Client, ClientConfig, DynView, Network, Snapshot};
-    use rtao_primitives::{AccountId, Spend};
+    use rtao_primitives::{AccountId, Spend, Ss58Address};
     use rtao_runtime::{CallBytes, RuntimeHandle};
     use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
     use rtao_tx::{DynIntent, OriginView, SystemClock};
     use serde_json::{Value, json};
 
     const ORIGIN: AccountId = AccountId([7; 32]);
-    // Independent Bouncy Castle BLAKE2b-256 vector for 32 zero bytes:
-    // attocash/commons @ 5ae16299214ed7fd44bc33c3ee6ee437cde393d9,
-    // commons-core/src/commonTest/kotlin/cash/atto/commons/AttoHashTest.kt:9-18.
-    const ZERO_KEY_HASH: &str = "89eb0d6a8a691dae2cd15ed0369931ce0a949ecafa5c3f93f8121833646e15c3";
 
     async fn fixture() -> anyhow::Result<(FakeChain, Client, Snapshot)> {
         let chain = FakeChain::from_state(FakeState::try_default()?);
@@ -134,13 +134,6 @@ mod tests {
         Ok(rtao_core::codec::value::to_corpus_json(&decoded))
     }
 
-    #[test]
-    fn coldkey_hash_matches_independent_blake2b256_vector() -> anyhow::Result<()> {
-        let address: Ss58Address = AccountId::ZERO.into();
-        assert_eq!(hex::encode(coldkey_hash(&address)?.0), ZERO_KEY_HASH);
-        Ok(())
-    }
-
     #[tokio::test]
     async fn coldkey_swaps_keep_ss58_spelling_but_encode_one_account_across_prefixes()
     -> anyhow::Result<()> {
@@ -148,8 +141,10 @@ mod tests {
         let runtime = &snapshot.block().runtime;
         let requests = chain.requests().len();
         let account = AccountId::ZERO;
-        let mut announced = vec![7, 125];
-        announced.extend_from_slice(&hex::decode(ZERO_KEY_HASH)?);
+        // Announce publishes the cleartext key through announce_coldkey_swap_v2
+        // (index 155); the chain derives its stored commitment itself.
+        let mut announced = vec![7, 155];
+        announced.extend_from_slice(account.as_bytes());
         let mut swapped = vec![7, 126];
         swapped.extend_from_slice(account.as_bytes());
         // The pinned core accepts registered network formats; arbitrary custom
@@ -162,20 +157,18 @@ mod tests {
             let swap = SwapColdkeyAnnounced {
                 new_coldkey_ss58: spelling.parse()?,
             };
-            for (intent, summary, bytes, argument, value) in [
+            for (intent, summary, bytes, function) in [
                 (
                     &announce as &dyn DynIntent,
                     format!("announce coldkey swap to {spelling}"),
                     announced.as_slice(),
-                    "new_coldkey_hash",
-                    json!(format!("0x{ZERO_KEY_HASH}")),
+                    "announce_coldkey_swap_v2",
                 ),
                 (
                     &swap as &dyn DynIntent,
                     format!("SWAP coldkey to {spelling} (moves all ownership)"),
                     swapped.as_slice(),
-                    "new_coldkey",
-                    json!(account.to_string()),
+                    "swap_coldkey_announced",
                 ),
             ] {
                 assert_eq!(intent.summary_dyn(), summary);
@@ -199,9 +192,9 @@ mod tests {
                 assert!(built.extras.is_empty());
                 let decoded = decode(&built.call, runtime)?;
                 assert_eq!(decoded["call_module"], "SubtensorModule");
-                assert_eq!(decoded["call_function"], intent.spec().name);
-                assert_eq!(decoded["call_args"][0]["name"], argument);
-                assert_eq!(decoded["call_args"][0]["value"], value);
+                assert_eq!(decoded["call_function"], function);
+                assert_eq!(decoded["call_args"][0]["name"], "new_coldkey");
+                assert_eq!(decoded["call_args"][0]["value"], json!(account.to_string()));
             }
         }
         let unknown_format = account.to_ss58(1000);
@@ -219,15 +212,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn coldkey_clear_and_dispute_encode_exact_zero_argument_calls() -> anyhow::Result<()> {
+    async fn coldkey_clear_dispute_and_release_encode_exact_zero_argument_calls()
+    -> anyhow::Result<()> {
         let (chain, client, snapshot) = fixture().await?;
         let runtime = &snapshot.block().runtime;
         let requests = chain.requests().len();
         let clear = ClearColdkeySwapAnnouncement {};
         let dispute = DisputeColdkeySwap {};
+        let release = ReleaseOwnColdkeySwapDestinationReservation {};
         for (intent, bytes) in [
             (&clear as &dyn DynIntent, [7u8, 133]),
             (&dispute as &dyn DynIntent, [7u8, 127]),
+            (&release as &dyn DynIntent, [7u8, 154]),
         ] {
             let built = intent
                 .build_dyn(&BuildCx {
@@ -267,6 +263,7 @@ mod tests {
         };
         let clear = ClearColdkeySwapAnnouncement {};
         let dispute = DisputeColdkeySwap {};
+        let release = ReleaseOwnColdkeySwapDestinationReservation {};
         for (intent, summary, warnings, all_subnets) in [
             (
                 &announce as &dyn DynIntent,
@@ -274,6 +271,7 @@ mod tests {
                 vec![
                     "after the announcement delay, swap_coldkey_announced will move EVERYTHING this coldkey owns (balance, stake, subnets) to the new coldkey",
                     "make sure you control the new coldkey and have its mnemonic backed up",
+                    "if the destination already holds assets, the swap merges into it",
                 ],
                 false,
             ),
@@ -296,6 +294,12 @@ mod tests {
                 &dispute as &dyn DynIntent,
                 "dispute the pending coldkey swap (freezes it for governance)".into(),
                 vec!["blocks the swap until the triumvirate resolves the dispute"],
+                false,
+            ),
+            (
+                &release as &dyn DynIntent,
+                "release this account's coldkey-swap destination reservation".into(),
+                vec![],
                 false,
             ),
         ] {
@@ -358,7 +362,11 @@ mod tests {
                 assert!(crate::AnyIntent::from_tool(op, args).is_err(), "{op}");
             }
         }
-        for op in ["clear_coldkey_swap_announcement", "dispute_coldkey_swap"] {
+        for op in [
+            "clear_coldkey_swap_announcement",
+            "dispute_coldkey_swap",
+            "release_own_coldkey_swap_destination_reservation",
+        ] {
             assert!(crate::AnyIntent::from_tool(op, json!({})).is_ok(), "{op}");
             for args in [json!({"unexpected":true}), json!([])] {
                 assert!(crate::AnyIntent::from_tool(op, args).is_err(), "{op}");

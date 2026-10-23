@@ -296,16 +296,50 @@ async fn swap_dispute_truthiness_and_absence_match_python() {
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(value.execute_block, 123);
-        assert_eq!(value.new_coldkey_hash, format!("0x{CALL_HASH}"));
+        assert_eq!(value.execute_block, Some(123));
+        assert_eq!(value.new_coldkey_hash, Some(format!("0x{CALL_HASH}")));
         assert_eq!(value.disputed, dispute.is_some_and(|block| block != 0));
         assert_eq!(value.dispute_block, dispute.filter(|block| *block != 0));
+        assert_eq!(value.recovery_locked, dispute == Some(0));
         assert!(
             reads::coldkey_swap_announcement(&client, OTHER)
                 .await
                 .unwrap()
                 .is_none()
         );
+        client.close().await;
+    }
+}
+
+// A stored dispute block of zero is root's keep-locked reset: the coldkey is
+// recovery-locked even without an announcement, while a real dispute block
+// alone still reads as no swap state.
+#[tokio::test]
+async fn recovery_lock_without_an_announcement_matches_python() {
+    for (dispute, expected) in [
+        (
+            0,
+            Some(json!({
+                "execute_block": null, "new_coldkey_hash": null, "disputed": false,
+                "dispute_block": null, "recovery_locked": true,
+            })),
+        ),
+        (99, None),
+    ] {
+        let mut state = seed();
+        state
+            .seed_python(
+                "SubtensorModule",
+                "ColdkeySwapDisputes",
+                &[json!(OTHER)],
+                json!(dispute),
+            )
+            .unwrap();
+        let (client, _) = setup_client(state).await;
+        let value = reads::coldkey_swap_announcement(&client, OTHER)
+            .await
+            .unwrap();
+        assert_eq!(value.map(|value| json!(value)), expected);
         client.close().await;
     }
 }

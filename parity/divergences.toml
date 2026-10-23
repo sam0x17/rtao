@@ -1014,9 +1014,9 @@ upstream_report = "Authored regression source was independently reviewed; hosted
 [[divergences]]
 id = "D-023"
 upstream_symbol = "ExtrinsicResult / RpcSubstrate._result_from_report"
-python_behavior = "no inclusion level; fate unknown visible only in the message; _substrate.py:804-811 constructs failed results without triggered events"
-rtao_behavior = "adds inclusion/fate_unknown and observed extrinsic_hash, and retains decoded failed-receipt events for native consumers; to_json preserves Python field presence and omits native tracking fields and events. A resolved shield receipt's observed identity is its inner extrinsic, not necessarily the transmitted carrier."
-rationale = "Public results retain typed inclusion and unknown-fate identity while to_json preserves Python field presence. Native multisig_executed and Null-pruning recovery inspect receipt events even when an inner dispatch failed, to distinguish consumed execution from a remaining approval; suppressing those events would erase required evidence. The real-executor dispatch-failure fixture checks retained System.ExtrinsicFailed, absent success fee/extras and one submission/build. The failed-batch client transcript compares the complete retained event vector with an actual pinned event read. Included and unresolved serialization fixtures preserve native fields through with_output and compare independent complete Python dictionaries, without event JSON. This extends the existing native diagnostic addition; it does not claim Python failed construction behaves identically. Current hosted execution and final disposition remain pending."
+python_behavior = "no inclusion level; fate unknown visible only in the message. Since v482, _substrate.py:774-813 keeps the fee and triggered events on failed included results, as on successful ones"
+rtao_behavior = "adds inclusion/fate_unknown and observed extrinsic_hash; failed included results keep the fee and decoded events as Python's do; to_json preserves Python field presence, including a failed result's fee_tao, and omits native tracking fields and events. A resolved shield receipt's observed identity is its inner extrinsic, not necessarily the transmitted carrier."
+rationale = "Public results retain typed inclusion and unknown-fate identity while to_json preserves Python field presence. Native multisig_executed and Null-pruning recovery inspect receipt events even when an inner dispatch failed, to distinguish consumed execution from a remaining approval; Python now keeps those events too, so only the inclusion/fate additions and the native-only events-in-JSON omission remain divergent. The real-executor dispatch-failure fixture checks retained System.ExtrinsicFailed, the paid fee and its fee_tao, absent success extras and one submission/build. The failed-batch client transcript compares the complete retained event vector with an actual pinned event read. Included and unresolved serialization fixtures preserve native fields through with_output and compare independent complete Python dictionaries, without event JSON. Pool rejections carry no fee, as in Python. Current hosted execution and final disposition remain pending."
 status = "active"
 class = "addition"
 milestone = "M8"
@@ -1027,7 +1027,7 @@ pinning_tests = [
   "rtao_tx::executor::dispatch_failure_is_returned_without_retry_or_success_extras",
   "rtao_intents::client_transfer_lifecycles::client_failed_batch_reads_unchanged_first_recipient_from_explicit_receipt_state",
 ]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/result.py#L733-L751"
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/8cf229f8ef969389d054a4c161b53ffd164a041f/sdk/python/bittensor/_substrate.py#L774-L813"
 upstream_report = "Existing serialization sources were independently reviewed. Failed-event retention is an explicit native addition required by current multisig/recovery consumers, with real-executor and pinned-receipt regression assertions authored. Current hosted execution and final independent rereview remain pending. No new upstream filing under Q30."
 
 [[divergences]]
@@ -1122,7 +1122,7 @@ status = "active"
 class = "addition"
 milestone = "M8"
 pinning_tests = [
-  "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_85_ops",
+  "rtao_cli::config_catalog::tools_json_equals_python_on_upstream_fields_for_all_86_ops",
   "rtao_cli::generated_commands::tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata",
 ]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/registry.py#L43-L66"

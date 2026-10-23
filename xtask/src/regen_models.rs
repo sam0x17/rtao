@@ -527,8 +527,8 @@ mod tests {
     use super::*;
     fn pinned_runtime() -> rtao_core::runtime::Runtime {
         rtao_core::runtime::Runtime::parse(
-            include_bytes!("../../vendor/metadata/finney/478.v15.scale"),
-            478,
+            include_bytes!("../../vendor/metadata/finney/482.v15.scale"),
+            482,
             1,
             42,
         )

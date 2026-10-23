@@ -152,6 +152,8 @@ struct ClientInner {
     /// Separate submission connection, when configured.
     submit: Option<Arc<SubmitRoute>>,
     cancelled: CancellationToken,
+    #[cfg(feature = "test-util")]
+    synthetic_journal_dispatch: std::sync::atomic::AtomicBool,
 }
 
 /// Lazily connected submission endpoint shared by a client and its nonces.
@@ -486,6 +488,8 @@ impl Client {
             hash_cache: tokio::sync::Mutex::new(HashCache::default()),
             best_pin: tokio::sync::Mutex::new(None),
             submit,
+            #[cfg(feature = "test-util")]
+            synthetic_journal_dispatch: std::sync::atomic::AtomicBool::new(false),
         });
         let client = Self {
             inner: inner.clone(),
@@ -591,6 +595,48 @@ impl Client {
                 "durable author requires an explicit native Session".into(),
             ))
         })
+    }
+
+    /// Release guard for journaled shield dispatch. Production chains remain
+    /// refused while public composition is being qualified. This is separate
+    /// from the trusted runtime-code and application semantic checks.
+    pub fn check_journal_shield_dispatch(&self) -> Result<(), ClientError> {
+        #[cfg(feature = "test-util")]
+        if self.genesis() == Self::SYNTHETIC_JOURNAL_GENESIS
+            && self
+                .inner
+                .synthetic_journal_dispatch
+                .load(std::sync::atomic::Ordering::Acquire)
+        {
+            return Ok(());
+        }
+        Err(ClientError::Journal(crate::journal::JournalError::Blocked(
+            "journaled shield dispatch remains gated pending public integration review".into(),
+        )))
+    }
+
+    /// Isolated synthetic-chain identity used only by journal lifecycle tests.
+    /// It is intentionally distinct from every pinned public-network genesis.
+    #[cfg(feature = "test-util")]
+    pub const SYNTHETIC_JOURNAL_GENESIS: H256 = H256([0xd7; 32]);
+
+    /// Enable the shared public implementation on the fixed synthetic genesis.
+    /// Available only with test-util; public chains refuse even in that build.
+    /// This does not bypass native custody, journal, protocol or semantic checks.
+    #[cfg(feature = "test-util")]
+    pub async fn enable_synthetic_journal_dispatch(&self) -> Result<(), ClientError> {
+        if self.genesis() != Self::SYNTHETIC_JOURNAL_GENESIS {
+            return Err(ClientError::Journal(crate::journal::JournalError::Identity));
+        }
+        let chain = self.submit_client().await?;
+        if chain.genesis() != Self::SYNTHETIC_JOURNAL_GENESIS {
+            return Err(ClientError::Journal(crate::journal::JournalError::Identity));
+        }
+        self.native_author_session().await?;
+        self.inner
+            .synthetic_journal_dispatch
+            .store(true, std::sync::atomic::Ordering::Release);
+        Ok(())
     }
 
     pub(crate) async fn fresh_signing_metadata(&self, at: H256) -> Result<Vec<u8>, ClientError> {
@@ -1449,7 +1495,7 @@ mod tests {
                 .unwrap();
             assert_eq!(upgraded_call.stamp(), runtime.stamp());
             assert!(old_call.ensure_runtime(&runtime).is_err());
-            assert_eq!(old_runtime.spec_version(), 481);
+            assert_eq!(old_runtime.spec_version(), 482);
             assert_eq!(old_runtime.transaction_version(), 1);
             assert_eq!(
                 raw.requests().len(),
