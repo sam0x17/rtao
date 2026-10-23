@@ -65,6 +65,67 @@ path remains available without this journal, but a durable carrier/inner adapter
 with separately reconciled identities is still required before claiming shield
 restart support. No shielded dispatch silently ignores the journal option.
 
+Journaled client/executor submissions reserve the signing account and logical
+operation before preparing or resolving private keys. The account scope spans
+different clients and operation IDs sharing the journal. Independent accounts
+can progress. `JournalBinding::reserve` also lets an application hold this
+preparation lifetime; pass its `binding()` to the SDK while retaining the owner.
+A scoped binding uses a weak reference and refuses once that owner expires,
+rather than silently acquiring a new authorization. Other unresolved operations
+for the same account block new preparation. All participants must use the same
+journal; these scopes cannot fence unrelated software or an unjournaled signer.
+Journaled automatic nonce allocation refreshes the actual account query under
+this owner instead of trusting a different client's earlier nonce cache.
+
+For explicit native sessions (`Client::connect` or `Client::from_session`), the
+reservation also follows the single-use author request into the transport queue
+and captured write. Cancelling the caller cannot release that lifetime while a
+captured write remains live. Opaque injected ordinary RPC adapters retain their
+existing uncertainty contract; they do not acquire an asserted native custody
+guarantee. A supplied opaque `RpcClient` wrapping a Session is still opaque.
+
+## Guarded paired preparation implementation
+
+An internal paired path now selects an immutable policy, qualifies the actual
+submission runtime's pinned code identity through an installed trusted
+`ShieldProtocolGuard`, and checks the application semantic guard on the inner
+call. Fresh metadata is checked even when the spec version has not changed.
+The guard represents an independently audited code identity; metadata shape,
+spec equality and an endpoint's own claims cannot supply that qualification.
+It does not establish application economics or independent finality.
+
+This path publishes the signed inner before sealing, then the signed carrier
+and pair link, then a separate durable dispatch-authorization barrier before
+the native author request. Material generation, runtime context, pause policy
+and the original finite pair budget are rechecked. Signed bytes/material remain
+redacted from Debug. A never-authorized preparation can be retired without
+erasing it. Rebuilding identical signed bytes returns `FreshSigningContext`
+until a fresh signing context is available; it cannot reset the pair budget or
+bypass the graph's unique physical identities.
+
+Only the exact finalized inner receipt is an effect result. Carrier-only
+acceptance, failure, timeout, disconnect and even local transport retirement
+leave a typed `PendingShield` after durable authorization. The weight recovery
+projection selects material by the unique finalized effect and report hash,
+never the vector tail; it composes the existing reveal watcher/checkpoint.
+
+**Public journaled shield dispatch remains refused pending completion and
+review.** This guarded internal implementation does not yet qualify complete
+historical negative evidence or authorize resealing of an earlier authorized
+pair. It is not full shield restart support. Complete canonical body coverage,
+every applicable historical runtime, actual mortality anchors and canonical
+signed-inner encoding are still needed before such a replacement can be safe.
+The ordinary default weight route remains journaled and unchanged.
+
+Local native tests cover publication-before-author, finalized-inner-only
+results, carrier-only uncertainty, stale nonce refresh, retired preparation and
+cancellation of offloaded publication. A separate native-socket weight fixture
+sends a real signed encrypted carrier, models the inner body/events and native
+commitment queue synthetically, discards all client/journal owners before
+handoff, reopens while paused and restores one reveal without resubmission.
+It tests SDK composition and native storage/socket behavior, not deployed-chain
+decryption, independently verified consensus or hardware power-loss durability.
+
 ## Paired-evidence storage foundation (schema 3)
 
 The native backend migrates supported schema1/2 raw envelopes before typed

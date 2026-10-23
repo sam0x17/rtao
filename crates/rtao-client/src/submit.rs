@@ -356,6 +356,20 @@ pub enum SubmitFailure {
         /// A later failure while trying to reconcile the original outcome.
         reconciliation: Option<Box<SubmitFailure>>,
     },
+    /// A durably authorized shield pair has no published finalized inner result.
+    /// Carrier acceptance/failure and local retirement are not logical outcomes.
+    PendingShield {
+        /// Retained logical operation ID.
+        operation: String,
+        /// Stable pair ordinal.
+        pair: u64,
+        /// Exact encrypted author request.
+        carrier_hash: H256,
+        /// Exact signed effect identity.
+        inner_hash: H256,
+        /// Structured evidence needed before deciding the effect or replacement.
+        reason: crate::journal::RecoveryReason,
+    },
     /// Finality lag leaves no valid shield carrier/inner inclusion window.
     ShieldEraExpired {
         /// Selected shield era in blocks.
@@ -397,6 +411,13 @@ impl fmt::Display for SubmitFailure {
                 }
                 Ok(())
             }
+            Self::PendingShield {
+                pair, carrier_hash, ..
+            } => write!(
+                f,
+                "shield pair {pair} remains unresolved (carrier {})",
+                crate::hash_hex(*carrier_hash)
+            ),
             Self::ShieldEraExpired {
                 period,
                 finality_lag,
@@ -433,6 +454,7 @@ impl SubmitFailure {
     pub fn unknown_fate_hash(&self) -> Option<H256> {
         match self {
             Self::Unresolved { hash, .. } | Self::Retracted { hash } => Some(*hash),
+            Self::PendingShield { carrier_hash, .. } => Some(*carrier_hash),
             Self::Submit(rtao_rpc::SubmitError::FateUnknown { hash }) => Some(H256(hash.0)),
             _ => None,
         }
@@ -506,9 +528,14 @@ impl Client {
         signer: &dyn Signer,
         opts: &SubmitOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
+        let (scoped, _owner) = scoped_journal_options(opts)?;
+        let opts = &scoped;
         let limits = SubmissionLimits::new(opts)?;
         let attempted_hash = SubmissionAttempt::default();
         let operation = async {
+            if opts.journal.is_some() {
+                self.nonces().clear_account(&signer.account());
+            }
             let lease = limits
                 .admission
                 .run(self, async {
@@ -538,6 +565,8 @@ impl Client {
         lease: NonceLease,
         opts: &SubmitOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
+        let (scoped, _owner) = scoped_journal_options(opts)?;
+        let opts = &scoped;
         let limits = SubmissionLimits::new(opts)?;
         let attempted_hash = SubmissionAttempt::default();
         let outcome = limits
@@ -599,8 +628,9 @@ impl Client {
                 .await
                 .map_err(ClientError::Journal)?;
         }
+        let owner = journal_author_ownership(self, opts, hash).await?;
         let outcome = self
-            .send_and_watch(&bytes, hash, opts, limits.admission, attempted_hash)
+            .send_and_watch(&bytes, hash, opts, limits.admission, attempted_hash, owner)
             .await;
         match outcome {
             Ok(report) => {
@@ -633,6 +663,7 @@ impl Client {
         opts: &SubmitOptions,
         limit: OperationLimit,
         attempted_hash: &SubmissionAttempt,
+        ownership: Option<rtao_rpc::AuthorOwnership>,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         limit.check(self)?;
         let wait = opts.wait;
@@ -644,7 +675,16 @@ impl Client {
                     let chain = self.submit_client().await?;
                     attempted = true;
                     let _ = attempted_hash.hash.set(hash);
-                    chain.request("author_submitExtrinsic", params).await
+                    if let Some(owner) = ownership {
+                        let session = chain.native_author_session().await?;
+                        let response =
+                            session.submit_owned(bytes, owner).await.map_err(|error| {
+                                ClientError::from(subxt_rpcs::Error::Client(Box::new(error)))
+                            })?;
+                        Ok::<_, ClientError>(json!(crate::hash_hex(H256(response.0))))
+                    } else {
+                        chain.request("author_submitExtrinsic", params).await
+                    }
                 })
                 .await
                 .map_err(|error| author_ack_error(error, attempted, attempted_hash))?;
@@ -678,15 +718,25 @@ impl Client {
                 let chain = self.submit_client().await?;
                 attempted = true;
                 let _ = attempted_hash.hash.set(hash);
-                chain
-                    .rpc()
-                    .subscribe_raw(
-                        "author_submitAndWatchExtrinsic",
-                        Some(raw),
-                        "author_unwatchExtrinsic",
-                    )
-                    .await
-                    .map_err(ClientError::from)
+                if let Some(owner) = ownership {
+                    let session = chain.native_author_session().await?;
+                    session
+                        .submit_and_watch_owned_raw(bytes, owner)
+                        .await
+                        .map_err(|error| {
+                            ClientError::from(subxt_rpcs::Error::Client(Box::new(error)))
+                        })
+                } else {
+                    chain
+                        .rpc()
+                        .subscribe_raw(
+                            "author_submitAndWatchExtrinsic",
+                            Some(raw),
+                            "author_unwatchExtrinsic",
+                        )
+                        .await
+                        .map_err(ClientError::from)
+                }
             })
             .await
             .map_err(|error| author_ack_error(error, attempted, attempted_hash))?;
@@ -1000,6 +1050,8 @@ impl Client {
         signature: MultiSignature,
         opts: &SubmitOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
+        let (scoped, _owner) = scoped_journal_options(opts)?;
+        let opts = &scoped;
         let limits = SubmissionLimits::new(opts)?;
         let attempted_hash = SubmissionAttempt::default();
         let operation = async {
@@ -1023,8 +1075,9 @@ impl Client {
             let lease = self
                 .nonces()
                 .lease_explicit(&unsigned.address, unsigned.nonce);
+            let owner = journal_author_ownership(self, opts, hash).await?;
             match self
-                .send_and_watch(&bytes, hash, opts, limits.admission, &attempted_hash)
+                .send_and_watch(&bytes, hash, opts, limits.admission, &attempted_hash, owner)
                 .await
             {
                 Ok(report) => {
@@ -1706,6 +1759,42 @@ fn watch_name(text: &str) -> Option<&'static str> {
     rtao_catalog::py::WATCH_STATUS_NAMES
         .iter()
         .find_map(|(name, resolved)| (*name == status).then_some(*resolved))
+}
+
+fn scoped_journal_options(
+    opts: &SubmitOptions,
+) -> Result<(SubmitOptions, Option<crate::journal::JournalPreparation>), ClientError> {
+    let owner = opts
+        .journal
+        .as_ref()
+        .map(|binding| binding.reserve())
+        .transpose()
+        .map_err(ClientError::Journal)?;
+    let mut scoped = opts.clone();
+    if let Some(owner) = &owner {
+        let binding = owner.binding();
+        binding.can_dispatch().map_err(ClientError::Journal)?;
+        scoped.journal = Some(binding);
+    }
+    Ok((scoped, owner))
+}
+async fn journal_author_ownership(
+    client: &Client,
+    opts: &SubmitOptions,
+    hash: H256,
+) -> Result<Option<rtao_rpc::AuthorOwnership>, ClientError> {
+    let Some(binding) = &opts.journal else {
+        return Ok(None);
+    };
+    if client.optional_native_author_session().await?.is_none() {
+        return Ok(None);
+    }
+    Ok(Some(
+        binding
+            .reserve()
+            .map_err(ClientError::Journal)?
+            .author_ownership(hash),
+    ))
 }
 
 async fn persist_journal_report(

@@ -302,6 +302,20 @@ impl Client {
         Ok(client)
     }
 
+    /// Initialize over an explicit native session, retaining author-write custody
+    /// capability. The client owns shutdown of this session. A supplied opaque
+    /// RpcClient alone cannot attest this capability, even if it wraps a Session.
+    pub async fn from_session(session: Session, config: ClientConfig) -> Result<Self, ClientError> {
+        let timeout = config.startup_timeout;
+        let rpc = RpcClient::new(session.clone());
+        let client =
+            tokio::time::timeout(timeout, Self::initialize(rpc, config, Some(session), None))
+                .await
+                .map_err(|_| startup_timeout_error(timeout))??;
+        client.load_token_symbols_within(timeout).await;
+        Ok(client)
+    }
+
     /// Initialize over a supplied RPC implementation, including fake chains.
     ///
     /// A configured [`ClientConfig::submit`] endpoint is connected as a
@@ -564,6 +578,29 @@ impl Client {
             Some(route) => route.client().await,
             None => Ok(self.clone()),
         }
+    }
+
+    /// Actual submission endpoint's native author session, with queue/write
+    /// ownership capability. Genesis is checked by the normal submission route.
+    /// This is a transport capability, not consensus or protocol qualification.
+    /// Opaque injected author transports refuse rather than silently losing the
+    /// durable ownership contract; use connect or from_session for native custody.
+    pub async fn native_author_session(&self) -> Result<Session, ClientError> {
+        self.optional_native_author_session().await?.ok_or_else(|| {
+            ClientError::Journal(crate::journal::JournalError::Blocked(
+                "durable author requires an explicit native Session".into(),
+            ))
+        })
+    }
+
+    pub(crate) async fn fresh_signing_metadata(&self, at: H256) -> Result<Vec<u8>, ClientError> {
+        self.inner.cache.fresh_signing_metadata(at).await
+    }
+
+    pub(crate) async fn optional_native_author_session(
+        &self,
+    ) -> Result<Option<Session>, ClientError> {
+        Ok(self.submit_client().await?.inner.session.clone())
     }
 
     /// Recovering best and finalized head tracker, when enabled in configuration.
