@@ -375,7 +375,7 @@ impl Client {
                     .map_err(ClientError::Journal)
             })
             .await?;
-        self.ensure_signing().await?;
+        limits.admission.run(self, self.ensure_signing()).await?;
         drop(preparation);
         Ok(JournalShieldReadiness::Ready(owner))
     }

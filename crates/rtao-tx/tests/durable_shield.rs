@@ -802,3 +802,6 @@ mod identity;
 
 #[path = "durable_shield/causal_identity.rs"]
 mod causal_identity;
+
+#[path = "durable_shield/deadline.rs"]
+mod deadline;
