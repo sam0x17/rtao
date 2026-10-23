@@ -614,7 +614,20 @@ async fn paired_native_cancelled_publication_retains_actual_account_claim_until_
     tokio::time::timeout(Duration::from_secs(2), store.released.notified())
         .await
         .unwrap();
-    assert!(binding.reserve().is_ok());
+    // The account lease notification precedes retirement of the operation
+    // claim in SubmissionClaims. Wait for actual reacquisition of BOTH claims,
+    // retaining the acquired reservation through the committed-record checks.
+    let _reservation = tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            match binding.reserve() {
+                Ok(reservation) => break reservation,
+                Err(JournalError::Owned) => tokio::task::yield_now().await,
+                Err(error) => panic!("claim retirement failed: {error:?}"),
+            }
+        }
+    })
+    .await
+    .expect("publication worker did not retire both claims");
     let record = binding.record().unwrap();
     assert_eq!(record.attempts.len(), 1);
     assert_eq!(record.attempts[0].hash, hash);
