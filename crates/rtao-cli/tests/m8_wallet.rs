@@ -671,6 +671,65 @@ async fn identity_and_empty_swap_check_use_public_reads_only() -> TestResult {
 }
 
 #[tokio::test]
+async fn swap_check_reports_the_recovery_lock_with_or_without_an_announcement() -> TestResult {
+    let root = Root::new()?;
+    root.public("alice", COLD)?;
+    for announced in [false, true] {
+        let mut state = FakeState::default();
+        state.seed_python(
+            "SubtensorModule",
+            "ColdkeySwapDisputes",
+            &[json!(COLD)],
+            json!(0),
+        )?;
+        if announced {
+            state.seed_python(
+                "SubtensorModule",
+                "ColdkeySwapAnnouncements",
+                &[json!(COLD)],
+                json!([0, format!("0x{}", "cd".repeat(32))]),
+            )?;
+        }
+        let (client, chain) = client(state).await?;
+        let (parsed, mut ctx, sink) = context(&root, &["wallet", "swap-check"])?;
+        wallet::run_with_client(
+            &mut ctx,
+            &client,
+            group(&parsed)?,
+            &mut PromptHistory::default(),
+        )
+        .await?;
+        let output = value(&sink)?;
+        if announced {
+            assert_eq!(output["execute_block"], 0);
+            assert_eq!(output["blocks_remaining"], 0);
+            assert_eq!(output["executable"], "now (waiting period elapsed)");
+            assert_eq!(output["new_coldkey_hash"], format!("0x{}", "cd".repeat(32)));
+            assert_eq!(output["disputed"], false);
+            assert_eq!(output["dispute_block"], Value::Null);
+            assert_eq!(output["recovery_locked"], true);
+        } else {
+            assert_eq!(
+                output,
+                json!({
+                    "status": "recovery locked (no announcement)",
+                    "recovery_locked": true,
+                    "allowed": "announce, execute, or dispute a coldkey swap; shielded submission",
+                })
+            );
+        }
+        assert!(
+            !chain
+                .requests()
+                .iter()
+                .any(|r| r.method.starts_with("author_"))
+        );
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn transfer_preview_retains_native_exact_amount_and_never_reads_private_material()
 -> TestResult {
     let root = Root::new()?;

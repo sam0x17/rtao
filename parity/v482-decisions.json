@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "scope": "Source mapping decisions only. Independent review of the inherited 49-file production port remains OPEN. No runtime execution, oracle parity, full-suite or milestone acceptance is established.",
+  "old_upstream": "6a972693ae9580541225bd37696ac2fee26b8ae9",
+  "new_upstream": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+  "decisions": [
+    {
+      "source": "common/src/proxy.rs",
+      "decision": "Twenty-one variants: Validate=19 and Weights=20 extend both u8 codecs; new tests fix SCALE indices. Normal proxy_contract extraction cross-checks Python PROXY_TYPES and metadata. Runtime permission filters are not executed by the client.",
+      "consumers": "xtask/src/extract_chain.rs; vendor/upstream/extracted/chain_rules.json"
+    },
+    {
+      "source": "eco-tests/src/mock.rs",
+      "decision": "FakeProxier adds has_delegator_proxies returning false. Chain mock support remains outside the client port; no claim to run these FRAME tests.",
+      "consumers": "none needed"
+    },
+    {
+      "source": "pallets/subtensor/src/coinbase/run_coinbase.rs",
+      "decision": "Due Null subnet now takes the first scheduler slot, preventing starvation under cap=1. The mapped blocks_until_next_auto_epoch body is unchanged; runtime slot ordering, deferred epochs and emission execution remain outside this extracted client projection.",
+      "consumers": "vendor/upstream/extracted/owner_map.json; crates/rtao-intents/src/hyperparameters/planner.rs"
+    },
+    {
+      "source": "pallets/subtensor/src/subnets/subnet.rs",
+      "decision": "Registration reasserts SubnetEmissionEnabled=true, including reused IDs; start_call activation remains separately gated. Native orchestration submits registration/start calls and correlates events; it does not simulate runtime emission initialization.",
+      "consumers": "crates/rtao-neuron/src/owner_ops.rs; crates/rtao-tx/src/registration.rs"
+    },
+    {
+      "source": "runtime/src/transaction_payment_wrapper.rs",
+      "decision": "Fee payer traversal changes to at most three consecutively opted-in proxy levels; homogeneous direct proxy batches may terminate traversal, with four declared DB reads. Normal fee_contract extraction authenticates production declarations, imports, owners and exact method bodies. The client warning is not a payer resolver; charging/refunds and runtime policy execution remain outside the mapping.",
+      "consumers": "xtask/src/extract_fee_contract.rs; vendor/upstream/extracted/chain_rules.json"
+    },
+    {
+      "source": "sdk/bittensor-core/tests/e2e.rs",
+      "decision": "Announcement sample sends cleartext V2 and compares a destination-and-policy commitment. Maintained source/staged checks cover the core test surface; actual coldkey lifecycle remains deferred under Q30. The core dependency stays v478 with the existing patch; these are parity-pin test inputs, not a core dependency upgrade.",
+      "consumers": "xtask/src/core_surface.rs; xtask/src/staged.rs; parity/e2e_map.toml"
+    },
+    {
+      "source": "sdk/bittensor-core/tests/e2e_support/mod.rs",
+      "decision": "Announcement sample wraps announce_coldkey_swap_v2(new_coldkey); legacy hash announcement remains raw-only. Sample source mapping does not assert live e2e execution or upgrade the separately pinned core dependency.",
+      "consumers": "xtask/src/core_surface.rs; xtask/src/staged.rs; parity/e2e_map.toml"
+    },
+    {
+      "source": "sdk/python/bittensor/_generated/calls.py",
+      "decision": "Metadata adds release reservation=154, V2 announcement=155 and root-only keep-locked reset=156; legacy hash call remains raw. Regeneration independently checks Python wire surfaces against authenticated V15/V16 metadata; metadata is not runtime execution.",
+      "consumers": "rtao_runtime::generated::calls"
+    },
+    {
+      "source": "sdk/python/bittensor/_generated/errors.py",
+      "decision": "Two reservation errors add indices 188/189; existing ColdKeyAlreadyAssociated index 58 remains with retired-error text. Normal regeneration independently checks metadata error identity/docs.",
+      "consumers": "rtao_runtime::generated::errors::MODULE_ERRORS"
+    },
+    {
+      "source": "sdk/python/bittensor/_generated/storage.py",
+      "decision": "Adds destination reservation forward/reverse maps. Native descriptors are regenerated from pinned metadata and cross-checked with Python; absence, TTL and runtime reservation enforcement are not certified.",
+      "consumers": "rtao_runtime::generated::storage"
+    },
+    {
+      "source": "sdk/python/bittensor/_substrate.py",
+      "decision": "Included failed receipts now retain actual fee and triggered events. Candidate native submission already projects those into its typed result; pool rejection remains separate with no included receipt. Production-port review remains open.",
+      "consumers": "crates/rtao-client/src/submit.rs; crates/rtao-tx/src/executor.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/cli/commands/evm/association.py",
+      "decision": "Proof names the effective dispatch hotkey selected by proxy context and submits with the same context. Candidate native proof_hotkey also handles typed multisig/external context. This record identifies the consumer, not independent approval of signing/routing logic.",
+      "consumers": "crates/rtao-cli/src/commands/evm/association.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/cli/commands/proxy.py",
+      "decision": "Remove --all resolves proxy context once; only direct local operation may follow with a hotkey-signed cleanup for Validate/Weights grants. External signer/no local hotkey skips that follow-up. Candidate native flow is mapped without claiming independent execution/semantic acceptance.",
+      "consumers": "crates/rtao-cli/src/commands/proxy.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/cli/commands/sudo.py",
+      "decision": "Set identity exposes all eight optional fields, reads current identity once and preserves omitted fields while permitting explicit empty strings. Candidate native identity flow owns this adaptation; independent port review stays open.",
+      "consumers": "crates/rtao-cli/src/commands/hparams.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/cli/commands/wallet.py",
+      "decision": "Swap-check distinguishes recovery-locked/no announcement from no state and carries recovery_locked in normal output. Native typed optional execute/hash fields and wallet views map this state; no runtime recovery execution is attested.",
+      "consumers": "crates/rtao-cli/src/commands/wallet_m8/views.rs; crates/rtao-cli/src/commands/wallet.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/error_descriptions/subtensor.py",
+      "decision": "Retired associated-coldkey guidance now describes merges; adds both reservation descriptions. Normal leaf/assembly extraction and catalog generation validate exact text/provenance and Rust CHAIN_ERRORS descriptions.",
+      "consumers": "rtao_catalog::CHAIN_ERRORS (description field)"
+    },
+    {
+      "source": "sdk/python/bittensor/error_map.py",
+      "decision": "Reservation occupied maps to AlreadyExists; reservation missing maps to NotFound. Normal literal extraction/catalog generation consumes the exact map; error classification makes no runtime admission claim.",
+      "consumers": "rtao_catalog::py; rtao_catalog::CHAIN_ERRORS"
+    },
+    {
+      "source": "sdk/python/bittensor/evm/abi/neuron.json",
+      "decision": "Adds announceColdkeySwapV2(bytes32). Vendored SDK ABI and canonical Solidity counterpart are normal extraction inputs; ABI catalog comparison proves signature/selectors, not precompile execution.",
+      "consumers": "vendor/upstream/evm/abi/neuron.json; rtao_evm::precompile_catalog"
+    },
+    {
+      "source": "sdk/python/bittensor/hyperparams.py",
+      "decision": "Only subnet emission-enabled help changes: new registrations start true, root may disable; existing type/root-only control remains. Normal named-table/catalog generation consumes the help text; no local emission model is introduced.",
+      "consumers": "rtao_catalog::HYPERPARAMS; rtao_primitives::Hyperparam"
+    },
+    {
+      "source": "sdk/python/bittensor/intents/coldkey.py",
+      "decision": "Announce sends the cleartext account through V2, removes coldkey_hash and adds destination-signed reservation release. Typed native methods/generated calls cover these operations, summaries and warnings. Source prose still describes a simple stored hash while the core e2e fixture uses a policy commitment: the client constructs neither commitment and leaves it to runtime; do not invent client hash compatibility. Runtime lifecycle and independent inherited-port review remain open.",
+      "consumers": "crates/rtao-intents/src/coldkey.rs; crates/rtao-intents/src/generated/passthrough.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/intents/proxy.py",
+      "decision": "Adds Validate/Weights, HOTKEY_PROXY_TYPES and proxy_grant_signer; add/remove select hotkey dynamically, remove_proxies has from_hotkey=false default. Existing native doc aliases expose both helpers and typed SignerRole replaces Python strings. Candidate implementations/fixtures are mapped; independent port review remains open.",
+      "consumers": "crates/rtao-intents/src/proxy.rs; crates/rtao-intents/src/generated/interfaces.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/intents/registration.py",
+      "decision": "Only descriptions change: pool-side emission flag initially true and owner start_call still gates activation. Call shapes and policy declarations remain unchanged under normal extraction; orchestration is not a chain scheduler.",
+      "consumers": "rtao_intents::registration; rtao_neuron::owner_ops"
+    },
+    {
+      "source": "sdk/python/bittensor/intents/root.py",
+      "decision": "Only emission-enable description changes to default true for new registrations. Root origin, wraps and call arguments remain unchanged; normal extraction checks the actual declarations.",
+      "consumers": "rtao_intents::SetSubnetEmissionEnabled; crates/rtao-intents/src/generated/interfaces.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/reads/accounts.py",
+      "decision": "Dispute Some(0) yields recovery_locked even without announcement; execute/hash become optional. Other absent/nonzero dispute semantics remain explicit. Candidate typed read/generation represent the optional fields; independent behavior review remains open.",
+      "consumers": "crates/rtao-reads/src/reads/m6_accounts.rs; crates/rtao-reads/src/generated/dispatch.rs"
+    },
+    {
+      "source": "sdk/python/bittensor/reads/hyperparameters.py",
+      "decision": "Only subnet_emission_enabled read help changes to new registrations starting enabled. Storage hit and parameter signatures remain unchanged under normal extraction.",
+      "consumers": "crates/rtao-reads/src/generated/interfaces.rs; rtao_catalog::READS"
+    },
+    {
+      "source": "sdk/python/codegen/check.py",
+      "decision": "RAW_ONLY adds legacy hash announce and root-only keep-locked reset; V2 announce/release become wrapped. Normal catalog/spec coverage checks enforce the split; runtime validation is separate.",
+      "consumers": "xtask/src/parity_catalog.rs; rtao_catalog::py"
+    },
+    {
+      "source": "sdk/python/tests/harness/samples.py",
+      "decision": "Adds the zero-argument reservation-release sample. Normal authenticated sample resolver and catalog generation check coverage/shape. Sample availability does not mean running the runtime lifecycle or Python oracle.",
+      "consumers": "xtask/src/extract_resolved.rs; rtao_catalog::py"
+    },
+    {
+      "source": "website/apps/bittensor-website/public/catalog/errors.json",
+      "decision": "Two new errors/classifications/descriptions plus revised retired error text. Vendored bytes are authenticated and normal extraction/catalog checks reproduce Rust output; no runtime error execution is claimed.",
+      "consumers": "vendor/upstream/catalog/errors.json; rtao_catalog::CHAIN_ERRORS"
+    },
+    {
+      "source": "website/apps/bittensor-website/public/catalog/intents.json",
+      "decision": "Adds reservation-release intent, V2 announce wraps, proxy hotkey cleanup field and updated help. Normal catalog/extraction/generation checks bind 86 intent interfaces; class-level defaults alone cannot attest dynamic signer behavior.",
+      "consumers": "vendor/upstream/catalog/intents.json; rtao_catalog::INTENTS"
+    },
+    {
+      "source": "website/apps/bittensor-website/public/catalog/reads.json",
+      "decision": "Updates coldkey swap optional/recovery-lock and emission help contracts without changing the 103-read inventory. Normal extractor/generator binds parameters, storage projections and interface bytes; runtime reads remain unverified.",
+      "consumers": "vendor/upstream/catalog/reads.json; rtao_catalog::READS"
+    }
+  ]
+}

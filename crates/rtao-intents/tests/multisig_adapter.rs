@@ -93,7 +93,7 @@ struct RootCall;
 impl ProbeKind for RootCall {
     // The wrapper test below guards this authenticated catalog position;
     // enabling the public M5 intent feature is unnecessary for this fixture.
-    const SPEC: &'static IntentSpec = &rtao_catalog::INTENTS[59];
+    const SPEC: &'static IntentSpec = &rtao_catalog::INTENTS[60];
     type Role = Coldkey;
     type Origin = Root;
 }

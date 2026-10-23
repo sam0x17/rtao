@@ -2,223 +2,223 @@
 schema = 1
 
 [tests."intent_add_proxy"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_add_stake"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_add_stake_limit"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_announce_coldkey_swap"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_associate_evm_key"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_associate_hotkey"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_batch"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_burned_register"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_claim_root"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_claim_root_with_hotkey"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_clear_coldkey_swap_announcement"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_commit_weights"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_contribute_crowdloan"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_create_crowdloan"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_create_pure_proxy"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_decrease_take"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_dispute_coldkey_swap"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_dissolve_crowdloan"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_evm_withdraw"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_execute_proxy_announced"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_finalize_crowdloan"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_fund_evm_key"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_increase_take"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_kill_pure_proxy"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_lock_stake"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_move_lock"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_move_stake"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_approve"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_cancel"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_execute"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_multisig_threshold_1"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_refund_crowdloan"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_register_leased_network"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_register_subnet"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_proxies"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_proxy"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_stake"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_remove_stake_limit"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_reset_axon"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_reveal_weights"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_root_register"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_serve_axon"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_serve_axon_tls"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_serve_prometheus"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_auto_stake"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_childkey_take"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_children"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_crowdloan_max_contribution"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_hyperparameter"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_identity"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_mechanism_count"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_perpetual_lock"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_root_claim_type"]
 na = "Retired core constructor absent from the pinned runtime and Python catalog."
 
 [tests."intent_set_subnet_identity"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_take"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_set_weights"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_stake_burn"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_start_call"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_swap_coldkey_announced"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_swap_hotkey"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_swap_stake"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_terminate_lease"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_transfer"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_transfer_all"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_transfer_stake"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_trim_subnet"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_unstake_all"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_unstake_all_alpha"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_crowdloan_cap"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_crowdloan_end"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_crowdloan_min_contribution"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_update_symbol"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."intent_withdraw_crowdloan"]
-rtao = "rtao_intents::intent_plans::all_85_catalog_operations_plan_with_fake_chain"
+rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
 [tests."pyt:e2e/test_emission_weights_cli.py::test_btcli_subnets_emission_against_localnet"]
 na = "Q30 defers this live-runtime, device or cross-language scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime or platform execution."

@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/{accounts,chain,identity,neurons}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/accounts.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/accounts.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/identity.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/neurons.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/chain.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
@@ -22,21 +22,28 @@ fn surface(descriptor: &'static str, detail: impl Into<String>) -> ReadError {
     }
 }
 
-/// A pending coldkey migration and its independent dispute state.
+/// A coldkey's swap state: a pending migration, its dispute and the recovery lock.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ColdkeySwapAnnouncement {
-    /// Earliest block at which the announced migration can execute.
-    pub execute_block: u32,
-    /// BlakeTwo256 commitment to the destination coldkey, as 0x hex.
-    pub new_coldkey_hash: String,
+    /// Earliest block at which the announced migration can execute; `None`
+    /// when the coldkey is recovery-locked without an announcement.
+    pub execute_block: Option<u32>,
+    /// The stored announcement commitment, as 0x hex. Announcements through
+    /// `announce_coldkey_swap_v2` commit to the destination and its policy,
+    /// not to the bare key hash. `None` without an announcement.
+    pub new_coldkey_hash: Option<String>,
     /// Whether the chain records a nonzero dispute block.
     pub disputed: bool,
     /// Dispute block; zero has the same absent meaning as Python's false value.
     pub dispute_block: Option<u32>,
+    /// Whether root's `reset_coldkey_swap_keep_locked` left the coldkey
+    /// recovery-locked (stored dispute block 0): it can only make swap calls
+    /// until a successful swap or a full reset, even with no announcement.
+    pub recovery_locked: bool,
 }
 
 /// Read an announcement and dispute together at one block (D-002).
-// py: sdk/python/bittensor/reads/accounts.py:81-99
+// py: sdk/python/bittensor/reads/accounts.py:77-100
 pub async fn coldkey_swap_announcement<V: View + ?Sized>(
     view: &V,
     coldkey_ss58: AccountId,
@@ -47,14 +54,20 @@ pub async fn coldkey_swap_announcement<V: View + ?Sized>(
             st::subtensor_module::COLDKEY_SWAP_DISPUTES.at((coldkey_ss58,)),
         ))
         .await?;
-    Ok(announcement.map(|(execute_block, new_coldkey_hash)| {
-        let dispute_block = dispute.filter(|block| *block != 0);
-        ColdkeySwapAnnouncement {
-            execute_block,
-            new_coldkey_hash: format!("0x{}", hex::encode(new_coldkey_hash.0)),
-            disputed: dispute_block.is_some(),
-            dispute_block,
-        }
+    let recovery_locked = dispute == Some(0);
+    if announcement.is_none() && !recovery_locked {
+        return Ok(None);
+    }
+    let dispute_block = dispute.filter(|block| *block != 0);
+    Ok(Some(ColdkeySwapAnnouncement {
+        execute_block: announcement
+            .as_ref()
+            .map(|(execute_block, _)| *execute_block),
+        new_coldkey_hash: announcement
+            .map(|(_, new_coldkey_hash)| format!("0x{}", hex::encode(new_coldkey_hash.0))),
+        disputed: dispute_block.is_some(),
+        dispute_block,
+        recovery_locked,
     }))
 }
 

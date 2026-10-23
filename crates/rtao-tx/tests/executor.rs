@@ -449,7 +449,7 @@ async fn reviewed_call_guard_accepts_an_unchanged_semantic_call() {
 #[tokio::test]
 async fn dispatch_failure_is_returned_without_retry_or_success_extras() {
     let (executor, fake, keys) = fixture().await;
-    fake.mutate_state(|state| state.queue_submit(SubmitScript::InBlockThenFinalized { events:json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"BadOrigin":null},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}]) }));
+    fake.mutate_state(|state| state.queue_submit(SubmitScript::InBlockThenFinalized { events:json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"TransactionPayment","event_id":"TransactionFeePaid","attributes":{"who":AccountId([7; 32]),"actual_fee":1_234_567,"tip":0},"topics":[]},{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"BadOrigin":null},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}]) }));
     let intent = Remark::default();
     let result = executor
         .execute(
@@ -469,7 +469,9 @@ async fn dispatch_failure_is_returned_without_retry_or_success_extras() {
             .iter()
             .any(|event| event.matches("System", "ExtrinsicFailed"))
     );
-    assert!(result.fee.is_none());
+    // An included failure still paid its fee, as Python's failed result reports.
+    assert_eq!(result.fee, Some(Balance::<Tao>::from_rao(1_234_567)));
+    assert_eq!(result.to_json()["fee_tao"], json!(0.001234567));
     assert_eq!(result.error.unwrap().name.as_deref(), Some("BadOrigin"));
     assert!(result.data.is_empty());
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
@@ -944,7 +946,7 @@ async fn runtime_stamp_change_replans_once_and_refuses_a_second_change(spec_chan
 async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
     let (executor, _, _) = fixture().await;
     let tools = executor.tools().unwrap();
-    assert_eq!(tools.len(), 85);
+    assert_eq!(tools.len(), 86);
     assert!(tools.windows(2).all(|pair| pair[0].name < pair[1].name));
     for (spec, tool) in rtao_catalog::INTENTS.iter().zip(tools) {
         let catalog: Value = serde_json::from_str(spec.catalog_json).unwrap();
@@ -989,7 +991,7 @@ async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
 async fn coldkey_fee_warning_precedes_failed_fee_probe_and_stays_out_of_preflight() {
     struct HotWeights;
     impl IntentInterface for HotWeights {
-        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[63];
+        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[64];
         type Role = rtao_signer::Hotkey;
         type Origin = Signed;
         type Output = ();

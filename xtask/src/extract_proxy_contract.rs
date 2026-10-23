@@ -132,10 +132,11 @@ fn proxy_types(source: &str) -> Result<Vec<(u8, String)>> {
         .iter()
         .enumerate()
         .map(|(index, variant)| {
+            // Doc comments are the only attributes that cannot change the codec.
             ensure!(
                 variant.fields.is_empty()
                     && variant.discriminant.is_none()
-                    && variant.attrs.is_empty(),
+                    && variant.attrs.iter().all(|attr| attr.path().is_ident("doc")),
                 "proxy variant no longer unconditional implicit unit variant"
             );
             Ok((u8::try_from(index)?, variant.ident.to_string()))
@@ -310,8 +311,10 @@ mod tests {
     fn proxy_codec_rejects_index_order_conversion_and_unknown_fallback_drift() -> Result<()> {
         let source = source()?;
         let actual = proxy_types(&source)?;
-        assert_eq!(actual.len(), 19);
+        assert_eq!(actual.len(), 21);
         assert_eq!(actual[18], (18, "BasketTrading".into()));
+        assert_eq!(actual[19], (19, "Validate".into()));
+        assert_eq!(actual[20], (20, "Weights".into()));
         for changed in [
             format!(
                 "const value: u8 = 0;\n{}",
@@ -335,6 +338,7 @@ mod tests {
             ),
             source.replace("            _ => Err(())", "            _ => Ok(Self::Any)"),
             source.replace("    BasketTrading,", "    BasketTrading = 42,"),
+            source.replace("    Weights,\n}", "    #[cfg(test)]\n    Weights,\n}"),
             source.replace(
                 "    Owner,\n    NonCritical,",
                 "    NonCritical,\n    Owner,",
@@ -366,7 +370,7 @@ mod tests {
                 .as_array()
                 .context("variants missing")?
                 .len(),
-            19
+            21
         );
         let mut changed = tables.clone();
         changed[PYTHON]["values"]["PROXY_TYPES"]["value"]["tuple"][0] = json!("Other");

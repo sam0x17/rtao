@@ -406,8 +406,8 @@ fn authenticated_samples_preserve_schemas_roundtrip_and_unknown_field_refusal() 
     let samples = samples()?;
     let expected: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
     ensure!(
-        expected.len() == 85,
-        "review changes to the pinned 85-op catalog"
+        expected.len() == 86,
+        "review changes to the pinned 86-op catalog"
     );
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == expected,
@@ -478,12 +478,12 @@ fn authenticated_samples_preserve_schemas_roundtrip_and_unknown_field_refusal() 
 #[tokio::test]
 // pyt: unit/test_intents_table.py::test_every_intent_has_a_sample
 // pyt: unit/test_intents_table.py::test_composes_and_plans_offline
-async fn all_85_catalog_operations_plan_with_fake_chain() -> Result<()> {
+async fn all_86_catalog_operations_plan_with_fake_chain() -> Result<()> {
     let samples = samples()?;
     let expected: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
     ensure!(
-        expected.len() == 85,
-        "review changes to the pinned 85-op catalog"
+        expected.len() == 86,
+        "review changes to the pinned 86-op catalog"
     );
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == expected,
@@ -503,7 +503,7 @@ async fn all_85_catalog_operations_plan_with_fake_chain() -> Result<()> {
     }
     ensure!(
         failures.is_empty(),
-        "all-85 planning failures:\n{}",
+        "all-86 planning failures:\n{}",
         failures.join("\n")
     );
     Ok(())
@@ -511,10 +511,10 @@ async fn all_85_catalog_operations_plan_with_fake_chain() -> Result<()> {
 
 #[tokio::test]
 // pyt: unit/test_intents_table.py::TestPolicyEnforcement::test_spend_cap_blocks_every_spending_intent
-async fn all_85_sample_plans_enforce_declared_spend_caps_without_private_access() -> Result<()> {
+async fn all_86_sample_plans_enforce_declared_spend_caps_without_private_access() -> Result<()> {
     let samples = samples()?;
     let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
-    ensure!(names.len() == 85, "review the pinned 85-op catalog");
+    ensure!(names.len() == 86, "review the pinned 86-op catalog");
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == names,
         "spend policy must cover every authenticated sample"
@@ -583,7 +583,7 @@ async fn all_85_sample_plans_enforce_declared_spend_caps_without_private_access(
         "nonspending controls disappeared"
     );
     ensure!(
-        bounded.len() + unbounded.len() + permitted.len() == 85,
+        bounded.len() + unbounded.len() + permitted.len() == 86,
         "spend-policy sample inventory is incomplete"
     );
     Ok(())
@@ -591,10 +591,10 @@ async fn all_85_sample_plans_enforce_declared_spend_caps_without_private_access(
 
 #[tokio::test]
 // pyt: unit/test_intents_table.py::TestPolicyEnforcement::test_netuid_allowlist
-async fn all_85_sample_plans_enforce_subnet_allowlists_without_private_access() -> Result<()> {
+async fn all_86_sample_plans_enforce_subnet_allowlists_without_private_access() -> Result<()> {
     let samples = samples()?;
     let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
-    ensure!(names.len() == 85, "review the pinned 85-op catalog");
+    ensure!(names.len() == 86, "review the pinned 86-op catalog");
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == names,
         "subnet policy must cover every authenticated sample"

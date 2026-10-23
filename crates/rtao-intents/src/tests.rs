@@ -161,7 +161,7 @@ fn weight_tool_construction_canonicalizes_the_python_mapping_shape() {
 
 #[cfg(feature = "all")]
 #[test]
-fn all_85_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
+fn all_86_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
     use crate::AnyIntent;
     use serde_json::{Value, json};
     let address = rtao_primitives::AccountId([1; 32]).to_ss58(110);
@@ -365,8 +365,8 @@ fn all_85_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             );
         }
     }
-    assert_eq!(rtao_catalog::INTENTS.len(), 85);
-    assert_eq!(tested.len(), 85);
+    assert_eq!(rtao_catalog::INTENTS.len(), 86);
+    assert_eq!(tested.len(), 86);
 }
 
 #[cfg(feature = "serving")]

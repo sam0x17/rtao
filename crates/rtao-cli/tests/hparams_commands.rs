@@ -172,8 +172,8 @@ fn owner_spellings_select_actual_intents_and_keep_exact_protocol_values() -> Tes
     Ok(())
 }
 
-#[test]
-fn identity_python_flags_map_to_native_fields_and_default_other_fields_to_empty() -> TestResult {
+#[tokio::test]
+async fn identity_flags_keep_current_values_for_omitted_fields_without_a_terminal() -> TestResult {
     let parsed = parse(&[
         "rtao",
         "hparams",
@@ -184,26 +184,108 @@ fn identity_python_flags_map_to_native_fields_and_default_other_fields_to_empty(
         "τ two",
         "--url",
         "https://example.test",
+        "--contact",
+        "ops@example.test",
         "--description",
-        "example",
+        "",
         "--yes",
+        "--json",
     ])?;
-    let (mut ctx, _) = context(&parsed)?;
-    let Request::Transaction(request) = Request::from_matches(
+    let (mut ctx, sink) = context(&parsed)?;
+    let Request::Identity(identity) = Request::from_matches(
         &mut ctx,
         parsed.subcommand().ok_or("group")?.1,
         &mut PromptHistory::default(),
     )?
     else {
-        return Err("expected transaction".into());
+        return Err("expected identity request".into());
     };
+    let mut state = FakeState::default();
+    state.seed_python(
+        "SubtensorModule",
+        "SubnetIdentitiesV3",
+        &[json!(2)],
+        json!({"subnet_name": "old", "github_repo": "https://example.test/repo", "description": "kept?", "discord": "old#1"}),
+    )?;
+    let (client, chain) = client(state).await?;
+    let request = identity
+        .complete(&ctx, &client, &mut PromptHistory::default())
+        .await?;
     let intent = request.intent()?.to_json();
     assert_eq!(intent["op"], "set_subnet_identity");
+    assert_eq!(intent["netuid"], 2);
+    // Passed flags win, including an explicit empty string.
     assert_eq!(intent["subnet_name"], "τ two");
     assert_eq!(intent["subnet_url"], "https://example.test");
-    assert_eq!(intent["description"], "example");
-    assert_eq!(intent["github_repo"], "");
+    assert_eq!(intent["subnet_contact"], "ops@example.test");
+    assert_eq!(intent["description"], "");
+    // The chain replaces the whole identity, so omitted fields keep their values.
+    assert_eq!(intent["github_repo"], "https://example.test/repo");
+    assert_eq!(intent["discord"], "old#1");
+    assert_eq!(intent["logo_url"], "");
     assert_eq!(intent["additional"], "");
+    // JSON mode does not render the current identity before the plan.
+    assert!(sink.text(Stream::Stdout)?.is_empty());
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn identity_without_a_name_needs_one_only_when_the_subnet_has_none() -> TestResult {
+    for (seeded, succeeds) in [(false, false), (true, true)] {
+        let parsed = parse(&[
+            "rtao",
+            "hparams",
+            "set-identity",
+            "--netuid",
+            "3",
+            "--discord",
+            "new#2",
+            "--yes",
+        ])?;
+        let (mut ctx, sink) = context(&parsed)?;
+        let Request::Identity(identity) = Request::from_matches(
+            &mut ctx,
+            parsed.subcommand().ok_or("group")?.1,
+            &mut PromptHistory::default(),
+        )?
+        else {
+            return Err("expected identity request".into());
+        };
+        let mut state = FakeState::default();
+        if seeded {
+            state.seed_python(
+                "SubtensorModule",
+                "SubnetIdentitiesV3",
+                &[json!(3)],
+                json!({"subnet_name": "three", "logo_url": "https://example.test/logo.png"}),
+            )?;
+        }
+        let (client, _) = client(state).await?;
+        let result = identity
+            .complete(&ctx, &client, &mut PromptHistory::default())
+            .await;
+        assert_eq!(result.is_ok(), succeeds);
+        let stderr = sink.text(Stream::Stderr)?;
+        if let Ok(request) = result {
+            assert_eq!(request.args["subnet_name"], "three");
+            assert_eq!(request.args["discord"], "new#2");
+            assert_eq!(request.args["logo_url"], "https://example.test/logo.png");
+            assert!(
+                sink.text(Stream::Stdout)?
+                    .contains("subnet 3 current identity")
+            );
+        } else {
+            assert!(stderr.contains("subnet 3 has no identity yet"));
+        }
+        client.close().await;
+    }
     Ok(())
 }
 

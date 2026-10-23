@@ -303,6 +303,7 @@ fn leaf_safety(
         | (
             "SubtensorModule",
             "announce_coldkey_swap"
+            | "announce_coldkey_swap_v2"
             | "associate_evm_key"
             | "try_associate_hotkey"
             | "claim_root"
@@ -317,6 +318,7 @@ fn leaf_safety(
             | "move_stake"
             | "move_stake_limit"
             | "pow_register"
+            | "release_own_coldkey_swap_destination_reservation"
             | "remove_stake"
             | "remove_stake_limit"
             | "reveal_weights"

@@ -61,6 +61,7 @@ rustls-native-certs = { workspace = true, optional = true }
 
 [dev-dependencies]
 rtao-testkit.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
 
 [[bin]]
 name = "rtao-validator"

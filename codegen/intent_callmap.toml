@@ -5,6 +5,10 @@
 pallet = "Proxy"
 call = "add_proxy"
 
+[passthrough.announce_coldkey_swap]
+pallet = "SubtensorModule"
+call = "announce_coldkey_swap_v2"
+
 [passthrough.associate_hotkey]
 pallet = "SubtensorModule"
 call = "try_associate_hotkey"
@@ -80,6 +84,10 @@ call = "register_leased_network"
 [passthrough.register_subnet]
 pallet = "SubtensorModule"
 call = "register_network"
+
+[passthrough.release_own_coldkey_swap_destination_reservation]
+pallet = "SubtensorModule"
+call = "release_own_coldkey_swap_destination_reservation"
 
 [passthrough.remove_proxies]
 pallet = "Proxy"

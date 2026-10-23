@@ -981,7 +981,7 @@ fn independent_producers(root: &Path, rows: &[Row]) -> Result<BTreeSet<String>> 
     }
     if kinds.contains(&IndependentProducer::Descriptions) {
         // Recompute all leaf tables, exact assembly grammar, per-entry source
-        // provenance and the 404 catalog descriptions, then the Rust output.
+        // provenance and the 406 catalog descriptions, then the Rust output.
         crate::extract::check_at(root)?;
         catalog::catalogs(root)?;
     }

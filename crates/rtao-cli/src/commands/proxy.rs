@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/proxy.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/proxy.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
 // Additional source at the same commit/license: sdk/python/bittensor/config.py.
 //! Proxy delegation commands and pure-account creation/retirement bookkeeping.
 
@@ -73,7 +73,7 @@ pub fn command() -> Result<Command, CliError> {
             Arg::new("all_proxies")
                 .long("all")
                 .action(ArgAction::SetTrue)
-                .help("Remove every proxy at once; pure accounts may become inaccessible."),
+                .help("Remove every proxy at once, including the hotkey's Validate/Weights grants; pure accounts may become inaccessible."),
         );
     let kill = proxy_choices(generated::intent_command("kill_pure_proxy")?, "proxy_type")
         .name("kill")
@@ -139,6 +139,7 @@ enum AfterSubmit {
     None,
     Create { name: Option<String> },
     Kill { name: Option<String> },
+    RemoveHotkeyProxies,
 }
 
 enum RequestKind {
@@ -192,11 +193,20 @@ impl Request {
                     period: period(leaf),
                 };
                 tx.intent()?;
+                // Resolve once: when acting for another account (--proxy-for or
+                // the proxy_for config), only that account's proxies are in scope.
+                let dispatch_as = ctx.dispatch_proxy(None)?;
                 return Ok(Self {
                     kind: RequestKind::Transaction {
                         tx,
-                        after: AfterSubmit::None,
-                        proxy_override: None,
+                        after: if dispatch_as.is_none() {
+                            AfterSubmit::RemoveHotkeyProxies
+                        } else {
+                            AfterSubmit::None
+                        },
+                        proxy_override: Some(
+                            dispatch_as.map_or_else(|| "self".into(), |real| real.to_string()),
+                        ),
                     },
                 });
             }
@@ -495,9 +505,55 @@ pub async fn execute(
                     after_submit(ctx, tx, after, receipt).await?;
                 }
             }
+            if matches!(after, AfterSubmit::RemoveHotkeyProxies)
+                && result.as_ref().is_none_or(|receipt| receipt.success)
+            {
+                let hotkey =
+                    remove_hotkey_proxies(ctx, client, tx, options, external, history).await?;
+                return Ok(hotkey.or(result));
+            }
             Ok(result)
         }
     }
+}
+
+/// Validate/Weights grants are keyed by the hotkey, which the coldkey's
+/// `remove_proxies` cannot revoke. Follow it with a hotkey-signed call when
+/// the local hotkey holds any proxies.
+async fn remove_hotkey_proxies(
+    ctx: &mut AppContext,
+    client: &Client,
+    coldkey: &TxRequest,
+    options: SubmissionOptions<'_>,
+    external: Option<&dyn ExternalSignerFactory>,
+    history: &mut PromptHistory,
+) -> Result<Option<ExtrinsicResult>, CliError> {
+    let Some(hotkey) = local_hotkey(ctx) else {
+        return Ok(None);
+    };
+    let data = rtao::reads::generated::interfaces::proxies(client, hotkey)
+        .await
+        .map_err(CliError::from)?;
+    if data.proxies.is_empty() {
+        return Ok(None);
+    }
+    let tx = TxRequest {
+        op: "remove_proxies",
+        args: Map::from_iter([("from_hotkey".into(), json!(true))]),
+        period: coldkey.period,
+    };
+    let previous = ctx.globals.proxy_for.replace("self".into());
+    let result = generated::execute_tx(ctx, client, &tx, options, external, history).await;
+    ctx.globals.proxy_for = previous;
+    result
+}
+
+/// Address of the wallet's hotkey, or `None` when no local hotkey is available.
+fn local_hotkey(ctx: &AppContext) -> Option<AccountId> {
+    if ctx.globals.uses_external_signer() {
+        return None;
+    }
+    ctx.resolve_address("hotkey_ss58", None).ok().flatten()
 }
 
 fn kill_dispatched(ctx: &AppContext, receipt: &ExtrinsicResult) -> bool {
@@ -879,7 +935,7 @@ async fn after_submit(
     receipt: &ExtrinsicResult,
 ) -> Result<(), CliError> {
     match after {
-        AfterSubmit::None => Ok(()),
+        AfterSubmit::None | AfterSubmit::RemoveHotkeyProxies => Ok(()),
         AfterSubmit::Kill { name: Some(name) } => {
             context_book(ctx)?.remove(name).await.map_err(failure)?;
             ctx.books
@@ -1223,6 +1279,45 @@ mod tests {
         )?;
         assert_eq!(transaction(&request)?.op, "remove_proxies");
         assert_eq!(reads.load(Ordering::SeqCst), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn remove_all_scopes_to_the_dispatch_account_and_follows_up_only_when_direct() -> TestResult {
+        let spawner = SPAWNER.to_string();
+        for (target, expected, follow_up) in [
+            (None, "self".to_owned(), true),
+            (Some("self"), "self".to_owned(), true),
+            (Some(spawner.as_str()), spawner.clone(), false),
+        ] {
+            let mut argv = vec!["rtao", "proxy", "remove", "--all", "--yes", "--json"];
+            if let Some(target) = target {
+                argv.extend(["--proxy-for", target]);
+            }
+            let parsed = parse(&argv)?;
+            let (mut ctx, _, _) = context(&parsed, Books::default(), false, &[])?;
+            let request = Request::from_matches(
+                &mut ctx,
+                parsed.subcommand().ok_or("proxy")?.1,
+                &mut PromptHistory::default(),
+            )?;
+            let RequestKind::Transaction {
+                tx,
+                after,
+                proxy_override,
+            } = &request.kind
+            else {
+                return Err("not transaction".into());
+            };
+            assert_eq!(tx.op, "remove_proxies");
+            assert!(tx.args.is_empty());
+            assert_eq!(proxy_override.as_deref(), Some(expected.as_str()));
+            assert_eq!(matches!(after, AfterSubmit::RemoveHotkeyProxies), follow_up);
+        }
+        // An external signer has no local hotkey whose grants could be revoked.
+        let parsed = parse(&["rtao", "proxy", "remove", "--all", "--signer", "vault"])?;
+        let (ctx, _, _) = context(&parsed, Books::default(), false, &[])?;
+        assert!(local_hotkey(&ctx).is_none());
         Ok(())
     }
 
