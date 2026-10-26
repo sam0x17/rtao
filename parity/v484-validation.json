@@ -618,7 +618,7 @@
           "ignored": 0
         }
       ],
-      "note": "193 passed; socket_config_and_cache_are_refused_without_replacement fails before binding because the required temporary path exceeds Unix SUN_LEN. No production change or guard bypass."
+      "note": "193 passed; socket_config_and_cache_are_refused_without_replacement fails before binding because the required temporary path exceeds Unix SUN_LEN. No production change or guard bypass. The separately recorded compiled-fixture rerun passes with shorter task-root-relative paths; the original failed run remains preserved."
     },
     {
       "command": "cargo --offline test -p xtask core_patch::tests",
@@ -637,6 +637,24 @@
         }
       ],
       "note": "Three local tests pass; hosted_git_fixture_proves_exact_trees_path_modes_and_append_only_history correctly requires bounded hosted CI."
+    },
+    {
+      "command": "compiled rtao-client unit-test binary config::tests::socket_config_and_cache_are_refused_without_replacement --exact --nocapture",
+      "status": "passed",
+      "log": {
+        "name": "supervisor-client-socket.log",
+        "sha256": "a36883e41ca896c78d17117d15e9914d4563786e3bbf07ab0299ca467cfa97e2",
+        "bytes": 197
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "note": "Rerun of the same binary used by the recorded client-unit suite, from the task root with task-root-relative temporary paths. Resolved scratch stays inside the original task root; no rebuild, source change or guard bypass."
     }
   ],
   "porting_report": {
@@ -655,13 +673,14 @@
     "Added automatic payout guidance to all stake-list and wallet inspect/overview paths without losing lock/free or lock-target output.",
     "Updated seed counts/order, exact read-fixture references and direct plural-read coverage without weakening guards.",
     "Corrected stale metadata fixture bindings and scope counts after regeneration.",
-    "Factory defaults tested through both CLI spellings and actual constructed intents; EVM read/write boundary and ABI width/mutability covered."
+    "Factory defaults tested through both CLI spellings and actual constructed intents; EVM read/write boundary and ABI width/mutability covered.",
+    "Resolved the local Unix socket path-length limitation by running the same compiled fixture with task-root-relative scratch; all 194 client-unit cases now have passing results across the original run and focused rerun."
   ],
   "remaining_gaps": [
     "Hosted full CI and both core API build probes were not invoked.",
     "No independent Python oracle, container/image execution, localnet e2e or platform/device execution.",
     "Lifecycle migration, cleanup settlement/cursors, fee/refund enforcement and EVM gas/authorization remain unverified runtime behavior.",
-    "One existing local socket fixture cannot bind under required long temporary root; one hosted-only fixture intentionally refuses."
+    "The hosted-only core-patch fixture intentionally refuses local execution."
   ],
   "compatibility": {
     "validated_spec_range": null,
@@ -672,7 +691,7 @@
   "changed_input_sha256": {
     "COMPAT.md": "5800a57395299e75d9a660a9ead8831ab57a238951a6c8c173223170195643bc",
     "NOTICE": "47cc35b64dc3ee65c7f2fc6e6ab2443d0b30e939ee42db7a0fbac615fe95e7b3",
-    "PLAN.md": "e5487be7af85a962a47f70155ceda16dc31c5c4fa67301b1b0be612d4d985763",
+    "PLAN.md": "cca5b4ddd8a7c61a705523ec373b08cf12ba1a94278de6933706980e140d06b2",
     "book/src/upstream-log.md": "70bc91a2419030e8943297f56074e504ec11fd312935cb538aec238f8d67e8c4",
     "codegen/probe-pins.toml": "0838e1ee002ac8b2c2d0f1eae007439d0d2ba1ac8adc2d193ec9a868d4e85b4a",
     "codegen/read_types.toml": "3ab942df8dacf8479fdb6bb594be2bb1e7232a85e29dd2425c62916f22473d92",
@@ -753,7 +772,7 @@
     "crates/rtao/src/lib.rs": "2b7f00455bfa1e8a7c07ed569821d775bda52a77d74525d39e92d2f7f0edb5f5",
     "docs/compat/build-weight/aarch64-apple-darwin.json": "08e0897542864590c47405bd117f52f9a0d7b49443a16f0130ec3127ab49aee1",
     "docs/compat/v484-provenance.json": "7e75b05523fe272327101483949bbf549677e0ad1029f20feda09c549d62c582",
-    "docs/compat/v484-upgrade.md": "43117096976a9d155f620678a060a4d74c1c1158aae150fa8774d24a753066f5",
+    "docs/compat/v484-upgrade.md": "5ff14553315a496d3e5c1bda6ef59795594660a265a8346410ba75b472e00c23",
     "docs/plan/python-module-map.md": "dc5775f3a9717ae8c196c93a66634d4f3bac79e62854ba7b60282cb0b5150059",
     "parity/e2e_map.toml": "8e42f7c1356bceb62f6359073953bd656615c3a45da819772090fd70d7c9e1b9",
     "parity/exports_extra.toml": "fb71461ebb5a6a7a93520981b54d83b1421037199166713851b5da983d438da2",

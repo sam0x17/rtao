@@ -98,11 +98,13 @@ Local checks and their exact result summary are recorded in
 scoped development checks. Runtime tests (70), read tests (137), the affected CLI
 and claim suites, EVM routing/ABI tests and blocking-facade checks pass, along
 with strict parity, source-only pins, import/extraction/regeneration, compatibility
-and scoped Clippy. Client units pass 193 tests; one existing Unix socket fixture
-cannot bind because the required task temporary path exceeds `SUN_LEN`. The
-hosted-only core-patch fixture correctly refuses local execution; its three
-local tests pass. These two local limitations remain recorded, with no guard
-bypass. Free GitHub `ubuntu-latest` remains authoritative
+and scoped Clippy. The original client-unit run passes 193 tests and records
+one Unix socket path-length failure. The same compiled socket fixture then
+passes with task-root-relative temporary paths inside the same scratch root,
+completing the 194 client-unit cases without a source change or guard bypass.
+Both executions remain recorded. The hosted-only core-patch fixture correctly
+refuses local execution; its three local tests pass.
+Free GitHub `ubuntu-latest` remains authoritative
 for full validation and was not invoked. No image/container, Python oracle,
 localnet e2e, device, soak or fuzz execution is claimed. There is no fresh
 independent Python output comparison, no live dissolution/payout evidence and
