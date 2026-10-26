@@ -76,6 +76,10 @@ fn seed_availability(state: &mut FakeState) {
 
 fn seed() -> FakeState {
     let mut state = FakeState::default();
+    // Exercise the legacy non-root lifecycle branch and all declared read hits.
+    state
+        .seed_python("SubtensorModule", "NetworksAdded", &[json!(1)], json!(true))
+        .unwrap();
     for (item, keys, value) in [
         ("TokenSymbol", vec![json!(0)], json!("root-symbol")),
         ("TokenSymbol", vec![json!(1)], json!("Ω")),
@@ -176,7 +180,15 @@ fn check_observations<V: View>(name: ReadName, view: &RecordingView<V>, requests
             (touch.kind, touch.pallet_or_api.clone(), touch.item.clone())
         })
         .collect();
-    assert_eq!(observed.len(), 1, "{name}");
+    assert_eq!(
+        observed.len(),
+        if matches!(name, ReadName::StakeForColdkey | ReadName::StakeForColdkeys) {
+            7
+        } else {
+            1
+        },
+        "{name}"
+    );
     assert_eq!(observed.len(), name.spec().hits.len(), "{name}");
     let hashes = view.block_hashes();
     assert_eq!(hashes.len(), 1, "{name}");

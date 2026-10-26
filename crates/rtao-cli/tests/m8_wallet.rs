@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_subnet_lifecycle.py @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7 (Apache-2.0); modified by rtao.
 //! Wallet parity exercises actual command dispatch, keyfile policy and fake RPC.
 
 use rtao::{
@@ -839,6 +840,12 @@ async fn overview_json_preserves_dust_positions_locks_root_yield_and_registered_
     root.public("alice", COLD)?;
     let mut state = FakeState::default();
     state.seed_python(
+        "SubtensorModule",
+        "SubnetState",
+        &[json!(1)],
+        json!("Started"),
+    )?;
+    state.seed_python(
         "System",
         "Account",
         &[json!(COLD)],
@@ -906,14 +913,14 @@ async fn overview_json_preserves_dust_positions_locks_root_yield_and_registered_
             {
                 "netuid":1, "hotkey":HOT, "stake":"3.000000000Ω", "stake_amount":3.0,
                 "stake_unit":"alpha (netuid 1)", "value":"τ1.500000000", "value_tao":1.5,
-                "registered":true, "uid":17,
+                "registered":true, "uid":17, "subnet_state":"started",
                 "locked":"2.000000000Ω", "locked_amount":2.0,
                 "available":"1.000000000Ω", "available_amount":1.0,
             },
             {
                 "netuid":1, "hotkey":OWNED, "stake":"0.000000002Ω", "stake_amount":dust_amount,
                 "stake_unit":"alpha (netuid 1)", "value":"τ0.000000001", "value_tao":dust_value,
-                "registered":false, "uid":null,
+                "registered":false, "uid":null, "subnet_state":"started",
                 "locked":"2.000000000Ω", "locked_amount":2.0,
                 "available":"1.000000000Ω", "available_amount":1.0,
             },
@@ -958,6 +965,18 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
         serde_json::to_vec(&json!({"ss58Address":HOT,"cryptoType":1}))?,
     )?;
     let mut state = FakeState::default();
+    state.seed_python(
+        "SubtensorModule",
+        "SubnetState",
+        &[json!(1)],
+        json!("PendingDissolution"),
+    )?;
+    state.seed_python(
+        "SubtensorModule",
+        "SubnetState",
+        &[json!(2)],
+        json!("Dissolving"),
+    )?;
     for hotkey in [HOT, OWNED, DUST, LOCK_TARGET] {
         state.seed_python("SubtensorModule", "Owner", &[json!(hotkey)], json!(COLD))?;
     }
@@ -1069,6 +1088,10 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
         let first = &text[alice_one..alice_two];
         let second = &text[alice_two..bob_one];
         let bob = &text[bob_one..];
+        assert!(first.contains("pending automatic payout"));
+        assert!(first.contains("unavailable for manual unstaking"));
+        assert!(second.contains("automatic payout in progress"));
+        assert!(second.contains("unavailable for manual unstaking"));
         assert!(first.contains("5.000000001Ω"));
         assert!(first.contains("τ2.500000000"));
         assert!(second.contains("7.000000000Ψ"));

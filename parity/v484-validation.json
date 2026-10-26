@@ -1,0 +1,828 @@
+{
+  "schema": 1,
+  "scope": "Local development validation of finalized v484 source candidate; no hosted CI, independent Python oracle or runtime execution claim. Repeated suites overlap and counts must not be summed as unique tests.",
+  "base_commit": "b19a803b935258100f66ade9d5dcd302987fd5b0",
+  "parity_commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
+  "execution_policy": {
+    "umask": "022",
+    "cargo": "sequential under one exclusive lock with one shared target",
+    "temporary_files": "task-scoped root; synthetic tests underneath",
+    "public_sources_only": true
+  },
+  "checks": [
+    {
+      "command": "cargo --offline xtask pin --parity v484 --prepare-candidate",
+      "status": "passed",
+      "log": {
+        "name": "prepare-candidate.log",
+        "sha256": "49c5a007d4116fcfb893dc3efc9dd35070bdcb41d9ed6542e5e0e209d64e8367",
+        "bytes": 713
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask import-upstream --verify-only",
+      "status": "passed",
+      "log": {
+        "name": "validate-import.log",
+        "sha256": "fbbd078b5d0783834b0fcdee3062a0860ee362df06a960e949f32dd5d16574d5",
+        "bytes": 181
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask pin --check --source-only",
+      "status": "passed",
+      "log": {
+        "name": "validate-pin-source.log",
+        "sha256": "28923f458e55d7aee4f40f208c517eb459f76da6b7277eaa6a07bba318305e0f",
+        "bytes": 327
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask extract --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-extract.log",
+        "sha256": "c0f07fd24885466910522f3dddeccc3c43263acf9e8389268e8c4f309206c1f1",
+        "bytes": 206
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask regen --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-regen.log",
+        "sha256": "7ce831e2a7bc2490c7bf375604edc84264cbc16bca6006ec9568799881d898a0",
+        "bytes": 492
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask parity bless <all 364 explicitly reviewed paths>",
+      "status": "passed",
+      "log": {
+        "name": "final-parity-bless.log",
+        "sha256": "f727337524793e5b8854e91967f023e9fe9eb62fe5fa8b956c898a2a5d6eb43e",
+        "bytes": 15537
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask parity matrix",
+      "status": "passed",
+      "log": {
+        "name": "finish-matrix.log",
+        "sha256": "930cb742ba001614944e7c48be525067535eb4377a1c9dadda4cf3550f7de1c4",
+        "bytes": 161
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask parity check --strict",
+      "status": "passed",
+      "log": {
+        "name": "finish-parity.log",
+        "sha256": "45bac179949fc9fec1e8eb2cd66bd793ac9b99b8fe2ac12cb3d217f85c923793",
+        "bytes": 3733
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask parity report --base <source baseline> --out <task evidence>",
+      "status": "passed",
+      "log": {
+        "name": "final-porting-report.log",
+        "sha256": "ca896e620ca64cf37dc7ef94f56314a82ff6e8accded31554bf68e98da9140e8",
+        "bytes": 545
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask probe pins --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-probe-check.log",
+        "sha256": "9803bd48924bfeb2138798094f61d1e96508038c914d297d5c26005fa6defbae",
+        "bytes": 138
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask compat --measure-build-weight --build-target aarch64-apple-darwin",
+      "status": "passed",
+      "log": {
+        "name": "validate-compat-measure.log",
+        "sha256": "4860ae156f6e0d507afc4cf82fd46bb85ceb7079c5d8f384d8f66f1648d6610c",
+        "bytes": 312
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask compat --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-compat-check.log",
+        "sha256": "0ff71dfd1c5d4993512e81d5523c4f5c5cbb4cfeacf5125928db66b942d7a9b4",
+        "bytes": 197
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline test -p xtask pin::tests",
+      "status": "passed",
+      "log": {
+        "name": "final-xtask-pin.log",
+        "sha256": "f7ea573b2731afd129e9f0f22b78e881aa842f438dcc840929fb5800f94baa63",
+        "bytes": 2645
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 24,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p xtask extract",
+      "status": "passed",
+      "log": {
+        "name": "final-xtask-extract.log",
+        "sha256": "f53e4804e14c2b8eac101fec714057a09ac83d39274a161cb0f248bb80082e87",
+        "bytes": 10244
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 91,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p xtask parity::tests",
+      "status": "passed",
+      "log": {
+        "name": "final-xtask-parity.log",
+        "sha256": "694501fb67d80d769bd89bc61a271d714c346c4c055b1e8b4c13cd3be8f87adf",
+        "bytes": 2957
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 31,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p xtask regen",
+      "status": "passed",
+      "log": {
+        "name": "final-xtask-regen.log",
+        "sha256": "9f194a7cf85f1366fce60bc15fd811d21b5a48cfc7d3156d1d3129b5bde7b857",
+        "bytes": 3059
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 28,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-runtime --lib --tests",
+      "status": "passed",
+      "log": {
+        "name": "validate-runtime.log",
+        "sha256": "2962bf06c40612a4eca59b019dd3134c7f1d37b27de37faf0afec35e03f63868",
+        "bytes": 9657
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 60,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-reads --tests",
+      "status": "passed",
+      "log": {
+        "name": "validate-reads.log",
+        "sha256": "a9f54106d8c703446e4cab6fced580d1fc751341937fe511a9460fde13ab68cf",
+        "bytes": 14532
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-intents --all-features --lib root_claim",
+      "status": "passed",
+      "log": {
+        "name": "root-claim-tests.log",
+        "sha256": "627e73667005c9bbe9e724a76b72a3a84944243b4db1c50506f7de5fae1cdd9a",
+        "bytes": 3898
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 22,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-intents --all-features --lib staking_claims",
+      "status": "passed",
+      "log": {
+        "name": "final-staking-claims.log",
+        "sha256": "339766e941189efb49f06618e75046e9fdaea0be0bcd77e443f4cdf77e7bafd2",
+        "bytes": 2137
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --test subnets_commands --test m8_stake_commands --test generated_commands --no-fail-fast",
+      "status": "passed",
+      "log": {
+        "name": "cli-tests.log",
+        "sha256": "bd730a0a08bd83a067ba131fd382a41580b67a7845694187a42f678fa3d1c05e",
+        "bytes": 5937
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 32,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 14,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --test wallet_reads --test m8_wallet",
+      "status": "passed",
+      "log": {
+        "name": "validate-wallet-cli.log",
+        "sha256": "0f85411d2afb0dd37007887043547c24e1414a204740a661efd3831fb2d0c2cd",
+        "bytes": 3452
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 14,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --test m8_stake_commands --test wallet_reads --test subnets_commands",
+      "status": "passed",
+      "log": {
+        "name": "final-cli-lifecycle-3.log",
+        "sha256": "fc09b71340066b897f96fa8f6e52ee271bf3ffedff01109345a46474d30ea381",
+        "bytes": 3841
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --test generated_commands factory_backed_cli_defaults_are_fresh_per_parse",
+      "status": "passed",
+      "log": {
+        "name": "final-factory.log",
+        "sha256": "149a271e79f2dbf13166e662768421291bd74a6882dad1c0739ffbe59d3dd72c",
+        "bytes": 468
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao --features blocking --test facade_contract",
+      "status": "passed",
+      "log": {
+        "name": "validate-blocking-facade.log",
+        "sha256": "cd88164e5aa71ccf31652b5c90082224ea26802878e2cad718b6c3a7bfac89c2",
+        "bytes": 2968
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-metagraph --test decode",
+      "status": "passed",
+      "log": {
+        "name": "validate-metagraph.log",
+        "sha256": "2580f18b6c3d5c4c708fffb335ebbbb32d9ebc6ab227bd0856ea032a09804788",
+        "bytes": 3400
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 16,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-evm --lib precompiles",
+      "status": "passed",
+      "log": {
+        "name": "evm-tests.log",
+        "sha256": "507009bb04106af76a31f5b82097fdb6e17c7fcfa9029f688897fc6b114abc72",
+        "bytes": 4240
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-evm --lib subnet_liquid_alpha_consensus",
+      "status": "passed",
+      "log": {
+        "name": "finish-evm-abi.log",
+        "sha256": "8ce36727a3f5aea6b7631a6d7c4bf7587bbae9fb62f9c5543dac2572f0e1e85c",
+        "bytes": 721
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --features evm --lib liquid_alpha_consensus",
+      "status": "passed",
+      "log": {
+        "name": "finish-evm-routing.log",
+        "sha256": "602991c037ca33fef8a0ddffed37d5bfdfed67a83b528b53f72d70272dd8ac82",
+        "bytes": 3751
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --features evm --test m7_evm_contracts",
+      "status": "passed",
+      "log": {
+        "name": "finish-evm-cli.log",
+        "sha256": "d71d3b77aef74fb34ca68016b1079294e753ea0a8f932c47e304088ba1b2d37a",
+        "bytes": 970
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline clippy -p rtao -p rtao-cli -p rtao-evm -p rtao-reads -p rtao-intents -p rtao-runtime -p rtao-client -p xtask --all-targets --features rtao/blocking -- -D warnings",
+      "status": "passed",
+      "log": {
+        "name": "validate-clippy.log",
+        "sha256": "99688d1f727cc539ef9178f722e2838efb0b692e1c20ab5134e0b49d5b29a05d",
+        "bytes": 4037
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline clippy -p rtao-cli -p rtao-evm --all-targets --features rtao-cli/evm -- -D warnings",
+      "status": "passed",
+      "log": {
+        "name": "finish-clippy.log",
+        "sha256": "83ad6160d0cef4af8553e007e0fddac8ccb6b66ff8d3d43f98d6d39042546e0b",
+        "bytes": 2655
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline clippy -p rtao-cli --test generated_commands -- -D warnings",
+      "status": "passed",
+      "log": {
+        "name": "final-factory-clippy.log",
+        "sha256": "62dba3ef4b38426474a3af52840cd3eca26242651e9b22d4dc52f85b9246c5c1",
+        "bytes": 2303
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline fmt --all --check",
+      "status": "passed",
+      "log": {
+        "name": "final-format.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline test -p rtao-client --lib",
+      "status": "local-environment-failure",
+      "log": {
+        "name": "validate-client-unit.log",
+        "sha256": "4890a2d2f5b1570dc2d8aa2a973c71c2e81347171dcefacafc5ad1a3b7221699",
+        "bytes": 19213
+      },
+      "suites": [
+        {
+          "status": "FAILED",
+          "passed": 193,
+          "failed": 1,
+          "ignored": 0
+        }
+      ],
+      "note": "193 passed; socket_config_and_cache_are_refused_without_replacement fails before binding because the required temporary path exceeds Unix SUN_LEN. No production change or guard bypass."
+    },
+    {
+      "command": "cargo --offline test -p xtask core_patch::tests",
+      "status": "hosted-only-refusal",
+      "log": {
+        "name": "final-xtask-core-patch.log",
+        "sha256": "a742eb29f27ac93da2ae3b7732c7812d8b170a593db132ea3adc06a84c7b16e3",
+        "bytes": 1023
+      },
+      "suites": [
+        {
+          "status": "FAILED",
+          "passed": 3,
+          "failed": 1,
+          "ignored": 0
+        }
+      ],
+      "note": "Three local tests pass; hosted_git_fixture_proves_exact_trees_path_modes_and_append_only_history correctly requires bounded hosted CI."
+    }
+  ],
+  "porting_report": {
+    "sha256": "ed2180ba259bfdc44b214623c7decd786a984cfe084f2d48ac70393c4f749051",
+    "changed_sources": 30,
+    "added_reads": [
+      "subnet_state",
+      "subnet_states"
+    ],
+    "auto_blessed": [],
+    "oracle": "unavailable; current finite extractor rejects baseline root-claim function inventory; no fresh independent Python batch"
+  },
+  "resolved_review_findings": [
+    "Ported lifecycle and all four stake joins with immutable snapshots and historical metadata fallback.",
+    "Completed both async/blocking APIs and explicit top-level/reads enum exports.",
+    "Added automatic payout guidance to all stake-list and wallet inspect/overview paths without losing lock/free or lock-target output.",
+    "Updated seed counts/order, exact read-fixture references and direct plural-read coverage without weakening guards.",
+    "Corrected stale metadata fixture bindings and scope counts after regeneration.",
+    "Factory defaults tested through both CLI spellings and actual constructed intents; EVM read/write boundary and ABI width/mutability covered."
+  ],
+  "remaining_gaps": [
+    "Hosted full CI and both core API build probes were not invoked.",
+    "No independent Python oracle, container/image execution, localnet e2e or platform/device execution.",
+    "Lifecycle migration, cleanup settlement/cursors, fee/refund enforcement and EVM gas/authorization remain unverified runtime behavior.",
+    "One existing local socket fixture cannot bind under required long temporary root; one hosted-only fixture intentionally refuses."
+  ],
+  "compatibility": {
+    "validated_spec_range": null,
+    "validated_runtimes": [],
+    "oracle_status": "optional-unverified",
+    "build_weight": "cargo tree only; precommit input hashes and dirty provenance recorded; no target binary execution"
+  },
+  "changed_input_sha256": {
+    "COMPAT.md": "5800a57395299e75d9a660a9ead8831ab57a238951a6c8c173223170195643bc",
+    "NOTICE": "47cc35b64dc3ee65c7f2fc6e6ab2443d0b30e939ee42db7a0fbac615fe95e7b3",
+    "PLAN.md": "e5487be7af85a962a47f70155ceda16dc31c5c4fa67301b1b0be612d4d985763",
+    "book/src/upstream-log.md": "70bc91a2419030e8943297f56074e504ec11fd312935cb538aec238f8d67e8c4",
+    "codegen/probe-pins.toml": "0838e1ee002ac8b2c2d0f1eae007439d0d2ba1ac8adc2d193ec9a868d4e85b4a",
+    "codegen/read_types.toml": "3ab942df8dacf8479fdb6bb594be2bb1e7232a85e29dd2425c62916f22473d92",
+    "compat.json": "1d550b2b802c624b2fd0edd7eadb30c10a5a3c4148b4d2ec14393e75848f42fc",
+    "crates/rtao-catalog/src/config.rs": "9ac9c0db82f17978e92f7c6e3e5aade6d16ea7998cbf70a3d7a48abb1016f452",
+    "crates/rtao-catalog/src/errors.rs": "b1a3a239e971355e44789b2e8ad197f673294d5d5b61d298344f066eed94d4ba",
+    "crates/rtao-catalog/src/hyperparams.rs": "f3c55bc3f76ab37673a72b263ee3c15cfc9af3386aafc6f8689f38ac5e465bca",
+    "crates/rtao-catalog/src/owner_map.rs": "23f12dcd8afd5bd613dc40dbb1cb8dfe5ab5311e91b9f322e278bda891199420",
+    "crates/rtao-catalog/src/py.rs": "1eb0dbe54d060d19a3942e9a202753bca624696afa20b7ae08cc3521fbe49320",
+    "crates/rtao-catalog/src/rt.rs": "48c1e5b0d4e9f6cac566fa1a2f68eb60021d983ac85caff8fdb40e8225a538f5",
+    "crates/rtao-catalog/src/runtime_py.rs": "3593468a0cecce369c0bcc8ce146aa037d347114b3acd376454e4666e0cc7bbb",
+    "crates/rtao-catalog/src/specs.rs": "4f73f87ca82e6af0f04919d32aa4f3988a82824c431acd41e71d3620bc151321",
+    "crates/rtao-cli/src/commands/evm/precompiles.rs": "e7f87e39b923b3f989b9b0a290bb1912ff66c69bb1a011dddd5b0fe1baeaa926",
+    "crates/rtao-cli/src/commands/stake.rs": "53b7d5c0b8d5e31e33912f1320c652aa06c0fd4640875d6782188004257e1caf",
+    "crates/rtao-cli/src/commands/stake_picker.rs": "1899190c2d252bcead0a1d63f1c93e438258a826d529eba63479f3d86791089f",
+    "crates/rtao-cli/src/commands/subnets.rs": "d5970eb2336a75727bf46a85cc24846e7f359feddb979ff65c49a4e87e845825",
+    "crates/rtao-cli/src/commands/wallet.rs": "652d359fc67c54d61f58d3095a384c1a0a6b57c2501831b3de0b367650b0d01d",
+    "crates/rtao-cli/src/commands/wallet_m8/views.rs": "211673c35b0792dbdf31c15c06b781355599766f73270407286a0b8d92e40d38",
+    "crates/rtao-cli/src/root_helpers/basket_index_data.rs": "2ee5dd65b17c24a5f4c5ecea60968678040c372ebaa78c72d453090879919362",
+    "crates/rtao-cli/tests/generated_commands.rs": "2e8476a351ef359db2ed56b0d8cf07dddd8f64f21c8b183debe1b55b72fad6c6",
+    "crates/rtao-cli/tests/m8_stake_commands.rs": "d9e6af1b2b07cc9bf79f8f912b4e85a40d43366a75c14cff172ec2f1e0c4f32a",
+    "crates/rtao-cli/tests/m8_wallet.rs": "7a49b2bc6a2442ad700d2d5f1ad676b99af711e63e5d33d232edff5a81d8e093",
+    "crates/rtao-cli/tests/subnets_commands.rs": "90da7c2ac58c3967c95059ce30e2376f70f30388285911341b7031720699baac",
+    "crates/rtao-cli/tests/wallet_reads.rs": "e3b6f9bdd1ee13c5f9f853f8f2f2793ef69025288be37314527b80b4892574db",
+    "crates/rtao-client/src/client.rs": "a8f7e692b6ae5db972c20465274bcbe7e9b6c09406bf70bab04cc5bf7749cbb4",
+    "crates/rtao-client/src/compat.rs": "d15faada69b1ac79b9077a40728620fae1e3edf3272092e31f8155d64b74dcab",
+    "crates/rtao-client/src/legacy_api_table.rs": "724c5ab8c25e1919e7be5a1d851d8ca44b2a6cff0973822c3957a0643b339569",
+    "crates/rtao-core-ext/src/ops/dispatch_error_tables.rs": "acc6d2deae022951531783f0096f9614e144221466c80cc0aa11e429c773b5e6",
+    "crates/rtao-core-ext/src/ops/receipt_tables.rs": "08631e2899ee1057a0830c51ff6c0602943ca643d8d75dc9cf20ae2bc671c6ea",
+    "crates/rtao-evm/src/precompile_catalog.rs": "0341e1879891c82f2d1e04a1f4a31a9cd47343fff57a7096e6393a11c7539c63",
+    "crates/rtao-evm/src/precompiles.rs": "3c03b1184dee6fdc4f7d6986d06907e1942c20f5aabda8c4adad9cafdcd984f9",
+    "crates/rtao-intents/src/generated/any_intent.rs": "05f9250716bde8525ddfd3689c7a191d8dadaba62f731a888854aab4dd84ec1b",
+    "crates/rtao-intents/src/generated/defaults.rs": "da1c604ba244465e9f70d26a8e97945359b4d09d8ca29684751db996bcd2d9e4",
+    "crates/rtao-intents/src/generated/interfaces.rs": "b036c27cb2867ed05b698fc794403d7457f2bf52dc3845d10cd38f7ea1805660",
+    "crates/rtao-intents/src/generated/metadata.rs": "bda12db85e93b7f925e66d906eb5b6864befd16437909e2f010ba89c27f8be65",
+    "crates/rtao-intents/src/generated/mod.rs": "d621ac09962a7063d1d5bba847d6f613c689291f12acd2a22bca810a7aed2cbb",
+    "crates/rtao-intents/src/generated/passthrough.rs": "ce3b3c697da778d7027d2d8f0a1f1dc306c0983449969766b3436b15952c70b2",
+    "crates/rtao-intents/src/generated/pending.rs": "60e4ed38ced2607bed95e8199f6dcf151454022e19bce803c2c8bb402516cb18",
+    "crates/rtao-intents/src/root_claim.rs": "a3c999d7e93ab22591dc24b4c3c2e469baea6facd1e52436353ff13bd0c14614",
+    "crates/rtao-intents/src/staking_claims.rs": "930ce0f63d6d02f10c32c50e88c2aba4571f23e6b2da2f63ef1d5e59aa5a675e",
+    "crates/rtao-reads/src/generated/defaults.rs": "434b3a081831f0ea92e2e0bfb97e482b697a173f38c79bddf7cf2d6b13813d61",
+    "crates/rtao-reads/src/generated/dispatch.rs": "64761139c6d8db3bc8e8ff31a2a4d7a06d4fbdf8e2d190aa3729e5c2e86f8a71",
+    "crates/rtao-reads/src/generated/interfaces.rs": "5f090fece8282c8cf4efeb3ed09ce8aebd5cabac8b2aef0750436d5fdacd6a27",
+    "crates/rtao-reads/src/generated/names.rs": "8b6c5761c1b00297ed38314b3e1c5844ab7488686ccbb03d9a595f8435124ce1",
+    "crates/rtao-reads/src/generated/namespace_methods.rs": "ac9bd0d70a045b77799eb26c89299e4d7fff8565d4c0de5df285921f0fbd4666",
+    "crates/rtao-reads/src/generated/namespaces.rs": "773cf2faf896be10f9b1fdea54ce2d091e8c6df87035f744e074dcad5d1bdab7",
+    "crates/rtao-reads/src/generated/specs.rs": "15552ad365c54f6d723009376af1c56854ded0646e6838dac5103457f639118a",
+    "crates/rtao-reads/src/lib.rs": "bfcfd17c5a51403ba28c54899add61c9022e474c69cbe9134585e25249e69764",
+    "crates/rtao-reads/src/reads/lifecycle.rs": "b0361d68d2b0a70ed0996d3fd80caccb2af0b7a53d005bc0fbc6abd4d7e420c6",
+    "crates/rtao-reads/src/reads/m6_root.rs": "9bb6fd34eb3d23c3a7f5c33ccab58333bc8b65cd6493ead7f0506e015be3cb53",
+    "crates/rtao-reads/src/reads/m6_staking.rs": "54984707e88338891426609ced36b2a5037b430b7033cc1de7e9c3d2d0fb82f8",
+    "crates/rtao-reads/src/reads/mod.rs": "2f788ced9b2eb13527b2c00dbff1d2080afb1a1843f0445f95d8ce78ce646179",
+    "crates/rtao-reads/src/reads/namespaces.rs": "6c2aea62ad71ed3b5ed06ab6114388713c74897ec5442949d89dee638223f879",
+    "crates/rtao-reads/src/reads/owner.rs": "372f5522e0cde0039c288226fb0c25c727b6f65864a6617f11dae23363326820",
+    "crates/rtao-reads/tests/catalog_samples.rs": "6f7077be401bdbf2b43ca5529149f077b692031894fb800b6c0290e5f00a6ac4",
+    "crates/rtao-reads/tests/lifecycle.rs": "df88414e61093c3f193fca1c15cc8bf1463bbfac795365383caf72ee79c99f5c",
+    "crates/rtao-reads/tests/m2.rs": "1fd3af05e2cad08e52f26092c6ac7308a30bc19cbc7f6234fff2ff87fe67f55a",
+    "crates/rtao-reads/tests/m6_root.rs": "b1fff1a3323d2c43ba01a8b052fe5c9f3eab324bb75b74f953695eaa394caa29",
+    "crates/rtao-reads/tests/m6_staking.rs": "89fc2066453ef8523777a6efe8c417da9c01dbbae505f1ac3984318e32daa5d2",
+    "crates/rtao-reads/tests/owner.rs": "8efa6c2c577c8895abea530184cfdcd09106ea633736e6f58680380d4b765e23",
+    "crates/rtao-rpc/src/generated/py_rpc.rs": "0f091def47148369de9fb915976beff7a2ed942f13fce48e7ea64f32a0f7a69d",
+    "crates/rtao-runtime/src/generated/calls.rs": "767bccc705831a78c1727aea7d6704c621812c7709105c5fe14c27850a6eb26b",
+    "crates/rtao-runtime/src/generated/constants.rs": "244302d71852a0d8c35d252b7c4b3fadf76cf777c5beb0915a73406c3e7fb85a",
+    "crates/rtao-runtime/src/generated/errors.rs": "a10abda58aec112c307601e1f49d41cd82b9fffb5505d0f4324c874e9c737e91",
+    "crates/rtao-runtime/src/generated/events.rs": "d00f00265e00613ce0c264efa4cdc65869fcca68f243c264e90d5b11f4274bcb",
+    "crates/rtao-runtime/src/generated/extensions.rs": "534775c43371e33963c90d8a6ad16631d5be739fe6f653b0a2ab9545ad35e56f",
+    "crates/rtao-runtime/src/generated/mod.rs": "496eb5eabe3daae1f4d3e864238adaaad5e0410ce8d58d558d4b85a40fed736a",
+    "crates/rtao-runtime/src/generated/runtime_apis.rs": "7e6e433b8264c33058aa3a0692ddac18aa10aadd54b23e4dc8abf3140f07e386",
+    "crates/rtao-runtime/src/generated/selective.rs": "c22578d5356b591b0f97146092cc2ba0f7221d4feeea9d9b8dcc798a96d2666f",
+    "crates/rtao-runtime/src/generated/shapes.rs": "f6698ce796e09981c2d3d589d95da826fc93acaefed2715ced99e38390a68c4a",
+    "crates/rtao-runtime/src/generated/storage.rs": "0bbc15214ae3bb5548e90aaf07e41b5894a87a12916c099970c2876117ae9354",
+    "crates/rtao-runtime/src/surface.rs": "f5c166084d9be4849cbd4de9c0dc2ee2028f5e6a568187d09043b665c44d34eb",
+    "crates/rtao-runtime/tests/exact_enums.rs": "d41b3699157bf804648358d0c13f818430a6f9b9b1b693a8c9bba840cf87238e",
+    "crates/rtao-runtime/tests/generated.rs": "711ed04cd859857bf823b2bde82d3ce083a39a102c3cc35eb4ed722cf74637ed",
+    "crates/rtao-testkit/src/fakes/state.rs": "f89a98ea2db94a134aad4971be9b89b9aa1c9125727248c9c23f8e2275021e57",
+    "crates/rtao/src/blocking.rs": "7a50b75f895b4b148a0c4c9504cf2381879cfb6029a337ff99d82765c2b78173",
+    "crates/rtao/src/generated/blocking_namespaces.rs": "1adbd66fb134e1a3ec376bc04f755564a20f9d83f506f4f7da0a34fd99fc7601",
+    "crates/rtao/src/lib.rs": "2b7f00455bfa1e8a7c07ed569821d775bda52a77d74525d39e92d2f7f0edb5f5",
+    "docs/compat/build-weight/aarch64-apple-darwin.json": "08e0897542864590c47405bd117f52f9a0d7b49443a16f0130ec3127ab49aee1",
+    "docs/compat/v484-provenance.json": "7e75b05523fe272327101483949bbf549677e0ad1029f20feda09c549d62c582",
+    "docs/compat/v484-upgrade.md": "43117096976a9d155f620678a060a4d74c1c1158aae150fa8774d24a753066f5",
+    "docs/plan/python-module-map.md": "dc5775f3a9717ae8c196c93a66634d4f3bac79e62854ba7b60282cb0b5150059",
+    "parity/e2e_map.toml": "8e42f7c1356bceb62f6359073953bd656615c3a45da819772090fd70d7c9e1b9",
+    "parity/exports_extra.toml": "fb71461ebb5a6a7a93520981b54d83b1421037199166713851b5da983d438da2",
+    "parity/map.toml": "231d4d536ba4b0466e54280de514b4e04d1a920f09b265e71f27d411190e1e6e",
+    "parity/matrix.json": "998ae8c09064cf903951e51ed450033aae576d0e2f9a4f42163dcf552856d1f2",
+    "parity/read_hits_extra.toml": "32beb0adf19549a48fbb373755c35e7d08d5d5d58ab55bf4c5cd5b685d6316e4",
+    "parity/v484-sources.json": "433d3360e39ee7127af4763fa5948f61fc991d2c040209a2f559f021e5f59a3e",
+    "upstream.toml": "f474740a63d487c7e0c6267b9127c91361a4a5f465d531aa2c1afc18d92c94bb",
+    "vendor/metadata/finney/484.v15.scale": "17183e36d52a18aa8cc15caf054b82f7559608ca6decc45923313e7be5c8d32f",
+    "vendor/metadata/finney/484.v16.scale": "5f7b01288df379ddd32bc7665f61fccc30b157c6662a13ea80008d1bc440192c",
+    "vendor/metadata/finney/index.toml": "c8d3749ad705adf08552dd1a243853323e11b483710abda782d4ebf5fc7dbdfd",
+    "vendor/oracle/lock.json": "ff0ef12e173a8fc262fcba1e3e6007baeb74b896c8e259ad116e938f329dae13",
+    "vendor/upstream/catalog/reads.json": "c8fd505c3d697270d71ff3275ead4bbe95138d1f6fb87f74fa24576a0c275e84",
+    "vendor/upstream/evm/abi/subnet.json": "fdfa5ad1f55d51d38cb2ee6cf3c4b4c43737a794c54a3b73ee96eeb18294466f",
+    "vendor/upstream/extracted/btauth.json": "1ac6aa31c0e54697931800c4f8f24fe8eff0c137459d454dc512a45629332abb",
+    "vendor/upstream/extracted/chain_rules.json": "3359acf358cd3d3a02e1f27af32d86173d831a040f89ac3f88683a895c874726",
+    "vendor/upstream/extracted/config.json": "9858ef5075cce340c782a1033da94d75c7589dd9e748fa212f1fcb7843640cd4",
+    "vendor/upstream/extracted/env_vars.json": "44e1312a9ef1456a760bb3b4dffdb7fc50fb196f849f97d8914f7c61e2dde79b",
+    "vendor/upstream/extracted/error_descriptions.json": "caf1bcf34d4baaeb733177efbfca0758a2050384788c1defedffa2368461cf3a",
+    "vendor/upstream/extracted/errors.json": "a473e4e4fa6b657e5131d7f294c517550be0703eb2b6002341b9be1df865270f",
+    "vendor/upstream/extracted/fee_filters.json": "0ff9e26f4e783c9967d04c8bea9a876ca39a9a167d948046063f7c629c32ba12",
+    "vendor/upstream/extracted/intent_classvars.json": "17aaa0f93474b490538f3b184284e2e8f779c51c05dbac93490749d29169121a",
+    "vendor/upstream/extracted/intent_fields.json": "ffbedb874a44f9094d37369e40d3efd1cc8f99df54fda66dfc067d84a1f89877",
+    "vendor/upstream/extracted/named_tables.json": "5c0f947de8aec5af9dc61c87eb7579eeb120aa0c42deca503f081329c300f688",
+    "vendor/upstream/extracted/owner_map.json": "55e9ced77ad07f3b991027fbeda1ac5a1025d73215cfeacee344eb6666aa884e",
+    "vendor/upstream/extracted/read_hits.json": "83d520b13fed609bf897a3223fa37e238d2f722fa42b4b73a458ce0a4f86a2b4",
+    "vendor/upstream/extracted/read_params.json": "b87a10b6584390c8bc119aaabf17db7ab81245fca969437ce6f3a44ac8adeab9",
+    "vendor/upstream/extracted/root_claim_fixtures.json": "64af1c457c409b52e58e3518a737687f02a61fd47a6753be735001646d017917",
+    "vendor/upstream/extracted/rpc.json": "2b438690b3322f257fec1146797dd93395bd148c8ffbcfb8359115491b9dfbbf",
+    "vendor/upstream/extracted/runtime.json": "9e4f0e9c7d7a1cc6e404ccf18d0c4150ef438eb83d639bdf64ca9b48e50c53c5",
+    "vendor/upstream/extracted/settings.json": "fed54c049a13b6274f1db7ec8fa3290c499f5ec32b8b5da7cafa13e8e1a3b395",
+    "vendor/upstream/extracted/transaction_errors.json": "3f6856ba726d2f4efb25732700041e45535bdfd54120970fe094b524a22808ed",
+    "vendor/upstream/src/pallets/subtensor/src/lib.rs": "a0ac9a15b35a0b188450dcdd22beea7348ea4a86a33cfecb50fbc8dc426a3077",
+    "vendor/upstream/src/pallets/subtensor/src/rpc_info/delegate_info.rs": "b1f8dae6293f7c5c7e6274abc78299ccb8b2be890dccfbe65cf680a8ae72c4e7",
+    "vendor/upstream/src/pallets/subtensor/src/rpc_info/dynamic_info.rs": "fd0f7543593c7eeaeb08531379fbddc2a0d4af58a4ed50aac02d7fcfa54cc316",
+    "vendor/upstream/src/pallets/subtensor/src/rpc_info/metagraph.rs": "3c120b2865ba21d09b37515a02c1eafe4aa9c237f4614766f7b105706d13c746",
+    "vendor/upstream/src/pallets/subtensor/src/rpc_info/neuron_info.rs": "b5ce66f5966cf61ebcb34a0bcfad731f4f14d31a01c63fd36a7d964b67c2d554",
+    "vendor/upstream/src/pallets/subtensor/src/rpc_info/show_subnet.rs": "9aa16987a9ed08ce1db96aac86a327d154209fafb766e941a3de6307618796d3",
+    "vendor/upstream/src/pallets/subtensor/src/rpc_info/stake_info.rs": "25c0e9649d9a2715fff01aaac89ef62f717a9a93821575107dbeb9af0f84e843",
+    "vendor/upstream/src/pallets/subtensor/src/subnets/subnet.rs": "6f9d06f5e7db2d2408f1195a98de738964c752c1b7dc494ec4643a15c444c406",
+    "vendor/upstream/src/precompiles/src/solidity/subnet.abi": "fdfa5ad1f55d51d38cb2ee6cf3c4b4c43737a794c54a3b73ee96eeb18294466f",
+    "vendor/upstream/src/sdk/python/bittensor/__init__.py": "e6af7b460f88efa1f9fe7003860123e376f2b6d9e5d0971ab037cc3d2765e6c9",
+    "vendor/upstream/src/sdk/python/bittensor/_generated/storage.py": "313375583baf95582335efd0d60039a9cfbe10ae6ca2bbe0209b3a66786d7a5a",
+    "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py": "abdcd4136715177ace0f2afcae176a11f2d0a5dd64e63b5d07d680f3765fbc0f",
+    "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py": "9bb8edc31f46efc082193482a314ad26952a9ee12d8ce669432e0095b58d5361",
+    "vendor/upstream/src/sdk/python/bittensor/cli/helpers.py": "2487192adaf47f6570d413d69d3b772dd3b618c0db44a036f63881c30ed80645",
+    "vendor/upstream/src/sdk/python/bittensor/cli/metagraph_view.py": "4d24aacf1e46759e5ae1e63f6e07880baf48e3032b2cde36175c4e0ed0105b8c",
+    "vendor/upstream/src/sdk/python/bittensor/cli/output.py": "e35ced372113da352d144a5a94f841b86cc47ff17c8c9d403dec8d8854a24b40",
+    "vendor/upstream/src/sdk/python/bittensor/cli/tx.py": "8fed2519961670549de882637a3e4486e14858ab9b68e66a605bcad9530827a7",
+    "vendor/upstream/src/sdk/python/bittensor/intents/_root_claim_fee.py": "6ab6392876994a1910b8668cb7f577fb9d138bd7d6a04e80099b26efef49cedc",
+    "vendor/upstream/src/sdk/python/bittensor/namespaces.py": "00b43a463aea3d192fb1f75f36eccf87e97912c549d32304f08eca14dfe6d6d7",
+    "vendor/upstream/src/sdk/python/bittensor/namespaces.pyi": "b585dccfe658ccfbfac1d2c376fe5c28aef1c474ba2044e67a298685c85b44f2",
+    "vendor/upstream/src/sdk/python/bittensor/reads/__init__.py": "3f8cf03e28c3ff488586e915de3cf4d711829b863cab67202ea0c364d546f4f9",
+    "vendor/upstream/src/sdk/python/bittensor/reads/staking.py": "b37eb3ba05e1a018872f359ccef1b3c8848221f1d6a5e799f003fec6357cda16",
+    "vendor/upstream/src/sdk/python/bittensor/reads/subnets.py": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2",
+    "vendor/upstream/src/sdk/python/tests/harness/samples.py": "e38a6aa2e793dd36f5d033f2e5cd253642e5b0c930a93d4e63c6e38c3719c116",
+    "vendor/upstream/src/sdk/python/tests/unit/test_cli_commands.py": "b19142f68230ae11797d7ca472ee2fe66c6efb440ce85ef985641a729a715df4",
+    "vendor/upstream/src/sdk/python/tests/unit/test_evm.py": "111c4e845b5b5ea07f70f1b397e99007f9fc2dd0fcd9bdfd89cb255ef9b1503f",
+    "vendor/upstream/src/sdk/python/tests/unit/test_intents_table.py": "c53e063125f11018011b04ff31bf9609d0009e6df6b42a2d1b8bfae2c0c24fb5",
+    "vendor/upstream/src/sdk/python/tests/unit/test_metagraph_symbols.py": "65ddd653a4fdb559ee223a702fe3ea285e0e884bf3f4e2a4c850435e806748f6",
+    "vendor/upstream/src/sdk/python/tests/unit/test_root_claim_fee.py": "4c0fc24c650c53b3c8121cbdbe32e953e3b17457b27c558c84ad1f2834c42e71",
+    "vendor/upstream/src/sdk/python/tests/unit/test_subnet_lifecycle.py": "9ffd5705f3d5c7b8985601a9fd86b6cb61e37105ab899e8b460e2f2d05e83c28",
+    "vendor/upstream/tree.txt": "51011e9f768f96a69855acdd342ca574b3cebfca31035e5a314991f6b81693e5",
+    "xtask/src/core_patch.rs": "c7d8adfe7629792212286258de469b485fc623e392100c1527b300a01da24df2",
+    "xtask/src/extract.rs": "e325e626418ced24e320fe032135e00d82e8270c58d2ee85b3242a6f3a33ed05",
+    "xtask/src/extract_root_claim_fixtures.rs": "0c87eccb118f8c540d79f371fd49d568447e005924fac38832d967898475785b",
+    "xtask/src/main.rs": "862c1407700cab912d1e85eb1fa88170cd7d24cb4f1760e5dbce2fa1b7784cc1",
+    "xtask/src/parity.rs": "6d34b2d6a98f0529fc6447fc7f54d4e7fbee49b0869599f17a5c87da76c2e0d0",
+    "xtask/src/parity_state.rs": "7634d439fa35cf48aa056dea9b4a91e5d2a909ad3426b63c6f06354129931108",
+    "xtask/src/pin.rs": "e23bff29d4b1bbae0aeabed43f7965b8ac93b391caee83e7251e42cf23bdf2a7"
+  }
+}

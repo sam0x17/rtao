@@ -1204,6 +1204,21 @@ impl SyncStaking<'_> {
 }
 
 impl SyncSubnets<'_> {
+    /// Reporting lifecycle of one subnet at this view's block.
+    pub fn state(&self, netuid: NetUid) -> Result<Option<rtao_reads::SubnetLifecycleState>, Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::reads::lifecycle::subnet_state(&view, netuid).await
+        })
+    }
+    /// Reporting lifecycle of all active or dissolving subnets.
+    pub fn states(
+        &self,
+    ) -> Result<std::collections::BTreeMap<NetUid, rtao_reads::SubnetLifecycleState>, Error> {
+        self.view.with_view(|view| async move {
+            rtao_reads::reads::lifecycle::subnet_states(&view).await
+        })
+    }
+
     /// Subnet tempo, registration burn and neuron count at one block.
     pub fn info(&self, netuid: NetUid) -> Result<rtao_reads::reads::m6_root::SubnetInfo, Error> {
         self.view.with_view(move |view| async move {
@@ -1211,7 +1226,7 @@ impl SyncSubnets<'_> {
         })
     }
 
-    /// Every subnet using four pinned batched maps.
+    /// Every reportable subnet using pinned lifecycle and pool-emission maps.
     pub fn all(&self) -> Result<Vec<rtao_reads::reads::m6_root::SubnetInfo>, Error> {
         self.view
             .with_view(|view| async move { rtao_reads::reads::m6_root::subnets(&view).await })

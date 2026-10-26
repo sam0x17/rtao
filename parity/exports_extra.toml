@@ -1789,7 +1789,7 @@ home = "rtao_reads::reads::m6_root::SubnetInfo"
 reason = "Public typed read-result model replaces the Python dataclass. Native account/subnet/balance types retain chain identity, checked monetary widths and serialized record fields; this decision identifies the existing model without claiming Python object mutability or an executed oracle comparison."
 source = "sdk/python/bittensor/reads/__init__.py"
 pinning_tests = [
-  "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows",
+  "rtao_reads::m6_root::subnet_list_uses_five_map_scans_and_zero_for_missing_join_rows",
 ]
 
 [[export]]
@@ -1888,3 +1888,17 @@ pinning_tests = [
   "rtao_client::submission::metadata_verifying_signer_receives_a_proof_consistent_with_the_signed_payload",
   "rtao_client::submission::signer_display_constants_define_the_signed_digest_through_arc_delegation",
 ]
+
+[[export]]
+python = "bittensor.reads.SubnetLifecycleState"
+home = "rtao_reads::reads::lifecycle::SubnetLifecycleState"
+reason = "Four serialized snake-case lifecycle values match Python's string enum; new-storage reads and historical fallback are block-pinned, and transport failures propagate. No runtime execution or independent oracle claim."
+source = "sdk/python/bittensor/reads/__init__.py"
+pinning_tests = ["rtao_reads::lifecycle::lifecycle_storage_includes_dissolving_subnets_and_independent_emission", "rtao_reads::lifecycle::legacy_lifecycle_preserves_cleanup_precedence_and_zero_first_emission"]
+
+[[export]]
+python = "bittensor.SubnetLifecycleState"
+home = "rtao::SubnetLifecycleState"
+reason = "Four serialized snake-case lifecycle values match Python's string enum; new-storage reads and historical fallback are block-pinned, and transport failures propagate. No runtime execution or independent oracle claim."
+source = "sdk/python/bittensor/__init__.py"
+pinning_tests = ["rtao_reads::lifecycle::lifecycle_storage_includes_dissolving_subnets_and_independent_emission", "rtao_reads::lifecycle::legacy_lifecycle_preserves_cleanup_precedence_and_zero_first_emission"]

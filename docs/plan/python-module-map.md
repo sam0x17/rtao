@@ -18,7 +18,7 @@ file is named; `[I]` marks an inference where the architecture names no home.
 223 package files: 197 `.py` files (60,978 lines at v478 plus the three v481 modules), `namespaces.pyi` (738), `py.typed` (empty), 21
 `evm/abi/*.json` (9,040 lines), `extension/static/bridge.html` (628), `vault/static/vault.html` (642) and
 `vault/static/bittensor-chain-specs.png` (binary). The `.py` total matches the 59,723 lines architecture §0.4 cites.
-Plus 139 other watched files ([Other watched roots](#other-watched-roots)): 362 `map.toml` rows in all.
+Plus 141 other watched files ([Other watched roots](#other-watched-roots)): 364 `map.toml` rows in all.
 
 ### Kinds
 
@@ -393,7 +393,7 @@ Each is one `map.toml` row (137 at v477), seeded `pending` in M0 like the packag
 |---|---:|---|---|---|
 | `sdk/python/codegen/check.py` | 1 | `extracted` | `rtao_catalog::py::{COVERED_PALLETS, RAW_ONLY}` (the coverage gate, §4.9 layer 6) and `tests/hyperparam_units.rs` (§5.5) | M2 |
 | `sdk/python/codegen/{__init__,__main__,emit_python,emit_namespaces,metadata}.py` | 5 | `n/a` | replaced by `xtask regen` (§3.7) | M2 |
-| `sdk/python/tests/unit/*.py` | 35 | `oracle-only`, except 21 `ported` | ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit) | the milestone of the code each tests |
+| `sdk/python/tests/unit/*.py` | 37 | `oracle-only`, except 23 `ported` | ported with `// pyt:` provenance (§11.2): the table-shaped `test_rpc` (M1), `test_http_auth` (M0), `test_balance_properties` (M0), `test_null_weights`, `test_slippage_protection`, `test_root_claim_fee`, `test_lock_ownership_gate`, `test_hyperparams_units`, `test_fee_filters`, `test_multisig_safety`, `test_prepare_attach` and `test_wallet_compat`; and the behavior tests the oracle does not reach: `test_v446_accounting_and_commitments` (M1 commitments, M6 locks), `test_pow_registration` (M4: the solver and intent keep the runtime challenge), `test_cli_null_pruning` (M4: owner pruning must advance on chain, not only return successful receipts), `test_natural_name_key` (M4: `coldkey2` before `coldkey10` in CLI listings), `test_facades` (M6: `SyncClient` namespace parity), `test_ledger_signer`, `test_extension_bridge`, `test_extension_signer` and `test_evm` (M7, the M7 exit), plus v484 `test_metagraph_symbols` and `test_subnet_lifecycle` (M6/M8; queried-block symbols and lifecycle reporting) | the milestone of the code each tests |
 | `sdk/python/tests/harness/{samples,fake_substrate}.py` | 2 | `extracted` | oracle inputs and `FakeChain` defaults (§4.1, §11.3) | M2 |
 | `sdk/python/tests/harness/fake_node.py` | 1 | `ported` | `rtao-testkit::FakeNode` (§11.3) | M1 |
 | `sdk/python/tests/harness/__init__.py` | 1 | `n/a` | | — |

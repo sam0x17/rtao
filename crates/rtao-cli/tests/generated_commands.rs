@@ -102,7 +102,7 @@ impl DynKeySource for SamplePublicKeys {
 fn cli_samples(name: &str) -> TestResult<BTreeMap<String, Value>> {
     let table = rtao_catalog::py::table("sdk/python/tests/harness/samples.py", name)
         .ok_or("authenticated CLI sample table")?;
-    assert_eq!(table.blob, "987cfa63d8b94b7f18440fc5c7d81bd256fbf613");
+    assert_eq!(table.blob, "60ee43d2db3159b969a7a01fb14edade193e57b8");
     let extracted = rtao::primitives::json::from_str::<Value>(table.value_json)?;
     let decoded = literal(&extracted)?;
     Ok(decoded
@@ -465,7 +465,7 @@ fn complete_query_tree_exposes_every_read_and_authenticated_parameter() -> TestR
         .into_iter()
         .map(|name| name.as_str().replace('_', "-"))
         .collect::<BTreeSet<_>>();
-    assert_eq!(actual.len(), 103);
+    assert_eq!(actual.len(), 105);
     assert_eq!(actual, expected);
     for name in rtao::reads::ReadName::ALL {
         let spelling = name.as_str().replace('_', "-");
@@ -1198,13 +1198,13 @@ async fn all_86_samples_run_through_actual_cli_json_dry_run_without_private_acce
 
 // pyt: unit/test_cli_commands.py::test_query_from_sample
 #[tokio::test]
-async fn all_103_samples_parse_dispatch_and_render_actual_cli_json_queries() -> TestResult {
+async fn all_105_samples_parse_dispatch_and_render_actual_cli_json_queries() -> TestResult {
     let samples = cli_samples("READ_SAMPLES")?;
     let expected = ReadName::ALL
         .into_iter()
         .map(|name| name.as_str())
         .collect::<BTreeSet<_>>();
-    assert_eq!(expected.len(), 103);
+    assert_eq!(expected.len(), 105);
     assert_eq!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
         expected,
@@ -2709,5 +2709,47 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
     }
     // Only public parser/request paths ran: no client, signer or private file
     // exists in this fixture. Scripted secret input refuses if reached.
+    Ok(())
+}
+
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7 (Apache-2.0); modified by rtao.
+#[test]
+fn factory_backed_cli_defaults_are_fresh_per_parse() -> TestResult {
+    let spec = rtao_catalog::INTENTS
+        .iter()
+        .find(|s| s.name == "claim_root")
+        .ok_or("claim_root spec")?;
+    let fields = schema::intent_fields(spec)?;
+    let command = schema::arguments(clap::Command::new("claim-root"), &fields, true);
+    let parsed = command.try_get_matches_from(["claim-root"])?;
+    let mut first = schema::values(&parsed, &fields)?;
+    let factory = spec
+        .fields
+        .iter()
+        .find(|f| f.default_factory)
+        .ok_or("factory field")?;
+    let original = first.get(factory.name).cloned().ok_or("factory default")?;
+    assert_eq!(factory.name, "subnets");
+    assert_eq!(original, json!([0]));
+    first.insert(factory.name.into(), json!(["mutated"]));
+    assert_eq!(schema::values(&parsed, &fields)?[factory.name], original);
+    for spelling in ["claim-root", "claim_root"] {
+        for (argument, expected) in [
+            (None, json!([0])),
+            (Some("0,1"), json!([0, 1])),
+            (Some("[0,2]"), json!([0, 2])),
+            (Some("[]"), json!([])),
+        ] {
+            let mut argv = vec!["rtao", "tx", spelling];
+            if let Some(argument) = argument {
+                argv.extend(["--subnets", argument]);
+            }
+            let parsed = tree()?.try_get_matches_from(argv)?;
+            let values = schema::values(leaf(&parsed)?, &fields)?;
+            assert_eq!(values["subnets"], expected);
+            let intent = rtao_intents::AnyIntent::from_tool("claim_root", json!(values))?;
+            assert_eq!(intent.to_json()["subnets"], expected);
+        }
+    }
     Ok(())
 }

@@ -11,6 +11,8 @@
 "blocks_since_last_update.uid" = "rtao_primitives::Uid"
 
 [outputs]
+subnet_state = "Option<crate::SubnetLifecycleState>"
+subnet_states = "std::collections::BTreeMap<rtao_primitives::NetUid,crate::SubnetLifecycleState>"
 balance = "rtao_primitives::DynBalance"
 balances = "std::collections::BTreeMap<rtao_primitives::AccountId,rtao_primitives::DynBalance>"
 proxies = "crate::reads::owner::ProxyDelegations"
@@ -117,6 +119,8 @@ validator_basket = "Vec<crate::reads::m6_root::ValidatorBasketHolding>"
 validator_basket_nav = "rtao_primitives::DynBalance"
 
 [implementations]
+subnet_state = "crate::reads::lifecycle::subnet_state"
+subnet_states = "crate::reads::lifecycle::subnet_states"
 balance = "crate::reads::owner::balance"
 balances = "crate::reads::owner::balances"
 proxies = "crate::reads::owner::proxies"

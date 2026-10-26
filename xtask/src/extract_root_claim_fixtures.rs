@@ -39,7 +39,7 @@ const CONSTANTS: &[&str] = &[
     "_DEFAULT_THRESHOLD_RAO",
 ];
 const PARAMETRIZED: &[&str] = &[
-    "test_discount_model_matches_the_467_release_node",
+    "test_discount_model_matches_the_release_node_quotes",
     "test_root_claim_too_heavy_is_a_hard_stop",
     "test_admission_hard_stop_survives_unavailable_payout_preview",
     "test_reserve_hard_stop_survives_unavailable_payout_preview",
@@ -605,7 +605,9 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
         "fixture imports/declarations missing"
     );
     ensure!(
-        functions.len() == 33
+        functions.len() == 34
+            && functions
+                .contains("test_single_hotkey_admission_covers_full_subnet_limit_plus_root_basket")
             && functions.contains("_seed_claim_quote")
             && functions.contains("_preview"),
         "fixture function inventory changed; source review required"
@@ -1441,7 +1443,7 @@ mod tests {
                 .len(),
             3
         );
-        assert_eq!(document["node_quotes"]["value"][0]["limits"], json!([129]));
+        assert_eq!(document["node_quotes"]["value"][0]["limits"], json!([130]));
         assert_eq!(
             document["node_quotes"]["value"][2]["weight_fee"],
             json!(16_481_677)
@@ -1518,7 +1520,7 @@ mod tests {
             document["model_cases"][MODELS[6]]["value"][1]["scan_holdings"],
             json!(5)
         );
-        assert_eq!(document["allowance_units"]["value"], json!([256, 129, 2]));
+        assert_eq!(document["allowance_units"]["value"], json!([256, 130, 2]));
         assert_eq!(
             document["helper_threshold_bits"]["value"],
             json!(500_000u64 << 32)

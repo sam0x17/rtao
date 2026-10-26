@@ -17,6 +17,7 @@ pub use generated::{
 };
 /// Typed entry points for catalog reads.
 pub mod reads;
+pub use reads::lifecycle::SubnetLifecycleState;
 
 use std::fmt;
 

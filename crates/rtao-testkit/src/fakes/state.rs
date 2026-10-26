@@ -241,8 +241,8 @@ impl FakeState {
     /// Parse the checked-in pinned Finney runtime and load extracted Python defaults.
     pub fn try_default() -> Result<Self, CoreError> {
         let runtime = Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/finney/482.v15.scale"),
-            482,
+            include_bytes!("../../../../vendor/metadata/finney/484.v15.scale"),
+            484,
             1,
             42,
         )
@@ -1994,7 +1994,7 @@ mod tests {
         );
         assert_eq!(
             call(&mut state, "state_getRuntimeVersion", json!([]))?.get("specVersion"),
-            Some(&json!(482))
+            Some(&json!(484))
         );
         Ok(())
     }

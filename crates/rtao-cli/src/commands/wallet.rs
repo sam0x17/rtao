@@ -1928,7 +1928,7 @@ mod chain {
             let mut record = json!({
                 "netuid": position.netuid, "hotkey": position.hotkey, "stake": display(&position.stake),
                 "stake_amount": position.stake.amount(), "stake_unit": stake_unit(position.netuid),
-                "value": display(&value), "value_tao": value.amount(), "registered": position.is_registered,
+                "value": display(&value), "value_tao": value.amount(), "registered": position.is_registered, "subnet_state":position.subnet_state,
             });
             extend_yield(&mut record, &yields)?;
             stakes.push(record);
@@ -2109,6 +2109,13 @@ mod chain {
             }
         }
         visible.sort_by(|left, right| right.2.amount().total_cmp(&left.2.amount()));
+        let payout_notes = visible
+            .iter()
+            .filter_map(|(netuid, position, _)| {
+                crate::commands::stake::automatic_payout_note(position.subnet_state)
+                    .map(|note| (*netuid, note))
+            })
+            .collect::<BTreeMap<_, _>>();
         let rows = visible
             .into_iter()
             .map(|(netuid, position, value)| {
@@ -2149,6 +2156,13 @@ mod chain {
             .map(|value| format!("  ({:.2}% of root stake)", value * 100.0))
             .unwrap_or_default();
         output.columns(&table).map_err(failure)?;
+        for (netuid, note) in payout_notes {
+            output
+                .value(&format!(
+                    "netuid {netuid}: {note}; unavailable for manual unstaking"
+                ))
+                .map_err(failure)?;
+        }
         if !table.rows.is_empty() {
             output
                 .value(&format!(

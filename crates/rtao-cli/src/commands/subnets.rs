@@ -510,9 +510,18 @@ async fn execute_inspect(
             let netuid = netuid()?;
             // Python reads these one at a time; one coalesced query at the
             // pinned block returns the same values.
-            let (added, tempo, burn, neuron_count, identity, owner, hotkey, registered, max) = at
+            let (
+                tempo,
+                burn,
+                neuron_count,
+                identity,
+                owner,
+                hotkey,
+                registered,
+                max,
+                pool_emission_enabled,
+            ) = at
                 .fetch((
-                    st::NETWORKS_ADDED.at((netuid,)),
                     st::TEMPO.at((netuid,)),
                     st::BURN.at((netuid,)),
                     st::SUBNETWORK_N.at((netuid,)),
@@ -521,10 +530,14 @@ async fn execute_inspect(
                     st::SUBNET_OWNER_HOTKEY.at((netuid,)),
                     st::NETWORK_REGISTERED_AT.at((netuid,)),
                     st::MAX_ALLOWED_UIDS.at((netuid,)),
+                    st::SUBNET_EMISSION_ENABLED.at((netuid,)),
                 ))
                 .await
                 .map_err(CliError::from)?;
-            if !added {
+            let state = rtao::reads::reads::lifecycle::subnet_state(&at, netuid)
+                .await
+                .map_err(CliError::from)?;
+            if state.is_none() {
                 return Err(failure(format!("subnet {netuid} does not exist")));
             }
             let info = m6_root::SubnetInfo {
@@ -532,6 +545,8 @@ async fn execute_inspect(
                 tempo,
                 burn: rtao::primitives::DynBalance::from_rao(burn.0, NetUid::ROOT),
                 neuron_count,
+                state,
+                pool_emission_enabled,
             };
             let identity = identity
                 .map(owner::normalize_identity)
@@ -549,7 +564,7 @@ async fn execute_inspect(
             let record = json!({"netuid":netuid,"name":name,"symbol":output.unit(netuid),
                 "owner_coldkey":owner.to_string(),"owner_hotkey":hotkey.to_string(),
                 "registered_at":registered,"tempo":info.tempo,"burn_tao":info.burn.amount(),
-                "neurons":info.neuron_count,"max_neurons":(max != 0).then_some(max),"identity":identity});
+                "neurons":info.neuron_count,"state":info.state,"pool_emission_enabled":info.pool_emission_enabled,"max_neurons":(max != 0).then_some(max),"identity":identity});
             let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
             let names: BTreeMap<_, _> = lookup
                 .candidates()
@@ -557,6 +572,15 @@ async fn execute_inspect(
                 .map(|c| (c.address, c.name))
                 .collect();
             let fields = vec![
+                ("state".into(), json!(info.state)),
+                (
+                    "pool emission".into(),
+                    json!(if info.pool_emission_enabled {
+                        "on"
+                    } else {
+                        "off"
+                    }),
+                ),
                 ("name".into(), name.cloned().unwrap_or(Value::Null)),
                 (
                     "owner".into(),
@@ -662,6 +686,8 @@ async fn execute_inspect(
                 rows.push(vec![
                     json!(i.netuid),
                     json!(names.get(&i.netuid)),
+                    json!(i.state.map(|state| state.as_str()).unwrap_or("—")),
+                    json!(if i.pool_emission_enabled { "on" } else { "off" }),
                     json!(
                         price
                             .map(|p| format!("{p:.6}"))
@@ -678,13 +704,15 @@ async fn execute_inspect(
                     ),
                     json!(i.burn.to_python_string()),
                 ]);
-                records.push(json!({"netuid":i.netuid,"name":names.get(&i.netuid),"symbol":output.unit(i.netuid),"price_tao_per_alpha":price,"emission_tao_per_day":emission,"tao_flow_tao_per_day":flow,"tempo":i.tempo,"burn_tao":i.burn.amount(),"neurons":i.neuron_count,"max_neurons":max.get(&i.netuid),"url":output.options.network.as_deref().filter(|n| matches!(*n, "finney" | "archive")).map(|_| format!("https://taomarketcap.com/subnets/{}",i.netuid))}));
+                records.push(json!({"netuid":i.netuid,"name":names.get(&i.netuid),"symbol":output.unit(i.netuid),"price_tao_per_alpha":price,"emission_tao_per_day":emission,"tao_flow_tao_per_day":flow,"tempo":i.tempo,"burn_tao":i.burn.amount(),"neurons":i.neuron_count,"state":i.state,"pool_emission_enabled":i.pool_emission_enabled,"max_neurons":max.get(&i.netuid),"url":output.options.network.as_deref().filter(|n| matches!(*n, "finney" | "archive")).map(|_| format!("https://taomarketcap.com/subnets/{}",i.netuid))}));
             }
             let mut table = TableSpec::new(
                 "subnets",
                 [
                     "netuid",
                     "name",
+                    "state",
+                    "pool emission",
                     "price (τ)",
                     "emission (τ/day)",
                     "flow (τ/day)",
@@ -1099,15 +1127,21 @@ pub fn render_metagraph(
             )),
         ))
     };
+    let graph_balance = |rao, subnet| {
+        let mut balance = rtao::primitives::DynBalance::from_rao(rao, subnet);
+        if subnet != NetUid::ROOT {
+            balance.symbol = graph
+                .get("symbol")
+                .and_then(Value::as_str)
+                .filter(|symbol| !symbol.is_empty())
+                .map(|symbol| rtao::primitives::Symbol::new(symbol.to_owned()));
+        }
+        balance
+    };
     let money = |key: &str, subnet: NetUid| -> Result<(String, Value), CliError> {
         Ok((
             key.into(),
-            json!(
-                output
-                    .balance(required_u64(graph, key)?, subnet)
-                    .0
-                    .to_python_string()
-            ),
+            json!(graph_balance(required_u64(graph, key)?, subnet).to_python_string()),
         ))
     };
     let overview = vec![
@@ -1299,8 +1333,8 @@ pub fn render_metagraph(
             vec![
                 json!(uid),
                 json!(output.account_text(&hotkey, name.as_deref())),
-                json!(output.balance(stake, NetUid::ROOT).0.to_python_string()),
-                json!(output.balance(emission, netuid).0.to_python_string()),
+                json!(graph_balance(stake, netuid).to_python_string()),
+                json!(graph_balance(emission, netuid).to_python_string()),
                 json!(column("incentives", uid).as_u64().unwrap_or(0) as f64 / f64::from(u16::MAX)),
                 json!(column("dividends", uid).as_u64().unwrap_or(0) as f64 / f64::from(u16::MAX)),
                 json!(validator),

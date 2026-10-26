@@ -370,7 +370,7 @@ runtime_limits = ["live-runtime-fee-query"]
 na = "Q30 defers this live-runtime scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime state changes."
 
 [tests."test_subnets_all_batched"]
-rtao = "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows"
+rtao = "rtao_reads::m6_root::subnet_list_uses_five_map_scans_and_zero_for_missing_join_rows"
 
 [tests."test_timelocked_commitment_reveals_plaintext"]
 na = "Q30 defers this live-runtime, device or cross-language scenario; implemented client behavior is covered by ordinary hosted fixtures without claiming runtime or platform execution."

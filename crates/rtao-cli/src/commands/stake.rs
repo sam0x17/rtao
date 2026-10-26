@@ -27,6 +27,19 @@ pub mod exit;
 #[path = "stake_picker.rs"]
 pub mod picker;
 
+/// Explain pending automatic payout for a reporting-only stake position.
+pub fn automatic_payout_note(
+    state: Option<rtao::reads::SubnetLifecycleState>,
+) -> Option<&'static str> {
+    match state {
+        Some(rtao::reads::SubnetLifecycleState::PendingDissolution) => {
+            Some("pending automatic payout")
+        }
+        Some(rtao::reads::SubnetLifecycleState::Dissolving) => Some("automatic payout in progress"),
+        _ => None,
+    }
+}
+
 const ALIASES: [(&str, &str); 7] = [
     ("add", "add_stake"),
     ("remove", "remove_stake"),
@@ -621,6 +634,7 @@ pub fn position_records(
             ("value".into(), json!(value.to_python_string())),
             ("value_tao".into(), json!(value.amount())),
             ("registered".into(), json!(position.is_registered)),
+            ("subnet_state".into(), json!(position.subnet_state)),
             (
                 "accrued_basket_yield".into(),
                 json!(owed.to_python_string()),
@@ -707,6 +721,7 @@ async fn list(
     let mut total = 0u64;
     let mut accrued_total = 0u64;
     let mut principal_total = 0u64;
+    let mut lifecycle_notes = Vec::new();
     let mut dust_groups = 0usize;
     let mut dust_positions = 0usize;
     let mut dust_value_tao = 0f64;
@@ -785,6 +800,21 @@ async fn list(
                 dust_groups += 1;
                 dust_value_tao += rtao::primitives::pyfmt::rao_to_f64(value);
                 continue;
+            }
+            let state = valuation
+                .positions
+                .iter()
+                .find(|position| position.netuid == netuid)
+                .and_then(|position| position.subnet_state);
+            if let Some(note) = automatic_payout_note(state) {
+                let wallet = if all_wallets {
+                    format!("{} · ", name.as_deref().unwrap_or("wallet"))
+                } else {
+                    String::new()
+                };
+                lifecycle_notes.push(format!(
+                    "{wallet}netuid {netuid}: {note}; unavailable for manual unstaking"
+                ));
             }
             let locked = availability
                 .iter()
@@ -886,6 +916,10 @@ async fn list(
         footer.push_str(&format!(
             "; accrued basket yield: {accrued_display}; root principal: {principal}; auto-claim is off → rtao root claim"
         ));
+    }
+    for note in lifecycle_notes {
+        footer.push_str("; ");
+        footer.push_str(&note);
     }
     spec.footer = Some(footer);
     ctx.output.table(&spec).map_err(failure)?;

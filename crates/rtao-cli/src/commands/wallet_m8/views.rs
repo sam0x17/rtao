@@ -189,7 +189,7 @@ pub(super) async fn overview(
             let mut record = json!({
                 "netuid":position.netuid,"hotkey":position.hotkey,"stake":display(&position.stake),
                 "stake_amount":position.stake.amount(),"stake_unit":stake_unit(position.netuid),
-                "value":display(&value),"value_tao":value.amount(),"registered":position.is_registered,"uid":uid,
+                "value":display(&value),"value_tao":value.amount(),"registered":position.is_registered,"subnet_state":position.subnet_state,"uid":uid,
             });
             if let Some(avail) = availability.get(&position.netuid) {
                 record["locked"] = display(&avail.locked);
@@ -239,18 +239,20 @@ pub(super) async fn overview(
                     ("stake".into(), display(&stake)),
                     ("value (τ)".into(), display(&value)),
                 ];
+                let payout = crate::commands::stake::automatic_payout_note(first.subnet_state);
+                let mut availability_notes = Vec::new();
+                if let Some(note) = payout {
+                    fields.push(("note".into(), json!(note)));
+                    availability_notes.push("unavailable for manual unstaking".to_owned());
+                }
                 if let Some(target) = &lock_target {
                     fields.push(("lock".into(), json!(format!("lock → {target}"))));
                 }
                 if let Some(availability) = availability {
-                    fields.push((
-                        "availability".into(),
-                        json!(format!(
-                            "{} locked · {} free",
-                            availability.locked.to_python_string(),
-                            availability.available.to_python_string()
-                        )),
-                    ));
+                    availability_notes.push(format!("{} locked · {} free", availability.locked.to_python_string(), availability.available.to_python_string()));
+                }
+                if !availability_notes.is_empty() {
+                    fields.push(("availability".into(), json!(availability_notes.join(" · "))));
                 }
                 positions.sort_by_key(|position| std::cmp::Reverse(position.stake.rao));
                 let mut positions_rows = Vec::new();

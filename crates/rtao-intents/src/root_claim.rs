@@ -24,7 +24,7 @@ use rtao_primitives::IntoCoreValue;
 use rtao_tx::{BuildCx, Built, Intent};
 
 const MAX_WORK: u64 = 256;
-const MAX_HOTKEY_WORK: u64 = 129;
+const MAX_HOTKEY_WORK: u64 = 130;
 const FEE_ALLOWANCE: u64 = 4;
 const DEFAULT_THRESHOLD_RAO: u64 = 500_000;
 
@@ -1232,9 +1232,9 @@ mod tests {
     }
 
     #[test]
-    fn weight_model_matches_recorded_spec_467_node_quotes_and_rounding() -> anyhow::Result<()> {
+    fn weight_model_matches_recorded_release_node_quotes_and_rounding() -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_reserved_fallback_charges_the_fee_allowance_not_the_envelope
-        // pyt: unit/test_root_claim_fee.py::test_discount_model_matches_the_467_release_node
+        // pyt: unit/test_root_claim_fee.py::test_discount_model_matches_the_release_node_quotes
         // pyt: unit/test_root_claim_fee.py::test_charged_allowance_is_the_same_for_both_claim_paths
         // pyt: unit/test_root_claim_fee.py::test_spent_caps_at_the_fee_allowance
         // pyt: unit/test_root_claim_fee.py::test_single_hotkey_spent_caps_at_the_same_allowance
@@ -1498,7 +1498,7 @@ mod tests {
 
     #[tokio::test]
     async fn admission_boundaries_stop_before_fee_and_optional_yield_reads() -> anyhow::Result<()> {
-        for (holdings, allowed) in [(128, true), (129, false)] {
+        for (holdings, allowed) in [(129, true), (130, false)] {
             let (chain, client, snapshot) =
                 fixture(|state| seed_admission(state, &[HOTKEY], &[HOTKEY], holdings)).await?;
             let intent = single();
@@ -1517,7 +1517,7 @@ mod tests {
                 assert_eq!(
                     preview.blocks,
                     [
-                        "root claim exceeds the 129-unit admission limit (1 root hotkey + 129 basket holdings = 130); the claim cannot be admitted until this basket's work is reduced"
+                        "root claim exceeds the 130-unit admission limit (1 root hotkey + 130 basket holdings = 131); the claim cannot be admitted until this basket's work is reduced"
                     ]
                 );
                 assert!(preview.required_free.is_none());

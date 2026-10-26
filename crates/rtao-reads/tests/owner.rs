@@ -28,6 +28,10 @@ async fn client(state: FakeState) -> (Client, FakeChain) {
 
 fn seed() -> FakeState {
     let mut state = FakeState::default();
+    // Exercise the legacy non-root lifecycle branch and all declared read hits.
+    state
+        .seed_python("SubtensorModule", "NetworksAdded", &[json!(1)], json!(true))
+        .unwrap();
     for (item, keys, value) in [
         ("Owner", vec![json!(HOT)], json!(COLD)),
         ("Owner", vec![json!(OTHER)], json!(COLD)),

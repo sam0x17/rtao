@@ -44,6 +44,18 @@ impl<V: View + ?Sized> Staking<'_, V> {
 }
 
 impl<V: View + ?Sized> Subnets<'_, V> {
+    /// Reporting lifecycle of one subnet at the view's block.
+    pub async fn state(
+        &self,
+        netuid: NetUid,
+    ) -> Result<Option<crate::SubnetLifecycleState>, ReadError> {
+        super::lifecycle::subnet_state(self.view, netuid).await
+    }
+    /// Reporting lifecycle of every active or dissolving subnet.
+    pub async fn states(&self) -> Result<BTreeMap<NetUid, crate::SubnetLifecycleState>, ReadError> {
+        super::lifecycle::subnet_states(self.view).await
+    }
+
     /// Subnet identity, tempo, registration cost and neuron count.
     pub async fn info(&self, netuid: NetUid) -> Result<super::m6_root::SubnetInfo, ReadError> {
         super::m6_root::subnet(self.view, netuid).await

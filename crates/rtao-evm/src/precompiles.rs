@@ -1052,6 +1052,36 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_evm.py @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7 (Apache-2.0); modified by rtao.
+    #[test]
+    fn subnet_liquid_alpha_consensus_mode_abi_matches_public_types() {
+        let subnet = get_precompile("subnet").unwrap();
+        let get = subnet.function("getLiquidAlphaConsensusMode").unwrap();
+        assert_eq!(get.inputs[0].ty, "uint16");
+        assert_eq!(get.outputs[0].ty, "uint8");
+        assert_eq!(get.state_mutability, alloy_json_abi::StateMutability::View);
+        let set = subnet.function("setLiquidAlphaConsensusMode").unwrap();
+        assert_eq!(
+            set.state_mutability,
+            alloy_json_abi::StateMutability::Payable
+        );
+        assert!(set.outputs.is_empty());
+        let mut result = [0; 32];
+        result[31] = 2;
+        assert_eq!(decode_result_bytes(&get, &result).unwrap(), vec![json!(2)]);
+        result[30] = 1;
+        assert!(decode_result_bytes(&get, &result).is_err());
+        let call = subnet
+            .encode_call("setLiquidAlphaConsensusMode", &[json!(7), json!(2)])
+            .unwrap();
+        assert_eq!(call.len(), 2 + 8 + 64 * 2);
+        assert!(
+            subnet
+                .encode_call("setLiquidAlphaConsensusMode", &[json!(7), json!(256)])
+                .is_err()
+        );
+    }
+
     #[test]
     fn production_catalog_and_all_hints_match_authenticated_python_declarations() {
         let tables: Value = serde_json::from_str(include_str!(

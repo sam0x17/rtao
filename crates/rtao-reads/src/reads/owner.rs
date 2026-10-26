@@ -466,6 +466,8 @@ pub struct StakePosition {
     pub stake: DynBalance,
     /// Whether the hotkey is currently registered.
     pub is_registered: bool,
+    /// Reporting lifecycle at the position's pinned block.
+    pub subnet_state: Option<crate::SubnetLifecycleState>,
 }
 
 /// A coldkey's stake valued at spot prices at one immutable block.
@@ -523,6 +525,7 @@ fn valuation(
     records: Vec<models::StakeInfo>,
     prices: &BTreeMap<NetUid, f64>,
     symbols: &Symbols,
+    states: &BTreeMap<NetUid, crate::SubnetLifecycleState>,
 ) -> Result<StakeValuation, ReadError> {
     let mut value_rao = 0u64;
     let mut positions = Vec::with_capacity(records.len());
@@ -547,6 +550,7 @@ fn valuation(
             netuid: record.netuid,
             stake: contextual_balance(record.stake.0, record.netuid, symbols),
             is_registered: record.is_registered,
+            subnet_state: states.get(&record.netuid).copied(),
         });
     }
     Ok(StakeValuation {
@@ -584,12 +588,14 @@ pub async fn stake_value_for_coldkey<V: View + ?Sized>(
         ),
         snapshot.call(&api::swap_runtime_api::CURRENT_ALPHA_PRICE_ALL, ())
     )?;
+    let states = super::lifecycle::subnet_states(&snapshot).await?;
     valuation(
         coldkey_ss58,
         snapshot.block().number,
         records,
         &prices(quotes),
         &snapshot.client().token_symbols().await,
+        &states,
     )
 }
 
@@ -607,6 +613,7 @@ pub async fn stake_value_for_coldkeys<V: View + ?Sized>(
         ),
         snapshot.call(&api::swap_runtime_api::CURRENT_ALPHA_PRICE_ALL, ())
     )?;
+    let states = super::lifecycle::subnet_states(&snapshot).await?;
     let by_coldkey: BTreeMap<_, _> = records.into_iter().collect();
     let prices = prices(quotes);
     let symbols = snapshot.client().token_symbols().await;
@@ -622,6 +629,7 @@ pub async fn stake_value_for_coldkeys<V: View + ?Sized>(
                 positions,
                 &prices,
                 &symbols,
+                &states,
             )?,
         );
     }

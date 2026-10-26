@@ -6,6 +6,8 @@ pub mod chain;
 pub mod epochs;
 /// Generated scalar hyperparameter entry points.
 pub mod hyperparameters;
+/// Reporting subnet lifecycle and legacy fallback.
+pub mod lifecycle;
 /// Epoch, weight and chain reads ported in the submission milestone.
 pub mod m2;
 /// Account, chain, commitment and neuron behavior from the read parity milestone.

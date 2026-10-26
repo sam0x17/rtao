@@ -1521,7 +1521,7 @@ mod tests {
             state.seed_runtime(
                 "BetaBasketRuntimeApi",
                 "get_validator_basket",
-                json!((0..129).map(|_| json!([1, 1, 1])).collect::<Vec<_>>()),
+                json!((0..130).map(|_| json!([1, 1, 1])).collect::<Vec<_>>()),
             )
         })?;
         let denied = inspect(&intent, &client, &snapshot, &built.call).await?;
@@ -1529,8 +1529,8 @@ mod tests {
             denied
                 .blocks
                 .iter()
-                .any(|block| block.contains("129 basket holdings")
-                    && block.contains("129-unit admission limit"))
+                .any(|block| block.contains("130 basket holdings")
+                    && block.contains("130-unit admission limit"))
         );
         assert!(denied.required_free.is_none());
         assert!(denied.facts.is_empty());
@@ -1542,7 +1542,7 @@ mod tests {
     #[tokio::test]
     async fn embedded_root_claim_families_enforce_public_plan_and_shield_admission()
     -> anyhow::Result<()> {
-        const EXPECTED: &str = "root claim exceeds the 129-unit admission limit (1 root hotkey + 257 basket holdings = 258); the claim cannot be admitted until this basket's work is reduced";
+        const EXPECTED: &str = "root claim exceeds the 130-unit admission limit (1 root hotkey + 257 basket holdings = 258); the claim cannot be admitted until this basket's work is reduced";
         let mut sweep = vec![7, 83];
         sweep.extend_from_slice(HOTKEY.as_bytes());
         for (intent, follow_up) in [

@@ -2,16 +2,16 @@
   "format": 1,
   "provenance": {
     "blob": "ca9875b0ee1bbbd8d7bb4600f8a45625d7722f1b",
-    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
     "path": "runtime/src/fee_filters.rs",
-    "tag": "v482"
+    "tag": "v484"
   },
   "python_mirror": {
     "provenance": {
       "blob": "e00c10d2a7e23f4e54d3336d5f3012b8ca121dfb",
-      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+      "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
       "path": "sdk/python/bittensor/fee_filters.py",
-      "tag": "v482"
+      "tag": "v484"
     },
     "source": {
       "end_line": 32,

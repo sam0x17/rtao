@@ -760,13 +760,12 @@ fn probe(root: &Path, pins: &DocumentMut, patched: bool) -> Result<Output> {
     Ok(output)
 }
 
-/// Source and identity checks used by `pin --check`.
-pub(crate) fn verify(root: &Path, pins: &DocumentMut) -> Result<()> {
+/// Source and identity checks, without executing hosted API build probes.
+pub(crate) fn verify_source(root: &Path, pins: &DocumentMut) -> Result<()> {
     verify_tables(&read_document(&root.join("Cargo.toml"))?, pins)?;
     verify_clippy(root)?;
     verify_lock(&read_document(&root.join("Cargo.lock"))?, pins)?;
     if let Some(patch) = patch(pins)? {
-        hosted_root()?;
         let repo = cached_repo(root)?;
         let rev = field(patch, "rev")?;
         git(&repo, &["cat-file", "-e", &format!("{rev}^{{commit}}")])
@@ -781,6 +780,15 @@ pub(crate) fn verify(root: &Path, pins: &DocumentMut) -> Result<()> {
             "recorded Ledger PR revision is not part of the combined core patch"
         );
         verify_security_source(&repo, rev)?;
+    }
+    Ok(())
+}
+
+/// Full verification retains both mandatory hosted build probes.
+pub(crate) fn verify(root: &Path, pins: &DocumentMut) -> Result<()> {
+    verify_source(root, pins)?;
+    if patch(pins)?.is_some() {
+        hosted_root()?;
         probe(root, pins, true)?;
         probe(root, pins, false)?;
     }

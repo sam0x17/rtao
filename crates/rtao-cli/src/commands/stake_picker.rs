@@ -981,6 +981,7 @@ mod tests {
             netuid: NetUid(netuid),
             stake: DynBalance::from_rao(rao, NetUid(netuid)),
             is_registered: true,
+            subnet_state: None,
         }
     }
     fn valuation(positions: Vec<StakePosition>) -> StakeValuation {

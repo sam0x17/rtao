@@ -165,7 +165,7 @@ pub struct ReadSpec {
     pub pinning: Pinning,
 }
 /// Every read's complete authenticated metadata, in catalog order.
-pub static READ_SPECS: [ReadSpec; 103] = [
+pub static READ_SPECS: [ReadSpec; 105] = [
     ReadSpec {
         name: "accepts_locked_alpha",
         summary: "Whether a coldkey accepts incoming locked alpha transfers.",
@@ -2198,13 +2198,45 @@ pub static READ_SPECS: [ReadSpec; 103] = [
         category: Category::Staking,
         namespace: "staking",
         docs_url: "/docs/query/stake-for-coldkey",
-        hits: &[Hit {
-            kind: HitKind::RuntimeApi,
-            container: "StakeInfoRuntimeApi",
-            name: "get_stake_info_for_coldkey",
-        }],
+        hits: &[
+            Hit {
+                kind: HitKind::RuntimeApi,
+                container: "StakeInfoRuntimeApi",
+                name: "get_stake_info_for_coldkey",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "NetworksAdded",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
+            },
+        ],
         render: None,
-        pinning: Pinning::Single,
+        pinning: Pinning::Pinned,
     },
     ReadSpec {
         name: "stake_for_coldkeys",
@@ -2221,13 +2253,45 @@ pub static READ_SPECS: [ReadSpec; 103] = [
         category: Category::Staking,
         namespace: "staking",
         docs_url: "/docs/query/stake-for-coldkeys",
-        hits: &[Hit {
-            kind: HitKind::RuntimeApi,
-            container: "StakeInfoRuntimeApi",
-            name: "get_stake_info_for_coldkeys",
-        }],
+        hits: &[
+            Hit {
+                kind: HitKind::RuntimeApi,
+                container: "StakeInfoRuntimeApi",
+                name: "get_stake_info_for_coldkeys",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "NetworksAdded",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
+            },
+        ],
         render: None,
-        pinning: Pinning::Single,
+        pinning: Pinning::Pinned,
     },
     ReadSpec {
         name: "stake_value_for_coldkey",
@@ -2254,6 +2318,36 @@ pub static READ_SPECS: [ReadSpec; 103] = [
                 kind: HitKind::RuntimeApi,
                 container: "SwapRuntimeApi",
                 name: "current_alpha_price_all",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "NetworksAdded",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
             },
         ],
         render: None,
@@ -2284,6 +2378,36 @@ pub static READ_SPECS: [ReadSpec; 103] = [
                 kind: HitKind::RuntimeApi,
                 container: "SwapRuntimeApi",
                 name: "current_alpha_price_all",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "NetworksAdded",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
             },
         ],
         render: None,
@@ -2336,7 +2460,42 @@ pub static READ_SPECS: [ReadSpec; 103] = [
             Hit {
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "NetworksAdded",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetEmissionEnabled",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
                 name: "SubnetworkN",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
             },
             Hit {
                 kind: HitKind::Storage,
@@ -2639,6 +2798,99 @@ pub static READ_SPECS: [ReadSpec; 103] = [
         pinning: Pinning::Pinned,
     },
     ReadSpec {
+        name: "subnet_state",
+        summary: "Reporting lifecycle for one subnet, or None after cleanup/nonexistence.",
+        description: "Reporting lifecycle for one subnet, or None after cleanup/nonexistence.",
+        params: &[ParamSpec {
+            name: "netuid",
+            json_type: JsonType::Integer,
+            doc: "Subnet whose reporting lifecycle to query.",
+            required: true,
+            default: None,
+            own_key: false,
+        }],
+        category: Category::Subnets,
+        namespace: "subnets",
+        docs_url: "/docs/query/subnet-state",
+        hits: &[
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "NetworksAdded",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
+            },
+        ],
+        render: None,
+        pinning: Pinning::Pinned,
+    },
+    ReadSpec {
+        name: "subnet_states",
+        summary: "Reporting lifecycle for every active or dissolving subnet.",
+        description: "Reporting lifecycle for every active or dissolving subnet.",
+        params: &[],
+        category: Category::Subnets,
+        namespace: "subnets",
+        docs_url: "/docs/query/subnet-states",
+        hits: &[
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "NetworksAdded",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
+            },
+        ],
+        render: None,
+        pinning: Pinning::Pinned,
+    },
+    ReadSpec {
         name: "subnet_tao_flows",
         summary: "Per-subnet EMA of net TAO flow, in rao per block.",
         description: "Per-subnet EMA of net TAO flow, in rao per block.\n\nTAO flow is the chain's running measure of user stake activity on a\nsubnet: every stake adds to the accumulator and every unstake subtracts,\nso a positive value means TAO is (on average) flowing into the subnet\nand a negative value means it is flowing out. The chain smooths the\nper-block accumulator (`SubnetTaoFlow`) into an exponential moving\naverage (`SubnetEmaTaoFlow`); this read returns that EMA per netuid.\nSubnets with no recorded flow are omitted.",
@@ -2671,12 +2923,42 @@ pub static READ_SPECS: [ReadSpec; 103] = [
             Hit {
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
+                name: "CurrentDissolveCleanupStatus",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "DissolveCleanupQueue",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "FirstEmissionBlockNumber",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
                 name: "NetworksAdded",
             },
             Hit {
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
+                name: "SubnetEmissionEnabled",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetState",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
                 name: "SubnetworkN",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubtokenEnabled",
             },
             Hit {
                 kind: HitKind::Storage,

@@ -748,7 +748,7 @@ const READ_E2E_FIXTURES: &[(&str, &str, &[&str])] = &[
     ),
     (
         "test_subnets_all_batched",
-        "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows",
+        "rtao_reads::m6_root::subnet_list_uses_five_map_scans_and_zero_for_missing_join_rows",
         &["subnets", "netuid", "requests"],
     ),
 ];

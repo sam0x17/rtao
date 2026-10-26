@@ -251,6 +251,37 @@ well. These local source checks leave runtime range null and the attested
 runtime catalog empty;
 they are not hosted CI or semantic approval of the port.
 
+## 2026-10-25: finalized v484 runtime and Python parity
+
+Advance parity v482 (`8cf229f8ef969389d054a4c161b53ffd164a041f`) to the final
+[v484 release](https://github.com/RaoFoundation/subtensor/releases/tag/v484)
+(`5749dbfbe4a78ccd3938d46ffae45e059488feb7`). Finalized Finney block 9,364,341,
+`0x0c856f3c0a470a23703858e652949a726369549288f5b1b1917897084d77e7a7`, reports
+spec 484 and code `0x23041f50d3529b359e9be3b90f3ca40474678e834e97f49fb401d0c691097760`,
+matching the downloaded release WASM. The registry-authenticated v484 localnet
+image digest is `sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35`;
+its config revision matches the release commit. The image was not executed.
+Core v478 (`850f2755bb05a3851f948489f0ab27b0645cebce`) and existing patch
+`5f2477f5290f5f4cb467524754cc025626b52974` remain: the fingerprint is unchanged.
+
+Import 390 artifacts, extract and regenerate 86 intents/105 reads, and port
+lifecycle/reportability, stake joins, CLI payout notes, response-owned metagraph
+symbols, the 130-unit root-claim envelope and liquid-alpha consensus ABI.
+The source report reconciles 364 watched files: 334 identical, 28 modified and
+two added. Per-file native decisions and diff identities are explicit; identical
+source does not establish an empty behavioral or extraction diff. Existing
+recovery/journal behavior is preserved.
+
+Use supported scratch candidate preparation and an explicit source-only pin
+check; full verification retains hosted patched/unpatched API probes. The
+[upgrade record](../../docs/compat/v484-upgrade.md), provenance and local
+validation inventory separate verified inputs and scoped development results
+from unavailable execution evidence. No hosted CI was invoked; no oracle
+comparison, localnet e2e, image execution or runtime range is certified.
+The oracle remains optional-unverified, with a null validated range and empty
+runtime attestations. No upstream filing, publication or push accompanies this
+local candidate.
+
 ## Recording the next change
 
 Append an entry when a pin changes. Include the old and new tag/commit, affected

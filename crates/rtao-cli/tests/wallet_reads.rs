@@ -332,13 +332,21 @@ async fn inspect_preserves_position_units_basket_order_and_coldkey_wide_yield() 
         true,
         Path::new("/isolated/no-local-wallets"),
     )?;
-    let (client, chain) = client(seed()?).await?;
+    let mut state = seed()?;
+    state.seed_python(
+        "SubtensorModule",
+        "SubnetState",
+        &[json!(1)],
+        json!("Dissolving"),
+    )?;
+    let (client, chain) = client(state).await?;
     let before = chain.requests().len();
     run(&mut ctx, &client, &parsed).await?;
     let record: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
     assert_eq!(record["balance"]["total_value"], "τ5.000000000");
     assert!(record["balance"].get("locked_value").is_none());
     assert_eq!(record["stakes"][0]["stake"], "3.000000000Ω");
+    assert_eq!(record["stakes"][0]["subnet_state"], "dissolving");
     assert_eq!(record["stakes"][0]["stake_unit"], "alpha (netuid 1)");
     assert_eq!(record["stakes"][0]["value"], "τ1.500000000");
     assert_eq!(record["stakes"][1]["stake_unit"], "TAO");
@@ -370,6 +378,15 @@ async fn inspect_preserves_position_units_basket_order_and_coldkey_wide_yield() 
                         "StakeInfoRuntimeApi_get_stake_availability_for_coldkeys"
                     )))
     );
+    let (mut ctx, human, parsed) = context(
+        &["wallet", "inspect", "--coldkey", &address],
+        false,
+        Path::new("/isolated/no-local-wallets"),
+    )?;
+    run(&mut ctx, &client, &parsed).await?;
+    let text = human.text(Stream::Stdout)?;
+    assert!(text.contains("automatic payout in progress"));
+    assert!(text.contains("unavailable for manual unstaking"));
     client.close().await;
     Ok(())
 }

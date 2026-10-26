@@ -1177,3 +1177,46 @@ async fn subnet_list_orders_emissions_then_native_netuid_and_root_has_no_pool() 
     client.close().await;
     Ok(())
 }
+
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_metagraph_symbols.py @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7 (Apache-2.0); modified by rtao.
+#[test]
+fn metagraph_balances_use_the_queried_symbol_instead_of_cached_symbols() -> TestResult {
+    for (netuid, symbol) in [
+        (NetUid(1), Some("NEW")),
+        (NetUid(1), None),
+        (NetUid(1), Some("")),
+        (NetUid::ROOT, Some("τ")),
+    ] {
+        let sink = MemorySink::default();
+        let output = Output::new(
+            OutputOptions {
+                json_mode: false,
+                quiet: false,
+                network: None,
+            },
+            Arc::new(sink.clone()),
+        );
+        output.update_token_symbols([(
+            netuid.get(),
+            rtao::primitives::Symbol::new("STALE".to_owned()),
+        )])?;
+        let mut graph = graph();
+        graph["symbol"] = json!(symbol);
+        graph["alpha_in"] = json!(2_000_000_000u64);
+        graph["total_stake"] = json!([3_000_000_000u64]);
+        graph["emission"] = json!([4_000_000_000u64]);
+        subnets::render_metagraph(&output, netuid, &graph, &BTreeMap::new())?;
+        let text = sink.text(Stream::Stdout)?;
+        assert!(!text.contains("STALE"));
+        let mut balance = rtao::primitives::DynBalance::from_rao(2_000_000_000, netuid);
+        balance.symbol = symbol
+            .filter(|_| netuid != NetUid::ROOT)
+            .filter(|s| !s.is_empty())
+            .map(|s| rtao::primitives::Symbol::new(s.to_owned()));
+        for rao in [2_000_000_000, 3_000_000_000, 4_000_000_000] {
+            balance.rao = rao;
+            assert!(text.contains(&balance.to_python_string()), "{text}");
+        }
+    }
+    Ok(())
+}

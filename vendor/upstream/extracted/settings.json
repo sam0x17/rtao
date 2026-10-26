@@ -2,9 +2,9 @@
   "format": 1,
   "provenance": {
     "blob": "418de02b74d6f6aaeba2ebef7679dbb2b40b992f",
-    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
     "path": "sdk/python/bittensor/settings.py",
-    "tag": "v482"
+    "tag": "v484"
   },
   "values": {
     "ALPHA_SYMBOL": {

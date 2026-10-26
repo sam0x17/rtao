@@ -34,7 +34,7 @@ fn native_key(keys: &[DynValue], descriptor: &'static str) -> Result<u64, ReadEr
         .ok_or_else(|| surface(descriptor, "map key is not a native unsigned integer"))
 }
 
-fn subnet_key(keys: &[DynValue], descriptor: &'static str) -> Result<NetUid, ReadError> {
+pub(super) fn subnet_key(keys: &[DynValue], descriptor: &'static str) -> Result<NetUid, ReadError> {
     u16::try_from(native_key(keys, descriptor)?)
         .map(NetUid)
         .map_err(|error| surface(descriptor, error.to_string()))
@@ -499,16 +499,23 @@ pub struct SubnetInfo {
     pub burn: DynBalance,
     /// Current number of neurons.
     pub neuron_count: u16,
+    /// Reporting lifecycle, including deferred dissolution.
+    pub state: Option<crate::SubnetLifecycleState>,
+    /// Whether the pool receives emissions, independent of lifecycle.
+    pub pool_emission_enabled: bool,
 }
 
 /// Tempo, burn and neuron count fetched together at one immutable block.
 // py: sdk/python/bittensor/reads/subnets.py:30-43
 pub async fn subnet<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<SubnetInfo, ReadError> {
-    let (tempo, burn, neuron_count) = view
+    let snapshot = view.pin().await?;
+    let state = super::lifecycle::subnet_state(&snapshot, netuid).await?;
+    let (tempo, burn, neuron_count, pool_emission_enabled) = snapshot
         .fetch((
             st::TEMPO.at((netuid,)),
             st::BURN.at((netuid,)),
             st::SUBNETWORK_N.at((netuid,)),
+            st::SUBNET_EMISSION_ENABLED.at((netuid,)),
         ))
         .await?;
     Ok(SubnetInfo {
@@ -516,19 +523,22 @@ pub async fn subnet<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Subnet
         tempo,
         burn: DynBalance::from_rao(burn.0, NetUid::ROOT),
         neuron_count,
+        state,
+        pool_emission_enabled,
     })
 }
 
-/// All added subnets in native netuid order, using four complete map scans.
+/// All reportable subnets in native netuid order, using lifecycle and four map scans.
 ///
 /// Missing entries in the tempo, burn and count maps produce zero, rather than
-/// a storage metadata default; no per-subnet follow-up queries are performed.
+/// a storage metadata default. Old runtimes use per-subnet lifecycle fallback.
 // py: sdk/python/bittensor/reads/subnets.py:47-70
 pub async fn subnets<V: View + ?Sized>(view: &V) -> Result<Vec<SubnetInfo>, ReadError> {
     let snapshot = view.pin().await?;
-    let (added, tempos, burns, counts) = futures::try_join!(
+    let states = super::lifecycle::subnet_states(&snapshot).await?;
+    let (emission, tempos, burns, counts) = futures::try_join!(
         snapshot
-            .storage_iter(&st::NETWORKS_ADDED, ())
+            .storage_iter(&st::SUBNET_EMISSION_ENABLED, ())
             .try_collect::<Vec<_>>(),
         snapshot
             .storage_iter(&st::TEMPO, ())
@@ -538,12 +548,16 @@ pub async fn subnets<V: View + ?Sized>(view: &V) -> Result<Vec<SubnetInfo>, Read
             .storage_iter(&st::SUBNETWORK_N, ())
             .try_collect::<Vec<_>>(),
     )?;
-    let mut netuids = BTreeSet::new();
-    for (keys, is_added) in added {
-        if is_added {
-            netuids.insert(subnet_key(&keys, "SubtensorModule.NetworksAdded")?);
-        }
-    }
+    let netuids: BTreeSet<_> = states.keys().copied().collect();
+    let emission = emission
+        .into_iter()
+        .map(|(keys, value)| {
+            Ok((
+                subnet_key(&keys, "SubtensorModule.SubnetEmissionEnabled")?,
+                value,
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>, ReadError>>()?;
     let tempos = tempos
         .into_iter()
         .map(|(keys, value)| Ok((subnet_key(&keys, "SubtensorModule.Tempo")?, value)))
@@ -563,6 +577,8 @@ pub async fn subnets<V: View + ?Sized>(view: &V) -> Result<Vec<SubnetInfo>, Read
             tempo: tempos.get(&netuid).copied().unwrap_or(0),
             burn: DynBalance::from_rao(burns.get(&netuid).copied().unwrap_or(0), NetUid::ROOT),
             neuron_count: counts.get(&netuid).copied().unwrap_or(0),
+            state: states.get(&netuid).copied(),
+            pool_emission_enabled: emission.get(&netuid).copied().unwrap_or(true),
         })
         .collect())
 }
@@ -586,22 +602,14 @@ pub struct SubnetListing {
 ///
 /// Python scans each per-subnet map completely, which on a paced public
 /// endpoint costs a key page and a value query per map. Here only
-/// `NetworksAdded` is scanned; every other column is looked up by netuid in a
+/// reporting lifecycle is scanned; every other column is looked up by netuid in a
 /// single coalesced query at the same block. Values match the scans exactly:
 /// an absent entry stays absent rather than taking the storage default.
 pub async fn subnet_listing<V: View + ?Sized>(view: &V) -> Result<SubnetListing, ReadError> {
     let snapshot = view.pin().await?;
-    let added = snapshot
-        .storage_iter(&st::NETWORKS_ADDED, ())
-        .try_collect::<Vec<_>>()
-        .await?;
-    let mut netuids = BTreeSet::new();
-    for (keys, is_added) in added {
-        if is_added {
-            netuids.insert(subnet_key(&keys, "SubtensorModule.NetworksAdded")?);
-        }
-    }
-    const COLUMNS: usize = 7;
+    let states = super::lifecycle::subnet_states(&snapshot).await?;
+    let netuids: BTreeSet<_> = states.keys().copied().collect();
+    const COLUMNS: usize = 8;
     let mut plan = rtao_client::PresencePlan::new();
     for &netuid in &netuids {
         plan.push(st::TEMPO.at((netuid,)));
@@ -611,12 +619,23 @@ pub async fn subnet_listing<V: View + ?Sized>(view: &V) -> Result<SubnetListing,
         plan.push(st::SUBNET_TAO_IN_EMISSION.at((netuid,)));
         plan.push(st::SUBNET_EMA_TAO_FLOW.at((netuid,)));
         plan.push(st::SUBNET_IDENTITIES_V3.at((netuid,)));
+        plan.push(st::SUBNET_EMISSION_ENABLED.at((netuid,)));
     }
     let raw = snapshot.fetch(plan).await?;
     let runtime = &snapshot.block().runtime;
     let mut listing = SubnetListing::default();
     for (&netuid, row) in netuids.iter().zip(raw.chunks(COLUMNS)) {
-        let [tempo, burn, count, max, emission, flow, identity] = row else {
+        let [
+            tempo,
+            burn,
+            count,
+            max,
+            emission,
+            flow,
+            identity,
+            pool_enabled,
+        ] = row
+        else {
             return Err(surface("SubnetListing", "coalesced row is incomplete"));
         };
         let tempo = tempo
@@ -664,6 +683,12 @@ pub async fn subnet_listing<V: View + ?Sized>(view: &V) -> Result<SubnetListing,
             tempo: tempo.unwrap_or(0),
             burn: DynBalance::from_rao(burn.map_or(0, |burn| burn.0), NetUid::ROOT),
             neuron_count: count.unwrap_or(0),
+            state: states.get(&netuid).copied(),
+            pool_emission_enabled: pool_enabled
+                .as_deref()
+                .map(|raw| rtao_client::decode_present(runtime, &st::SUBNET_EMISSION_ENABLED, raw))
+                .transpose()?
+                .unwrap_or(true),
         });
     }
     Ok(listing)

@@ -2,9 +2,9 @@
   "format": 1,
   "provenance": {
     "blob": "76101e5247da8356118e4bb179aadf77b2f14c34",
-    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
     "path": "sdk/python/bittensor/_transport/runtime.py",
-    "tag": "v482"
+    "tag": "v484"
   },
   "values": {
     "_DISK_CACHE_MAX_FILES": {

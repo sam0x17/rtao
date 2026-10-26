@@ -1441,6 +1441,35 @@ pub async fn subnet_start_schedule<V: rtao_client::View + ?Sized>(
 ) -> Result<crate::reads::owner::SubnetStartSchedule, crate::ReadError> {
     crate::reads::owner::subnet_start_schedule(view, netuid).await
 }
+#[doc = "Typed parameters for `subnet_state`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubnetStateParams {
+    #[doc = "Subnet whose reporting lifecycle to query."]
+    pub netuid: rtao_primitives::NetUid,
+}
+#[doc = "Reporting lifecycle for one subnet, or None after cleanup/nonexistence."]
+#[doc(alias = "bittensor.reads.subnet_state")]
+pub async fn subnet_state<V: rtao_client::View + ?Sized>(
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<Option<crate::SubnetLifecycleState>, crate::ReadError> {
+    crate::reads::lifecycle::subnet_state(view, netuid).await
+}
+#[doc = "Typed parameters for `subnet_states`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubnetStatesParams {}
+#[doc = "Reporting lifecycle for every active or dissolving subnet."]
+#[doc(alias = "bittensor.reads.subnet_states")]
+pub async fn subnet_states<V: rtao_client::View + ?Sized>(
+    view: &V,
+) -> Result<
+    std::collections::BTreeMap<rtao_primitives::NetUid, crate::SubnetLifecycleState>,
+    crate::ReadError,
+> {
+    crate::reads::lifecycle::subnet_states(view).await
+}
 #[doc = "Typed parameters for `subnet_tao_flows`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -46,6 +46,9 @@ pub use rtao_neuron::{
 #[cfg(feature = "reads")]
 #[cfg_attr(docsrs, doc(cfg(feature = "reads")))]
 pub use rtao_reads as reads;
+#[cfg(feature = "reads")]
+#[cfg_attr(docsrs, doc(cfg(feature = "reads")))]
+pub use rtao_reads::SubnetLifecycleState;
 #[cfg(feature = "tx")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tx")))]
 pub use rtao_signer as signer;
@@ -99,7 +102,7 @@ pub mod prelude {
     pub use rtao_primitives::{AccountId, Alpha, Balance, MechId, NetUid, Tao, Uid};
     #[cfg(feature = "reads")]
     #[cfg_attr(docsrs, doc(cfg(feature = "reads")))]
-    pub use rtao_reads::Namespaces;
+    pub use rtao_reads::{Namespaces, SubnetLifecycleState};
     #[cfg(feature = "tx")]
     #[cfg_attr(docsrs, doc(cfg(feature = "tx")))]
     pub use rtao_tx::{ExecuteOptions, Intent, IntentInterface, PlanOptions, Policy};

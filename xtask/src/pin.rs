@@ -57,6 +57,7 @@ struct Options {
     prepare_candidate: bool,
     resolve_only: bool,
     prepare_cache: bool,
+    source_only: bool,
 }
 
 fn options(args: Vec<String>) -> Result<Options> {
@@ -65,6 +66,7 @@ fn options(args: Vec<String>) -> Result<Options> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--check" => result.check = true,
+            "--source-only" if !result.source_only => result.source_only = true,
             "--networks" => {
                 ensure!(!result.networks, "duplicate --networks");
                 result.networks = true;
@@ -154,6 +156,16 @@ fn options(args: Vec<String>) -> Result<Options> {
                 && !result.prepare_candidate
                 && !result.resolve_only),
         "--prepare-cache requires plain --check and cannot change pins"
+    );
+    ensure!(
+        !result.source_only
+            || (result.check
+                && !result.networks
+                && result.parity.is_none()
+                && !result.prepare_cache
+                && result.core_branch.is_none()
+                && !result.force),
+        "--source-only requires plain --check; hosted build probes remain unverified"
     );
     Ok(result)
 }
@@ -403,7 +415,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             None
         };
         verify_pin_identity(&repo, &next)?;
-        verify_manifest(root, &next)?;
+        verify_manifest(root, &next, opts.prepare_candidate)?;
         if current.is_none() || !opts.check {
             record_oracle_lock(root, &repo, &proof.commit)?;
         }
@@ -466,7 +478,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             crate::core_patch::prepare_cache(root, &current)?;
         }
         verify_pin_identity(&repo, &current)?;
-        verify_manifest(root, &current)?;
+        verify_manifest(root, &current, opts.source_only)?;
         crate::metadata_pin::verify(root, &current)?;
         crate::network_pin::verify(root, &current)?;
         verify_lock(root, &current)?;
@@ -1428,7 +1440,7 @@ fn verify_git_dependency(item: &Item, tag: &str, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn verify_manifest(root: &Path, pins: &DocumentMut) -> Result<()> {
+fn verify_manifest(root: &Path, pins: &DocumentMut, source_only: bool) -> Result<()> {
     let manifest = read_document(&root.join("Cargo.toml"))?;
     let tag = pin_string(pins, "core", "tag")?;
     for name in ["bittensor-core", "subtensor-macros", "subtensor-linting"] {
@@ -1477,7 +1489,14 @@ fn verify_manifest(root: &Path, pins: &DocumentMut) -> Result<()> {
         &read_document(&root.join("xtask/Cargo.toml"))?,
         &root.join("xtask/Cargo.toml"),
     )?;
-    crate::core_patch::verify(root, pins)?;
+    if source_only {
+        crate::core_patch::verify_source(root, pins)?;
+        println!(
+            "Core patch source identity verified; hosted patched/unpatched API build probes NOT executed."
+        );
+    } else {
+        crate::core_patch::verify(root, pins)?;
+    }
     Ok(())
 }
 
@@ -1605,6 +1624,22 @@ pub(super) fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn source_only_is_explicit_and_cannot_replace_release_or_full_verification() -> Result<()> {
+        assert!(!options(vec!["--check".into()])?.source_only);
+        assert!(options(vec!["--check".into(), "--source-only".into()])?.source_only);
+        for args in [
+            vec!["--source-only"],
+            vec!["--check", "--source-only", "--parity", "v484"],
+            vec!["--check", "--source-only", "--prepare-cache"],
+            vec!["--check", "--source-only", "--networks"],
+            vec!["--check", "--source-only", "--source-only"],
+        ] {
+            assert!(options(args.into_iter().map(str::to_owned).collect()).is_err());
+        }
+        Ok(())
+    }
 
     #[test]
     fn core_canary_mode_requires_explicit_no_commit_and_excludes_release_modes() -> Result<()> {

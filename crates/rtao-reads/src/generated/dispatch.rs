@@ -1408,6 +1408,36 @@ pub async fn dispatch(
                 detail: error.to_string(),
             })
         }
+        ReadName::SubnetState => {
+            let args: super::interfaces::SubnetStateParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::subnet_state(view, args.netuid).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::SubnetStates => {
+            let args: super::interfaces::SubnetStatesParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::subnet_states(view).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
         ReadName::SubnetTaoFlows => {
             let args: super::interfaces::SubnetTaoFlowsParams =
                 serde_json::from_value(Value::Object(params)).map_err(|error| {

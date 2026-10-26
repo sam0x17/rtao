@@ -10,7 +10,7 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1792754368,
+        "measured_unix_seconds": 1792977070,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -20,7 +20,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "f2ae5f6b19cb934fa0e10888eaba5a896625ffc2c6009824e1acdb735e764d56",
+            "feature_graph_sha256": "b661d03019bb840192ad7d0f00b67ecafc7e99f815725c5113726e8052a2c68c",
             "features": [],
             "normal_build_packages": 225,
             "package": "rtao-core",
@@ -256,7 +256,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "f53468555fdf8388c3d050b88a1a9ae1898826fa6e5d51d1f61be10d14fec78d",
+            "feature_graph_sha256": "28ba0d53c02b58c4e175177a56127a6f7e272ade86814a15595adbb9ec496ffb",
             "features": [
               "validator"
             ],
@@ -631,7 +631,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "3e6da4980dadde51e2ed51a43d0984930e230051735d3ed964827506f83f74ab",
+            "feature_graph_sha256": "5f511a611f3300b290c73b640cdf373298fcea7020f1b13b9825cb8b7aed96b9",
             "features": [
               "miner"
             ],
@@ -1010,7 +1010,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "ee09061db2045acedddb42355ea535acae32caa191c69c750ba534bbf8c665b7",
+            "feature_graph_sha256": "d1253a7d6da5407f1e83ac49d637b708b99b3ea8e114c253d803ac18cbd7f9e8",
             "features": [
               "owner"
             ],
@@ -1467,16 +1467,16 @@
             "crates/rtao-tx/Cargo.toml": "9ed0bd496ab8f48c6d3e9966bd130321e81d490a9bbc4f83d87f51e0d209f72f",
             "crates/rtao-wallet/Cargo.toml": "a956707a77f207cbb4d3bba6fbc935e4337c6886ec612c61a8ddbfe3ecaeee97",
             "crates/rtao/Cargo.toml": "7063fc567ec64639f77e2b13b2ef659163c6fe42fc4b4e0e31578fcdd55699aa",
-            "upstream.toml": "bde3e40ad7431ffbbc7ce7a4a50debc3094e8c623bced7023cc12660e5bd4a83",
+            "upstream.toml": "f474740a63d487c7e0c6267b9127c91361a4a5f465d531aa2c1afc18d92c94bb",
             "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
           },
-          "dependency_inputs_sha256": "18b9dc4f52a0a628bf4fd04ad206d77ea3078b4f13e6c5ffe6ba98fc93856468",
-          "dirty": false,
-          "head_commit": "3907e95c39d98fa2a9f3dc897bdde917b03ce33a"
+          "dependency_inputs_sha256": "c36a53bde5332cad0a37f5671b90e2c8ba17823501cbe503d6d77ee898068bb3",
+          "dirty": true,
+          "head_commit": "b19a803b935258100f66ade9d5dcd302987fd5b0"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "5252d2aac96c6346a99372236670540abd694b62a499f1f245175a839059230c"
+      "sha256": "08e0897542864590c47405bd117f52f9a0d7b49443a16f0130ec3127ab49aee1"
     }
   ],
   "core": {
@@ -1484,31 +1484,31 @@
     "tag": "v478"
   },
   "interop": {
-    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
     "package": "bittensor",
     "source_version": "11.3.1.dev0",
-    "tag": "v482"
+    "tag": "v484"
   },
   "localnet": {
     "devnet": {
-      "digest": "sha256:0dd5335b49ed3a20431dc404ddf375f17d2219094457f00e12c12181959f9345",
+      "digest": "sha256:64f56c4b5485c2bf1f299ce792423517217acd7e763549dab311c74e784bee2b",
       "tag": "devnet"
     },
     "image": "ghcr.io/raofoundation/subtensor-localnet",
     "main": {
-      "digest": "sha256:24aa318a945b3cccd87c05a07b88f986933dcb59dfedd7e877c82b081a38a2e6",
+      "digest": "sha256:9f4a42e08dd2dbbb9eab01b9f8f3f9152766a56608a1b97958eaaad3671141a9",
       "tag": "main"
     },
     "mainnet": {
-      "digest": "sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8",
+      "digest": "sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35",
       "tag": "mainnet"
     },
     "pinned": {
-      "digest": "sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8",
-      "tag": "v482"
+      "digest": "sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35",
+      "tag": "v484"
     },
     "testnet": {
-      "digest": "sha256:c55447365f752826d366101fce0dec458b4b61fe0ad7332ae2efa29e112dfc3c",
+      "digest": "sha256:5e4eaefb768d08bf13345d9c60eeb04719a8bb1a9d0fdb14e4f05bbb95a5602e",
       "tag": "testnet"
     }
   },
@@ -1652,21 +1652,49 @@
         "path": "vendor/metadata/finney/482.v16.scale",
         "sha256": "6d662b835afe9c02132cff8fe46c24d9cc93d3bcc5d77c039a99384cf18e88fb"
       }
+    },
+    {
+      "code_hash": "0x23041f50d3529b359e9be3b90f3ca40474678e834e97f49fb401d0c691097760",
+      "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
+      "endpoint": "https://entrypoint-finney.opentensor.ai:443",
+      "finalized_head": "0x0c856f3c0a470a23703858e652949a726369549288f5b1b1917897084d77e7a7",
+      "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+      "network": "finney",
+      "spec_version": 484,
+      "tag": "v484",
+      "v15": {
+        "bytes": 411830,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0x56792f438a51f045ccb1873623a8f7ac7334b9e286020e9e07fb097ac90c42a8"
+        },
+        "path": "vendor/metadata/finney/484.v15.scale",
+        "sha256": "17183e36d52a18aa8cc15caf054b82f7559608ca6decc45923313e7be5c8d32f"
+      },
+      "v16": {
+        "bytes": 415879,
+        "metadata_hash": {
+          "kind": "blake2b-256-raw",
+          "value": "0x782e734a0af8af92317c9d0322e3eb2af5f0f52422a9db12aa76943fb0ef73ed"
+        },
+        "path": "vendor/metadata/finney/484.v16.scale",
+        "sha256": "5f7b01288df379ddd32bc7665f61fccc30b157c6662a13ea80008d1bc440192c"
+      }
     }
   ],
   "milestone": null,
   "parity": {
-    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
     "pypi_release": null,
     "python_source_version": "11.3.1.dev0",
-    "tag": "v482"
+    "tag": "v484"
   },
   "rtao_version": "0.1.0",
   "schema": 1,
   "validated_runtimes": [],
   "validated_spec_range": null,
   "validation": {
-    "inputs_sha256": "6d8d3e4b0b13f4f7a71fec2cde54c01286b32b37000128ed6fccdd7a9bbb1fbc",
+    "inputs_sha256": "3e8b140a2ea84fde4b614932a6c765631143714d0b5c9192350a9e7ce865d0a4",
     "reports": []
   }
 }

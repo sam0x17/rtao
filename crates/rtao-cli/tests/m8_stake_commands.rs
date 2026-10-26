@@ -118,6 +118,7 @@ fn position(hotkey: AccountId, netuid: u16, rao: u64) -> StakePosition {
         netuid: NetUid(netuid),
         stake: DynBalance::from_rao(rao, NetUid(netuid)),
         is_registered: true,
+        subnet_state: None,
     }
 }
 fn valuation(positions: Vec<StakePosition>) -> StakeValuation {
@@ -699,6 +700,12 @@ async fn list_keeps_all_json_positions_and_globally_sorts_the_filtered_human_row
         (900_000_000, 2_000_000_000, 500_000_000),
     ] {
         let mut state = FakeState::try_default()?;
+        state.seed_python(
+            "SubtensorModule",
+            "SubnetState",
+            &[json!(1)],
+            json!("PendingDissolution"),
+        )?;
         let mut positions = json!([
             {"hotkey":HOT,"coldkey":OWNER,"netuid":1,"stake":100_000_000_000u64,"is_registered":true},
             {"hotkey":OTHER,"coldkey":OWNER,"netuid":1,"stake":1_000_000_000u64,"is_registered":true},
@@ -834,6 +841,8 @@ async fn list_keeps_all_json_positions_and_globally_sorts_the_filtered_human_row
                 }
                 assert!(sink.bytes(Stream::Stderr)?.is_empty());
             } else {
+                assert!(output.contains("pending automatic payout"));
+                assert!(output.contains("unavailable for manual unstaking"));
                 let large = output.find("Straße").ok_or("large position")?;
                 let middle = output.find("Owner").ok_or("middle position")?;
                 let small = output.find("Other").ok_or("small position")?;
@@ -1366,5 +1375,114 @@ async fn stake_list_uses_natural_local_aliases_and_empty_contacts_allow_chain_na
             .iter()
             .all(|request| !request.method.starts_with("author_"))
     );
+    Ok(())
+}
+
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_subnet_lifecycle.py @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7 (Apache-2.0); modified by rtao.
+#[test]
+fn lifecycle_stake_records_preserve_state_and_explain_automatic_payout() -> TestResult {
+    use rtao::reads::SubnetLifecycleState as State;
+    for (state, note) in [
+        (State::PendingDissolution, "pending automatic payout"),
+        (State::Dissolving, "automatic payout in progress"),
+    ] {
+        let mut position = position(HOT, 9, 2_000_000_000);
+        position.subnet_state = Some(state);
+        let rows = stake::position_records(
+            &valuation(vec![position]),
+            &[],
+            &[],
+            &DynBalance::from_rao(0, NetUid::ROOT),
+            None,
+        )?;
+        assert_eq!(rows[0]["subnet_state"], json!(state));
+        assert_eq!(stake::automatic_payout_note(Some(state)), Some(note));
+    }
+    assert_eq!(stake::automatic_payout_note(Some(State::Started)), None);
+    assert_eq!(stake::automatic_payout_note(None), None);
+    Ok(())
+}
+
+#[tokio::test]
+async fn single_and_all_wallet_stake_lists_explain_payout_without_availability() -> TestResult {
+    let mut state = FakeState::try_default()?;
+    for (netuid, status) in [(9, "PendingDissolution"), (10, "Dissolving")] {
+        state.seed_python(
+            "SubtensorModule",
+            "SubnetState",
+            &[json!(netuid)],
+            json!(status),
+        )?;
+    }
+    let positions = json!([
+        {"hotkey":HOT,"coldkey":OWNER,"netuid":9,"stake":2_000_000_000u64,"is_registered":false},
+        {"hotkey":OTHER,"coldkey":OWNER,"netuid":10,"stake":3_000_000_000u64,"is_registered":false}
+    ]);
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_stake_info_for_coldkey",
+        positions.clone(),
+    )?;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_stake_info_for_coldkeys",
+        json!([[OWNER, positions]]),
+    )?;
+    state.seed_runtime(
+        "SwapRuntimeApi",
+        "current_alpha_price_all",
+        json!([{"netuid":9,"price":1_000_000_000u64},{"netuid":10,"price":1_000_000_000u64}]),
+    )?;
+    state.seed_runtime("BetaBasketRuntimeApi", "get_root_basket_owed", json!(0))?;
+    state.seed_runtime(
+        "StakeInfoRuntimeApi",
+        "get_stake_availability_for_coldkeys",
+        json!({}),
+    )?;
+    let (client, chain) = client(state).await?;
+    for all_wallets in [false, true] {
+        for json_mode in [false, true] {
+            let mut args = vec!["rtao", "stake", "list", "--coldkey", "Owner"];
+            if json_mode {
+                args.push("--json");
+            }
+            let parsed = parse(&args)?;
+            let (mut ctx, sink) = context(&parsed)?;
+            let request = Request::List {
+                owners: vec![(Some("wallet".into()), OWNER)],
+                dust: false,
+                all_wallets,
+            };
+            stake::execute(
+                &mut ctx,
+                &client,
+                &request,
+                Default::default(),
+                None,
+                &mut PromptHistory::default(),
+            )
+            .await?;
+            let text = sink.text(Stream::Stdout)?;
+            if json_mode {
+                let rows: Value = serde_json::from_str(&text)?;
+                assert_eq!(rows[0]["subnet_state"], "pending_dissolution");
+                assert_eq!(rows[1]["subnet_state"], "dissolving");
+                // The availability read projects missing runtime rows to zero values.
+                assert_eq!(rows[0]["locked_amount"], 0.0);
+                assert_eq!(rows[1]["available_amount"], 0.0);
+            } else {
+                assert!(text.contains("pending automatic payout"));
+                assert!(text.contains("automatic payout in progress"));
+                assert_eq!(text.matches("unavailable for manual unstaking").count(), 2);
+            }
+        }
+    }
+    assert!(
+        !chain
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
     Ok(())
 }

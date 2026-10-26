@@ -4353,7 +4353,7 @@
         "name": "test_subnets_all_batched",
         "oracle": "unverified",
         "rtao": "mapped",
-        "test": "rtao_reads::m6_root::subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows"
+        "test": "rtao_reads::m6_root::subnet_list_uses_five_map_scans_and_zero_for_missing_join_rows"
       },
       {
         "evidence": {
@@ -4709,6 +4709,12 @@
         "oracle": "unverified",
         "python": "bittensor.SubnetInfo",
         "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.SubnetLifecycleState",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/__init__.py"
       },
       {
@@ -6855,6 +6861,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.reads.SubnetLifecycleState",
+        "rtao": "decision",
+        "source": "sdk/python/bittensor/reads/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.reads.SwapQuote",
         "rtao": "decision",
         "source": "sdk/python/bittensor/reads/__init__.py"
@@ -7213,7 +7225,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated delegate_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "7656aaec6c144af360743d9e627835cce5868b53"
+        "synced_blob": "ef2bc45eb677fe17b5ad06e653981ef007476db6"
       },
       {
         "kind": "extracted",
@@ -7225,7 +7237,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated dynamic_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "b1432954255343d9f68ede604e3fd2fb30a73a78"
+        "synced_blob": "eb9624b00d84fac0a2e942363b6061da7f5d6a74"
       },
       {
         "kind": "extracted",
@@ -7237,7 +7249,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated metagraph freeze_struct layout tripwires)"
         ],
-        "synced_blob": "a627a4eff3313ca64691c21d94540e6622ab7c49"
+        "synced_blob": "7dde1599b93616c5e99e2ca421c834cb1b2e3234"
       },
       {
         "kind": "n/a",
@@ -7260,7 +7272,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated neuron_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "fe9f0f2e5285bd8d113cf5152ba92a0954795ab0"
+        "synced_blob": "6a55349156fec11b9b52a5cbd6995b1cdae1d257"
       },
       {
         "kind": "extracted",
@@ -7272,7 +7284,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated show_subnet freeze_struct layout tripwires)"
         ],
-        "synced_blob": "18adfe4bc4ec5252c28cfe506d2aab9b2ef6abb5"
+        "synced_blob": "8b591519421a4a1844bb689ddc6c978ad4d12456"
       },
       {
         "kind": "extracted",
@@ -7284,7 +7296,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated stake_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "2d3316f34d909cd21699fc53420ae2636216383e"
+        "synced_blob": "f89712a1122067b69747024ffe1d74618fc55464"
       },
       {
         "kind": "extracted",
@@ -7320,7 +7332,7 @@
           "crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)",
           "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)"
         ],
-        "synced_blob": "3a890e95a98c19f39c83c2fcba6a40900ef458c2"
+        "synced_blob": "256231d7a0041fb61c2f0f260043322dbfa06810"
       },
       {
         "kind": "ported",
@@ -7944,7 +7956,7 @@
         "rust": [
           "crates/rtao/src/lib.rs"
         ],
-        "synced_blob": "6dce916d2a4037ac0c7d26090fbbd21866a125f5"
+        "synced_blob": "2794f4358a84f0a9471c025d726a05dfdaf2baaf"
       },
       {
         "kind": "n/a",
@@ -8010,7 +8022,7 @@
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "c2cc266ded297ee3c80566a662e161a8b3033744"
+        "synced_blob": "e1bc936f9536231a403db45cf6824c132dba91f9"
       },
       {
         "kind": "n/a",
@@ -8591,7 +8603,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/stake.rs"
         ],
-        "synced_blob": "712a6a038799d7384cc682ac6491fd4e1ba72840"
+        "synced_blob": "b3dddb347518217badb56f43655a3dad09948517"
       },
       {
         "kind": "ported",
@@ -8613,7 +8625,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/subnets.rs"
         ],
-        "synced_blob": "f5a2393fd9418d1413e6418a75b004687d75a5df"
+        "synced_blob": "b875a85679360670e6425eac88ab830f9994fed8"
       },
       {
         "kind": "ported",
@@ -8722,7 +8734,7 @@
           "crates/rtao-cli/src/commands/wallet.rs",
           "crates/rtao-cli/src/commands/wallet_m8/views.rs"
         ],
-        "synced_blob": "cfe78cc078cafb30ee1e69d80014c4820a2f26ea"
+        "synced_blob": "12b68738a9b99b03565487e9eabe550fc1d2bea4"
       },
       {
         "kind": "ported",
@@ -8784,7 +8796,7 @@
           "crates/rtao-cli/src/commands/subnets.rs",
           "crates/rtao-cli/tests/subnets_commands.rs"
         ],
-        "synced_blob": "3ef561c3cbb67138952c08fdc02c5ec78dd9a19a"
+        "synced_blob": "be3e1fce72740bb83ec31a21e65e97b0fc4f95eb"
       },
       {
         "kind": "ported",
@@ -8824,7 +8836,7 @@
           "crates/rtao-cli/src/output.rs",
           "rtao_cli::commands specialized human renderers"
         ],
-        "synced_blob": "69670cd9ff4d21625247c730398585379e04f992"
+        "synced_blob": "fd879cd7e1915c7d29eae04c78114b59dc4c5ce9"
       },
       {
         "kind": "ported",
@@ -8909,7 +8921,7 @@
           "crates/rtao-cli/src/commands/schema.rs",
           "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "e2bdf719e50ddb32b17f7aa94b3265be4b7902b5"
+        "synced_blob": "0036e8de67dd82e7f4eead7c9ad5dbb383f35670"
       },
       {
         "kind": "ported",
@@ -9437,7 +9449,7 @@
           "vendor/upstream/evm/abi/subnet.json",
           "rtao_evm::precompiles::PRECOMPILES embeds this exact ABI with include_str!"
         ],
-        "synced_blob": "52cc9d27e5ee89fd81e2e8bbe73b3be524428351"
+        "synced_blob": "d3747f845ec2ab192c93342bb42567eaf13f3706"
       },
       {
         "kind": "vendored",
@@ -9755,7 +9767,7 @@
         "rust": [
           "rtao_intents::root_claim"
         ],
-        "synced_blob": "f59999129baaad88b743f2961a75d49fb03ee008"
+        "synced_blob": "f11df3715189489c7b228d7f8480a8852329b408"
       },
       {
         "kind": "ported",
@@ -10127,7 +10139,7 @@
           "rtao_reads::Subnets::commitments",
           "rtao_metagraph::SubnetsMetagraphExt::{metagraph, metagraph_with}"
         ],
-        "synced_blob": "04a2c7110a402d59f20af52f705b4a5e65243ce1"
+        "synced_blob": "4a7cd8f32a776a526e2efbf4d21180ceb289f8ec"
       },
       {
         "kind": "n/a",
@@ -10138,7 +10150,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "3f4814eedd4be6507a2b5fbaaeb04deadbde58f9"
+        "synced_blob": "3c504ac6e61fd88fd0dcff62c77ba71ea0d4943a"
       },
       {
         "kind": "ported",
@@ -10173,7 +10185,7 @@
         "rust": [
           "`rtao_reads` crate root"
         ],
-        "synced_blob": "ad6e1af3fa9b15d16683de5addd7d423bb739203"
+        "synced_blob": "ea46bee016c2a51fff7dcdf4eb1edd566c5607e5"
       },
       {
         "kind": "ported",
@@ -10352,7 +10364,7 @@
           "rtao_reads::reads::owner::{StakePosition, StakeValuation, stake_value_for_coldkey, stake_value_for_coldkeys}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "e4cc43d182d8b897fa0472de74f6d44c437473e9"
+        "synced_blob": "8b92b40f96219fa25983fa71cf2d230a1f600d77"
       },
       {
         "kind": "ported",
@@ -10361,12 +10373,13 @@
         "python": "sdk/python/bittensor/reads/subnets.py",
         "rtao": "reconciled",
         "rust": [
+          "rtao_reads::reads::lifecycle::{SubnetLifecycleState, subnet_state, subnet_states}",
           "rtao_reads::reads::subnets::{metagraph, token_symbols, commit_reveal_enabled, mechanism_count, subnet_emission_weights, emission_weights_rate_limit_key, root_preservation_inputs}",
           "rtao_reads::reads::owner::{burn, subnet_hyperparameters, subnet_identity, subnet_names, subnet_start_schedule, mechanism_emission_split}",
           "rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "32cb6b8b6af7550159045cec8b6b684a5c139c89"
+        "synced_blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58"
       },
       {
         "kind": "ported",
@@ -10837,7 +10850,7 @@
           "crates/rtao-intents/tests/intent_plans.rs",
           "crates/rtao-reads/tests/catalog_samples.rs"
         ],
-        "synced_blob": "987cfa63d8b94b7f18440fc5c7d81bd256fbf613"
+        "synced_blob": "60ee43d2db3159b969a7a01fb14edade193e57b8"
       },
       {
         "kind": "n/a",
@@ -10887,7 +10900,7 @@
           "crates/rtao-cli/tests/generated_commands.rs",
           "crates/rtao-cli/tests/m8_help_theme.rs"
         ],
-        "synced_blob": "2d48caba1b308f5cc1075a4fdd6ab8bdf84cfa1f"
+        "synced_blob": "155e2380f0111e4e1c617e7d3cd1ed8282d4566b"
       },
       {
         "kind": "ported",
@@ -10964,7 +10977,7 @@
           "crates/rtao-evm/src/keys/tests.rs",
           "xtask/src/extract_precompiles.rs"
         ],
-        "synced_blob": "503a7ef44e63fcf91211fc123af67262d230af8d"
+        "synced_blob": "8dd19654744f5338cc4b9ab620f834bbf6b526bd"
       },
       {
         "kind": "oracle-only",
@@ -11058,7 +11071,7 @@
           "crates/rtao-intents/src/staking_claims.rs",
           "crates/rtao-intents/src/children.rs"
         ],
-        "synced_blob": "3657bd862a3b708e4f01d2339a503f4b9c9bd9bc"
+        "synced_blob": "4968a1ce1c156c3fe47195781635672e441d2009"
       },
       {
         "kind": "oracle-only",
@@ -11092,6 +11105,17 @@
           "rtao_reads::reads::m6_locks::tests"
         ],
         "synced_blob": "91228d101f98e4835037fbf9a34832a993b8d67b"
+      },
+      {
+        "kind": "ported",
+        "milestone": "M8",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_metagraph_symbols.py",
+        "rtao": "reconciled",
+        "rust": [
+          "rtao-cli/tests/subnets_commands.rs"
+        ],
+        "synced_blob": "9ae159ffe79049d72dde1e0bbe10044591cecc78"
       },
       {
         "kind": "ported",
@@ -11173,7 +11197,7 @@
         "rust": [
           "rtao_intents::root_claim::tests"
         ],
-        "synced_blob": "b0d8d27609153bd006024a15f368fed4720fe7aa"
+        "synced_blob": "f890c50fa7609820e844c026bd16c24be15a180b"
       },
       {
         "kind": "ported",
@@ -11250,6 +11274,19 @@
       },
       {
         "kind": "ported",
+        "milestone": "M8",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_subnet_lifecycle.py",
+        "rtao": "reconciled",
+        "rust": [
+          "rtao-reads/tests/lifecycle.rs",
+          "rtao-cli/tests/m8_stake_commands.rs",
+          "rtao-cli/tests/m8_wallet.rs"
+        ],
+        "synced_blob": "f43946c0186b14b2cca3f687d5b21409b89d30eb"
+      },
+      {
+        "kind": "ported",
         "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_v446_accounting_and_commitments.py",
@@ -11305,7 +11342,7 @@
           "vendor/upstream/catalog/reads.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "389ff5cd126c4ead27bcefcb6c92857241bc7692"
+        "synced_blob": "9eed565e120ab5dc01ec49fc2bd59864fb0707e4"
       }
     ],
     "intents": [
@@ -12278,6 +12315,16 @@
         "rtao": "implemented"
       },
       {
+        "name": "subnet_state",
+        "oracle": "missing",
+        "rtao": "implemented"
+      },
+      {
+        "name": "subnet_states",
+        "oracle": "missing",
+        "rtao": "implemented"
+      },
+      {
         "name": "subnet_tao_flows",
         "oracle": "missing",
         "rtao": "implemented"
@@ -12437,8 +12484,8 @@
     ]
   },
   "pin": {
-    "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
-    "tag": "v482"
+    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
+    "tag": "v484"
   },
   "schema": 1,
   "status_semantics": {

@@ -901,6 +901,40 @@ mod falsy_option_tests {
     }
 
     #[tokio::test]
+    async fn liquid_alpha_consensus_getter_and_setter_choose_read_and_write_boundaries()
+    -> TestResult {
+        let getter = Fixture::new(
+            "subnet",
+            "getLiquidAlphaConsensusMode",
+            &["7"],
+            &["--evm-key", ""],
+        )?;
+        let read = ReadProbe::default();
+        let tx = TxProbe::default();
+        getter.run(&read, &tx).await?;
+        assert_eq!(getter.json()?, json!(7));
+        assert_eq!(*read.calls.lock().map_err(|_| "poisoned")?, 1);
+        assert_eq!(*tx.keys.lock().map_err(|_| "poisoned")?, 0);
+        let setter = Fixture::new("subnet", "setLiquidAlphaConsensusMode", &["7", "2"], &[])?;
+        setter.run(&read, &tx).await?;
+        assert_eq!(*read.calls.lock().map_err(|_| "poisoned")?, 1);
+        let prepared = tx.prepared.lock().map_err(|_| "poisoned")?;
+        assert_eq!(prepared.len(), 1);
+        let mut target = [0; 20];
+        target[18] = 8;
+        target[19] = 3;
+        assert_eq!(prepared[0].0, Some(Address::from(target)));
+        assert_eq!(prepared[0].2.len(), 68);
+        let mut word = [0; 32];
+        word[31] = 7;
+        assert_eq!(&prepared[0].2[4..36], &word);
+        word[31] = 2;
+        assert_eq!(&prepared[0].2[36..68], &word);
+        assert_eq!(*tx.submitted.lock().map_err(|_| "poisoned")?, 0);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn views_ignore_attached_value_and_key_without_the_write_boundary() -> TestResult {
         for value in ["", "not-an-amount"] {
             let fixture = Fixture::new(

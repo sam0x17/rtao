@@ -230,6 +230,10 @@ pub mod subnet_names {}
 pub mod subnet_registration_cost {}
 /// Extracted defaults for `subnet_start_schedule`.
 pub mod subnet_start_schedule {}
+/// Extracted defaults for `subnet_state`.
+pub mod subnet_state {}
+/// Extracted defaults for `subnet_states`.
+pub mod subnet_states {}
 /// Extracted defaults for `subnet_tao_flows`.
 pub mod subnet_tao_flows {}
 /// Extracted defaults for `subnets`.

@@ -32,13 +32,18 @@ fn balance(rao: u64, netuid: NetUid, symbols: &Symbols) -> DynBalance {
     value
 }
 
-fn position(record: models::StakeInfo, symbols: &Symbols) -> StakePosition {
+fn position(
+    record: models::StakeInfo,
+    symbols: &Symbols,
+    states: &BTreeMap<NetUid, crate::SubnetLifecycleState>,
+) -> StakePosition {
     StakePosition {
         hotkey: record.hotkey,
         coldkey: record.coldkey,
         netuid: record.netuid,
         stake: balance(record.stake.0, record.netuid, symbols),
         is_registered: record.is_registered,
+        subnet_state: states.get(&record.netuid).copied(),
     }
 }
 
@@ -78,9 +83,10 @@ pub async fn stake_for_coldkey<V: View + ?Sized>(
         )
         .await?;
     let symbols = snapshot.client().token_symbols().await;
+    let states = super::lifecycle::subnet_states(&snapshot).await?;
     Ok(records
         .into_iter()
-        .map(|record| position(record, &symbols))
+        .map(|record| position(record, &symbols, &states))
         .collect())
 }
 
@@ -100,6 +106,7 @@ pub async fn stake_for_coldkeys<V: View + ?Sized>(
         )
         .await?;
     let symbols = snapshot.client().token_symbols().await;
+    let states = super::lifecycle::subnet_states(&snapshot).await?;
     Ok(records
         .into_iter()
         .map(|(coldkey, records)| {
@@ -107,7 +114,7 @@ pub async fn stake_for_coldkeys<V: View + ?Sized>(
                 coldkey,
                 records
                     .into_iter()
-                    .map(|record| position(record, &symbols))
+                    .map(|record| position(record, &symbols, &states))
                     .collect(),
             )
         })

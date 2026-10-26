@@ -507,6 +507,16 @@ async fn turnover_bucket_uses_integer_refills_and_clamps_excess_availability() {
 #[tokio::test]
 async fn subnet_listing_matches_the_map_scans_with_one_scan_and_one_lookup() {
     let mut state = seed();
+    for id in [1, 2] {
+        state
+            .seed_python(
+                "SubtensorModule",
+                "SubnetState",
+                &[json!(id)],
+                json!("Registered"),
+            )
+            .unwrap();
+    }
     // The Python harness answers unwritten keys with defaults; a node reads
     // them as null, which is what keyed lookups must treat as absent.
     for item in [
@@ -547,8 +557,19 @@ async fn subnet_listing_matches_the_map_scans_with_one_scan_and_one_lookup() {
 
 #[tokio::test]
 // upstream-e2e: sdk/bittensor-core/tests/e2e.rs::test_subnets_all_batched
-async fn subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows() {
-    let (client, chain) = client(seed()).await;
+async fn subnet_list_uses_five_map_scans_and_zero_for_missing_join_rows() {
+    let mut state = seed();
+    for id in [1, 2] {
+        state
+            .seed_python(
+                "SubtensorModule",
+                "SubnetState",
+                &[json!(id)],
+                json!("Registered"),
+            )
+            .unwrap();
+    }
+    let (client, chain) = client(state).await;
     let before = chain.requests().len();
     let rows = reads::subnets(&client).await.unwrap();
     assert_eq!(
@@ -569,7 +590,7 @@ async fn subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows() {
             .iter()
             .filter(|request| request.method == "state_getKeysPaged")
             .count(),
-        4
+        5
     );
     assert_eq!(
         requests[before..]
@@ -592,8 +613,9 @@ async fn subnet_list_uses_four_map_scans_and_zero_for_missing_join_rows() {
         .iter()
         .filter(|request| request.method == "state_queryStorageAt")
         .collect();
-    assert_eq!(batches.len(), 1);
-    assert_eq!(batches[0].params[0].as_array().unwrap().len(), 3);
+    assert_eq!(batches.len(), 2);
+    assert_eq!(batches[0].params[0].as_array().unwrap().len(), 1);
+    assert_eq!(batches[1].params[0].as_array().unwrap().len(), 4);
     assert_eq!(
         reads::subnet_registration_cost(&client).await.unwrap().rao,
         u64::MAX

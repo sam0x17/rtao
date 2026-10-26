@@ -193,6 +193,10 @@ pub enum ReadName {
     SubnetRegistrationCost,
     #[doc = "When a registered subnet can call `start_call`."]
     SubnetStartSchedule,
+    #[doc = "Reporting lifecycle for one subnet, or None after cleanup/nonexistence."]
+    SubnetState,
+    #[doc = "Reporting lifecycle for every active or dissolving subnet."]
+    SubnetStates,
     #[doc = "Per-subnet EMA of net TAO flow, in rao per block."]
     SubnetTaoFlows,
     #[doc = "Info for every subnet, fetched in four batched map queries rather than"]
@@ -222,7 +226,7 @@ pub enum ReadName {
 }
 impl ReadName {
     /// Every catalog read in stable name order.
-    pub const ALL: [Self; 103] = [
+    pub const ALL: [Self; 105] = [
         Self::AcceptsLockedAlpha,
         Self::AlphaPrice,
         Self::AlphaPrices,
@@ -313,6 +317,8 @@ impl ReadName {
         Self::SubnetNames,
         Self::SubnetRegistrationCost,
         Self::SubnetStartSchedule,
+        Self::SubnetState,
+        Self::SubnetStates,
         Self::SubnetTaoFlows,
         Self::Subnets,
         Self::TimelockedWeightCommits,
@@ -420,6 +426,8 @@ impl ReadName {
             Self::SubnetNames => "subnet_names",
             Self::SubnetRegistrationCost => "subnet_registration_cost",
             Self::SubnetStartSchedule => "subnet_start_schedule",
+            Self::SubnetState => "subnet_state",
+            Self::SubnetStates => "subnet_states",
             Self::SubnetTaoFlows => "subnet_tao_flows",
             Self::Subnets => "subnets",
             Self::TimelockedWeightCommits => "timelocked_weight_commits",
@@ -528,19 +536,21 @@ impl ReadName {
             Self::SubnetNames => &rtao_catalog::READS[87],
             Self::SubnetRegistrationCost => &rtao_catalog::READS[88],
             Self::SubnetStartSchedule => &rtao_catalog::READS[89],
-            Self::SubnetTaoFlows => &rtao_catalog::READS[90],
-            Self::Subnets => &rtao_catalog::READS[91],
-            Self::TimelockedWeightCommits => &rtao_catalog::READS[92],
-            Self::Timestamp => &rtao_catalog::READS[93],
-            Self::TokenSymbols => &rtao_catalog::READS[94],
-            Self::TotalAlphaStaked => &rtao_catalog::READS[95],
-            Self::TxRateLimit => &rtao_catalog::READS[96],
-            Self::Uid => &rtao_catalog::READS[97],
-            Self::ValidatorBasket => &rtao_catalog::READS[98],
-            Self::ValidatorBasketNav => &rtao_catalog::READS[99],
-            Self::ValidatorBasketSummary => &rtao_catalog::READS[100],
-            Self::Weights => &rtao_catalog::READS[101],
-            Self::WeightsRateLimit => &rtao_catalog::READS[102],
+            Self::SubnetState => &rtao_catalog::READS[90],
+            Self::SubnetStates => &rtao_catalog::READS[91],
+            Self::SubnetTaoFlows => &rtao_catalog::READS[92],
+            Self::Subnets => &rtao_catalog::READS[93],
+            Self::TimelockedWeightCommits => &rtao_catalog::READS[94],
+            Self::Timestamp => &rtao_catalog::READS[95],
+            Self::TokenSymbols => &rtao_catalog::READS[96],
+            Self::TotalAlphaStaked => &rtao_catalog::READS[97],
+            Self::TxRateLimit => &rtao_catalog::READS[98],
+            Self::Uid => &rtao_catalog::READS[99],
+            Self::ValidatorBasket => &rtao_catalog::READS[100],
+            Self::ValidatorBasketNav => &rtao_catalog::READS[101],
+            Self::ValidatorBasketSummary => &rtao_catalog::READS[102],
+            Self::Weights => &rtao_catalog::READS[103],
+            Self::WeightsRateLimit => &rtao_catalog::READS[104],
         }
     }
     /// Complete descriptor, presentation and signature contract.
@@ -636,19 +646,21 @@ impl ReadName {
             Self::SubnetNames => &super::specs::READ_SPECS[87],
             Self::SubnetRegistrationCost => &super::specs::READ_SPECS[88],
             Self::SubnetStartSchedule => &super::specs::READ_SPECS[89],
-            Self::SubnetTaoFlows => &super::specs::READ_SPECS[90],
-            Self::Subnets => &super::specs::READ_SPECS[91],
-            Self::TimelockedWeightCommits => &super::specs::READ_SPECS[92],
-            Self::Timestamp => &super::specs::READ_SPECS[93],
-            Self::TokenSymbols => &super::specs::READ_SPECS[94],
-            Self::TotalAlphaStaked => &super::specs::READ_SPECS[95],
-            Self::TxRateLimit => &super::specs::READ_SPECS[96],
-            Self::Uid => &super::specs::READ_SPECS[97],
-            Self::ValidatorBasket => &super::specs::READ_SPECS[98],
-            Self::ValidatorBasketNav => &super::specs::READ_SPECS[99],
-            Self::ValidatorBasketSummary => &super::specs::READ_SPECS[100],
-            Self::Weights => &super::specs::READ_SPECS[101],
-            Self::WeightsRateLimit => &super::specs::READ_SPECS[102],
+            Self::SubnetState => &super::specs::READ_SPECS[90],
+            Self::SubnetStates => &super::specs::READ_SPECS[91],
+            Self::SubnetTaoFlows => &super::specs::READ_SPECS[92],
+            Self::Subnets => &super::specs::READ_SPECS[93],
+            Self::TimelockedWeightCommits => &super::specs::READ_SPECS[94],
+            Self::Timestamp => &super::specs::READ_SPECS[95],
+            Self::TokenSymbols => &super::specs::READ_SPECS[96],
+            Self::TotalAlphaStaked => &super::specs::READ_SPECS[97],
+            Self::TxRateLimit => &super::specs::READ_SPECS[98],
+            Self::Uid => &super::specs::READ_SPECS[99],
+            Self::ValidatorBasket => &super::specs::READ_SPECS[100],
+            Self::ValidatorBasketNav => &super::specs::READ_SPECS[101],
+            Self::ValidatorBasketSummary => &super::specs::READ_SPECS[102],
+            Self::Weights => &super::specs::READ_SPECS[103],
+            Self::WeightsRateLimit => &super::specs::READ_SPECS[104],
         }
     }
     /// Whether this read's actual generated dispatch has implemented behavior.
@@ -744,6 +756,8 @@ impl ReadName {
             Self::SubnetNames => true,
             Self::SubnetRegistrationCost => true,
             Self::SubnetStartSchedule => true,
+            Self::SubnetState => true,
+            Self::SubnetStates => true,
             Self::SubnetTaoFlows => true,
             Self::Subnets => true,
             Self::TimelockedWeightCommits => true,
@@ -1324,6 +1338,21 @@ impl ReadName {
                 ),
                 output_type_name: std::any::type_name::<crate::reads::owner::SubnetStartSchedule>(),
             },
+            Self::SubnetState => ReadInterfaceMetadata {
+                implemented: true,
+                params_type_name: std::any::type_name::<super::interfaces::SubnetStateParams>(),
+                output_type_name: std::any::type_name::<Option<crate::SubnetLifecycleState>>(),
+            },
+            Self::SubnetStates => ReadInterfaceMetadata {
+                implemented: true,
+                params_type_name: std::any::type_name::<super::interfaces::SubnetStatesParams>(),
+                output_type_name: std::any::type_name::<
+                    std::collections::BTreeMap<
+                        rtao_primitives::NetUid,
+                        crate::SubnetLifecycleState,
+                    >,
+                >(),
+            },
             Self::SubnetTaoFlows => ReadInterfaceMetadata {
                 implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::SubnetTaoFlowsParams>(),
@@ -1510,6 +1539,8 @@ impl std::str::FromStr for ReadName {
             "subnet_names" => Ok(Self::SubnetNames),
             "subnet_registration_cost" => Ok(Self::SubnetRegistrationCost),
             "subnet_start_schedule" => Ok(Self::SubnetStartSchedule),
+            "subnet_state" => Ok(Self::SubnetState),
+            "subnet_states" => Ok(Self::SubnetStates),
             "subnet_tao_flows" => Ok(Self::SubnetTaoFlows),
             "subnets" => Ok(Self::Subnets),
             "timelocked_weight_commits" => Ok(Self::TimelockedWeightCommits),

@@ -71,7 +71,7 @@ fn main() -> Result<()> {
   cargo xtask gates [--job <name>] [--list]\n\
   cargo xtask supply\n\
   cargo xtask template check [--localnet]\n\
-  cargo xtask pin --check\n\
+  cargo xtask pin --check [--source-only] (source-only leaves hosted API probes unverified)\n\
   cargo xtask pin --check --prepare-cache (hosted source-cache bootstrap)\n\
   cargo xtask pin --networks [--check]\n\
   cargo xtask pin --parity <vN|auto> --check [--github-output <path>]\n\

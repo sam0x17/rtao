@@ -822,6 +822,26 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
+    #[doc = "Reporting lifecycle for one subnet, or None after cleanup/nonexistence."]
+    pub async fn subnet_state(
+        &self,
+        netuid: rtao_primitives::NetUid,
+    ) -> Result<Option<crate::SubnetLifecycleState>, crate::ReadError> {
+        super::interfaces::subnet_state(self.view, netuid).await
+    }
+}
+impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
+    #[doc = "Reporting lifecycle for every active or dissolving subnet."]
+    pub async fn subnet_states(
+        &self,
+    ) -> Result<
+        std::collections::BTreeMap<rtao_primitives::NetUid, crate::SubnetLifecycleState>,
+        crate::ReadError,
+    > {
+        super::interfaces::subnet_states(self.view).await
+    }
+}
+impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
     #[doc = "Per-subnet EMA of net TAO flow, in rao per block.\n\nTAO flow is the chain's running measure of user stake activity on a\nsubnet: every stake adds to the accumulator and every unstake subtracts,\nso a positive value means TAO is (on average) flowing into the subnet\nand a negative value means it is flowing out. The chain smooths the\nper-block accumulator (`SubnetTaoFlow`) into an exponential moving\naverage (`SubnetEmaTaoFlow`); this read returns that EMA per netuid.\nSubnets with no recorded flow are omitted."]
     pub async fn subnet_tao_flows(
         &self,

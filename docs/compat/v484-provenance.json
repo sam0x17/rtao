@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "observed_at": "2026-10-26T00:59:46.069878+00:00",
+  "policy": "Published release matching finalized Finney, including raw release WASM code hash; image provenance is registry evidence, not image execution.",
+  "finney": {
+    "endpoint": "https://entrypoint-finney.opentensor.ai:443",
+    "genesis": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
+    "block_number": 9364341,
+    "finalized_hash": "0x0c856f3c0a470a23703858e652949a726369549288f5b1b1917897084d77e7a7",
+    "spec_version": 484,
+    "code_hash": "0x23041f50d3529b359e9be3b90f3ca40474678e834e97f49fb401d0c691097760",
+    "v15_sha256": "17183e36d52a18aa8cc15caf054b82f7559608ca6decc45923313e7be5c8d32f",
+    "v16_sha256": "5f7b01288df379ddd32bc7665f61fccc30b157c6662a13ea80008d1bc440192c"
+  },
+  "release": {
+    "url": "https://github.com/RaoFoundation/subtensor/releases/tag/v484",
+    "tag": "v484",
+    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-23T19:35:19Z",
+    "assets": [
+      {
+        "name": "subtensor-digest.json",
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v484/subtensor-digest.json",
+        "digest": "sha256:f4ef4e160d5109c1ee67e1e4426fbe8e6f0e991dbc60b3add511b0df5811a053",
+        "size": 4969
+      },
+      {
+        "name": "subtensor.wasm",
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v484/subtensor.wasm",
+        "digest": "sha256:8ba7928018328ba9e08d6089b0d92c841967801733ff4cd3c4965f105881e681",
+        "size": 2677869
+      },
+      {
+        "name": "upgrade-manifest.json",
+        "browser_download_url": "https://github.com/RaoFoundation/subtensor/releases/download/v484/upgrade-manifest.json",
+        "digest": "sha256:0fbe6f6790d7ce1fbd8971726d7da24b9d49e80f12db408ca3cb6bbe3efc8c02",
+        "size": 1980
+      }
+    ],
+    "wasm_blake2b_256": "0x23041f50d3529b359e9be3b90f3ca40474678e834e97f49fb401d0c691097760",
+    "manifest_and_srtool_sha256_verified": true
+  },
+  "image": {
+    "repository": "ghcr.io/raofoundation/subtensor-localnet",
+    "tag": "v484",
+    "digest": "sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35",
+    "config_sha256": "a70ce58218b73b3a7cc8f902a7bdfd2e82c077f24d3b1aa9d07cb7ae79b6ceee",
+    "revision": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
+    "platform": "linux/amd64",
+    "executed": false
+  },
+  "core": {
+    "tag": "v478",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "toolchain": "1.89",
+    "fingerprint": "b3:edc9f51ac0953af2b9b60665398e0146567ae4ca9988d7f018d3788f01a73b86",
+    "patch": {
+      "repo": "https://github.com/sam0x17/subtensor.git",
+      "branch": "rtao-core-patch/v478",
+      "rev": "5f2477f5290f5f4cb467524754cc025626b52974",
+      "base": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "upstream_pr": "https://github.com/RaoFoundation/subtensor/pull/3242",
+      "upstream_pr_rev": "09f40dc4cf0af6668398adf1565358e77e910772",
+      "security_issue": "https://github.com/RaoFoundation/subtensor/issues/3251",
+      "review_base": "850f2755bb05a3851f948489f0ab27b0645cebce",
+      "review_rev": "5f2477f5290f5f4cb467524754cc025626b52974",
+      "review_diff_sha256": "8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489",
+      "paths": [
+        "sdk/bittensor-core/src/signers/mod.rs",
+        "sdk/bittensor-core/src/signers/ledger.rs",
+        "sdk/bittensor-core/src/signers/hid.rs",
+        "sdk/bittensor-core/Cargo.toml",
+        "sdk/bittensor-core/src/keys/mod.rs",
+        "sdk/bittensor-core/src/keys/encrypted_json.rs"
+      ],
+      "probe": [
+        "bittensor_core::signers::ApduTransport",
+        "bittensor_core::signers::ledger::LedgerDevice::with_transport"
+      ]
+    }
+  },
+  "coverage": {
+    "hosted_ci": "not invoked",
+    "core_api_build_probes": "not executed",
+    "oracle": "optional-unverified; no independent Python output",
+    "localnet_e2e": "not executed",
+    "validated_spec_range": null
+  },
+  "previous": {
+    "parity": {
+      "tag": "v482",
+      "commit": "8cf229f8ef969389d054a4c161b53ffd164a041f",
+      "spec_version": 482,
+      "python_package_version": "11.3.1.dev0"
+    },
+    "finney_metadata": {
+      "spec": 482,
+      "code_hash": "0x37d83888085e2f1b7c9c36c1341cfb6c0d6689f8efd6e0c6128e3666eb5d8b62",
+      "finalized_head": "0xc565db18d6b580eb2769f563fcad41077fea53f0af555711bfd03fe7e1c09b75",
+      "v15": "vendor/metadata/finney/482.v15.scale",
+      "v15_sha256": "e1104feeb153ca201da1d1e88174c4c6d52d9d9e12e54e463778900136afb1fc",
+      "v16": "vendor/metadata/finney/482.v16.scale",
+      "v16_sha256": "6d662b835afe9c02132cff8fe46c24d9cc93d3bcc5d77c039a99384cf18e88fb"
+    },
+    "localnet": {
+      "image": "ghcr.io/raofoundation/subtensor-localnet",
+      "pinned": {
+        "tag": "v482",
+        "digest": "sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8"
+      },
+      "mainnet": {
+        "tag": "mainnet",
+        "digest": "sha256:6fa0bccdd855b5abd81aa3d08f425b3c4593590104adc7f180959d1657ccebc8"
+      },
+      "testnet": {
+        "tag": "testnet",
+        "digest": "sha256:c55447365f752826d366101fce0dec458b4b61fe0ad7332ae2efa29e112dfc3c"
+      },
+      "devnet": {
+        "tag": "devnet",
+        "digest": "sha256:0dd5335b49ed3a20431dc404ddf375f17d2219094457f00e12c12181959f9345"
+      },
+      "main": {
+        "tag": "main",
+        "digest": "sha256:24aa318a945b3cccd87c05a07b88f986933dcb59dfedd7e877c82b081a38a2e6"
+      }
+    }
+  },
+  "localnet_lanes": {
+    "image": "ghcr.io/raofoundation/subtensor-localnet",
+    "pinned": {
+      "tag": "v484",
+      "digest": "sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35"
+    },
+    "mainnet": {
+      "tag": "mainnet",
+      "digest": "sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35"
+    },
+    "testnet": {
+      "tag": "testnet",
+      "digest": "sha256:5e4eaefb768d08bf13345d9c60eeb04719a8bb1a9d0fdb14e4f05bbb95a5602e"
+    },
+    "devnet": {
+      "tag": "devnet",
+      "digest": "sha256:64f56c4b5485c2bf1f299ce792423517217acd7e763549dab311c74e784bee2b"
+    },
+    "main": {
+      "tag": "main",
+      "digest": "sha256:9f4a42e08dd2dbbb9eab01b9f8f3f9152766a56608a1b97958eaaad3671141a9"
+    }
+  }
+}
