@@ -20,6 +20,22 @@ builds and tests are for development feedback.
   requires them.
 - Preserve wallets, recovery journals, datasets and unrelated work.
 
+# Runtime adoption policy
+
+Bittensor upgrades on the chain's schedule. Adopt newly activated Finney
+runtimes promptly: make a quick diff check focused on the interfaces and
+behavior this SDK uses, update pins/generated artifacts and affected adapters,
+then run focused local build and smoke checks. When these pass, proceed within
+existing rollout authorization. A routine upgrade does not need a broad audit,
+long soak or a wait for hosted CI. These focused checks govern runtime adoption;
+the general full-validation guidance above remains for other development.
+
+Expand the review only for a concrete relevant incompatibility or failed check,
+record the blocker and fix it promptly. A specVersion bump alone must not
+invalidate application work. Preserve runtime/metadata compatibility checks,
+current signing parameters and finalized-evidence reconciliation of unresolved
+transactions; prompt adoption never permits blind resubmission.
+
 # Workspace hygiene
 
 - Keep temporary tests, builds, extraction and rehearsals under one recorded
