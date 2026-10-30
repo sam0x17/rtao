@@ -4407,14 +4407,20 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
      its exact shape matches. Otherwise it goes to an installed `WeightCallEncoder` if there is one, and else to
      name-resolved composition (§3.7), logged once per runtime and counted in
      `rtao_weights_resolved_composition_total`. Encoder output is imported strictly (§3.8). It must then be a
-     `SubtensorModule` weight call of the requested kind (or a declared name, only with a semantic guard), carry no
+     `SubtensorModule` weight call of the requested kind (or a declared name, only on a durable attempt whose
+     binding runs the installed semantic guard: work queued under the scheduler's semantic contract; a non-durable
+     attempt, the step 3 retries and work queued under another contract or none refuse declared names), carry no
      nested call, and match the scheduler's subnet and the prepared mechanism, row or commitment, reveal round,
-     version key and tag in every field the live call has. Composition runs before the cadence slot is reserved. A
-     call no composer can produce pauses that mechanism as `PausedSurface` with nothing signed. Composed bytes carry
-     no wrapped descriptor and take the same executor path, so preflight, policy, the semantic guard, the journal,
-     the shield and the step 3 retries are unchanged. Durable work records the encoder `contract()` installed when it
-     was queued (omitted when none was, so native work keeps its bytes). That work is rebuilt only while the same
-     contract is installed and otherwise reports `Unresolved`.
+     version key and tag in every field the live call has. Composition runs before the cadence slot is reserved,
+     under the best-head preflight runtime. The executor signs under its refreshed runtime; when that differs, the
+     intent composes again with the same composer for the signing runtime and validates again, and a refusal there
+     signs nothing. A call no composer can produce pauses that mechanism as `PausedSurface` with nothing signed.
+     Composed bytes carry no wrapped descriptor and take the same executor path, so preflight, policy, the semantic
+     guard, the journal, the shield and the step 3 retries are unchanged. Each durable attempt the encoder composes
+     records its `contract()` in the attempt material (omitted otherwise, so other material keeps its bytes); the
+     operation's effects never carry it, so installing or removing an encoder never changes an operation ID's
+     identity. Retained work with a signed attempt under a contract is rebuilt only while the same contract is
+     installed and otherwise reports `Unresolved`; other work uses the composers installed now.
 7. **`TimelockCommitter`**, with all cryptography from the core:
 
    ```text

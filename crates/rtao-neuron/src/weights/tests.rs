@@ -846,7 +846,7 @@ fn advisories_log_when_a_condition_starts_and_again_after_it_clears() {
 }
 
 mod validator_surface {
-    use super::super::ValidatorSurface;
+    use super::super::{ValidatorSurface, compose};
     use rtao_core::runtime::Runtime;
     use rtao_runtime::RuntimeHandle;
     use scale_info::{TypeDef, Variant, form::PortableForm};
@@ -1038,6 +1038,40 @@ mod validator_surface {
             warnings[0].detail.contains("composes by name"),
             "{}",
             warnings[0].detail
+        );
+        // With an encoder installed the scheduler composes through it before
+        // trying name resolution, and the surface check names it.
+        let surface = ValidatorSurface::check_with_encoder(&runtime, true);
+        assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
+        let warnings = surface
+            .warnings
+            .iter()
+            .filter(|change| change.descriptor == id)
+            .collect::<Vec<_>>();
+        assert_eq!(warnings.len(), 1, "{warnings:#?}");
+        assert!(
+            warnings[0]
+                .detail
+                .contains("composes through the application call encoder"),
+            "{}",
+            warnings[0].detail
+        );
+        assert!(
+            !warnings[0].detail.contains("by name"),
+            "{}",
+            warnings[0].detail
+        );
+        assert_eq!(
+            compose::route(&runtime, true, true).ok(),
+            Some(compose::Route::Application)
+        );
+        assert_eq!(
+            compose::route(&runtime, true, false).ok(),
+            Some(compose::Route::Resolved)
+        );
+        assert_eq!(
+            compose::route(&runtime, false, true).ok(),
+            Some(compose::Route::Compiled)
         );
     }
 

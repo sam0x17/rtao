@@ -330,7 +330,8 @@ async fn an_incompatible_commit_call_pauses_without_signing() -> anyhow::Result<
 
 /// The application encoder composes a call name resolution refuses; the
 /// journaled shielded submission keeps the semantic guard and records the
-/// encoder contract with the durable work.
+/// encoder contract with each attempt it composed, never in the operation's
+/// identity. Retained work with such an attempt needs that contract again.
 #[tokio::test]
 async fn an_application_encoder_composes_a_changed_call_through_the_journal() -> anyhow::Result<()>
 {
@@ -378,10 +379,43 @@ async fn an_application_encoder_composes_a_changed_call_through_the_journal() ->
     assert!(guard.0.load(Ordering::SeqCst) >= 1, "semantic guard ran");
     let snapshot = lab.journal().unwrap().snapshot()?;
     let record = snapshot.operations.values().next().expect("operation");
-    assert_eq!(
-        record.intent.effects["call_encoder"],
-        json!("test-encoder-v1")
+    assert!(
+        record.intent.effects.get("call_encoder").is_none(),
+        "{}",
+        record.intent.effects
     );
+    assert!(!record.attempts.is_empty());
+    for attempt in &record.attempts {
+        assert_eq!(attempt.material["call_encoder"], json!("test-encoder-v1"));
+    }
+    assert_eq!(
+        super::signed_encoder_contract(record)?.as_deref(),
+        Some("test-encoder-v1")
+    );
+    let binding = lab.journal().unwrap().bind(&record.intent.id)?;
+    for installed in [None, Some("test-encoder-v2")] {
+        let mut other = self::scheduler()?;
+        if let Some(contract) = installed {
+            other = other.with_call_encoder(ByNameEncoder::new(contract));
+        }
+        assert_eq!(
+            other.work_encoder(Some(&binding))?.err().as_deref(),
+            Some("test-encoder-v1")
+        );
+    }
+    let same = self::scheduler()?.with_call_encoder(ByNameEncoder::new("test-encoder-v1"));
+    assert!(matches!(same.work_encoder(Some(&binding))?, Ok(Some(_))));
+    // A malformed retained contract is an error, never a silent default.
+    let mut malformed = record.clone();
+    malformed.attempts[0].material["call_encoder"] = json!(7);
+    for attempt in malformed.attempts.iter_mut().skip(1) {
+        attempt
+            .material
+            .as_object_mut()
+            .unwrap()
+            .remove("call_encoder");
+    }
+    assert!(super::signed_encoder_contract(&malformed).is_err());
     assert!(signed.lock().unwrap().is_some());
     let rendered = cx.metrics.render();
     assert!(
@@ -396,10 +430,12 @@ async fn an_application_encoder_composes_a_changed_call_through_the_journal() ->
     Ok(())
 }
 
-/// Retained work queued under an encoder contract is rebuilt only while an
-/// encoder with that contract is installed; native work keeps its bytes.
+/// The encoder contract is not part of an operation's identity: work queued
+/// while an encoder was installed but composed from the compiled descriptor
+/// restarts and submits without that encoder, and redelivering an operation
+/// ID after installing an encoder stays idempotent.
 #[tokio::test]
-async fn retained_encoder_work_waits_for_its_encoder_after_restart() -> anyhow::Result<()> {
+async fn encoder_installation_never_changes_retained_work() -> anyhow::Result<()> {
     let (lab, cx, account) = cr_lab_with("composer-restart", 4, |_| Ok(())).await?;
     let durable = |encoder: Option<Arc<ByNameEncoder>>| -> anyhow::Result<WeightScheduler> {
         let mut scheduler = scheduler()?
@@ -416,30 +452,22 @@ async fn retained_encoder_work_waits_for_its_encoder_after_restart() -> anyhow::
         }
         Ok(scheduler)
     };
-    let queued = durable(Some(ByNameEncoder::new("test-encoder-v1")))?;
-    queued.enqueue(
-        "op-1",
-        None,
-        MechId(0),
-        WeightsInput::Parallel {
-            uids: vec![Uid(1)],
-            weights: vec![1.0],
-        },
-    )?;
+    let input = WeightsInput::Parallel {
+        uids: vec![Uid(1)],
+        weights: vec![1.0],
+    };
+    let queued = durable(None)?;
+    queued.enqueue("op-1", None, MechId(0), input.clone())?;
     drop(queued);
-    for encoder in [None, Some(ByNameEncoder::new("test-encoder-v2"))] {
-        let mut restarted = durable(encoder)?;
-        let head = advance(&lab)?;
-        Box::pin(restarted.on_finalized(&cx, &head, scored)).await?;
-        assert_eq!(lab.authors(), 0);
-        let WeightAttemptOutcome::Unresolved(reason) = outcome(&restarted) else {
-            panic!("expected unresolved work: {:?}", outcome(&restarted))
-        };
-        assert!(
-            reason.contains("call encoder test-encoder-v1 required"),
-            "{reason}"
-        );
-    }
+    let encoder = ByNameEncoder::new("test-encoder-v1");
+    let redelivered = durable(Some(encoder.clone()))?;
+    redelivered.enqueue("op-1", None, MechId(0), input.clone())?;
+    drop(redelivered);
+    let snapshot = lab.journal().unwrap().snapshot()?;
+    assert_eq!(snapshot.operations.len(), 1);
+    let effects = &snapshot.operations["op-1"].intent.effects;
+    assert!(effects.get("call_encoder").is_none(), "{effects}");
+
     lab.after_inclusion(move |state, record, number| {
         let (ciphertext, round): (Vec<u8>, u64) =
             serde_json::from_value(record.material["commit"].clone()).expect("commit material");
@@ -453,27 +481,171 @@ async fn retained_encoder_work_waits_for_its_encoder_after_restart() -> anyhow::
         )
         .expect("native queue model");
     });
-    let encoder = ByNameEncoder::new("test-encoder-v1");
-    let mut restored = durable(Some(encoder.clone()))?;
+    // Restarted without any encoder, the retained work still submits.
+    let mut restored = durable(None)?;
     until_authored(&mut restored, &lab, &cx).await?;
     assert_eq!(lab.authors(), 1);
-    // The compiled descriptor matches, so the encoder is installed but unused.
+    assert!(
+        matches!(outcome(&restored), WeightAttemptOutcome::Submitted { .. }),
+        "{:?}",
+        outcome(&restored)
+    );
     assert_eq!(encoder.calls.load(Ordering::SeqCst), 0);
+    let record = lab.journal().unwrap().snapshot()?.operations["op-1"].clone();
+    assert!(!record.attempts.is_empty());
+    for attempt in &record.attempts {
+        // Compiled material carries no contract and keeps its bytes.
+        assert!(attempt.material.get("call_encoder").is_none());
+        let material: super::Material = serde_json::from_value(attempt.material.clone())?;
+        assert!(material.call_encoder.is_none());
+        assert_eq!(serde_json::to_value(&material)?, attempt.material);
+    }
+    assert_eq!(super::signed_encoder_contract(&record)?, None);
     close_cr_lab(restored, lab, cx).await;
+    Ok(())
+}
 
-    let native = super::Work {
-        netuid: NetUid(1),
-        mechanism: MechId(0),
-        input: WeightsInput::RawU16 {
-            uids: vec![Uid(1)],
-            values: vec![1],
-        },
-        version_key: 0,
-        call_encoder: None,
+/// Encodes `commit_crv3_mechanism_weights`, a `SubtensorModule` call outside
+/// [`super::super::COMMIT_WEIGHT_CALLS`] that it declares.
+struct DeclaredEncoder(AtomicUsize);
+impl WeightCallEncoder for DeclaredEncoder {
+    fn contract(&self) -> &str {
+        "declared-v1"
+    }
+    fn encode(
+        &self,
+        runtime: &RuntimeHandle,
+        call: &WeightCall<'_>,
+    ) -> Result<Vec<u8>, Incompatibility> {
+        self.0.fetch_add(1, Ordering::SeqCst);
+        let WeightCall::Commit {
+            netuid,
+            mechanism,
+            commit,
+            reveal_round,
+            ..
+        } = *call
+        else {
+            panic!("a commit-reveal lab prepares commits")
+        };
+        runtime
+            .core()
+            .compose_call(
+                "SubtensorModule",
+                "commit_crv3_mechanism_weights",
+                &Value::record(vec![
+                    ("netuid".into(), netuid.into_core_value()),
+                    ("mecid".into(), mechanism.into_core_value()),
+                    ("commit".into(), Value::Bytes(commit.to_vec())),
+                    ("reveal_round".into(), reveal_round.into_core_value()),
+                ]),
+            )
+            .map_err(|error| Incompatibility {
+                code: "test-encoder".into(),
+                descriptor: None,
+                detail: error.to_string(),
+                extensions: Default::default(),
+            })
+    }
+    fn additional_calls(&self) -> &[&str] {
+        &["commit_crv3_mechanism_weights"]
+    }
+}
+
+fn assert_declared_refused(scheduler: &WeightScheduler) {
+    let WeightAttemptOutcome::PausedSurface { detail, .. } = outcome(scheduler) else {
+        panic!("expected a pause: {:?}", outcome(scheduler))
     };
-    let encoded = serde_json::to_value(&native)?;
-    assert!(encoded.get("call_encoder").is_none(), "{encoded}");
-    let _: super::Work = serde_json::from_value(encoded)?;
+    assert!(
+        detail.contains("commit_crv3_mechanism_weights") && detail.contains("semantic guard"),
+        "{detail}"
+    );
+}
+
+/// An installed semantic guard alone does not admit an encoder's declared
+/// calls: a non-durable scheduler never runs the guard, so the call refuses
+/// unsigned.
+#[tokio::test]
+async fn declared_calls_refuse_where_no_guard_checks_the_attempt() -> anyhow::Result<()> {
+    let (lab, cx, _) =
+        cr_lab_with("composer-declared", 4, patched(extra_field(COMMIT_CALL))).await?;
+    let encoder = Arc::new(DeclaredEncoder(AtomicUsize::new(0)));
+    let guard = Arc::new(CountingGuard::default());
+    let mut scheduler = scheduler()?
+        .with_semantic_guard("test-semantics-v1", guard.clone())
+        .with_call_encoder(encoder.clone());
+    assert!(!scheduler.semantic_guard_runs(MechId(0))?);
+    for _ in 0..12 {
+        let head = advance(&lab)?;
+        Box::pin(scheduler.on_finalized(&cx, &head, scored)).await?;
+        if encoder.0.load(Ordering::SeqCst) > 0 {
+            break;
+        }
+    }
+    assert!(encoder.0.load(Ordering::SeqCst) > 0, "the encoder ran");
+    assert_eq!(lab.authors(), 0);
+    assert_eq!(guard.0.load(Ordering::SeqCst), 0);
+    assert_declared_refused(&scheduler);
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// Durable work queued before a semantic contract existed is dispatched
+/// without the guard, so a restart that installs one still refuses the
+/// encoder's declared calls; work queued under the contract admits them.
+#[tokio::test]
+async fn declared_calls_refuse_for_work_queued_without_the_semantic_contract() -> anyhow::Result<()>
+{
+    let (lab, cx, account) = cr_lab_with(
+        "composer-declared-durable",
+        4,
+        patched(extra_field(COMMIT_CALL)),
+    )
+    .await?;
+    let durable = || -> anyhow::Result<WeightScheduler> {
+        Ok(scheduler()?
+            .with_journal(
+                lab.journal().unwrap().clone(),
+                lab.client.genesis(),
+                NetUid(1),
+                account,
+            )?
+            .with_shield_protocol(lab.protocol.clone())
+            .with_shielded_submission(ShieldPeriod::P4))
+    };
+    let input = WeightsInput::Parallel {
+        uids: vec![Uid(1)],
+        weights: vec![1.0],
+    };
+    let queued = durable()?;
+    queued.enqueue("unguarded", None, MechId(0), input.clone())?;
+    drop(queued);
+    let encoder = Arc::new(DeclaredEncoder(AtomicUsize::new(0)));
+    let guard = Arc::new(CountingGuard::default());
+    let mut restarted = durable()?
+        .with_semantic_guard("test-semantics-v1", guard.clone())
+        .with_call_encoder(encoder.clone());
+    assert!(!restarted.semantic_guard_runs(MechId(0))?);
+    for _ in 0..12 {
+        let head = advance(&lab)?;
+        Box::pin(restarted.on_finalized(&cx, &head, scored)).await?;
+        if encoder.0.load(Ordering::SeqCst) > 0 {
+            break;
+        }
+    }
+    assert!(encoder.0.load(Ordering::SeqCst) > 0, "the encoder ran");
+    assert_eq!(lab.authors(), 0);
+    assert_eq!(guard.0.load(Ordering::SeqCst), 0);
+    assert_declared_refused(&restarted);
+    let record = lab.journal().unwrap().snapshot()?.operations["unguarded"].clone();
+    assert!(record.attempts.is_empty());
+
+    // Work queued under the installed contract runs the guard on dispatch,
+    // which is what admits a declared call.
+    restarted.persist(Some("unguarded"))?;
+    restarted.enqueue("guarded", None, MechId(0), input)?;
+    assert!(restarted.semantic_guard_runs(MechId(0))?);
+    close_cr_lab(restarted, lab, cx).await;
     Ok(())
 }
 
@@ -804,6 +976,103 @@ mod encoder_validation {
             compose::select(&runtime, false, Some(&encoder)),
             Ok(Composer::Compiled)
         ));
+    }
+
+    fn spec(version: u32) -> RuntimeHandle {
+        let mut core = pinned();
+        core.spec_version = version;
+        RuntimeHandle::new(core).expect("runtime")
+    }
+
+    /// Verified bytes are composed under the best-head preflight runtime but
+    /// signed under the executor's refreshed runtime. Across an upgrade
+    /// between the two, the same composer composes again for the signing
+    /// runtime and validates again, instead of failing the attempt after the
+    /// cadence slot was reserved.
+    #[test]
+    fn verified_calls_compose_again_for_a_different_signing_runtime() {
+        use super::super::super::submit::{VerifiedCall, WeightCallPlan};
+        let preflight = runtime();
+        let upgraded = spec(487);
+        let plan = WeightCallPlan {
+            netuid: NetUid(1),
+            mechanism: MechId(0),
+            row: (vec![], vec![]),
+            version_key: 0,
+            commit: Some(rtao_intents::weights::PreparedWeightCommit {
+                ciphertext: vec![1, 2, 3],
+                reveal_round: 77,
+            }),
+            commit_reveal_version: 4,
+        };
+        let encoder = ByNameEncoder::new("by-name");
+        for composer in [Composer::Resolved, Composer::Application(encoder.clone())] {
+            let composed = plan
+                .with_call(|call| compose::compose_verified(&composer, &preflight, call, false))
+                .expect("not compiled")
+                .unwrap();
+            let verified = VerifiedCall::new(composed.clone(), composer.clone(), false);
+            let before = encoder.calls.load(Ordering::SeqCst);
+            assert_eq!(verified.for_runtime(&plan, &preflight).unwrap(), composed);
+            assert_eq!(encoder.calls.load(Ordering::SeqCst), before);
+            let signing = verified.for_runtime(&plan, &upgraded).unwrap();
+            assert_eq!(signing.stamp(), upgraded.stamp());
+            assert_eq!(signing.as_bytes(), composed.as_bytes());
+            signing.ensure_runtime(&upgraded).unwrap();
+        }
+        // The signing runtime's own validation decides: an added field that
+        // name resolution refuses fails the build unsigned, and the encoder
+        // that supplies it composes.
+        let mut core = pinned();
+        core.spec_version = 488;
+        let calls_type = core.pallet("SubtensorModule").unwrap().calls_type.unwrap();
+        let u64 = core
+            .types
+            .types
+            .iter()
+            .find(|ty| matches!(&ty.ty.type_def, TypeDef::Primitive(TypeDefPrimitive::U64)))
+            .unwrap()
+            .id;
+        let ty = core
+            .types
+            .types
+            .iter_mut()
+            .find(|ty| ty.id == calls_type)
+            .unwrap();
+        let TypeDef::Variant(variants) = &mut ty.ty.type_def else {
+            panic!("call enum")
+        };
+        variants
+            .variants
+            .iter_mut()
+            .find(|variant| variant.name == COMMIT_CALL)
+            .unwrap()
+            .fields
+            .insert(
+                0,
+                Field {
+                    name: Some("extra".into()),
+                    ty: u64.into(),
+                    type_name: Some("u64".into()),
+                    docs: vec![],
+                },
+            );
+        let changed = RuntimeHandle::new(core).unwrap();
+        let composed = plan
+            .with_call(|call| compose::compose_resolved(&preflight, call))
+            .unwrap();
+        let refused = VerifiedCall::new(composed.clone(), Composer::Resolved, false)
+            .for_runtime(&plan, &changed)
+            .unwrap_err();
+        assert!(
+            refused.to_string().contains("signing runtime (spec 488)")
+                && refused.to_string().contains("extra"),
+            "{refused}"
+        );
+        let encoded = VerifiedCall::new(composed, Composer::Application(encoder), false)
+            .for_runtime(&plan, &changed)
+            .unwrap();
+        assert_eq!(encoded.stamp(), changed.stamp());
     }
 
     #[test]

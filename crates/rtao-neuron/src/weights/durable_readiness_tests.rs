@@ -80,7 +80,13 @@ async fn qualified_shield_recovery_exposes_readiness_without_authority() -> anyh
         WeightOpportunity::Ready
     );
     let binding = scheduler
-        .prepare_binding(MechId(0), (vec![Uid(1)], vec![u16::MAX]), None, &state)?
+        .prepare_binding(
+            MechId(0),
+            (vec![Uid(1)], vec![u16::MAX]),
+            None,
+            &state,
+            None,
+        )?
         .unwrap();
     let mut options = super::super::submit::SubmissionOptions {
         journal: Some(binding.clone()),
@@ -226,7 +232,13 @@ async fn exhausted_shield_recovery_stays_reconcile_without_renewing_budget() -> 
     let account = lab.signer.account();
     let state = preflight(&lab).await?;
     let binding = scheduler
-        .prepare_binding(MechId(0), (vec![Uid(1)], vec![u16::MAX]), None, &state)?
+        .prepare_binding(
+            MechId(0),
+            (vec![Uid(1)], vec![u16::MAX]),
+            None,
+            &state,
+            None,
+        )?
         .unwrap();
     let mut options = super::super::submit::SubmissionOptions {
         journal: Some(binding.clone()),

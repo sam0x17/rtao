@@ -155,10 +155,17 @@ fn u16_seq() -> ArgClass {
 /// carry a nested runtime call, must name the scheduler's subnet and must
 /// carry the prepared mechanism, row or commitment, reveal round, version
 /// key and commit-reveal tag wherever the live call has those fields. A
-/// refusal pauses that mechanism's attempt and nothing is signed.
+/// declared call is accepted only on an attempt the installed semantic guard
+/// will check: durable work queued under the scheduler's semantic contract.
+/// A refusal pauses that mechanism's attempt and nothing is signed. When the
+/// runtime the executor signs with differs from the one the call was
+/// composed for, the encoder is called again for the signing runtime and its
+/// bytes are validated again.
 pub trait WeightCallEncoder: Send + Sync {
-    /// Stable contract token, recorded with durable work. Work recorded under
-    /// a token is only rebuilt while an encoder with that token is installed.
+    /// Stable contract token, recorded with each durable attempt this encoder
+    /// composes (never in the operation's identity). Retained work with a
+    /// signed attempt under a token is only rebuilt while an encoder with that
+    /// token is installed.
     fn contract(&self) -> &str;
     /// Encode `call` as complete SCALE call bytes under `runtime`.
     fn encode(
@@ -167,7 +174,7 @@ pub trait WeightCallEncoder: Send + Sync {
         call: &WeightCall<'_>,
     ) -> Result<Vec<u8>, Incompatibility>;
     /// Further `SubtensorModule` call names this encoder may return. They are
-    /// accepted only while a semantic guard is installed.
+    /// accepted only on an attempt the installed semantic guard will check.
     fn additional_calls(&self) -> &[&str] {
         &[]
     }
@@ -190,6 +197,14 @@ impl Composer {
             Self::Compiled => "compiled",
             Self::Resolved => "name-resolved",
             Self::Application(_) => "application encoder",
+        }
+    }
+    /// Contract of the application encoder this composer uses, recorded with
+    /// each durable attempt it composes.
+    pub(super) fn contract(&self) -> Option<&str> {
+        match self {
+            Self::Application(encoder) => Some(encoder.contract()),
+            Self::Compiled | Self::Resolved => None,
         }
     }
 }
@@ -243,21 +258,81 @@ pub(super) fn check_resolved(runtime: &RuntimeHandle, commit: bool) -> Result<()
     rtao_runtime::check_resolved(runtime, call.pallet, call.name, &classes(commit))
 }
 
+/// Which composer a call uses, in the one order the scheduler and the surface
+/// check share: the compiled descriptor while its exact shape matches, then
+/// an installed application encoder, then name-resolved composition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Route {
+    /// The compiled descriptor matches the live call.
+    Compiled,
+    /// The installed application encoder composes the call.
+    Application,
+    /// Name-resolved composition accepts the call.
+    Resolved,
+}
+
+/// Route this call under `runtime`, or return name resolution's refusal when
+/// no composer can produce it. `encoder` reports whether one is installed.
+pub(super) fn route(
+    runtime: &RuntimeHandle,
+    commit: bool,
+    encoder: bool,
+) -> Result<Route, ComposeError> {
+    if compiled_matches(runtime, commit) {
+        return Ok(Route::Compiled);
+    }
+    if encoder {
+        return Ok(Route::Application);
+    }
+    check_resolved(runtime, commit).map(|()| Route::Resolved)
+}
+
 /// Select how to compose this call, or explain why it cannot be composed.
 pub(super) fn select(
     runtime: &RuntimeHandle,
     commit: bool,
     encoder: Option<&Arc<dyn WeightCallEncoder>>,
 ) -> Result<Composer, String> {
-    if compiled_matches(runtime, commit) {
-        return Ok(Composer::Compiled);
+    let route = route(runtime, commit, encoder.is_some())
+        .map_err(|error| format!("name-resolved composition refused: {error}"))?;
+    match (route, encoder) {
+        (Route::Compiled, _) => Ok(Composer::Compiled),
+        (Route::Application, Some(encoder)) => Ok(Composer::Application(encoder.clone())),
+        (Route::Resolved, _) => Ok(Composer::Resolved),
+        (Route::Application, None) => Err("no application call encoder is installed".into()),
     }
-    if let Some(encoder) = encoder {
-        return Ok(Composer::Application(encoder.clone()));
+}
+
+/// Compose `call` under `runtime` with a composer that does not use the
+/// compiled descriptor, validating the result before it can be signed.
+/// `None` for [`Composer::Compiled`], whose call composes at build time.
+///
+/// `guarded` must be true only when the attempt dispatches through a journal
+/// binding that runs the installed semantic guard; see
+/// [`encode_application`].
+pub(super) fn compose_verified(
+    composer: &Composer,
+    runtime: &RuntimeHandle,
+    call: &WeightCall<'_>,
+    guarded: bool,
+) -> Option<Result<CallBytes, String>> {
+    match composer {
+        Composer::Compiled => None,
+        Composer::Resolved => Some(
+            compose_resolved(runtime, call)
+                .map_err(|error| format!("name-resolved composition refused: {error}")),
+        ),
+        Composer::Application(encoder) => Some(
+            encode_application(encoder.as_ref(), runtime, call, guarded).map_err(|refusal| {
+                format!(
+                    "application call encoder {} refused the call ({}): {}",
+                    encoder.contract(),
+                    refusal.code,
+                    refusal.detail
+                )
+            }),
+        ),
     }
-    check_resolved(runtime, commit)
-        .map(|()| Composer::Resolved)
-        .map_err(|error| format!("name-resolved composition refused: {error}"))
 }
 
 /// Compose by name under `runtime`.
@@ -292,8 +367,11 @@ fn known_fields() -> Vec<(&'static str, ArgClass)> {
 
 /// Encode through the application encoder and validate the returned bytes.
 ///
-/// `guarded` reports whether a semantic guard is installed, which
-/// [`WeightCallEncoder::additional_calls`] requires.
+/// `guarded` reports whether the installed semantic guard will check this
+/// attempt's call before signing, which [`WeightCallEncoder::additional_calls`]
+/// requires. A guard runs only on a durable attempt whose operation was
+/// queued under the scheduler's semantic contract; an installed guard alone
+/// is not enough.
 pub(super) fn encode_application(
     encoder: &dyn WeightCallEncoder,
     runtime: &RuntimeHandle,
@@ -340,7 +418,7 @@ pub(super) fn encode_application(
         return Err(refuse(
             "weight-encoder-call",
             format!(
-                "{} is declared by the encoder but requires an installed semantic guard",
+                "{} is declared by the encoder but this attempt is not checked by a semantic guard; declared calls need durable work queued under the installed semantic contract",
                 inspected.call
             ),
         ));

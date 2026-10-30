@@ -116,6 +116,7 @@ async fn native_paired_weight_lost_handoff_reopens_and_restores_one_reveal_while
             (vec![Uid(1)], vec![u16::MAX]),
             Some(commit.clone()),
             &preflight,
+            None,
         )?
         .ok_or_else(|| anyhow::anyhow!("durable binding"))?;
     let material = binding.record()?.material;

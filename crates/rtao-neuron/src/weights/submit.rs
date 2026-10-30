@@ -1,12 +1,14 @@
 // Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/weights.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Execute already conformed rows through the public policy-aware executor.
 
-use super::compose::WeightCall;
+use super::compose::{self, Composer, WeightCall};
 use crate::NeuronCx;
 use rtao_client::View;
 use rtao_intents::weights::PreparedWeightCommit;
 use rtao_primitives::{H256, MechId, NetUid, Uid};
-use rtao_runtime::{Call, CallBytes, CallDescriptor, calls::subtensor_module as calls};
+use rtao_runtime::{
+    Call, CallBytes, CallDescriptor, RuntimeHandle, calls::subtensor_module as calls,
+};
 use rtao_tx::{
     BuildCx, Built, ExecuteOptions, Intent, IntentError, IntentInterface, WeightsSubmitted,
 };
@@ -120,13 +122,69 @@ impl WeightCallPlan {
 pub(super) enum Composed {
     /// Compose from the compiled descriptor at build time.
     Compiled,
-    /// Bytes already composed and validated for the signing runtime.
-    Verified(CallBytes),
+    /// Bytes already composed and validated, with the composer that produced
+    /// them.
+    Verified(VerifiedCall),
+}
+
+/// Call bytes composed and validated without the compiled descriptor, and
+/// how to compose them again for another runtime (D-088).
+#[derive(Clone)]
+pub(super) struct VerifiedCall {
+    call: CallBytes,
+    composer: Composer,
+    guarded: bool,
+}
+impl VerifiedCall {
+    /// `call` was composed by `composer`; `guarded` is the semantic-guard
+    /// coverage it was validated under.
+    pub(super) fn new(call: CallBytes, composer: Composer, guarded: bool) -> Self {
+        Self {
+            call,
+            composer,
+            guarded,
+        }
+    }
+    /// The call for the runtime the executor signs with.
+    ///
+    /// The scheduler composes under its best-head preflight runtime, while
+    /// the executor signs under the refreshed head runtime. When the two
+    /// differ, for example across an upgrade enacted between them, the same
+    /// composer composes the plan again under the signing runtime and its
+    /// validation runs again; a refusal there signs nothing.
+    pub(super) fn for_runtime(
+        &self,
+        plan: &WeightCallPlan,
+        runtime: &RuntimeHandle,
+    ) -> Result<CallBytes, IntentError> {
+        let Err(stale) = self.call.ensure_runtime(runtime) else {
+            return Ok(self.call.clone());
+        };
+        let Some(recomposed) = plan.with_call(|call| {
+            compose::compose_verified(&self.composer, runtime, call, self.guarded)
+        }) else {
+            return Err(rtao_client::ClientError::from(stale).into());
+        };
+        let call = recomposed.map_err(|detail| {
+            IntentError::validation(format!(
+                "weight call refused under the signing runtime (spec {}): {detail}",
+                runtime.spec_version()
+            ))
+        })?;
+        tracing::info!(
+            mechanism = plan.mechanism.0,
+            composer = self.composer.label(),
+            composed_spec = self.call.stamp().spec_version,
+            signing_spec = runtime.spec_version(),
+            "the signing runtime differs from the preflight runtime; composed the weight call again"
+        );
+        Ok(call)
+    }
 }
 
 pub(super) struct PreparedWeights<K> {
     pub(super) plan: WeightCallPlan,
-    pub(super) call: Option<CallBytes>,
+    pub(super) call: Option<VerifiedCall>,
     kind: PhantomData<K>,
 }
 impl<K: Wraps> PreparedWeights<K> {
@@ -160,11 +218,7 @@ impl<K: Wraps> Intent for PreparedWeights<K> {
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let call = match &self.call {
-            Some(call) => {
-                call.ensure_runtime(cx.runtime)
-                    .map_err(rtao_client::ClientError::from)?;
-                call.clone()
-            }
+            Some(verified) => verified.for_runtime(&self.plan, cx.runtime)?,
             None => self.plan.call().compose(cx.runtime)?,
         };
         let mut built = Built::new(call);

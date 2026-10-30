@@ -75,6 +75,7 @@ async fn public_weight_pair_restarts_into_paused_reveal_and_retains_actual_nativ
                 (vec![Uid(1)], vec![u16::MAX]),
                 Some(commit.clone()),
                 &preflight,
+                None,
             )?
             .expect("journal binding");
         let options = super::super::submit::SubmissionOptions {
@@ -296,7 +297,13 @@ async fn public_genesis_shielded_weights_bind_the_native_protocol_by_default() -
     let snapshot = lab.client.at(BlockRef::Best).await?;
     let preflight = WeightPreflight::fetch(&snapshot, NetUid(1), MechId(0), account).await?;
     let binding = scheduler
-        .prepare_binding(MechId(0), (vec![Uid(1)], vec![u16::MAX]), None, &preflight)?
+        .prepare_binding(
+            MechId(0),
+            (vec![Uid(1)], vec![u16::MAX]),
+            None,
+            &preflight,
+            None,
+        )?
         .expect("journal binding");
     let options = super::super::submit::SubmissionOptions {
         journal: Some(binding),

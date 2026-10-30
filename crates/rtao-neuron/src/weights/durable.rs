@@ -32,10 +32,6 @@ pub(super) struct Work {
     pub mechanism: MechId,
     pub input: WeightsInput,
     pub version_key: u64,
-    /// Contract of the application call encoder installed when this work was
-    /// queued (D-088). Omitted when none was, so native work keeps its bytes.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub call_encoder: Option<String>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -44,6 +40,30 @@ pub(super) struct Material {
     #[serde(with = "optional_commit")]
     pub commit: Option<PreparedWeightCommit>,
     pub preparation: RevealPreparation,
+    /// Contract of the application call encoder that composed this attempt's
+    /// call (D-088). Omitted for compiled and name-resolved calls, so their
+    /// material keeps its bytes. It is attempt evidence, never part of the
+    /// operation's identity, so installing or removing an encoder never
+    /// changes an operation ID's effects.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_encoder: Option<String>,
+}
+/// Contract of the application encoder that composed the latest signed
+/// attempt of `record` that one composed, if any (D-088).
+pub(super) fn signed_encoder_contract(
+    record: &rtao_client::journal::OperationRecord,
+) -> anyhow::Result<Option<String>> {
+    for attempt in record.attempts.iter().rev() {
+        match attempt.material.get("call_encoder") {
+            None => {}
+            Some(serde_json::Value::String(contract)) => return Ok(Some(contract.clone())),
+            Some(_) => anyhow::bail!(
+                "retained weight attempt {} has a malformed call encoder contract",
+                attempt.id
+            ),
+        }
+    }
+    Ok(None)
 }
 pub(super) mod commit_codec {
     use super::*;
@@ -138,10 +158,6 @@ impl WeightScheduler {
             mechanism,
             input,
             version_key: self.policy.version_key.value(),
-            call_encoder: self
-                .call_encoder
-                .as_ref()
-                .map(|encoder| encoder.contract().to_owned()),
         };
         let effects = serde_json::to_value(&work)?;
         // JSON encodes nonfinite scores as null. Refuse lossy input before
@@ -219,10 +235,8 @@ impl WeightScheduler {
                 "multiple pending mechanism operations; retain journal for reconciliation"
             );
             let mut binding = d.journal.bind(&record.intent.id)?;
-            if record.intent.semantic_policy == self.semantic_policy
-                && let Some(guard) = &self.semantic_guard
-            {
-                binding = binding.with_guard(guard.clone());
+            if let Some(guard) = self.guard_for(&record.intent) {
+                binding = binding.with_guard(guard);
             }
             // The native default binds only work it could have created: a
             // record retained under another adapter's profile stays unbound,
@@ -242,6 +256,25 @@ impl WeightScheduler {
             result = Some((binding, work));
         }
         Ok(result)
+    }
+    /// The semantic guard a binding of this operation runs: the installed
+    /// one, and only when the operation was queued under the scheduler's
+    /// semantic contract.
+    fn guard_for(&self, intent: &OperationIntent) -> Option<Arc<dyn SemanticGuard>> {
+        self.semantic_guard
+            .clone()
+            .filter(|_| intent.semantic_policy == self.semantic_policy)
+    }
+    /// Whether this mechanism's next attempt dispatches through a journal
+    /// binding that runs the installed semantic guard (D-088). Only such an
+    /// attempt may carry an application encoder's declared calls: a
+    /// non-durable scheduler never runs the guard, and neither does a
+    /// binding of work queued under another semantic contract or none.
+    pub(super) fn semantic_guard_runs(&self, mechanism: MechId) -> anyhow::Result<bool> {
+        Ok(match self.pending_work(mechanism)? {
+            Some((binding, _)) => self.guard_for(&binding.record()?.intent).is_some(),
+            None => false,
+        })
     }
     pub(super) fn persist(&self, handed_off: Option<&str>) -> anyhow::Result<()> {
         let Some(d) = &self.durable else {
@@ -415,6 +448,7 @@ impl WeightScheduler {
         row: (Vec<Uid>, Vec<u16>),
         commit: Option<PreparedWeightCommit>,
         preflight: &WeightPreflight,
+        call_encoder: Option<&str>,
     ) -> anyhow::Result<Option<JournalBinding>> {
         let Some((binding, _)) = self.pending_work(mech)? else {
             anyhow::ensure!(
@@ -427,6 +461,7 @@ impl WeightScheduler {
             row,
             commit,
             preparation: RevealPreparation::from(preflight),
+            call_encoder: call_encoder.map(str::to_owned),
         })?)?;
         Ok(Some(binding))
     }
@@ -859,6 +894,7 @@ mod handoff_tests {
                 (vec![Uid(1)], vec![65535]),
                 Some(commit.clone()),
                 &preparation,
+                None,
             )?
             .ok_or_else(|| anyhow::anyhow!("binding"))?;
         let retained = commit.clone();

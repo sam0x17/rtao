@@ -93,14 +93,23 @@ canonical, and re-encoded byte for byte by the core). They must also be a
 must carry the scheduler's subnet and the prepared mechanism, row or
 commitment, reveal round, version key and tag in every field the live call
 has. Further call names returned by `additional_calls` are accepted only
-while a semantic guard is installed. A refusal pauses that attempt with
-`PausedSurface` and signs nothing. Preflight, executor policy, the semantic
-guard, the journal, shielding and the bounded `IncorrectCommitRevealVersion`
-retries apply as for compiled calls. Durable work queued while an encoder is
-installed records its `contract()`. After a restart, that work stays
-unresolved until an encoder with the same contract is installed again.
-`rtao-validator --check-connection` reports a call composed by name as a
-warning. It fails only when name resolution also refuses the call.
+on an attempt the installed semantic guard checks: durable work queued while
+that guard's contract was installed. Without a journal, in the bounded
+retries, and for work queued without that contract, they refuse. A refusal
+pauses that attempt with `PausedSurface` and signs nothing. When the runtime
+the executor signs with differs from the best-head runtime the call was
+composed for, the encoder is called again for the signing runtime and its
+bytes are checked again. Preflight, executor policy, the semantic guard, the
+journal, shielding and the bounded `IncorrectCommitRevealVersion` retries
+apply as for compiled calls. Each durable attempt the encoder composes
+records its `contract()` with that attempt, not with the operation, so
+installing an encoder never changes how an operation ID is redelivered. After
+a restart, work with a signed attempt the encoder composed stays unresolved
+until an encoder with the same contract is installed again; other work
+continues with the composers installed now.
+`rtao-validator --check-connection` reports a changed call as a warning
+naming the composer the scheduler will use, the encoder first when one is
+installed. It fails only when no composer can produce the call.
 
 The default timelock clock is the system clock. The minimum timestamp offset
 across twenty best heads filters propagation delays. The framework warns above

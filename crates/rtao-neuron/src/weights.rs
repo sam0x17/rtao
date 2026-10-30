@@ -389,8 +389,9 @@ impl ValidatorSurface {
     }
 
     /// [`Self::check`] for a validator that installs a [`WeightCallEncoder`]
-    /// when `encoder` is true: a weight call the encoder would compose is a
-    /// warning instead of a failure.
+    /// when `encoder` is true: a changed weight call is then reported as
+    /// composed through the encoder, which the scheduler prefers over name
+    /// resolution, as a warning instead of a failure.
     pub fn check_with_encoder(runtime: &rtao_runtime::RuntimeHandle, encoder: bool) -> Self {
         use rtao_runtime::{SurfaceClass, SurfaceKind};
         let report = runtime.surface_report();
@@ -417,13 +418,14 @@ impl ValidatorSurface {
         let mut composed = std::collections::BTreeSet::new();
         for call in crate::runtime::WEIGHT_CALLS {
             let id = crate::runtime::call_identity(call);
-            if report.shape_matches(&id) {
-                continue;
-            }
             let commit = call.name == compose::compiled(true).name;
-            let composer = match compose::check_resolved(runtime, commit) {
-                Ok(()) => Ok("composes by name against live metadata"),
-                Err(_) if encoder => Ok("composes through the application call encoder"),
+            // The same order the scheduler selects composers in.
+            let composer = match compose::route(runtime, commit, encoder) {
+                Ok(compose::Route::Compiled) => continue,
+                Ok(compose::Route::Application) => {
+                    Ok("composes through the application call encoder")
+                }
+                Ok(compose::Route::Resolved) => Ok("composes by name against live metadata"),
                 Err(error) => Err(error),
             };
             match composer {
@@ -815,10 +817,11 @@ impl WeightScheduler {
     /// It composes a mechanism's call only while that call's compiled
     /// descriptor no longer matches the live runtime, before name-resolved
     /// composition. Its bytes are imported and validated before signing; see
-    /// [`WeightCallEncoder`]. Durable work queued while it is installed
-    /// records its [`WeightCallEncoder::contract`] and is rebuilt only while
-    /// an encoder with the same contract is installed, so reinstall it on
-    /// restart.
+    /// [`WeightCallEncoder`]. Each durable attempt it composes records its
+    /// [`WeightCallEncoder::contract`] in the attempt material, outside the
+    /// operation's identity. Retained work with such a signed attempt is
+    /// rebuilt only while an encoder with the same contract is installed, so
+    /// reinstall it on restart.
     pub fn with_call_encoder(mut self, encoder: Arc<dyn WeightCallEncoder>) -> Self {
         self.call_encoder = Some(encoder);
         self
@@ -990,22 +993,25 @@ impl WeightScheduler {
     /// Encoder this mechanism's work may use, or the contract retained work
     /// requires when its encoder is not installed (D-088).
     ///
-    /// Work retained without a contract was queued without an encoder and
-    /// uses only the compiled and name-resolved composers.
+    /// Only work with a signed attempt the encoder composed requires it: its
+    /// contract is recorded in that attempt's material. Other work, including
+    /// work queued while an encoder was installed but composed from the
+    /// compiled descriptor, uses whatever composers are installed now.
     fn work_encoder(
         &self,
-        work: Option<&durable::Work>,
-    ) -> Result<Option<Arc<dyn WeightCallEncoder>>, String> {
-        let Some(work) = work else {
-            return Ok(self.call_encoder.clone());
+        binding: Option<&rtao_client::journal::JournalBinding>,
+    ) -> anyhow::Result<Result<Option<Arc<dyn WeightCallEncoder>>, String>> {
+        let required = match binding {
+            Some(binding) => durable::signed_encoder_contract(&binding.record()?)?,
+            None => None,
         };
-        match (&work.call_encoder, &self.call_encoder) {
-            (None, _) => Ok(None),
+        Ok(match (required, &self.call_encoder) {
+            (None, encoder) => Ok(encoder.clone()),
             (Some(contract), Some(encoder)) if encoder.contract() == contract => {
                 Ok(Some(encoder.clone()))
             }
-            (Some(contract), _) => Err(contract.clone()),
-        }
+            (Some(contract), _) => Err(contract),
+        })
     }
 
     /// Select how this attempt composes its call, or pause the mechanism when
@@ -1046,8 +1052,12 @@ impl WeightScheduler {
         }
     }
 
-    /// Compose this attempt's call for the signing runtime, or pause the
-    /// mechanism without signing when the composer refuses it.
+    /// Compose this attempt's call, or pause the mechanism without signing
+    /// when the composer refuses it.
+    ///
+    /// `guarded` is true only when the attempt dispatches through a journal
+    /// binding that runs the installed semantic guard
+    /// ([`Self::semantic_guard_runs`]); an encoder's declared calls need it.
     fn compose_call(
         &mut self,
         metrics: &crate::Metrics,
@@ -1055,30 +1065,17 @@ impl WeightScheduler {
         state: &WeightPreflight,
         composer: &compose::Composer,
         plan: &submit::WeightCallPlan,
+        guarded: bool,
     ) -> Option<submit::Composed> {
         let runtime = &state.at.runtime;
-        let guarded = self.semantic_guard.is_some();
-        let (result, metric) = match composer {
-            compose::Composer::Compiled => return Some(submit::Composed::Compiled),
-            compose::Composer::Resolved => (
-                plan.with_call(|call| compose::compose_resolved(runtime, call))
-                    .map_err(|error| format!("name-resolved composition refused: {error}")),
-                "rtao_weights_resolved_composition_total",
-            ),
-            compose::Composer::Application(encoder) => (
-                plan.with_call(|call| {
-                    compose::encode_application(encoder.as_ref(), runtime, call, guarded)
-                })
-                .map_err(|refusal| {
-                    format!(
-                        "application call encoder {} refused the call ({}): {}",
-                        encoder.contract(),
-                        refusal.code,
-                        refusal.detail
-                    )
-                }),
-                "rtao_weights_encoder_composition_total",
-            ),
+        let Some(result) =
+            plan.with_call(|call| compose::compose_verified(composer, runtime, call, guarded))
+        else {
+            return Some(submit::Composed::Compiled);
+        };
+        let metric = match composer {
+            compose::Composer::Application(_) => "rtao_weights_encoder_composition_total",
+            _ => "rtao_weights_resolved_composition_total",
         };
         match result {
             Ok(call) => {
@@ -1094,7 +1091,11 @@ impl WeightScheduler {
                         "the compiled weight call no longer matches the live runtime; composing it without the compiled descriptor"
                     );
                 }
-                Some(submit::Composed::Verified(call))
+                Some(submit::Composed::Verified(submit::VerifiedCall::new(
+                    call,
+                    composer.clone(),
+                    guarded,
+                )))
             }
             Err(detail) => {
                 let call = compose::compiled(plan.commit.is_some());
@@ -1264,7 +1265,7 @@ impl WeightScheduler {
             },
         );
         let pending_work = self.pending_work(mech)?;
-        let encoder = match self.work_encoder(pending_work.as_ref().map(|(_, work)| work)) {
+        let encoder = match self.work_encoder(pending_work.as_ref().map(|(binding, _)| binding))? {
             Ok(encoder) => encoder,
             Err(contract) => {
                 self.attempts.insert(
@@ -1273,7 +1274,7 @@ impl WeightScheduler {
                         mechanism: mech,
                         best_block: preflight.at.number,
                         outcome: WeightAttemptOutcome::Unresolved(format!(
-                            "call encoder {contract} required: retained work was queued under it; reinstall it with WeightScheduler::with_call_encoder"
+                            "call encoder {contract} required: it composed a signed attempt of retained work; reinstall it with WeightScheduler::with_call_encoder"
                         )),
                     },
                 );
@@ -1442,8 +1443,11 @@ impl WeightScheduler {
             version_key,
             commit.as_ref().map(|commit| (commit, cr_tag)),
         );
+        // Declared encoder calls need the guard this attempt's binding runs.
+        let guarded = self.semantic_guard_runs(mech)?;
         // A call no composer can produce pauses before the slot is reserved.
-        let Some(composed) = self.compose_call(&cx.metrics, mech, &preflight, &composer, &plan)
+        let Some(composed) =
+            self.compose_call(&cx.metrics, mech, &preflight, &composer, &plan, guarded)
         else {
             return Ok(());
         };
@@ -1452,7 +1456,13 @@ impl WeightScheduler {
         self.slots.entry(mech).or_default().last_attempt_epoch =
             Some(preflight.schedule.subnet_epoch_index);
         self.slots.entry(mech).or_default().last_attempt_block = Some(preflight.at.number);
-        let binding = self.prepare_binding(mech, row.clone(), commit.clone(), &preflight)?;
+        let binding = self.prepare_binding(
+            mech,
+            row.clone(),
+            commit.clone(),
+            &preflight,
+            composer.contract(),
+        )?;
         self.persist(None)?;
         let result = submit::execute(
             cx,
@@ -1576,8 +1586,10 @@ impl WeightScheduler {
                         version_key,
                         commit.as_ref().map(|commit| (commit, cr_tag)),
                     );
+                    // This retry has no journal binding, so no semantic
+                    // guard checks it: declared encoder calls refuse.
                     let Some(composed) =
-                        self.compose_call(&cx.metrics, mech, &state, &composer, &plan)
+                        self.compose_call(&cx.metrics, mech, &state, &composer, &plan, false)
                     else {
                         return Ok(());
                     };
