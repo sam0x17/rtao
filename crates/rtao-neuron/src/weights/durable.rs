@@ -32,6 +32,10 @@ pub(super) struct Work {
     pub mechanism: MechId,
     pub input: WeightsInput,
     pub version_key: u64,
+    /// Contract of the application call encoder installed when this work was
+    /// queued (D-088). Omitted when none was, so native work keeps its bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub call_encoder: Option<String>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -134,6 +138,10 @@ impl WeightScheduler {
             mechanism,
             input,
             version_key: self.policy.version_key.value(),
+            call_encoder: self
+                .call_encoder
+                .as_ref()
+                .map(|encoder| encoder.contract().to_owned()),
         };
         let effects = serde_json::to_value(&work)?;
         // JSON encodes nonfinite scores as null. Refuse lossy input before
@@ -952,3 +960,7 @@ mod public_tests;
 #[cfg(test)]
 #[path = "durable_readiness_tests.rs"]
 mod readiness_tests;
+
+#[cfg(test)]
+#[path = "durable_composer_tests.rs"]
+mod composer_tests;

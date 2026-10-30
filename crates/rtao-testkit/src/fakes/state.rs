@@ -622,6 +622,31 @@ impl FakeState {
         Ok(())
     }
 
+    /// Edit the served V15 metadata and reparse the runtime, keeping its
+    /// versions, so clients connecting afterwards see the changed surface.
+    pub fn patch_metadata(
+        &mut self,
+        edit: impl FnOnce(&mut frame_metadata::v15::RuntimeMetadataV15),
+    ) -> Result<(), CoreError> {
+        let mut metadata =
+            RuntimeMetadataPrefixed::decode(&mut self.runtime.metadata_bytes.as_slice())
+                .map_err(|e| CoreError::Codec(e.to_string()))?;
+        let RuntimeMetadata::V15(v15) = &mut metadata.1 else {
+            return Err(CoreError::Codec("fake metadata patch requires V15".into()));
+        };
+        edit(v15);
+        self.runtime = Arc::new(
+            Runtime::parse(
+                &metadata.encode(),
+                self.runtime.spec_version,
+                self.runtime.transaction_version,
+                self.runtime.ss58_format,
+            )
+            .map_err(CoreError::from)?,
+        );
+        Ok(())
+    }
+
     /// Encode System.Events records for the supplied block.
     pub fn seed_events(&mut self, hash: impl Into<String>, events: Value) -> Result<(), CoreError> {
         let info = self

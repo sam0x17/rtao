@@ -937,6 +937,18 @@ pub enum ComposeError {
         /// Specification and transaction versions expected by the runtime.
         runtime: RuntimeStamp,
     },
+    /// A name-resolved call or one of its fields does not fit the supplied
+    /// structural class under the live runtime (D-088).
+    ResolvedIncompatible {
+        /// Pallet containing the call.
+        pallet: String,
+        /// Call name.
+        call: String,
+        /// Field that refused, when the refusal concerns one field.
+        field: Option<String>,
+        /// Exact reason the live call does not fit.
+        detail: String,
+    },
     /// A signed extension has no safe encoding under this runtime.
     SigningDisabled(CoreError),
     /// The core rejected argument values or encoding.
@@ -960,6 +972,24 @@ impl fmt::Display for ComposeError {
             Self::VersionMismatch { composed, runtime } => write!(
                 formatter,
                 "call runtime stamp {composed:?} does not match {runtime:?}"
+            ),
+            Self::ResolvedIncompatible {
+                pallet,
+                call,
+                field: Some(field),
+                detail,
+            } => write!(
+                formatter,
+                "{pallet}.{call} cannot be composed by name: field {field}: {detail}"
+            ),
+            Self::ResolvedIncompatible {
+                pallet,
+                call,
+                field: None,
+                detail,
+            } => write!(
+                formatter,
+                "{pallet}.{call} cannot be composed by name: {detail}"
             ),
             Self::SigningDisabled(error) => write!(formatter, "signing is disabled: {error}"),
             Self::Core(error) => error.fmt(formatter),

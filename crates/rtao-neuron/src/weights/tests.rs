@@ -924,9 +924,7 @@ mod validator_surface {
         let surface = ValidatorSurface::check(&runtime);
         assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
         assert!(surface.warnings.is_empty(), "{:#?}", surface.warnings);
-        assert!(crate::runtime::weight_calls_verified(
-            runtime.surface_report()
-        ));
+        assert!(crate::runtime::weight_calls_usable(&runtime, false));
     }
 
     #[test]
@@ -956,7 +954,7 @@ mod validator_surface {
         assert!(unrelated.contains(&"call:SubtensorModule.burned_register"));
         let error = format!("error:Balances.{}", catalogued.name);
         assert!(unrelated.contains(&error.as_str()), "{unrelated:?}");
-        assert!(crate::runtime::weight_calls_verified(report));
+        assert!(crate::runtime::weight_calls_usable(&runtime, false));
     }
 
     #[test]
@@ -973,9 +971,7 @@ mod validator_surface {
             };
             reshape_call(&mut core, "SubtensorModule", call, field);
             let runtime = handle(core);
-            assert!(!crate::runtime::weight_calls_verified(
-                runtime.surface_report()
-            ));
+            assert!(!crate::runtime::weight_calls_usable(&runtime, false));
             let surface = ValidatorSurface::check(&runtime);
             assert!(!surface.is_compatible());
             let id = format!("call:SubtensorModule.{call}");
@@ -983,11 +979,87 @@ mod validator_surface {
                 surface
                     .incompatible
                     .iter()
-                    .any(|line| line.starts_with(&id)),
+                    .any(|line| line.starts_with(&id) && line.contains("name-resolved")),
                 "{:#?}",
                 surface.incompatible
             );
         }
+    }
+
+    /// A weight call whose shape changed without changing its encoding is
+    /// composed by name: a warning, not a failure (D-088).
+    #[test]
+    fn a_weight_call_composed_by_name_is_only_a_warning() {
+        let mut core = pinned();
+        let calls = core
+            .pallet("SubtensorModule")
+            .and_then(|pallet| pallet.calls_type)
+            .expect("call enum");
+        let commit = enum_variants(&mut core, calls)
+            .iter()
+            .find(|variant| variant.name == "commit_timelocked_mechanism_weights")
+            .and_then(|variant| {
+                variant
+                    .fields
+                    .iter()
+                    .find(|f| f.name.as_deref() == Some("commit"))
+            })
+            .expect("commit field")
+            .ty
+            .id;
+        let TypeDef::Composite(bounded) = &core.resolve(commit).expect("type").type_def else {
+            unreachable!("commit is a BoundedVec newtype")
+        };
+        let plain = bounded.fields[0].ty;
+        enum_variants(&mut core, calls)
+            .iter_mut()
+            .find(|variant| variant.name == "commit_timelocked_mechanism_weights")
+            .and_then(|variant| {
+                variant
+                    .fields
+                    .iter_mut()
+                    .find(|f| f.name.as_deref() == Some("commit"))
+            })
+            .expect("commit field")
+            .ty = plain;
+        let runtime = handle(core);
+        let id = "call:SubtensorModule.commit_timelocked_mechanism_weights";
+        assert!(!runtime.surface_report().shape_matches(id));
+        assert!(crate::runtime::weight_calls_usable(&runtime, false));
+        let surface = ValidatorSurface::check(&runtime);
+        assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
+        let warnings = surface
+            .warnings
+            .iter()
+            .filter(|change| change.descriptor == id)
+            .collect::<Vec<_>>();
+        assert_eq!(warnings.len(), 1, "{warnings:#?}");
+        assert!(
+            warnings[0].detail.contains("composes by name"),
+            "{}",
+            warnings[0].detail
+        );
+    }
+
+    /// An installed application encoder covers a weight call name
+    /// resolution refuses.
+    #[test]
+    fn an_encoder_covers_an_incompatible_weight_call() {
+        let mut core = pinned();
+        reshape_call(
+            &mut core,
+            "SubtensorModule",
+            "set_mechanism_weights",
+            "version_key",
+        );
+        let runtime = handle(core);
+        let id = "call:SubtensorModule.set_mechanism_weights";
+        assert!(fails_on(&ValidatorSurface::check(&runtime), id));
+        assert!(!crate::runtime::weight_calls_usable(&runtime, false));
+        assert!(crate::runtime::weight_calls_usable(&runtime, true));
+        let surface = ValidatorSurface::check_with_encoder(&runtime, true);
+        assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
+        assert!(warned(&surface, id));
     }
 
     #[test]

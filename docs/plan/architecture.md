@@ -1771,6 +1771,16 @@ fail-closed **per call**:
 - the metagraph view falls back to the owned by-name model, then to dynamic (§8.2);
 - the gauge `rtao_surface_breaking_items` exposes the count.
 
+Calls also have a by-name path, but only through an explicit caller. `rtao_runtime::compose_resolved` resolves a call
+and its fields by name against the live metadata (D-088). Each supplied argument declares a structural `ArgClass`
+(`Uint(min bits)`, `Bytes`, `Seq`), and the live field type must fit that class once single-field composites and
+`Compact` are removed. The live field names must equal the supplied set exactly, in any order. The result is encoded by
+the one core encoder, imported strictly, decoded back by class and compared with the supplied values. Anything else
+refuses per field with `ComposeError::ResolvedIncompatible`: an added, removed or renamed field, an `Option`, an enum, a
+narrowed or signed integer, an array or a nested call. `check_resolved` runs the same checks without values. The
+validator's weight scheduler uses this path when a weight call's compiled shape fails (§9.3). A call therefore stays
+fail-closed per call only when it is really incompatible after name-resolved checking.
+
 ### 3.8 Typed call builders and `CallBytes`
 
 Generated from the IR (`calls[].args[].{name, type_ident}`, the content of `PY/_generated/calls.py`):
@@ -1801,6 +1811,11 @@ pub struct CallBytes { bytes: Bytes, spec_version: u32, transaction_version: u32
 - **Golden check**: the 10 golden `calls` (`PYT/fixtures/golden.json`; transfers, `add_stake`, `remove_stake`,
   `burned_register`, `set_weights`, `System.remark`, nested `Sudo.sudo`, `Utility.batch`, `Proxy.proxy`) re-encode
   through the typed builders byte for byte (§11.1). The golden file embeds the spec-461 metadata it was recorded with.
+- **Imported, never trusted** (D-088): name-resolved composition (§3.7) still ends in `Runtime::compose_call`.
+  Application-encoded weight calls (`WeightCallEncoder`, §9.3) enter only through `CallBytes::decode`. That import
+  decodes the whole call strictly from metadata, re-encodes it through the core and requires the same bytes. The
+  scheduler then reads the call back by name and checks its pallet, call name, nested calls and prepared values
+  before anything is signed. There is still exactly one encoder.
 
 ### 3.9 Submission pipeline
 
@@ -4387,6 +4402,19 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
    - Commit-reveal on: `commit_timelocked_mechanism_weights(netuid, mech, ciphertext, reveal_round, 4)` (call 118).
    - Commit-reveal off: `set_mechanism_weights` (119).
    - Never the legacy `set_weights` (0) or `commit_crv3_mechanism_weights` (117) ([R] C1 §0.6).
+   - **Composition (D-088).** Each attempt declares only its own call to the executor's surface review. A changed
+     shape of the other weight call therefore never refuses it. The selected call uses the compiled descriptor when
+     its exact shape matches. Otherwise it goes to an installed `WeightCallEncoder` if there is one, and else to
+     name-resolved composition (§3.7), logged once per runtime and counted in
+     `rtao_weights_resolved_composition_total`. Encoder output is imported strictly (§3.8). It must then be a
+     `SubtensorModule` weight call of the requested kind (or a declared name, only with a semantic guard), carry no
+     nested call, and match the scheduler's subnet and the prepared mechanism, row or commitment, reveal round,
+     version key and tag in every field the live call has. Composition runs before the cadence slot is reserved. A
+     call no composer can produce pauses that mechanism as `PausedSurface` with nothing signed. Composed bytes carry
+     no wrapped descriptor and take the same executor path, so preflight, policy, the semantic guard, the journal,
+     the shield and the step 3 retries are unchanged. Durable work records the encoder `contract()` installed when it
+     was queued (omitted when none was, so native work keeps its bytes). That work is rebuilt only while the same
+     contract is installed and otherwise reports `Unresolved`.
 7. **`TimelockCommitter`**, with all cryptography from the core:
 
    ```text

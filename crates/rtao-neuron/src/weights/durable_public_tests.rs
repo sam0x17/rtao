@@ -82,14 +82,17 @@ async fn public_weight_pair_restarts_into_paused_reveal_and_retains_actual_nativ
             shield_period: scheduler.shield_period,
         }
         .execution(0.001);
-        let intent = super::super::submit::PreparedWeights {
-            netuid: NetUid(1),
-            mechanism: MechId(0),
-            row: (vec![Uid(1)], vec![u16::MAX]),
-            version_key: 0,
-            commit: Some(commit.clone()),
-            commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
-        };
+        let intent =
+            super::super::submit::PreparedWeights::<super::super::submit::CommitCall>::compiled(
+                super::super::submit::WeightCallPlan {
+                    netuid: NetUid(1),
+                    mechanism: MechId(0),
+                    row: (vec![Uid(1)], vec![u16::MAX]),
+                    version_key: 0,
+                    commit: Some(commit.clone()),
+                    commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
+                },
+            );
         let queue_commit = commit.clone();
         lab.after_inclusion(move |state, _record, number| {
             super::super::tests::seed_at(
@@ -300,14 +303,16 @@ async fn public_genesis_shielded_weights_bind_the_native_protocol_by_default() -
         shield_period: scheduler.shield_period,
     }
     .execution(0.001);
-    let intent = super::super::submit::PreparedWeights {
-        netuid: NetUid(1),
-        mechanism: MechId(0),
-        row: (vec![Uid(1)], vec![u16::MAX]),
-        version_key: 0,
-        commit: None,
-        commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
-    };
+    let intent = super::super::submit::PreparedWeights::<super::super::submit::SetCall>::compiled(
+        super::super::submit::WeightCallPlan {
+            netuid: NetUid(1),
+            mechanism: MechId(0),
+            row: (vec![Uid(1)], vec![u16::MAX]),
+            version_key: 0,
+            commit: None,
+            commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
+        },
+    );
     let keys = LabKeys::new(lab.signer.clone());
     let report = Executor::new(lab.client.clone())
         .execute(&intent, &keys, &options)
@@ -568,6 +573,15 @@ async fn cr_lab(
     name: &str,
     tag: u16,
 ) -> anyhow::Result<(JournalLab, crate::NeuronCx, rtao_primitives::AccountId)> {
+    cr_lab_with(name, tag, |_| Ok(())).await
+}
+
+/// [`cr_lab`] whose fixture state `patch` edits first, such as its metadata.
+pub(super) async fn cr_lab_with(
+    name: &str,
+    tag: u16,
+    patch: impl FnOnce(&mut rtao_testkit::FakeState) -> anyhow::Result<()>,
+) -> anyhow::Result<(JournalLab, crate::NeuronCx, rtao_primitives::AccountId)> {
     use crate::{EpochClock, EpochStatus, NeuronCx};
     use rtao_metagraph::{MetagraphSync, Preset, SyncPolicy};
     use rtao_runtime::SelectiveMetagraphIndex;
@@ -583,6 +597,7 @@ async fn cr_lab(
         )
         .await?;
     let mut state = super::super::tests::fixture_state()?;
+    patch(&mut state)?;
     state.set_finalized(state.block)?;
     state.seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), tag)?;
     state.seed_typed("SubtensorModule", "Uids", (NetUid(1), account), 0u16)?;
@@ -628,7 +643,7 @@ async fn cr_lab(
 }
 
 /// Finalize one more lab block and return its header.
-fn advance(lab: &JournalLab) -> anyhow::Result<BlockHeader> {
+pub(super) fn advance(lab: &JournalLab) -> anyhow::Result<BlockHeader> {
     let raw = lab
         .node
         .mutate_state(|s| -> anyhow::Result<_> {
@@ -640,7 +655,11 @@ fn advance(lab: &JournalLab) -> anyhow::Result<BlockHeader> {
     Ok(BlockHeader::from_json(raw)?)
 }
 
-async fn close_cr_lab(scheduler: WeightScheduler, mut lab: JournalLab, cx: crate::NeuronCx) {
+pub(super) async fn close_cr_lab(
+    scheduler: WeightScheduler,
+    mut lab: JournalLab,
+    cx: crate::NeuronCx,
+) {
     drop(scheduler);
     cx.metagraph.shutdown().await;
     cx.shutdown.cancel();
@@ -649,7 +668,7 @@ async fn close_cr_lab(scheduler: WeightScheduler, mut lab: JournalLab, cx: crate
 }
 
 /// `(pallet index, error index)` of a SubtensorModule error.
-fn module_error(name: &str) -> (u8, u8) {
+pub(super) fn module_error(name: &str) -> (u8, u8) {
     let error = rtao_runtime::errors::MODULE_ERRORS
         .iter()
         .find(|error| error.pallet == "SubtensorModule" && error.name == name)
@@ -658,11 +677,11 @@ fn module_error(name: &str) -> (u8, u8) {
 }
 
 /// `(ciphertext, reveal_round, commit_reveal_version)` of a timelocked commit.
-type CommitTail = (Vec<u8>, u64, u16);
+pub(super) type CommitTail = (Vec<u8>, u64, u16);
 
 /// The [`CommitTail`] closing a signed
 /// `commit_timelocked_mechanism_weights(netuid 1, mecid 0, ..)` extrinsic.
-fn timelocked_tail(bytes: &[u8]) -> CommitTail {
+pub(super) fn timelocked_tail(bytes: &[u8]) -> CommitTail {
     let n = bytes.len();
     let tag = u16::from_le_bytes(bytes[n - 2..].try_into().unwrap());
     let round = u64::from_le_bytes(bytes[n - 10..n - 2].try_into().unwrap());
@@ -691,7 +710,7 @@ fn timelocked_tail(bytes: &[u8]) -> CommitTail {
 /// Route plain signed author requests to the built-in pool and record each
 /// one's commit tail. Every included commit is placed in the native queue so
 /// the reveal watcher can locate it; `on_submit` sees the submission ordinal.
-fn plain_author(
+pub(super) fn plain_author(
     lab: &JournalLab,
     account: rtao_primitives::AccountId,
     mut on_submit: impl FnMut(&mut rtao_testkit::FakeState, usize) + Send + 'static,
@@ -723,7 +742,7 @@ fn plain_author(
 
 /// Feed finalized heads until the cadence slot opens and the scheduler
 /// authors, at most one epoch of heads.
-async fn until_authored(
+pub(super) async fn until_authored(
     scheduler: &mut WeightScheduler,
     lab: &JournalLab,
     cx: &crate::NeuronCx,
@@ -741,7 +760,7 @@ async fn until_authored(
     )
 }
 
-fn scored(_: MechId) -> super::super::WeightsProposal {
+pub(super) fn scored(_: MechId) -> super::super::WeightsProposal {
     super::super::WeightsProposal::Set(WeightsInput::Parallel {
         uids: vec![Uid(1)],
         weights: vec![1.0],

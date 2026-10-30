@@ -210,9 +210,9 @@ impl<M: Miner> MinerRuntime<M> {
         });
         let (heads, _finalized) = watch::channel(cx.epochs.status().block);
         let finalized_cx = cx.clone();
-        tasks.spawn(
-            async move { crate::runtime::finalized_worker(finalized_cx, heads, "miner").await },
-        );
+        tasks.spawn(async move {
+            crate::runtime::finalized_worker(finalized_cx, heads, "miner", false).await
+        });
         let graph_cx = cx.clone();
         let miner = self.miner.clone();
         let graph_state = state.clone();

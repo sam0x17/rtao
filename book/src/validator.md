@@ -75,8 +75,32 @@ Watch `rtao_step_errors_total`, `rtao_clock_skew_seconds`,
 `rtao_weights_reveal_missed_total{mech,reason}`. A reveal miss records the observed
 epoch events and the first failing reveal condition. An owner-triggered epoch
 can advance the reveal before a round becomes available; retain the metrics and
-logs when investigating it. A runtime change to required weight calls pauses
-the scheduler until their surfaces are compatible again.
+logs when investigating it.
+
+A runtime change to a weight call pauses only the mechanisms that use that
+call, and only when it cannot be composed any other way. A changed call whose
+fields all still fit is composed by name against the live metadata, logged
+once and counted in `rtao_weights_resolved_composition_total`. For a change
+name resolution refuses, override `Validator::weight_call_encoder` (or call
+`WeightScheduler::with_call_encoder`) to return a `WeightCallEncoder`. The
+scheduler calls it only while the compiled call no longer matches, with the
+final `WeightCall` values: the conformed row, or the encrypted commitment, its
+reveal round and tag. It counts `rtao_weights_encoder_composition_total`. The
+encoder returns complete SCALE call bytes, and rtao never signs them as
+given. They must import strictly under the signing runtime (complete,
+canonical, and re-encoded byte for byte by the core). They must also be a
+`SubtensorModule` weight call of the requested kind with no nested call, and
+must carry the scheduler's subnet and the prepared mechanism, row or
+commitment, reveal round, version key and tag in every field the live call
+has. Further call names returned by `additional_calls` are accepted only
+while a semantic guard is installed. A refusal pauses that attempt with
+`PausedSurface` and signs nothing. Preflight, executor policy, the semantic
+guard, the journal, shielding and the bounded `IncorrectCommitRevealVersion`
+retries apply as for compiled calls. Durable work queued while an encoder is
+installed records its `contract()`. After a restart, that work stays
+unresolved until an encoder with the same contract is installed again.
+`rtao-validator --check-connection` reports a call composed by name as a
+warning. It fails only when name resolution also refuses the call.
 
 The default timelock clock is the system clock. The minimum timestamp offset
 across twenty best heads filters propagation delays. The framework warns above

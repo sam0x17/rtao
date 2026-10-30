@@ -8,6 +8,7 @@ pub mod generated;
 mod handle;
 /// Handwritten by-name runtime return models.
 pub mod models;
+mod resolved;
 /// Exact and projected structural metadata hashes.
 pub mod shape;
 mod surface;
@@ -25,6 +26,10 @@ pub use generated::{
 };
 pub use handle::{
     CallBytes, ComposeError, MetadataLevel, RuntimeEntry, RuntimeHandle, RuntimeStamp,
+};
+pub use resolved::{
+    ArgClass, ArgValue, InspectedCall, InspectedField, ResolvedArg, check_resolved,
+    compose_resolved, inspect_call,
 };
 pub use shape::{
     OuterEnums, Projection, ProjectionField, ProjectionFields, ProjectionVariant, ShapeError,

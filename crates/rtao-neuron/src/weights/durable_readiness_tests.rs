@@ -55,15 +55,15 @@ async fn preflight(lab: &JournalLab) -> anyhow::Result<WeightPreflight> {
     let snapshot = lab.client.at(BlockRef::Best).await?;
     WeightPreflight::fetch(&snapshot, NetUid(1), MechId(0), lab.signer.account()).await
 }
-fn intent() -> super::super::submit::PreparedWeights {
-    super::super::submit::PreparedWeights {
+fn intent() -> super::super::submit::PreparedWeights<super::super::submit::SetCall> {
+    super::super::submit::PreparedWeights::compiled(super::super::submit::WeightCallPlan {
         netuid: NetUid(1),
         mechanism: MechId(0),
         row: (vec![Uid(1)], vec![u16::MAX]),
         version_key: 0,
         commit: None,
         commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
-    }
+    })
 }
 #[tokio::test(start_paused = true)]
 async fn qualified_shield_recovery_exposes_readiness_without_authority() -> anyhow::Result<()> {

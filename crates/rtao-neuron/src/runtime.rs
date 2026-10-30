@@ -112,6 +112,13 @@ pub trait Validator: Send + Sync + 'static {
     fn weight_semantics(&self) -> Option<(String, Arc<dyn rtao_client::journal::SemanticGuard>)> {
         None
     }
+    /// Optional application weight call encoder, used for a weight call whose
+    /// compiled descriptor no longer matches the live runtime (D-088). Its
+    /// bytes are validated before signing; see
+    /// [`crate::weights::WeightCallEncoder`].
+    fn weight_call_encoder(&self) -> Option<Arc<dyn crate::weights::WeightCallEncoder>> {
+        None
+    }
     /// Drop or reset scores after registration identities change.
     fn on_metagraph(&self, _diff: &MetagraphDiff, _state: &mut Self::State) {}
     /// Set scoring cadence, timeout and failure backoff.
@@ -250,7 +257,10 @@ impl<V: Validator> NeuronRuntime<V> {
             cx.shutdown.clone(),
         ));
         let head_cx = cx.clone();
-        tasks.spawn(async move { finalized_worker(head_cx, heads, "validator").await });
+        let weight_encoder = self.validator.weight_call_encoder().is_some();
+        tasks.spawn(
+            async move { finalized_worker(head_cx, heads, "validator", weight_encoder).await },
+        );
         let graph_cx = cx.clone();
         let graph_state = state.clone();
         let validator = self.validator.clone();
@@ -465,7 +475,7 @@ pub(crate) async fn initialize_with_http_factory(
             config.netuid.0
         );
         let (initial, verified, spec_version) =
-            epoch_at(&client, config.netuid, BlockRef::Finalized, kind).await?;
+            epoch_at(&client, config.netuid, BlockRef::Finalized, kind, false).await?;
         let epochs = EpochClock::new(initial);
         let home = std::env::var_os("HOME")
             .ok_or_else(|| anyhow::anyhow!("HOME is required to resolve the state directory"))?;
@@ -572,15 +582,35 @@ pub(crate) fn call_identity(call: &rtao_runtime::CallDescriptor) -> String {
     format!("call:{}.{}", call.pallet, call.name)
 }
 
-/// Whether every validator weight call keeps its argument shape.
+/// Whether every validator weight call can be composed under `runtime`.
 ///
-/// This is the validator readiness flag (`runtime_verified`). Weight
-/// submission itself pauses per mechanism, on the call that mechanism uses
-/// (`set_mechanism_weights` or `commit_timelocked_mechanism_weights`).
-pub(crate) fn weight_calls_verified(report: &rtao_runtime::SurfaceReport) -> bool {
-    WEIGHT_CALLS
-        .iter()
-        .all(|call| report.shape_matches(&call_identity(call)))
+/// This is the validator readiness flag (`runtime_verified`). A call is
+/// usable when its compiled descriptor matches, when name-resolved
+/// composition accepts it, or when an application encoder is installed
+/// (D-088). Weight submission itself pauses per mechanism, on the call that
+/// mechanism uses (`set_mechanism_weights` or
+/// `commit_timelocked_mechanism_weights`), only when none of these can
+/// produce it.
+pub(crate) fn weight_calls_usable(runtime: &rtao_runtime::RuntimeHandle, encoder: bool) -> bool {
+    encoder
+        || WEIGHT_CALLS.iter().all(|call| {
+            runtime.surface_report().shape_matches(&call_identity(call))
+                || weight_call_resolves(runtime, call)
+        })
+}
+#[cfg(feature = "validator")]
+fn weight_call_resolves(
+    runtime: &rtao_runtime::RuntimeHandle,
+    call: &rtao_runtime::CallDescriptor,
+) -> bool {
+    crate::weights::weight_call_resolves(runtime, call)
+}
+#[cfg(not(feature = "validator"))]
+fn weight_call_resolves(
+    _runtime: &rtao_runtime::RuntimeHandle,
+    _call: &rtao_runtime::CallDescriptor,
+) -> bool {
+    false
 }
 
 async fn epoch_at(
@@ -588,6 +618,7 @@ async fn epoch_at(
     netuid: NetUid,
     block: BlockRef,
     kind: &str,
+    weight_encoder: bool,
 ) -> anyhow::Result<(EpochStatus, bool, u32)> {
     use rtao_runtime::storage::subtensor_module::{LAST_EPOCH_BLOCK, SUBNET_EPOCH_INDEX, TEMPO};
     let snapshot = client.at(block).await?;
@@ -603,7 +634,7 @@ async fn epoch_at(
         report.shape_matches("call:SubtensorModule.serve_axon")
             && report.shape_matches("call:SubtensorModule.serve_axon_tls")
     } else {
-        weight_calls_verified(report)
+        weight_calls_usable(&snapshot.block().runtime, weight_encoder)
     };
     Ok((
         EpochStatus {
@@ -620,6 +651,7 @@ pub(crate) async fn finalized_worker(
     cx: NeuronCx,
     heads: watch::Sender<u64>,
     kind: &'static str,
+    weight_encoder: bool,
 ) -> anyhow::Result<()> {
     let mut stream = cx.client.blocks(Finality::Finalized)?;
     loop {
@@ -628,7 +660,7 @@ pub(crate) async fn finalized_worker(
             () = cx.shutdown.cancelled() => return Ok(()),
             header = stream.next() => {
                 let header = header.ok_or_else(|| anyhow::anyhow!("finalized head stream ended"))??;
-                let (status, verified, spec_version) = match epoch_at(&cx.client, cx.netuid, BlockRef::Hash(header.hash), kind).await {
+                let (status, verified, spec_version) = match epoch_at(&cx.client, cx.netuid, BlockRef::Hash(header.hash), kind, weight_encoder).await {
                     Ok(snapshot) => snapshot,
                     Err(error) => {
                         cx.metrics.increment("rtao_epoch_sync_errors_total");

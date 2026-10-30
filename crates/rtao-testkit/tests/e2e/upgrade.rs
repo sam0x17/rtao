@@ -300,7 +300,23 @@ async fn exercise_running(
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         let descriptor = "call:SubtensorModule.set_mechanism_weights";
-        if changed.surface_report().shape_matches(descriptor) {
+        // A changed call whose fields all still fit is composed by name and
+        // submits; only a real incompatibility pauses (D-088).
+        let u16_seq = || rtao_runtime::ArgClass::Seq(Box::new(rtao_runtime::ArgClass::Uint(16)));
+        let resolvable = rtao_runtime::check_resolved(
+            &changed,
+            "SubtensorModule",
+            "set_mechanism_weights",
+            &[
+                ("netuid", rtao_runtime::ArgClass::Uint(16)),
+                ("mecid", rtao_runtime::ArgClass::Uint(8)),
+                ("dests", u16_seq()),
+                ("weights", u16_seq()),
+                ("version_key", rtao_runtime::ArgClass::Uint(64)),
+            ],
+        )
+        .is_ok();
+        if changed.surface_report().shape_matches(descriptor) || resolvable {
             driver.wait_for(upgrade_height + 1, false).await?;
         } else {
             driver.wait_for(upgrade_height + 1, true).await?;

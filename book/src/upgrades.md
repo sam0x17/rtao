@@ -61,9 +61,20 @@ the preparation and result-handling flow.
 
 ## Keep validator behavior compatible
 
-The validator scheduler pauses a weight attempt when its required call
-surface is incompatible. Review the refusal, update rtao as needed, and
-verify the affected surface before resuming weights. A subnet's weight
+Each weight attempt composes only the call its mechanism uses, so a change
+to the other weight call never blocks it. When that call's compiled shape no
+longer matches the live runtime, the scheduler composes it by name against
+the live metadata if every field still fits (for example a field moved into
+a single-field newtype, `Vec` replaced by `BoundedVec`, a compact switch, a
+widened integer or reordered fields). It logs a warning once per runtime and
+counts `rtao_weights_resolved_composition_total`; the call is decoded back
+and compared with the prepared values before anything is signed. A validator
+can also install a `WeightCallEncoder` for calls that name resolution
+refuses. The attempt pauses (`PausedSurface`) only when no composer can
+produce the call: an added, removed or renamed field, or a field that became
+an `Option`, an enum, a narrower or signed integer, an array or a nested
+call. Review the refusal, update rtao or the encoder, and the next head
+resumes weights once the call composes again. A subnet's weight
 version key is also an application contract: configure
 `--weights-version-key` only for a scoring implementation that supports that
 version. Raising the number alone does not upgrade the implementation.

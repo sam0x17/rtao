@@ -2,6 +2,7 @@
 // Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/weights.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Coherent best-head weight preparation and actual-epoch reveal tracking.
 
+mod compose;
 mod durable;
 mod reveal;
 mod submit;
@@ -10,6 +11,9 @@ mod tests;
 
 use crate::{Clock, ClockGuard, NeuronCx, StateCell, Validator};
 use blake2::{Blake2b, Digest, digest::consts::U32};
+pub use compose::{
+    COMMIT_WEIGHT_CALLS, SET_WEIGHT_CALLS, WEIGHT_PALLET, WeightCall, WeightCallEncoder,
+};
 use futures::StreamExt;
 pub use reveal::{EpochNotice, PendingReveal, RevealMissReason, RevealOutcome, RevealWatcher};
 use rtao_client::{BlockHeader, BlockRef, Client, Finality, ReadPlan, Snapshot, ViewExt};
@@ -369,7 +373,9 @@ impl ValidatorSurface {
     ///
     /// The result fails only where the run loop would fail or report itself
     /// not ready:
-    /// - a weight call's shape changed (the readiness flag);
+    /// - a weight call's shape changed and name-resolved composition refuses
+    ///   it too (the readiness flag); a call only composed by name is a
+    ///   warning (D-088);
     /// - validator-read storage or constants are absent or changed shape,
     ///   since their typed reads refuse;
     /// - the selective metagraph API is absent, its inputs changed, its API
@@ -379,6 +385,13 @@ impl ValidatorSurface {
     ///
     /// Everything else is collected in [`Self::warnings`].
     pub fn check(runtime: &rtao_runtime::RuntimeHandle) -> Self {
+        Self::check_with_encoder(runtime, false)
+    }
+
+    /// [`Self::check`] for a validator that installs a [`WeightCallEncoder`]
+    /// when `encoder` is true: a weight call the encoder would compose is a
+    /// warning instead of a failure.
+    pub fn check_with_encoder(runtime: &rtao_runtime::RuntimeHandle, encoder: bool) -> Self {
         use rtao_runtime::{SurfaceClass, SurfaceKind};
         let report = runtime.surface_report();
         let details = |descriptor: &str| {
@@ -401,11 +414,33 @@ impl ValidatorSurface {
             surface.incompatible.push(format!("{id}: {detail}"));
             id
         };
-        if !crate::runtime::weight_calls_verified(report) {
-            for call in crate::runtime::WEIGHT_CALLS {
-                let id = crate::runtime::call_identity(call);
-                if !report.shape_matches(&id) {
-                    let detail = format!("weight submission pauses; {}", details(&id));
+        let mut composed = std::collections::BTreeSet::new();
+        for call in crate::runtime::WEIGHT_CALLS {
+            let id = crate::runtime::call_identity(call);
+            if report.shape_matches(&id) {
+                continue;
+            }
+            let commit = call.name == compose::compiled(true).name;
+            let composer = match compose::check_resolved(runtime, commit) {
+                Ok(()) => Ok("composes by name against live metadata"),
+                Err(_) if encoder => Ok("composes through the application call encoder"),
+                Err(error) => Err(error),
+            };
+            match composer {
+                Ok(how) => {
+                    surface.warnings.push(rtao_runtime::SurfaceChange {
+                        descriptor: id.clone(),
+                        kind: SurfaceKind::Call,
+                        class: SurfaceClass::Behavioural,
+                        detail: format!("weight call {how}; {}", details(&id)),
+                    });
+                    composed.insert(id);
+                }
+                Err(error) => {
+                    let detail = format!(
+                        "weight submission pauses; {}; name-resolved composition refused: {error}",
+                        details(&id)
+                    );
                     failed.insert(fail(&mut surface, id, detail));
                 }
             }
@@ -436,7 +471,7 @@ impl ValidatorSurface {
         }
         used.push(api);
         for change in &report.changes {
-            if failed.contains(&change.descriptor) {
+            if failed.contains(&change.descriptor) || composed.contains(&change.descriptor) {
                 continue;
             }
             if change.class == SurfaceClass::Breaking
@@ -461,6 +496,14 @@ impl ValidatorSurface {
     pub fn is_compatible(&self) -> bool {
         self.incompatible.is_empty()
     }
+}
+
+/// Whether name-resolved composition accepts this weight call (D-088).
+pub(crate) fn weight_call_resolves(
+    runtime: &rtao_runtime::RuntimeHandle,
+    call: &rtao_runtime::CallDescriptor,
+) -> bool {
+    compose::check_resolved(runtime, call.name == compose::compiled(true).name).is_ok()
 }
 
 /// Whether the selective metagraph call the validator makes can be encoded.
@@ -708,6 +751,9 @@ struct Advisories {
     activity_alarm: bool,
     cr_version_paused: bool,
     cr_version_followed: Option<(u16, Option<rtao_primitives::H256>)>,
+    /// Composer and runtime of the last call composed without the compiled
+    /// descriptor, so each switch is logged once (D-088).
+    composed_with: Option<(&'static str, rtao_runtime::RuntimeStamp)>,
 }
 
 /// Metadata default of `CommitRevealWeightsVersion`, a diagnostic hint only:
@@ -739,6 +785,7 @@ pub struct WeightScheduler {
     semantic_guard: Option<Arc<dyn rtao_client::journal::SemanticGuard>>,
     shield_protocol: Option<Arc<dyn rtao_client::journal::ShieldProtocolGuard>>,
     shield_period: Option<rtao_client::ShieldPeriod>,
+    call_encoder: Option<Arc<dyn WeightCallEncoder>>,
 }
 impl WeightScheduler {
     /// Construct a scheduler with explicit wall time and a best-head skew guard.
@@ -760,7 +807,21 @@ impl WeightScheduler {
             semantic_guard: None,
             shield_protocol: None,
             shield_period: None,
+            call_encoder: None,
         })
+    }
+    /// Install an application weight call encoder (D-088).
+    ///
+    /// It composes a mechanism's call only while that call's compiled
+    /// descriptor no longer matches the live runtime, before name-resolved
+    /// composition. Its bytes are imported and validated before signing; see
+    /// [`WeightCallEncoder`]. Durable work queued while it is installed
+    /// records its [`WeightCallEncoder::contract`] and is rebuilt only while
+    /// an encoder with the same contract is installed, so reinstall it on
+    /// restart.
+    pub fn with_call_encoder(mut self, encoder: Arc<dyn WeightCallEncoder>) -> Self {
+        self.call_encoder = Some(encoder);
+        self
     }
     /// Explicitly request shielded weight submission through the same public
     /// executor/journal. Ordinary scheduling remains the default. Reinstall on
@@ -926,6 +987,152 @@ impl WeightScheduler {
         }
     }
 
+    /// Encoder this mechanism's work may use, or the contract retained work
+    /// requires when its encoder is not installed (D-088).
+    ///
+    /// Work retained without a contract was queued without an encoder and
+    /// uses only the compiled and name-resolved composers.
+    fn work_encoder(
+        &self,
+        work: Option<&durable::Work>,
+    ) -> Result<Option<Arc<dyn WeightCallEncoder>>, String> {
+        let Some(work) = work else {
+            return Ok(self.call_encoder.clone());
+        };
+        match (&work.call_encoder, &self.call_encoder) {
+            (None, _) => Ok(None),
+            (Some(contract), Some(encoder)) if encoder.contract() == contract => {
+                Ok(Some(encoder.clone()))
+            }
+            (Some(contract), _) => Err(contract.clone()),
+        }
+    }
+
+    /// Select how this attempt composes its call, or pause the mechanism when
+    /// neither the compiled descriptor, an installed encoder nor name-resolved
+    /// composition can produce it.
+    fn select_composer(
+        &mut self,
+        metrics: &crate::Metrics,
+        mech: MechId,
+        state: &WeightPreflight,
+        encoder: Option<&Arc<dyn WeightCallEncoder>>,
+    ) -> Option<compose::Composer> {
+        let runtime = &state.at.runtime;
+        match compose::select(runtime, state.commit_reveal, encoder) {
+            Ok(composer) => Some(composer),
+            Err(resolved) => {
+                let call = compose::compiled(state.commit_reveal);
+                let descriptor = crate::runtime::call_identity(call);
+                let difference = runtime
+                    .surface_report()
+                    .changes
+                    .iter()
+                    .filter(|change| change.descriptor == descriptor)
+                    .map(|change| change.detail.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                self.pause_surface(
+                    metrics,
+                    mech,
+                    state.at.number,
+                    descriptor,
+                    format!(
+                        "weight call is incompatible with this rtao build; update rtao or install a WeightCallEncoder and re-verify the runtime: {difference}; {resolved}"
+                    ),
+                );
+                None
+            }
+        }
+    }
+
+    /// Compose this attempt's call for the signing runtime, or pause the
+    /// mechanism without signing when the composer refuses it.
+    fn compose_call(
+        &mut self,
+        metrics: &crate::Metrics,
+        mech: MechId,
+        state: &WeightPreflight,
+        composer: &compose::Composer,
+        plan: &submit::WeightCallPlan,
+    ) -> Option<submit::Composed> {
+        let runtime = &state.at.runtime;
+        let guarded = self.semantic_guard.is_some();
+        let (result, metric) = match composer {
+            compose::Composer::Compiled => return Some(submit::Composed::Compiled),
+            compose::Composer::Resolved => (
+                plan.with_call(|call| compose::compose_resolved(runtime, call))
+                    .map_err(|error| format!("name-resolved composition refused: {error}")),
+                "rtao_weights_resolved_composition_total",
+            ),
+            compose::Composer::Application(encoder) => (
+                plan.with_call(|call| {
+                    compose::encode_application(encoder.as_ref(), runtime, call, guarded)
+                })
+                .map_err(|refusal| {
+                    format!(
+                        "application call encoder {} refused the call ({}): {}",
+                        encoder.contract(),
+                        refusal.code,
+                        refusal.detail
+                    )
+                }),
+                "rtao_weights_encoder_composition_total",
+            ),
+        };
+        match result {
+            Ok(call) => {
+                metrics.increment(metric);
+                let current = Some((composer.label(), runtime.stamp()));
+                let advisories = self.advisories.entry(mech).or_default();
+                if advisories.composed_with != current {
+                    advisories.composed_with = current;
+                    tracing::warn!(
+                        mechanism = mech.0,
+                        composer = composer.label(),
+                        spec_version = runtime.spec_version(),
+                        "the compiled weight call no longer matches the live runtime; composing it without the compiled descriptor"
+                    );
+                }
+                Some(submit::Composed::Verified(call))
+            }
+            Err(detail) => {
+                let call = compose::compiled(plan.commit.is_some());
+                self.pause_surface(
+                    metrics,
+                    mech,
+                    state.at.number,
+                    crate::runtime::call_identity(call),
+                    detail,
+                );
+                None
+            }
+        }
+    }
+
+    fn pause_surface(
+        &mut self,
+        metrics: &crate::Metrics,
+        mech: MechId,
+        best_block: u64,
+        descriptor: String,
+        detail: String,
+    ) {
+        self.attempts.insert(
+            mech,
+            WeightAttempt {
+                mechanism: mech,
+                best_block,
+                outcome: WeightAttemptOutcome::PausedSurface { descriptor, detail },
+            },
+        );
+        metrics.increment("rtao_weights_surface_paused_total");
+        metrics.update_readiness(|ready| {
+            ready.runtime_verified = false;
+            ready.last_weight_succeeded = false;
+        });
+    }
+
     /// Clear a legacy in-memory uncertainty block after external reconciliation.
     ///
     /// The scheduler normally reconciles through the executor. An unresolved
@@ -1056,31 +1263,27 @@ impl WeightScheduler {
                 outcome: WeightAttemptOutcome::Scheduled,
             },
         );
-        let call = if preflight.commit_reveal {
-            &rtao_runtime::calls::subtensor_module::COMMIT_TIMELOCKED_MECHANISM_WEIGHTS
-        } else {
-            &rtao_runtime::calls::subtensor_module::SET_MECHANISM_WEIGHTS
-        };
-        let descriptor = format!("call:{}.{}", call.pallet, call.name);
-        let report = preflight.at.runtime.surface_report();
-        if !report.shape_matches(&descriptor) {
-            let difference = report
-                .changes
-                .iter()
-                .filter(|change| change.descriptor == descriptor)
-                .map(|change| change.detail.as_str())
-                .collect::<Vec<_>>()
-                .join("; ");
-            self.attempts.insert(mech, WeightAttempt { mechanism: mech, best_block: preflight.at.number,
-                outcome: WeightAttemptOutcome::PausedSurface { descriptor, detail: format!("weight call is incompatible with this rtao build; update rtao and re-verify the runtime: {difference}") } });
-            cx.metrics.increment("rtao_weights_surface_paused_total");
-            cx.metrics.update_readiness(|ready| {
-                ready.runtime_verified = false;
-                ready.last_weight_succeeded = false;
-            });
-            return Ok(());
-        }
         let pending_work = self.pending_work(mech)?;
+        let encoder = match self.work_encoder(pending_work.as_ref().map(|(_, work)| work)) {
+            Ok(encoder) => encoder,
+            Err(contract) => {
+                self.attempts.insert(
+                    mech,
+                    WeightAttempt {
+                        mechanism: mech,
+                        best_block: preflight.at.number,
+                        outcome: WeightAttemptOutcome::Unresolved(format!(
+                            "call encoder {contract} required: retained work was queued under it; reinstall it with WeightScheduler::with_call_encoder"
+                        )),
+                    },
+                );
+                return Ok(());
+            }
+        };
+        let Some(composer) = self.select_composer(&cx.metrics, mech, &preflight, encoder.as_ref())
+        else {
+            return Ok(());
+        };
         let version_key = pending_work
             .as_ref()
             .map_or(self.policy.version_key.value(), |(_, work)| {
@@ -1232,6 +1435,18 @@ impl WeightScheduler {
                     .await?,
             );
         }
+        let plan = submit::WeightCallPlan::new(
+            cx.netuid,
+            mech,
+            row.clone(),
+            version_key,
+            commit.as_ref().map(|commit| (commit, cr_tag)),
+        );
+        // A call no composer can produce pauses before the slot is reserved.
+        let Some(composed) = self.compose_call(&cx.metrics, mech, &preflight, &composer, &plan)
+        else {
+            return Ok(());
+        };
         // Reserve this cadence slot before await; pool-unknown outcomes must
         // never cause an unconditional resubmission on the next finalized head.
         self.slots.entry(mech).or_default().last_attempt_epoch =
@@ -1241,10 +1456,8 @@ impl WeightScheduler {
         self.persist(None)?;
         let result = submit::execute(
             cx,
-            mech,
-            row.clone(),
-            version_key,
-            commit.as_ref().map(|commit| (commit, cr_tag)),
+            plan,
+            composed,
             block_time,
             submit::SubmissionOptions {
                 journal: binding.clone(),
@@ -1350,16 +1563,32 @@ impl WeightScheduler {
                     } else {
                         None
                     };
+                    // Fresh state selects and composes its own call.
+                    let Some(composer) =
+                        self.select_composer(&cx.metrics, mech, &state, encoder.as_ref())
+                    else {
+                        return Ok(());
+                    };
+                    let plan = submit::WeightCallPlan::new(
+                        cx.netuid,
+                        mech,
+                        row.clone(),
+                        version_key,
+                        commit.as_ref().map(|commit| (commit, cr_tag)),
+                    );
+                    let Some(composed) =
+                        self.compose_call(&cx.metrics, mech, &state, &composer, &plan)
+                    else {
+                        return Ok(());
+                    };
                     self.slots.entry(mech).or_default().last_attempt_epoch =
                         Some(state.schedule.subnet_epoch_index);
                     self.slots.entry(mech).or_default().last_attempt_block = Some(state.at.number);
                     cx.metrics.increment(recomputed);
                     let retry = submit::execute(
                         cx,
-                        mech,
-                        row.clone(),
-                        version_key,
-                        commit.as_ref().map(|commit| (commit, cr_tag)),
+                        plan,
+                        composed,
                         block_time,
                         submit::SubmissionOptions {
                             journal: None,
@@ -1731,6 +1960,9 @@ pub(crate) async fn run_scheduler<V: Validator>(
     )?;
     if let Some((contract, guard)) = validator.weight_semantics() {
         scheduler = scheduler.with_semantic_guard(contract, guard);
+    }
+    if let Some(encoder) = validator.weight_call_encoder() {
+        scheduler = scheduler.with_call_encoder(encoder);
     }
     let mut heads = cx.client.blocks(Finality::Finalized)?;
     loop {
