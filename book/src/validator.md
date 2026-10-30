@@ -99,10 +99,12 @@ and `TimeoutStopSec=90`.
 
 The `rtao-validator` binary also accepts `--check-connection`. This checks the
 configured endpoint's TLS connection, chain identity, signing support and the
-runtime metadata the validator uses (its weight calls, preflight storage and
-metagraph API), then closes before loading a wallet. Breaking drift in other
-calls, pallets or module errors is logged as a warning and does not fail the
-check. It supports
+runtime metadata the validator run loop uses (its weight calls and the
+validator-read storage, constants and selective metagraph API), then closes
+before loading a wallet. It fails only where the run loop would fail or report
+itself not ready. Other drift, such as a changed metagraph projection that the
+dynamic decode absorbs or a breaking change in an unrelated call, pallet or
+module error, is logged as a warning. It supports
 `--network finney --chain-endpoint wss://your-node.example` and the ordinary TLS
 root configuration. It is useful for verifying container certificates before
 providing the hotkey mount.

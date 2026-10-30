@@ -252,9 +252,33 @@ pub const PREFLIGHT_STORAGE: [rtao_runtime::StorageSurface; 17] = [
     st::BLOCKS_SINCE_LAST_STEP.surface(),
 ];
 
-/// Runtime API read by the validator's mechanism metagraph sync.
+/// Other storage the validator run path reads with typed, shape-checked reads.
+///
+/// Mechanism and owner state for each scheduling pass, timelocked commit
+/// tracking and the drand round used by the reveal watcher. Together with
+/// [`PREFLIGHT_STORAGE`] this covers every typed storage read whose failure
+/// stops the run loop; the chain-clock timestamp read only warns and retries.
+pub const RUN_PATH_STORAGE: [rtao_runtime::StorageSurface; 6] = [
+    st::MECHANISM_COUNT_CURRENT.surface(),
+    st::ACTIVITY_CUTOFF_FACTOR_MILLI.surface(),
+    st::STAKE_THRESHOLD.surface(),
+    st::SUBNET_OWNER_HOTKEY.surface(),
+    st::TIMELOCKED_WEIGHT_COMMITS.surface(),
+    rtao_runtime::storage::drand::LAST_STORED_ROUND.surface(),
+];
+
+/// Constants the validator run path reads with typed, shape-checked reads.
+pub const RUN_PATH_CONSTANTS: [rtao_runtime::ConstantSurface; 1] =
+    [rtao_runtime::constants::aura::SLOT_DURATION.surface()];
+
+/// Runtime API read by the validator's selective metagraph sync and reveal
+/// watcher.
+///
+/// Its output decode falls back to a dynamic decode when the typed
+/// projection changes, so only absence, changed inputs, an API version below
+/// two or degraded metadata stop the run loop.
 pub const METAGRAPH_API: rtao_runtime::ApiSurface =
-    rtao_runtime::runtime_apis::subnet_info_runtime_api::GET_MECHAGRAPH.surface();
+    rtao_runtime::runtime_apis::subnet_info_runtime_api::GET_SELECTIVE_MECHAGRAPH.surface();
 
 /// Live-surface compatibility of what a validator actually uses.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -262,78 +286,102 @@ pub struct ValidatorSurface {
     /// Validator dependencies this build cannot use under the live runtime,
     /// as `descriptor: detail` lines.
     pub incompatible: Vec<String>,
-    /// Breaking drift in items the validator does not use. Diagnostics report
-    /// these as warnings; they do not affect validator operation.
-    pub unrelated: Vec<rtao_runtime::SurfaceChange>,
+    /// Drift that does not stop the validator run loop: breaking changes in
+    /// items outside the validator-read storage, constants, APIs and weight
+    /// calls, and non-refusing changes (such as a metagraph projection change
+    /// with a dynamic fallback) in validator-read items. Diagnostics report
+    /// these as warnings.
+    pub warnings: Vec<rtao_runtime::SurfaceChange>,
 }
 
 impl ValidatorSurface {
-    /// Check the validator's weight calls, preflight storage, metagraph API
-    /// and signing surface against the live runtime.
+    /// Check what the validator run path uses against the live runtime.
     ///
-    /// The weight calls use the run loop's own pause predicate. Breaking
-    /// signing drift (V15 metadata level, extrinsic version, signed
-    /// extensions) stays a hard requirement. Breaking drift elsewhere is
-    /// collected in [`Self::unrelated`] instead of refusing a compatible
-    /// runtime.
+    /// The result fails only where the run loop would fail or report itself
+    /// not ready:
+    /// - a weight call's shape changed (the readiness flag);
+    /// - validator-read storage or constants are absent or changed shape,
+    ///   since their typed reads refuse;
+    /// - the selective metagraph API is absent, its inputs changed, its API
+    ///   version is below two, or metadata is degraded;
+    /// - breaking signing drift (V15 metadata level, extrinsic version,
+    ///   signed extensions).
+    ///
+    /// Everything else is collected in [`Self::warnings`].
     pub fn check(runtime: &rtao_runtime::RuntimeHandle) -> Self {
         use rtao_runtime::{SurfaceClass, SurfaceKind};
         let report = runtime.surface_report();
-        let mut used = crate::runtime::WEIGHT_CALLS
-            .iter()
-            .map(|call| crate::runtime::call_identity(call))
-            .collect::<Vec<_>>();
-        used.extend(
-            PREFLIGHT_STORAGE
-                .iter()
-                .map(|storage| format!("storage:{}.{}", storage.pallet, storage.name)),
-        );
-        used.push(format!("api:{}.{}", METAGRAPH_API.api, METAGRAPH_API.name));
         let details = |descriptor: &str| {
-            report
+            let detail = report
                 .changes
                 .iter()
                 .filter(|change| change.descriptor == descriptor)
                 .map(|change| change.detail.as_str())
                 .collect::<Vec<_>>()
-                .join("; ")
+                .join("; ");
+            if detail.is_empty() {
+                "not verified by this rtao build".to_owned()
+            } else {
+                detail
+            }
         };
         let mut surface = Self::default();
+        let mut failed = std::collections::BTreeSet::new();
+        let fail = |surface: &mut Self, id: String, detail: String| {
+            surface.incompatible.push(format!("{id}: {detail}"));
+            id
+        };
         if !crate::runtime::weight_calls_verified(report) {
-            surface.incompatible.extend(
-                crate::runtime::WEIGHT_CALLS
-                    .iter()
-                    .map(|call| crate::runtime::call_identity(call))
-                    .filter(|id| !report.shape_matches(id))
-                    .map(|id| format!("{id}: weight submission pauses; {}", details(&id))),
-            );
+            for call in crate::runtime::WEIGHT_CALLS {
+                let id = crate::runtime::call_identity(call);
+                if !report.shape_matches(&id) {
+                    let detail = format!("weight submission pauses; {}", details(&id));
+                    failed.insert(fail(&mut surface, id, detail));
+                }
+            }
         }
-        surface.incompatible.extend(
-            used.iter()
-                .skip(crate::runtime::WEIGHT_CALLS.len())
-                .filter(|id| !report.shape_matches(id))
-                .map(|id| {
-                    let detail = details(id);
-                    if detail.is_empty() {
-                        format!("{id}: not verified by this rtao build")
-                    } else {
-                        format!("{id}: {detail}")
-                    }
-                }),
-        );
+        let mut used = crate::runtime::WEIGHT_CALLS
+            .iter()
+            .map(|call| crate::runtime::call_identity(call))
+            .collect::<Vec<_>>();
+        let typed = PREFLIGHT_STORAGE
+            .iter()
+            .chain(&RUN_PATH_STORAGE)
+            .map(|storage| format!("storage:{}.{}", storage.pallet, storage.name))
+            .chain(
+                RUN_PATH_CONSTANTS
+                    .iter()
+                    .map(|constant| format!("constant:{}.{}", constant.pallet, constant.name)),
+            )
+            .collect::<Vec<_>>();
+        for id in &typed {
+            if !report.shape_matches(id) {
+                failed.insert(fail(&mut surface, id.clone(), details(id)));
+            }
+        }
+        used.extend(typed);
+        let api = format!("api:{}.{}", METAGRAPH_API.api, METAGRAPH_API.name);
+        if let Err(detail) = metagraph_api_usable(runtime) {
+            failed.insert(fail(&mut surface, api.clone(), detail));
+        }
+        used.push(api);
         for change in &report.changes {
-            if change.class != SurfaceClass::Breaking || used.contains(&change.descriptor) {
+            if failed.contains(&change.descriptor) {
                 continue;
             }
-            if matches!(
-                change.kind,
-                SurfaceKind::Metadata | SurfaceKind::Extrinsic | SurfaceKind::Extension
-            ) {
-                surface
-                    .incompatible
-                    .push(format!("{}: {}", change.descriptor, change.detail));
-            } else {
-                surface.unrelated.push(change.clone());
+            if change.class == SurfaceClass::Breaking
+                && matches!(
+                    change.kind,
+                    SurfaceKind::Metadata | SurfaceKind::Extrinsic | SurfaceKind::Extension
+                )
+            {
+                failed.insert(fail(
+                    &mut surface,
+                    change.descriptor.clone(),
+                    change.detail.clone(),
+                ));
+            } else if change.class == SurfaceClass::Breaking || used.contains(&change.descriptor) {
+                surface.warnings.push(change.clone());
             }
         }
         surface
@@ -343,6 +391,43 @@ impl ValidatorSurface {
     pub fn is_compatible(&self) -> bool {
         self.incompatible.is_empty()
     }
+}
+
+/// Whether the selective metagraph call the validator makes can be encoded.
+///
+/// Mirrors the metagraph fetch: degraded metadata, an absent method, an API
+/// version below two, or inputs that changed name, order or encoding refuse.
+fn metagraph_api_usable(runtime: &rtao_runtime::RuntimeHandle) -> Result<(), String> {
+    use rtao_core::ops::runtime_api;
+    if runtime.metadata_level() != rtao_runtime::MetadataLevel::V15 {
+        return Err("runtime API signatures require V15 metadata".into());
+    }
+    let have = runtime.runtime_api_version(METAGRAPH_API.api).unwrap_or(0);
+    if have < 2 {
+        return Err(format!(
+            "the metagraph fetch requires API version 2, found {have}"
+        ));
+    }
+    let method =
+        runtime_api::runtime_api_method(runtime.core(), METAGRAPH_API.api, METAGRAPH_API.name)
+            .map_err(|_| "runtime API method is absent".to_owned())?;
+    if method.inputs.len() != METAGRAPH_API.inputs.len()
+        || METAGRAPH_API
+            .inputs
+            .iter()
+            .zip(&method.inputs)
+            .any(|(expected, actual)| expected.name != actual.name)
+    {
+        return Err("runtime API input names or order changed".into());
+    }
+    let sample = [
+        Value::Int(1),
+        Value::Int(0),
+        Value::List(vec![Value::Int(0)]),
+    ];
+    runtime_api::encode_params(runtime.core(), METAGRAPH_API.api, method, &sample)
+        .map(|_| ())
+        .map_err(|error| format!("runtime API inputs no longer encode: {error}"))
 }
 
 /// The seventeen storage fields used by one mechanism's preflight.

@@ -100,11 +100,11 @@ async fn main() -> anyhow::Result<()> {
         let runtime = client.refresh_runtime().await?;
         // Only what this validator uses gates the check; unrelated drift is a warning.
         let surface = rtao_neuron::weights::ValidatorSurface::check(&runtime);
-        for change in &surface.unrelated {
+        for change in &surface.warnings {
             tracing::warn!(
                 descriptor = %change.descriptor,
                 detail = %change.detail,
-                "runtime surface changed outside what the validator uses"
+                "runtime surface changed without affecting the validator run loop"
             );
         }
         anyhow::ensure!(

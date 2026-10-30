@@ -561,7 +561,7 @@ impl rtao_tx::Clock for ExecutorClock {
             .unwrap_or(std::time::UNIX_EPOCH)
     }
 }
-/// Typed weight calls a validator composes; their shape gates weight submission.
+/// Typed weight calls a validator composes; each mechanism submits with one of them.
 pub(crate) const WEIGHT_CALLS: [&rtao_runtime::CallDescriptor; 2] = [
     &rtao_runtime::calls::subtensor_module::COMMIT_TIMELOCKED_MECHANISM_WEIGHTS,
     &rtao_runtime::calls::subtensor_module::SET_MECHANISM_WEIGHTS,
@@ -574,7 +574,9 @@ pub(crate) fn call_identity(call: &rtao_runtime::CallDescriptor) -> String {
 
 /// Whether every validator weight call keeps its argument shape.
 ///
-/// The validator run loop pauses weight submission when this is false.
+/// This is the validator readiness flag (`runtime_verified`). Weight
+/// submission itself pauses per mechanism, on the call that mechanism uses
+/// (`set_mechanism_weights` or `commit_timelocked_mechanism_weights`).
 pub(crate) fn weight_calls_verified(report: &rtao_runtime::SurfaceReport) -> bool {
     WEIGHT_CALLS
         .iter()

@@ -688,6 +688,30 @@ mod validator_surface {
         .expect("pinned metadata")
     }
 
+    /// The client supplies live API versions; the metagraph fetch needs v2+.
+    fn handle(core: Runtime) -> RuntimeHandle {
+        RuntimeHandle::new_with_api_versions(
+            core,
+            std::collections::BTreeMap::from([("SubnetInfoRuntimeApi".to_owned(), 3)]),
+        )
+        .expect("runtime")
+    }
+
+    fn warned(surface: &ValidatorSurface, descriptor: &str) -> bool {
+        surface
+            .warnings
+            .iter()
+            .any(|change| change.descriptor == descriptor)
+    }
+
+    fn fails_on(surface: &ValidatorSurface, descriptor: &str) -> bool {
+        !surface.is_compatible()
+            && surface
+                .incompatible
+                .iter()
+                .any(|line| line.starts_with(&format!("{descriptor}:")))
+    }
+
     fn enum_variants(core: &mut Runtime, type_id: u32) -> &mut Vec<Variant<PortableForm>> {
         let ty = core
             .types
@@ -723,10 +747,10 @@ mod validator_surface {
 
     #[test]
     fn pinned_runtime_satisfies_every_validator_dependency() {
-        let runtime = RuntimeHandle::new(pinned()).expect("runtime");
+        let runtime = handle(pinned());
         let surface = ValidatorSurface::check(&runtime);
         assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
-        assert!(surface.unrelated.is_empty(), "{:#?}", surface.unrelated);
+        assert!(surface.warnings.is_empty(), "{:#?}", surface.warnings);
         assert!(crate::runtime::weight_calls_verified(
             runtime.surface_report()
         ));
@@ -745,14 +769,14 @@ mod validator_surface {
             .find(|error| error.pallet == "Balances")
             .expect("catalogued Balances error");
         enum_variants(&mut core, errors).retain(|variant| variant.name != catalogued.name);
-        let runtime = RuntimeHandle::new(core).expect("runtime");
+        let runtime = handle(core);
         let report = runtime.surface_report();
         // The former global gate refused this runtime.
         assert!(report.breaking_items() >= 2, "{:#?}", report.changes);
         let surface = ValidatorSurface::check(&runtime);
         assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
         let unrelated = surface
-            .unrelated
+            .warnings
             .iter()
             .map(|change| change.descriptor.as_str())
             .collect::<Vec<_>>();
@@ -775,7 +799,7 @@ mod validator_surface {
                 "reveal_round"
             };
             reshape_call(&mut core, "SubtensorModule", call, field);
-            let runtime = RuntimeHandle::new(core).expect("runtime");
+            let runtime = handle(core);
             assert!(!crate::runtime::weight_calls_verified(
                 runtime.surface_report()
             ));
@@ -804,7 +828,7 @@ mod validator_surface {
         pallet
             .storage
             .retain(|entry| entry.name != "WeightsSetRateLimit");
-        let runtime = RuntimeHandle::new(core).expect("runtime");
+        let runtime = handle(core);
         let surface = ValidatorSurface::check(&runtime);
         assert!(
             surface
@@ -814,5 +838,120 @@ mod validator_surface {
             "{:#?}",
             surface.incompatible
         );
+    }
+
+    #[test]
+    fn missing_run_path_storage_and_constants_fail_the_check() {
+        let mut core = pinned();
+        core.pallets
+            .iter_mut()
+            .find(|pallet| pallet.name == "Drand")
+            .expect("Drand")
+            .storage
+            .retain(|entry| entry.name != "LastStoredRound");
+        let surface = ValidatorSurface::check(&handle(core));
+        assert!(
+            fails_on(&surface, "storage:Drand.LastStoredRound"),
+            "{:#?}",
+            surface.incompatible
+        );
+        for (pallet, name) in [
+            ("SubtensorModule", "MechanismCountCurrent"),
+            ("SubtensorModule", "ActivityCutoffFactorMilli"),
+            ("SubtensorModule", "StakeThreshold"),
+            ("SubtensorModule", "SubnetOwnerHotkey"),
+            ("SubtensorModule", "TimelockedWeightCommits"),
+        ] {
+            let mut core = pinned();
+            core.pallets
+                .iter_mut()
+                .find(|candidate| candidate.name == pallet)
+                .expect("pallet")
+                .storage
+                .retain(|entry| entry.name != name);
+            let surface = ValidatorSurface::check(&handle(core));
+            let id = format!("storage:{pallet}.{name}");
+            assert!(fails_on(&surface, &id), "{id}: {:#?}", surface.incompatible);
+        }
+        let mut core = pinned();
+        core.pallets
+            .iter_mut()
+            .find(|pallet| pallet.name == "Aura")
+            .expect("Aura")
+            .constants
+            .retain(|constant| constant.name != "SlotDuration");
+        let surface = ValidatorSurface::check(&handle(core));
+        assert!(
+            fails_on(&surface, "constant:Aura.SlotDuration"),
+            "{:#?}",
+            surface.incompatible
+        );
+    }
+
+    #[test]
+    fn selective_metagraph_projection_change_warns_but_removal_fails() {
+        const API: &str = "api:SubnetInfoRuntimeApi.get_selective_mechagraph";
+        assert_eq!(
+            format!(
+                "api:{}.{}",
+                super::super::METAGRAPH_API.api,
+                super::super::METAGRAPH_API.name
+            ),
+            API
+        );
+        let mut core = pinned();
+        let model = core
+            .types
+            .types
+            .iter_mut()
+            .find(|ty| {
+                ty.ty
+                    .path
+                    .segments
+                    .last()
+                    .is_some_and(|name| name == "SelectiveMetagraph")
+            })
+            .expect("SelectiveMetagraph");
+        let TypeDef::Composite(composite) = &mut model.ty.type_def else {
+            unreachable!("SelectiveMetagraph is a struct")
+        };
+        let field = composite
+            .fields
+            .iter_mut()
+            .find(|field| field.name.as_deref() == Some("hotkeys"))
+            .expect("hotkeys field");
+        field.name = Some("renamed_hotkeys".into());
+        let runtime = handle(core);
+        assert!(!runtime.surface_report().shape_matches(API));
+        let surface = ValidatorSurface::check(&runtime);
+        assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
+        assert!(warned(&surface, API), "{:#?}", surface.warnings);
+
+        let mut core = pinned();
+        core.apis
+            .iter_mut()
+            .find(|api| api.name == "SubnetInfoRuntimeApi")
+            .expect("SubnetInfoRuntimeApi")
+            .methods
+            .retain(|method| method.name != "get_selective_mechagraph");
+        let surface = ValidatorSurface::check(&handle(core));
+        assert!(fails_on(&surface, API), "{:#?}", surface.incompatible);
+
+        let mut core = pinned();
+        core.apis
+            .iter_mut()
+            .find(|api| api.name == "SubnetInfoRuntimeApi")
+            .expect("SubnetInfoRuntimeApi")
+            .methods
+            .iter_mut()
+            .find(|method| method.name == "get_selective_mechagraph")
+            .expect("get_selective_mechagraph")
+            .inputs
+            .swap(0, 1);
+        let surface = ValidatorSurface::check(&handle(core));
+        assert!(fails_on(&surface, API), "{:#?}", surface.incompatible);
+
+        let surface = ValidatorSurface::check(&RuntimeHandle::new(pinned()).expect("runtime"));
+        assert!(fails_on(&surface, API), "unknown API version must refuse");
     }
 }
