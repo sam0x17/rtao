@@ -1860,11 +1860,28 @@ mod tests {
     #[test]
     fn release_provenance_fails_closed_on_each_identity() -> Result<()> {
         let (release, manifest, digest, wasm) = release_fixture();
-        validate_release(&release, "v478", "commit", Provenance::Train(&manifest), &digest, &wasm)?;
+        validate_release(
+            &release,
+            "v478",
+            "commit",
+            Provenance::Train(&manifest),
+            &digest,
+            &wasm,
+        )?;
         for key in ["draft", "prerelease"] {
             let mut bad = release.clone();
             bad[key] = json!(true);
-            ensure!(validate_release(&bad, "v478", "commit", Provenance::Train(&manifest), &digest, &wasm).is_err());
+            ensure!(
+                validate_release(
+                    &bad,
+                    "v478",
+                    "commit",
+                    Provenance::Train(&manifest),
+                    &digest,
+                    &wasm
+                )
+                .is_err()
+            );
         }
         for (key, bad_value) in [
             ("commit", json!("other")),
@@ -1876,7 +1893,17 @@ mod tests {
         ] {
             let mut bad = manifest.clone();
             bad[key] = bad_value;
-            ensure!(validate_release(&release, "v478", "commit", Provenance::Train(&bad), &digest, &wasm).is_err());
+            ensure!(
+                validate_release(
+                    &release,
+                    "v478",
+                    "commit",
+                    Provenance::Train(&bad),
+                    &digest,
+                    &wasm
+                )
+                .is_err()
+            );
         }
         ensure!(
             validate_release(
@@ -1891,7 +1918,17 @@ mod tests {
         );
         let mut bad = digest.clone();
         bad["runtimes"]["compressed"]["blake2_256"] = json!("0xdead");
-        ensure!(validate_release(&release, "v478", "commit", Provenance::Train(&manifest), &bad, &wasm).is_err());
+        ensure!(
+            validate_release(
+                &release,
+                "v478",
+                "commit",
+                Provenance::Train(&manifest),
+                &bad,
+                &wasm
+            )
+            .is_err()
+        );
         Ok(())
     }
 

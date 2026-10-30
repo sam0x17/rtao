@@ -960,7 +960,9 @@ fn reproduce_recipe_matches_the_upstream_srtool_recipe() -> TestResult {
     ctx.output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
     let bundle = ProposalBundle {
         blob: Vec::new(),
-        manifest: Some(json!({"repo": "RaoFoundation/subtensor", "tag": "v486", "srtool_rustc": "1.89.0"})),
+        manifest: Some(
+            json!({"repo": "RaoFoundation/subtensor", "tag": "v486", "srtool_rustc": "1.89.0"}),
+        ),
         wasm: None,
         digest: None,
         wasm_source: Some("release"),
