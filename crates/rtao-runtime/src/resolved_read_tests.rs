@@ -577,6 +577,141 @@ fn scalars_that_changed_meaning_refuse() {
 }
 
 #[test]
+fn ratios_and_fixed_point_numbers_refuse_instead_of_unwrapping() {
+    // (read class, live value type, described path)
+    type Case = (ReadClass, Shape, &'static str);
+    let cases: [Case; 6] = [
+        // A per-mille u32 that became Permill(u32) would read millionths.
+        (
+            ReadClass::Uint(32),
+            |lab| {
+                let u32_ = lab.prim(TypeDefPrimitive::U32);
+                lab.composite(
+                    &["sp_arithmetic", "per_things", "Permill"],
+                    vec![field(None, u32_)],
+                )
+            },
+            "a per-thing ratio (sp_arithmetic::per_things::Permill)",
+        ),
+        // A u64 that became U64F64 { bits: u128 } would read raw bits.
+        (
+            ReadClass::Uint(64),
+            |lab| {
+                let u128_ = lab.prim(TypeDefPrimitive::U128);
+                lab.composite(
+                    &["substrate_fixed", "FixedU128"],
+                    vec![field(Some("bits"), u128_)],
+                )
+            },
+            "a fixed-point number (substrate_fixed::FixedU128)",
+        ),
+        (
+            ReadClass::Uint(128),
+            |lab| {
+                let u128_ = lab.prim(TypeDefPrimitive::U128);
+                lab.composite(
+                    &["sp_arithmetic", "fixed_point", "FixedU128"],
+                    vec![field(None, u128_)],
+                )
+            },
+            "a fixed-point number (sp_arithmetic::fixed_point::FixedU128)",
+        ),
+        // A single `bits` field is fixed point whatever its path.
+        (
+            ReadClass::Uint(64),
+            |lab| {
+                let u64_ = lab.prim(TypeDefPrimitive::U64);
+                lab.composite(&["Ratio"], vec![field(Some("bits"), u64_)])
+            },
+            "a fixed-point number (Ratio)",
+        ),
+        // A plain newtype around a ratio still refuses at the ratio.
+        (
+            ReadClass::Uint(32),
+            |lab| {
+                let u32_ = lab.prim(TypeDefPrimitive::U32);
+                let perbill = lab.composite(&["Perbill"], vec![field(None, u32_)]);
+                lab.composite(&["Cutoff"], vec![field(None, perbill)])
+            },
+            "a per-thing ratio (Perbill)",
+        ),
+        // Compact<Perbill> is a compact ratio, not a compact integer.
+        (
+            ReadClass::Uint(32),
+            |lab| {
+                let u32_ = lab.prim(TypeDefPrimitive::U32);
+                let perbill = lab.composite(
+                    &["sp_arithmetic", "per_things", "Perbill"],
+                    vec![field(None, u32_)],
+                );
+                lab.compact(perbill)
+            },
+            "is a compact per-thing ratio (sp_arithmetic::per_things::Perbill)",
+        ),
+    ];
+    for (class, value, described) in cases {
+        let mut lab = Lab::new();
+        let key = lab.prim(TypeDefPrimitive::U16);
+        let value = value(&mut lab);
+        // Every byte string decodes under the raw integer, so only the
+        // layout can catch the changed meaning.
+        lab.probe(&[key], value, "Default", vec![0; 16]);
+        let runtime = lab.handle();
+        let error = refused(probe(&[ReadClass::Uint(16)], class), &runtime);
+        assert_eq!((error.item.as_str(), error.part.as_str()), (PROBE, "value"));
+        assert!(error.detail.contains(described), "{described}: {error}");
+        assert!(error.detail.contains("carries a scale"), "{error}");
+    }
+
+    // The same refusal names the record field whose integer became a ratio.
+    let mut lab = Lab::new();
+    let key = lab.prim(TypeDefPrimitive::U16);
+    let u32_ = lab.prim(TypeDefPrimitive::U32);
+    let permill = lab.composite(
+        &["sp_arithmetic", "per_things", "Permill"],
+        vec![field(None, u32_)],
+    );
+    let u64_ = lab.prim(TypeDefPrimitive::U64);
+    let entry = lab.composite(
+        &["Entry"],
+        vec![field(Some("block"), u64_), field(Some("cutoff"), permill)],
+    );
+    lab.probe(&[key], entry, "Optional", vec![]);
+    let runtime = lab.handle();
+    const FIELDS: &[ReadField] = &[
+        ReadField {
+            names: &["block"],
+            class: ReadClass::Uint(64),
+        },
+        ReadField {
+            names: &["cutoff"],
+            class: ReadClass::Uint(32),
+        },
+    ];
+    let error = refused(
+        probe(&[ReadClass::Uint(16)], ReadClass::Record(FIELDS)),
+        &runtime,
+    );
+    assert!(
+        error.detail.contains("field `cutoff` is a per-thing ratio"),
+        "{error}"
+    );
+
+    // A plain newtype around the same integer still unwraps.
+    let mut lab = Lab::new();
+    let key = lab.prim(TypeDefPrimitive::U16);
+    let u32_ = lab.prim(TypeDefPrimitive::U32);
+    let plain = lab.composite(&["Milli"], vec![field(None, u32_)]);
+    lab.probe(&[key], plain, "Default", vec![0; 4]);
+    let runtime = lab.handle();
+    let storage = probe(&[ReadClass::Uint(16)], ReadClass::Uint(32));
+    assert_eq!(
+        decode(storage, &runtime, &500u32.encode()),
+        ReadDatum::Uint(500)
+    );
+}
+
+#[test]
 fn key_changes_refuse_by_position() {
     // A key added to the map.
     let mut lab = Lab::new();

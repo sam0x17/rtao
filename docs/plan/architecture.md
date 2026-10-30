@@ -1787,7 +1787,8 @@ for each key and for the value (`Uint(bits)` of any live width or compact, `Bool
 encodes keys with the live types, hashers and prefix and decodes values strictly into `ReadDatum`s: every byte is
 consumed, each integer must fit its live type and the class width, a named struct is matched by declared names and
 never by position, undeclared struct fields and added variants are skipped through the core decoder. A signed integer,
-an `Option`, a struct where a scalar was read, a removed or un-aliased renamed field, a changed tuple arity or key
+an `Option`, a struct where a scalar was read, a per-thing ratio or fixed-point number (`Permill`, `FixedU128`,
+a single `bits` field) in place of a plain integer, a removed or un-aliased renamed field, a changed tuple arity or key
 count, a removed declared variant, or an `Optional` entry that became `Default` refuses per entry with
 `ReadResolveError`. `ViewExt::fetch_resolved` coalesces such reads into one storage request with a result per read.
 The exact gate in `ViewExt::fetch` is unchanged; the validator run path routes its own reads through the by-name path

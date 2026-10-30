@@ -88,8 +88,9 @@ still recoverable: a widened or compact integer, a single-field newtype,
 `BoundedVec` or `VecDeque` in place of `Vec`, a tuple that became a struct,
 reordered or added struct fields, or an added enum variant. A warning is
 logged once per runtime and entry. An entry whose meaning changed, such as a
-removed or renamed field, a signed integer, an `Option`, a changed key count
-or a value too large for the type rtao reads, refuses with an error that
+removed or renamed field, a signed integer, an `Option`, an integer that
+became a ratio or fixed-point number (such as `Permill` or `FixedU128`), a
+changed key count or a value too large for the type rtao reads, refuses with an error that
 names the entry and field. Only the reads that need that entry fail; the
 reads are retried on each finalized head, so the validator resumes once rtao
 is updated. The hotkey's `Uids` entry must stay optional, since a default

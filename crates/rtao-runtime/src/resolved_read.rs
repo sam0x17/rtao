@@ -7,12 +7,14 @@
 //! reordered or added struct fields, or an added enum variant. This module
 //! resolves an entry by name against live metadata and decodes exactly those
 //! changes into a [`ReadDatum`]. Each key and the value declare a structural
-//! [`ReadClass`]; the live type must fit it once single-field composites and
-//! `Compact` are removed.
+//! [`ReadClass`]; the live type must fit it once plain single-field newtypes
+//! and `Compact` are removed.
 //!
 //! Anything whose meaning cannot be recovered refuses with a
 //! [`ReadResolveError`] naming the entry, the key or value position and the
 //! field: a signed integer, an `Option`, a struct where a scalar was read, a
+//! per-thing ratio or fixed-point number (`Permill`, `FixedU128`, a single
+//! `bits` field) whose integer carries a scale the old value lacked, a
 //! removed field, a renamed field without a declared alias, a changed tuple
 //! arity or key count, a removed or payload-carrying declared variant, and a
 //! missing-value modifier that would turn an absent entry into a default.
@@ -255,10 +257,62 @@ fn is_u8(core: &Runtime, id: u32) -> Result<bool, String> {
     ))
 }
 
+/// Last path segments of per-thing ratios, whose integer is parts of a whole.
+const PER_THINGS: &[&str] = &["Percent", "PerU16", "Permill", "Perbill", "Perquintill"];
+
+/// Describe a live composite whose integer carries a scale, so that
+/// unwrapping it to that integer would change the value's meaning.
+///
+/// A plain newtype (`NetUid(u16)`, `AccountId32([u8; 32])`, a currency
+/// wrapper) keeps its integer's meaning and is unwrapped. A per-thing ratio
+/// (`Permill(u32)` holds millionths) or a fixed-point number
+/// (`FixedU128(u128)` holds 10^-18 units, `substrate_fixed::FixedU128 { bits }`
+/// holds a binary fraction) does not: a plain integer that became one of
+/// these refuses rather than reading its raw parts as the old value.
+fn scaled_wrapper(ty: &Type<PortableForm>) -> Option<String> {
+    let TypeDef::Composite(composite) = &ty.type_def else {
+        return None;
+    };
+    let segments = &ty.path.segments;
+    let last = segments.last().map(String::as_str).unwrap_or_default();
+    let in_module = |module: &str| segments.iter().any(|segment| segment == module);
+    let fixed_name = last
+        .strip_prefix("Fixed")
+        .is_some_and(|rest| rest.starts_with(['U', 'I']) || rest.starts_with("Point"));
+    let bits_field = matches!(
+        composite.fields.as_slice(),
+        [field] if field.name.as_deref() == Some("bits")
+    );
+    let reason = if in_module("per_things") || PER_THINGS.contains(&last) {
+        "per-thing ratio"
+    } else if in_module("fixed_point")
+        || segments
+            .first()
+            .is_some_and(|first| first == "substrate_fixed")
+        || fixed_name
+        || bits_field
+    {
+        "fixed-point number"
+    } else {
+        return None;
+    };
+    Some(format!(
+        "{reason} ({}) whose integer carries a scale",
+        if segments.is_empty() {
+            "unnamed".to_owned()
+        } else {
+            segments.join("::")
+        }
+    ))
+}
+
 /// Width of a compact integer's payload, through single-field composites.
 fn compact_bits(core: &Runtime, mut id: u32) -> Result<u8, String> {
     for _ in 0..MAX_LAYERS {
         let ty = resolve(core, id)?;
+        if let Some(detail) = scaled_wrapper(ty) {
+            return Err(format!("is a compact {detail}"));
+        }
         match &ty.type_def {
             TypeDef::Primitive(primitive) => {
                 return unsigned_bits(primitive)
@@ -353,6 +407,13 @@ fn layout(core: &Runtime, id: u32, class: &ReadClass, depth: usize) -> Result<La
     }
     let ty = resolve(core, id)?;
     let mismatch = || format!("is {}, expected {class}", describe(ty));
+    // No class reads a ratio or fixed-point number, so one refuses wherever
+    // it appears, whether as a newtype to unwrap or as a record.
+    if let Some(detail) = scaled_wrapper(ty) {
+        return Err(format!(
+            "is a {detail}, not a plain newtype; expected {class}"
+        ));
+    }
     if let TypeDef::Composite(composite) = &ty.type_def
         && let [field] = composite.fields.as_slice()
         && !matches!(class, ReadClass::Record(fields) if single_field_record(field, fields))
