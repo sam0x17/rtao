@@ -123,7 +123,10 @@ pub struct ShieldOptions {
     /// while the account nonce moved past it and finalized history then passed
     /// its era without it. Each retry waits one block, doubling to eight, and
     /// re-seals with a fresh key, anchor and nonce pair within this
-    /// invocation's deadlines. Journaled submissions never retry this way.
+    /// invocation's deadlines. A journaled submission counts these re-seals
+    /// in its persisted pair budget and re-seals only after a finalized
+    /// absence certificate past the era, reconciling again after a block
+    /// backoff at most this many times while finality catches up.
     pub nonce_conflict_retries: u32,
     /// Shared deadlines, reconciliation and metadata-signing display settings.
     ///
@@ -272,7 +275,6 @@ impl Client {
         opts: &ShieldOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         if opts.submit.journal.is_some() {
-            self.check_journal_shield_dispatch()?;
             let limits = SubmissionLimits::new(&opts.submit)?;
             match self
                 .prepare_journal_shield_with_limits(opts, limits)
@@ -362,7 +364,7 @@ impl Client {
 
     /// Reconcile a journaled shield operation before a caller unlocks its signer.
     /// Holds actual account/operation ownership for preparation, or returns the
-    /// exact historical effect. The production dispatch release guard applies.
+    /// exact historical effect.
     pub async fn prepare_journal_shield(
         &self,
         opts: &ShieldOptions,
@@ -377,7 +379,6 @@ impl Client {
         opts: &ShieldOptions,
         limits: SubmissionLimits,
     ) -> Result<JournalShieldReadiness, SubmitFailure> {
-        self.check_journal_shield_dispatch()?;
         if opts.wait != Wait::Finalization {
             return Err(ClientError::Journal(crate::journal::JournalError::Blocked(
                 "durable shield requires finalized inner wait".into(),
@@ -452,6 +453,7 @@ impl Client {
             .shield_policy(
                 opts.period.get(),
                 opts.dropped_inner_retries,
+                opts.nonce_conflict_retries,
                 opts.max_fee.map(|f| f.rao()),
             )
             .map_err(ClientError::Journal)?;
@@ -480,9 +482,16 @@ impl Client {
         let mut scoped = opts.clone();
         scoped.submit.journal = Some(owner.binding());
         let mut last = None;
+        let mut waits = 0;
         // This invocation cannot renew the persisted pair limit or either
         // original deadline, even when a typed negative result permits reseal.
-        for _ in 0..=opts.dropped_inner_retries {
+        // A pair that is not yet provable, such as a carrier that lost its
+        // nonce, is reconciled again after a block backoff, at most
+        // `nonce_conflict_retries` times, before it is reported as pending.
+        let pairs = opts
+            .dropped_inner_retries
+            .saturating_add(opts.nonce_conflict_retries);
+        for _ in 0..=pairs {
             // Bound the parent future and debug-build polling stack across this
             // large signing/RPC state machine. This does not spawn or detach it.
             let result =
@@ -501,11 +510,13 @@ impl Client {
             else {
                 return Err(error);
             };
+            let (operation, pair) = (operation.clone(), *pair);
+            let (carrier_hash, inner_hash) = (*carrier_hash, *inner_hash);
             let pending = |reason| SubmitFailure::PendingShield {
                 operation: operation.clone(),
-                pair: *pair,
-                carrier_hash: *carrier_hash,
-                inner_hash: *inner_hash,
+                pair,
+                carrier_hash,
+                inner_hash,
                 reason,
             };
             let binding = scoped
@@ -513,32 +524,66 @@ impl Client {
                 .journal
                 .as_ref()
                 .ok_or(ClientError::Journal(crate::journal::JournalError::Identity))?;
-            match limits
-                .full
-                .run(
-                    self,
-                    Box::pin(async {
-                        binding
-                            .recover(self, 128)
-                            .await
-                            .map_err(ClientError::Journal)
-                    }),
-                )
-                .await
-            {
-                Ok(crate::journal::RecoveryStatus::Finalized(report)) => {
-                    return recovered_call_result(binding, &call, report);
-                }
-                Ok(crate::journal::RecoveryStatus::Rebuildable) => last = Some(error),
-                Ok(crate::journal::RecoveryStatus::Unresolved(reason)) => {
-                    return Err(pending(reason));
-                }
-                Err(_) => {
-                    return Err(pending(
-                        crate::journal::RecoveryReason::FinalizedUnavailable,
-                    ));
+            loop {
+                match limits
+                    .full
+                    .run(
+                        self,
+                        Box::pin(async {
+                            binding
+                                .recover(self, 128)
+                                .await
+                                .map_err(ClientError::Journal)
+                        }),
+                    )
+                    .await
+                {
+                    Ok(crate::journal::RecoveryStatus::Finalized(report)) => {
+                        return recovered_call_result(binding, &call, report);
+                    }
+                    Ok(crate::journal::RecoveryStatus::Rebuildable) => {
+                        last = Some(error);
+                        break;
+                    }
+                    Ok(crate::journal::RecoveryStatus::Unresolved(
+                        reason @ crate::journal::RecoveryReason::AwaitingFinality { .. },
+                    )) if waits < opts.nonce_conflict_retries => {
+                        let delay = crate::nonce::block_backoff(self.block_time().await?, waits);
+                        waits += 1;
+                        tracing::info!(
+                            operation = %operation,
+                            pair,
+                            attempt = waits,
+                            ?delay,
+                            "journaled shield pair awaits finalized expiry; reconciling again"
+                        );
+                        let slept = limits
+                            .full
+                            .run(self, async {
+                                tokio::time::sleep(delay).await;
+                                Ok::<(), ClientError>(())
+                            })
+                            .await;
+                        if slept.is_err() {
+                            return Err(pending(reason));
+                        }
+                    }
+                    Ok(crate::journal::RecoveryStatus::Unresolved(reason)) => {
+                        return Err(pending(reason));
+                    }
+                    Err(_) => {
+                        return Err(pending(
+                            crate::journal::RecoveryReason::FinalizedUnavailable,
+                        ));
+                    }
                 }
             }
+            tracing::warn!(
+                operation = %operation,
+                pair,
+                "journaled shield pair proven never executed; a new pair may follow \
+                 within the persisted pair budget"
+            );
         }
         Err(last.unwrap_or_else(|| {
             ClientError::Journal(crate::journal::JournalError::Blocked(
@@ -617,6 +662,7 @@ impl Client {
                     .shield_policy(
                         opts.period.get(),
                         opts.dropped_inner_retries,
+                        opts.nonce_conflict_retries,
                         opts.max_fee.map(|fee| fee.rao()),
                     )
                     .map_err(ClientError::Journal)?;

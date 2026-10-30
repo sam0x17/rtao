@@ -91,6 +91,7 @@ fn options(binding: rtao_client::journal::JournalBinding) -> ShieldOptions {
     ShieldOptions {
         period: ShieldPeriod::P4,
         dropped_inner_retries: 1,
+        nonce_conflict_retries: 0,
         execute: ExecuteOptions {
             journal: Some(binding),
             deadline: None,
@@ -364,7 +365,7 @@ async fn public_pause_cancel_and_competing_preparation_preserve_original_work() 
 }
 
 #[tokio::test]
-async fn production_genesis_and_nonfinal_waits_cannot_use_synthetic_dispatch() {
+async fn production_genesis_passes_the_release_check_but_nonfinal_waits_refuse() {
     let fake = FakeChain::from_state(FakeState::default());
     let mut config = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
     config.track_heads = false;
@@ -373,12 +374,15 @@ async fn production_genesis_and_nonfinal_waits_cannot_use_synthetic_dispatch() {
     let client = Client::from_rpc(rtao_testkit::rpc::RpcClient::new(fake.clone()), config)
         .await
         .unwrap();
+    // The synthetic latch still checks identity, but dispatch no longer
+    // depends on it: a public genesis passes the former release check.
     assert!(client.enable_synthetic_journal_dispatch().await.is_err());
-    assert!(client.check_journal_shield_dispatch().is_err());
+    assert!(client.check_journal_shield_dispatch().is_ok());
     client.close().await;
-    let mut lab = JournalLab::new(FakeState::default(), path(), CryptoType::Ed25519)
+    let mut lab = JournalLab::public(FakeState::default(), path(), CryptoType::Ed25519)
         .await
         .unwrap();
+    assert_ne!(lab.client.genesis(), Client::SYNTHETIC_JOURNAL_GENESIS);
     let keys = LabKeys::new(lab.signer.clone());
     let probe = Probe {
         builds: Arc::new(AtomicU64::new(0)),
@@ -400,6 +404,49 @@ async fn production_genesis_and_nonfinal_waits_cannot_use_synthetic_dispatch() {
     assert_eq!(keys.unlocks(), 0);
     assert_eq!(lab.signer.signatures(), 0);
     assert_eq!(lab.authors(), 0);
+    lab.close().await;
+}
+
+#[tokio::test]
+async fn public_genesis_native_protocol_dispatches_follows_an_upgrade_and_recovers_once() {
+    let mut lab = JournalLab::public(FakeState::default(), path(), CryptoType::Sr25519)
+        .await
+        .unwrap();
+    let keys = LabKeys::new(lab.signer.clone());
+    let probe = Probe {
+        builds: Arc::new(AtomicU64::new(0)),
+    };
+    // An activated, unlisted runtime is followed: no allowlist edit needed.
+    lab.upgrade(487, 2, rtao_primitives::H256([43; 32]))
+        .unwrap();
+    let opts = options(
+        lab.begin("public-native", probe.to_json(), Value::Null)
+            .unwrap(),
+    );
+    let ex = Executor::new(lab.client.clone());
+    // Dynamic route: the typed output counter belongs to another test.
+    let first = ex.submit_shielded_dyn(&probe, &keys, &opts).await.unwrap();
+    assert!(first.success);
+    let record = lab.bind("public-native").unwrap().record().unwrap();
+    assert!(record.incompatibility.is_none());
+    assert!(matches!(
+        &record.mode,
+        rtao_client::journal::ExecutionMode::Shielded(policy)
+            if policy.protocol == rtao_client::journal::NativeShieldProtocol::PROFILE
+    ));
+    assert_eq!(lab.authors(), 1);
+    drop(opts);
+    drop(ex);
+    lab.restart().await.unwrap();
+    let opts = options(lab.bind("public-native").unwrap());
+    let again = Executor::new(lab.client.clone())
+        .submit_shielded_dyn(&probe, &keys, &opts)
+        .await
+        .unwrap();
+    assert_eq!(again.extrinsic_hash, first.extrinsic_hash);
+    assert_eq!(lab.authors(), 1);
+    assert_eq!(keys.unlocks(), 1);
+    drop(opts);
     lab.close().await;
 }
 

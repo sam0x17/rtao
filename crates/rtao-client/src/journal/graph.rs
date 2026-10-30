@@ -373,11 +373,15 @@ pub(super) fn validate_transition(
                     && !old.extensions.contains_key(super::shield::ABSENCE)
                     && new.extensions.contains_key(super::shield::ABSENCE)
                 {
-                    new.extensions.len() != old.extensions.len() + 1
-                        || old
-                            .extensions
-                            .iter()
-                            .any(|(key, value)| new.extensions.get(key) != Some(value))
+                    // The certificate may carry its code evidence, nothing else.
+                    new.extensions.keys().any(|key| {
+                        !old.extensions.contains_key(key)
+                            && key != super::shield::ABSENCE
+                            && key != super::shield::CODE_EVIDENCE
+                    }) || old
+                        .extensions
+                        .iter()
+                        .any(|(key, value)| new.extensions.get(key) != Some(value))
                 } else {
                     old.extensions != new.extensions
                 }

@@ -217,12 +217,16 @@ async fn exhausted_shield_recovery_stays_reconcile_without_renewing_budget() -> 
     let binding = scheduler
         .prepare_binding(MechId(0), (vec![Uid(1)], vec![u16::MAX]), None, &state)?
         .unwrap();
-    let options = super::super::submit::SubmissionOptions {
+    let mut options = super::super::submit::SubmissionOptions {
         journal: Some(binding.clone()),
         shield_period: Some(ShieldPeriod::P4),
     }
     .execution(0.001);
-    let maximum = rtao_client::SHIELD_DROPPED_INNER_RETRIES + 1;
+    // One deadline covers every reseal; this fixture spends it on wall time.
+    options.deadline = Some(std::time::Duration::from_secs(300));
+    // Dropped-inner and lost-nonce reseals share one persisted pair budget.
+    let maximum =
+        rtao_client::SHIELD_DROPPED_INNER_RETRIES + rtao_client::SHIELD_NONCE_CONFLICT_RETRIES + 1;
     lab.script((0..maximum).map(|_| Inner::Absent));
     let keys = LabKeys::new(lab.signer.clone());
     let result = Executor::new(lab.client.clone())

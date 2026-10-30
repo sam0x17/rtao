@@ -156,8 +156,6 @@ pub(crate) struct ClientInner {
     /// Separate submission connection, when configured.
     submit: Option<Arc<SubmitRoute>>,
     cancelled: CancellationToken,
-    #[cfg(feature = "test-util")]
-    synthetic_journal_dispatch: std::sync::atomic::AtomicBool,
 }
 
 /// Lazily connected submission endpoint shared by a client and its nonces.
@@ -504,8 +502,6 @@ impl Client {
             hash_cache: tokio::sync::Mutex::new(HashCache::default()),
             best_pin: tokio::sync::Mutex::new(None),
             submit,
-            #[cfg(feature = "test-util")]
-            synthetic_journal_dispatch: std::sync::atomic::AtomicBool::new(false),
         });
         let client = Self {
             inner: inner.clone(),
@@ -613,22 +609,16 @@ impl Client {
         })
     }
 
-    /// Release guard for journaled shield dispatch. Production chains remain
-    /// refused while public composition is being qualified. This is separate
-    /// from the trusted runtime-code and application semantic checks.
+    /// Former release guard for journaled shield dispatch; always succeeds.
+    ///
+    /// Journaled shield dispatch is available on every chain. What made it
+    /// safe is enforced on the dispatch path itself: a finalized inner wait,
+    /// native author `Session` custody, account and genesis identity, the
+    /// installed [`crate::journal::ShieldProtocolGuard`] (see
+    /// [`crate::journal::NativeShieldProtocol`]), the semantic guard, pause
+    /// control and the persisted pair budget. Retained for compatibility.
     pub fn check_journal_shield_dispatch(&self) -> Result<(), ClientError> {
-        #[cfg(feature = "test-util")]
-        if self.genesis() == Self::SYNTHETIC_JOURNAL_GENESIS
-            && self
-                .inner
-                .synthetic_journal_dispatch
-                .load(std::sync::atomic::Ordering::Acquire)
-        {
-            return Ok(());
-        }
-        Err(ClientError::Journal(crate::journal::JournalError::Blocked(
-            "journaled shield dispatch remains gated pending public integration review".into(),
-        )))
+        Ok(())
     }
 
     /// Isolated synthetic-chain identity used only by journal lifecycle tests.
@@ -636,9 +626,9 @@ impl Client {
     #[cfg(feature = "test-util")]
     pub const SYNTHETIC_JOURNAL_GENESIS: H256 = H256([0xd7; 32]);
 
-    /// Enable the shared public implementation on the fixed synthetic genesis.
-    /// Available only with test-util; public chains refuse even in that build.
-    /// This does not bypass native custody, journal, protocol or semantic checks.
+    /// Check that this client is a native-custody client on the fixed
+    /// synthetic genesis. Journaled shield dispatch no longer needs it; the
+    /// identity checks remain so existing fixtures keep their meaning.
     #[cfg(feature = "test-util")]
     pub async fn enable_synthetic_journal_dispatch(&self) -> Result<(), ClientError> {
         if self.genesis() != Self::SYNTHETIC_JOURNAL_GENESIS {
@@ -649,9 +639,6 @@ impl Client {
             return Err(ClientError::Journal(crate::journal::JournalError::Identity));
         }
         self.native_author_session().await?;
-        self.inner
-            .synthetic_journal_dispatch
-            .store(true, std::sync::atomic::Ordering::Release);
         Ok(())
     }
 

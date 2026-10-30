@@ -245,6 +245,103 @@ async fn public_weight_pair_restarts_into_paused_reveal_and_retains_actual_nativ
     Ok(())
 }
 
+#[tokio::test]
+async fn public_genesis_shielded_weights_bind_the_native_protocol_by_default() -> anyhow::Result<()>
+{
+    let mut state = super::super::tests::fixture_state()?;
+    state.set_finalized(state.block)?;
+    let root =
+        std::path::PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").expect("task scratch"))
+            .join(format!("public-native-weight-{}", std::process::id()));
+    let mut lab = JournalLab::public(state, root.join("journal.json"), CryptoType::Ed25519)
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    assert_ne!(
+        lab.client.genesis(),
+        rtao_client::Client::SYNTHETIC_JOURNAL_GENESIS
+    );
+    let account = lab.signer.account();
+    lab.node.mutate_state(|state| -> anyhow::Result<()> {
+        state.seed_typed("SubtensorModule", "Uids", (NetUid(1), account), 0u16)?;
+        Ok(())
+    })?;
+    let make = |lab: &JournalLab| -> anyhow::Result<WeightScheduler> {
+        Ok(WeightScheduler::new(
+            WeightPolicy::default(),
+            Arc::new(ChainClock::new(1_000_000)),
+            ClockGuard::default(),
+        )?
+        .with_journal(
+            lab.journal().unwrap().clone(),
+            lab.client.genesis(),
+            NetUid(1),
+            account,
+        )?
+        .with_shielded_submission(ShieldPeriod::P4))
+    };
+    // No `with_shield_protocol`: the native protocol is the default.
+    let scheduler = make(&lab)?;
+    scheduler.enqueue(
+        "native-weights",
+        None,
+        MechId(0),
+        WeightsInput::Parallel {
+            uids: vec![Uid(1)],
+            weights: vec![1.0],
+        },
+    )?;
+    let snapshot = lab.client.at(BlockRef::Best).await?;
+    let preflight = WeightPreflight::fetch(&snapshot, NetUid(1), MechId(0), account).await?;
+    let binding = scheduler
+        .prepare_binding(MechId(0), (vec![Uid(1)], vec![u16::MAX]), None, &preflight)?
+        .expect("journal binding");
+    let options = super::super::submit::SubmissionOptions {
+        journal: Some(binding),
+        shield_period: scheduler.shield_period,
+    }
+    .execution(0.001);
+    let intent = super::super::submit::PreparedWeights {
+        netuid: NetUid(1),
+        mechanism: MechId(0),
+        row: (vec![Uid(1)], vec![u16::MAX]),
+        version_key: 0,
+        commit: None,
+        commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
+    };
+    let keys = LabKeys::new(lab.signer.clone());
+    let report = Executor::new(lab.client.clone())
+        .execute(&intent, &keys, &options)
+        .await?;
+    assert!(report.success);
+    assert_eq!(lab.authors(), 1);
+    let record = lab.journal().unwrap().bind("native-weights")?.record()?;
+    assert!(matches!(
+        &record.mode,
+        rtao_client::journal::ExecutionMode::Shielded(policy)
+            if policy.protocol == rtao_client::journal::NativeShieldProtocol::PROFILE
+    ));
+    drop(options);
+    drop(snapshot);
+    drop(scheduler);
+    lab.restart()
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    // A restarted scheduler, again without an explicit adapter, recovers the
+    // retained finalized effect instead of requiring adapter reinstallation.
+    let scheduler = make(&lab)?;
+    let (binding, _) = scheduler.pending_work(MechId(0))?.expect("retained work");
+    assert!(matches!(
+        binding.recover(&lab.client, 128).await?,
+        rtao_client::journal::RecoveryStatus::Finalized(_)
+    ));
+    assert_eq!(lab.authors(), 1);
+    assert_eq!(keys.unlocks(), 1);
+    drop(binding);
+    drop(scheduler);
+    lab.close().await;
+    Ok(())
+}
+
 /// Enter through the real finalized scheduler callback with native wallet,
 /// metagraph worker and Executor. Direct rows avoid pretending the controlled
 /// peer decrypts a real timelock; the paired-reveal test above covers handoff.

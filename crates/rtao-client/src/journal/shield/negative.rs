@@ -5,8 +5,149 @@ use crate::{BlockHeader, BlockRef, ShieldReport};
 use rtao_core::{codec::Value as CoreValue, value_ext::ValueExt};
 
 pub(in crate::journal) const ABSENCE: &str = "rtao_shield_absence_v1";
+/// Runtime codes qualified from their own signing metadata for one pair's
+/// certificate, published atomically with it. A separate extension, so
+/// older SDKs keep parsing the certificate and keep refusing replacement.
+pub(in crate::journal) const CODE_EVIDENCE: &str = "rtao_shield_code_evidence_v1";
 pub(super) const MAX_PAIRS: u32 = 16;
 const MAX_CANONICAL_BYTES: usize = 64 * 1024;
+/// Stored `MevShield.PendingExtrinsics` entries inspected at a certificate
+/// boundary; more holds the work rather than skipping any.
+const MAX_PENDING_SCAN: u32 = 256;
+
+/// One runtime code qualified from the signing metadata at a pinned state.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(in crate::journal) struct CodeEvidence {
+    code: H256,
+    profile: String,
+    state: H256,
+    metadata_hash: H256,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CodeEvidenceSet {
+    version: u32,
+    codes: Vec<CodeEvidence>,
+}
+impl CodeEvidence {
+    pub(in crate::journal) fn from_runtime(qualified: &QualifiedShieldRuntime) -> Option<Self> {
+        qualified.unlisted.then(|| Self {
+            code: qualified.code_hash,
+            profile: qualified.profile.clone(),
+            state: qualified.state,
+            metadata_hash: qualified.metadata_hash,
+        })
+    }
+}
+/// Retained code evidence for this pair and profile; malformed evidence is
+/// ignored, which only means the code must qualify again.
+fn retained_codes(pair: &ShieldPair, profile: &str) -> Vec<CodeEvidence> {
+    pair.extensions
+        .get(CODE_EVIDENCE)
+        .and_then(|raw| serde_json::from_value::<CodeEvidenceSet>(raw.clone()).ok())
+        .filter(|set| set.version == 1)
+        .map(|set| {
+            set.codes
+                .into_iter()
+                .filter(|e| e.profile == profile)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+enum CodeVerdict {
+    /// Listed by the guard, already retained, or newly qualified (`Some`).
+    Qualified(Option<CodeEvidence>),
+    /// A real interface change or an allowlist refusal.
+    Refused(Incompatibility),
+    /// Metadata could not be read; nothing is proven either way.
+    Unavailable,
+}
+async fn qualify_code(
+    chain: &Client,
+    guard: &dyn ShieldProtocolGuard,
+    genesis: H256,
+    code: H256,
+    state: H256,
+    known: &[CodeEvidence],
+) -> CodeVerdict {
+    let reason = match guard.check(genesis, code) {
+        Ok(()) => return CodeVerdict::Qualified(None),
+        Err(reason) => reason,
+    };
+    if !guard.qualify_unlisted() {
+        return CodeVerdict::Refused(reason);
+    }
+    let profile = guard.profile().to_owned();
+    if known.iter().any(|e| e.code == code && e.profile == profile) {
+        return CodeVerdict::Qualified(None);
+    }
+    let Ok(metadata) = chain.fresh_signing_metadata(state).await else {
+        return CodeVerdict::Unavailable;
+    };
+    let metadata_hash = digest(&metadata);
+    // Spec/transaction versions do not affect the shape checks.
+    let verdict = crate::offload(move || {
+        rtao_core::runtime::Runtime::parse(&metadata, 0, 0, 42)
+            .ok()
+            .map(|runtime| verify_native_shield_semantics(&runtime))
+    })
+    .await;
+    match verdict {
+        Ok(Some(Ok(()))) => CodeVerdict::Qualified(Some(CodeEvidence {
+            code,
+            profile,
+            state,
+            metadata_hash,
+        })),
+        Ok(Some(Err(reason))) => CodeVerdict::Refused(reason),
+        Ok(None) | Err(_) => CodeVerdict::Unavailable,
+    }
+}
+
+fn account_value(value: &CoreValue) -> Option<AccountId> {
+    if let Some(text) = value.as_str() {
+        if let Some(digits) = text.strip_prefix("0x") {
+            return hex::decode(digits).ok()?.try_into().ok().map(AccountId);
+        }
+        return text.parse().ok();
+    }
+    value.value_bytes()?.try_into().ok().map(AccountId)
+}
+/// A finalized carrier receipt must show the signed-inner route only: a
+/// successful carrier emits `EncryptedSubmitted` for its signer and no other
+/// MevShield event (`ExtrinsicStored` would mean deferred dispatch that
+/// carries no nonce or era check). A failed carrier emits none.
+fn carrier_effect(
+    records: &[crate::EventRecord],
+    account: AccountId,
+) -> Result<(), Incompatibility> {
+    let refuse = |detail: String| super::incompatible("shield-carrier-effect", detail);
+    let success = records
+        .iter()
+        .any(|e| e.matches("System", "ExtrinsicSuccess"));
+    let mut submitted = false;
+    for event in records.iter().filter(|e| e.module_id == "MevShield") {
+        if event.event_id != "EncryptedSubmitted" || !success {
+            return Err(refuse(format!(
+                "carrier receipt holds MevShield.{}; only EncryptedSubmitted is expiry-safe",
+                event.event_id
+            )));
+        }
+        if event.attributes.field("who").and_then(account_value) != Some(account) {
+            return Err(refuse(
+                "carrier EncryptedSubmitted names another or undecodable account".into(),
+            ));
+        }
+        submitted = true;
+    }
+    if success && !submitted {
+        return Err(refuse(
+            "successful carrier receipt lacks MevShield.EncryptedSubmitted".into(),
+        ));
+    }
+    Ok(())
+}
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -299,6 +440,71 @@ fn canonical(
     Ok(())
 }
 
+/// The carrier's own event records at its finalized inclusion block, decoded
+/// with that block's historical metadata.
+async fn carrier_events(
+    chain: &Client,
+    block: H256,
+    index: u32,
+) -> Result<Vec<crate::EventRecord>, crate::ClientError> {
+    use crate::ViewExt;
+    let events = chain.at(BlockRef::Hash(block)).await?.events().await?;
+    Ok(events.for_extrinsic(index).cloned().collect())
+}
+
+/// Stored `MevShield.PendingExtrinsics` at a finalized boundary, enumerated
+/// by name from that block's own metadata. `Err(None)` means unavailable;
+/// `Err(Some(_))` means an entry for this account, or one that does not
+/// decode, holds the work. A runtime without the item has nothing stored.
+async fn stored_for_account(
+    chain: &Client,
+    at: H256,
+    account: AccountId,
+) -> Result<(), Option<String>> {
+    use crate::View;
+    let snapshot = chain.at(BlockRef::Hash(at)).await.map_err(|_| None)?;
+    let runtime = View::runtime(&snapshot).await.map_err(|_| None)?;
+    let Some(info) = runtime
+        .storage_entry("MevShield", "PendingExtrinsics")
+        .cloned()
+    else {
+        return Ok(());
+    };
+    let mut prefix = rtao_core::mlkem::twox_128(info.prefix.as_bytes()).to_vec();
+    prefix.extend(rtao_core::mlkem::twox_128(info.name.as_bytes()));
+    let keys = View::keys_paged(&snapshot, &prefix, MAX_PENDING_SCAN + 1, None)
+        .await
+        .map_err(|_| None)?;
+    if keys.len() > MAX_PENDING_SCAN as usize {
+        return Err(Some(format!(
+            "more than {MAX_PENDING_SCAN} stored MevShield extrinsics at the boundary"
+        )));
+    }
+    let values = View::storage_raw_many(&snapshot, &keys)
+        .await
+        .map_err(|_| None)?;
+    for value in values {
+        // Keys and values come from one pinned block; a gap is unavailable.
+        let bytes = value.ok_or(None)?;
+        let who = runtime
+            .core()
+            .decode_spec(
+                &rtao_core::runtime::TypeSpec::Id(info.value_type),
+                &bytes,
+                true,
+            )
+            .ok()
+            .and_then(|decoded| decoded.field("who").and_then(account_value))
+            .ok_or_else(|| Some("a stored MevShield extrinsic does not decode".into()))?;
+        if who == account {
+            return Err(Some(
+                "the account has a stored MevShield extrinsic awaiting dispatch".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
 impl JournalBinding {
     async fn retain_code_refusal(
         &self,
@@ -374,7 +580,7 @@ impl JournalBinding {
         attempt: &SignedAttempt,
         field: &str,
         period: u64,
-    ) -> Result<(), RecoveryReason> {
+    ) -> Result<Option<CodeEvidence>, RecoveryReason> {
         if attempt.bytes.len() > MAX_CANONICAL_BYTES {
             return Err(RecoveryReason::ShieldCanonicalEncodingRequired {
                 attempt: attempt.id,
@@ -410,6 +616,7 @@ impl JournalBinding {
         if digest(&metadata) != qualified.metadata_hash {
             return Err(unverified(attempt.id));
         }
+        let evidence = CodeEvidence::from_runtime(&qualified);
         let attempt = attempt.clone();
         let account = record.intent.account;
         let genesis = record.intent.genesis;
@@ -424,7 +631,8 @@ impl JournalBinding {
             canonical(&runtime, &attempt, account, genesis, period)
         })
         .await
-        .map_err(|_| unverified(pair.inner))?
+        .map_err(|_| unverified(pair.inner))??;
+        Ok(evidence)
     }
     /// All old cursors are deliberately ignored for negative qualification.
     /// One finite body allowance covers every pair and both physical hashes.
@@ -493,21 +701,53 @@ impl JournalBinding {
                     }
                     Err(reason) => return Ok(RecoveryStatus::Unresolved(reason)),
                 }
+                // Retained metadata evidence qualifies an unlisted code again
+                // without pruned history; an allowlist guard rechecks its list.
+                let known = retained_codes(pair, guard.profile());
                 for covered in &proof.covered {
-                    if let Err(reason) = guard.check(record.intent.genesis, covered.code) {
-                        self.retain_code_refusal(reason, covered.parent, covered.code)
-                            .await?;
-                        return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
+                    match qualify_code(
+                        &chain,
+                        guard.as_ref(),
+                        record.intent.genesis,
+                        covered.code,
+                        covered.parent,
+                        &known,
+                    )
+                    .await
+                    {
+                        CodeVerdict::Qualified(_) => {}
+                        CodeVerdict::Refused(reason) => {
+                            self.retain_code_refusal(reason, covered.parent, covered.code)
+                                .await?;
+                            return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
+                        }
+                        CodeVerdict::Unavailable => {
+                            return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
+                        }
                     }
                 }
                 for field in ["signing_context", "carrier_context"] {
-                    let code = pair
-                        .extensions
-                        .get(field)
-                        .and_then(|v| v.get("runtime_code_hash"))
-                        .cloned()
-                        .and_then(|v| serde_json::from_value::<H256>(v).ok());
-                    if code.is_none_or(|code| guard.check(record.intent.genesis, code).is_err()) {
+                    let context = pair.extensions.get(field);
+                    let read = |name: &str| {
+                        context
+                            .and_then(|v| v.get(name))
+                            .cloned()
+                            .and_then(|v| serde_json::from_value::<H256>(v).ok())
+                    };
+                    let (Some(code), Some(state)) = (read("runtime_code_hash"), read("state"))
+                    else {
+                        return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
+                    };
+                    let verdict = qualify_code(
+                        &chain,
+                        guard.as_ref(),
+                        record.intent.genesis,
+                        code,
+                        state,
+                        &known,
+                    )
+                    .await;
+                    if !matches!(verdict, CodeVerdict::Qualified(_)) {
                         return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
                     }
                 }
@@ -533,12 +773,14 @@ impl JournalBinding {
                     },
                 ));
             }
+            let mut qualified: Vec<CodeEvidence> = Vec::new();
             for (attempt, field) in [(inner, "signing_context"), (carrier, "carrier_context")] {
-                if let Err(reason) = self
+                match self
                     .qualify_component(&chain, &record, pair, attempt, field, policy.period)
                     .await
                 {
-                    return Ok(RecoveryStatus::Unresolved(reason));
+                    Ok(evidence) => qualified.extend(evidence),
+                    Err(reason) => return Ok(RecoveryStatus::Unresolved(reason)),
                 }
                 match Self::historical_header(&chain, attempt.start).await {
                     Ok(header) if header.hash == attempt.era_anchor => {}
@@ -594,9 +836,24 @@ impl JournalBinding {
                     Ok(v) => v,
                     Err(_) => return Ok(RecoveryStatus::Unresolved(unverified(inner.id))),
                 };
-                if let Err(reason) = guard.check(record.intent.genesis, code) {
-                    self.retain_code_refusal(reason, parent, code).await?;
-                    return Ok(RecoveryStatus::Unresolved(unverified(inner.id)));
+                match qualify_code(
+                    &chain,
+                    guard.as_ref(),
+                    record.intent.genesis,
+                    code,
+                    parent,
+                    &qualified,
+                )
+                .await
+                {
+                    CodeVerdict::Qualified(evidence) => qualified.extend(evidence),
+                    CodeVerdict::Refused(reason) => {
+                        self.retain_code_refusal(reason, parent, code).await?;
+                        return Ok(RecoveryStatus::Unresolved(unverified(inner.id)));
+                    }
+                    CodeVerdict::Unavailable => {
+                        return Ok(RecoveryStatus::Unresolved(unverified(inner.id)));
+                    }
                 }
                 *remaining -= 1;
                 let raw: Value = match chain
@@ -636,11 +893,25 @@ impl JournalBinding {
                                 RecoveryReason::EvidenceConflict,
                             ));
                         }
-                        if attempt.id == carrier.id
-                            && matches!(current.attempt(attempt.id)?.outcome,
+                        if attempt.id == carrier.id {
+                            let Some(index) = found else {
+                                return Err(JournalError::Identity);
+                            };
+                            let Ok(records) = carrier_events(&chain, header.hash, index).await
+                            else {
+                                return Ok(RecoveryStatus::Unresolved(
+                                    RecoveryReason::ReceiptUnavailable,
+                                ));
+                            };
+                            if let Err(reason) = carrier_effect(&records, record.intent.account) {
+                                self.retain_code_refusal(reason, header.hash, code).await?;
+                                return Ok(RecoveryStatus::Unresolved(unverified(carrier.id)));
+                            }
+                            if matches!(current.attempt(attempt.id)?.outcome,
                             AttemptOutcome::Finalized {block,number:height,..} if block==header.hash && height==number)
-                        {
-                            continue;
+                            {
+                                continue;
+                            }
                         }
                         let mut report = match client
                             .resolve_extrinsic(attempt.hash, header.hash, true)
@@ -694,6 +965,20 @@ impl JournalBinding {
                     RecoveryReason::StaleFinalizedView,
                 ));
             }
+            match stored_for_account(&chain, boundary.hash, record.intent.account).await {
+                Ok(()) => {}
+                Err(None) => return Ok(RecoveryStatus::Unresolved(unavailable(boundary.number))),
+                Err(Some(detail)) => {
+                    let code = covered.last().map_or(H256([0; 32]), |c| c.code);
+                    self.retain_code_refusal(
+                        super::incompatible("shield-pending-extrinsics", detail),
+                        boundary.hash,
+                        code,
+                    )
+                    .await?;
+                    return Ok(RecoveryStatus::Unresolved(unverified(carrier.id)));
+                }
+            }
             let proof = Absence {
                 version: 1,
                 pair: pair.id,
@@ -708,6 +993,19 @@ impl JournalBinding {
             };
             proof.shape(&record, pair)?;
             let raw = serde_json::to_value(&proof).map_err(|_| JournalError::Identity)?;
+            qualified.sort_by_key(|e| e.code.0);
+            qualified.dedup_by(|a, b| a.code == b.code);
+            let evidence = if qualified.is_empty() {
+                None
+            } else {
+                Some(
+                    serde_json::to_value(CodeEvidenceSet {
+                        version: 1,
+                        codes: qualified,
+                    })
+                    .map_err(|_| JournalError::Identity)?,
+                )
+            };
             let binding = self.clone();
             let pair_id = pair.id;
             let length = record.shield_pairs.len();
@@ -739,9 +1037,14 @@ impl JournalBinding {
                             AttemptOutcome::ExpiredUnexecuted,
                         );
                     }
-                    current.shield_pairs[pair_id as usize]
-                        .extensions
-                        .insert(ABSENCE.into(), raw);
+                    let extensions = &mut current.shield_pairs[pair_id as usize].extensions;
+                    if let Some(evidence) = evidence {
+                        if extensions.contains_key(CODE_EVIDENCE) {
+                            return Err(JournalError::Conflict);
+                        }
+                        extensions.insert(CODE_EVIDENCE.into(), evidence);
+                    }
+                    extensions.insert(ABSENCE.into(), raw);
                     Ok(())
                 })
             })

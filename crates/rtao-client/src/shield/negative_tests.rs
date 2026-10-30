@@ -617,3 +617,175 @@ async fn qualified_negative_exhaustion_preserves_certified_absence_and_intent_wi
     assert_eq!(author_reads(&f), 1);
     f.client.close().await;
 }
+
+const CODE_EVIDENCE: &str = "rtao_shield_code_evidence_v1";
+async fn native_missing_inner() -> Fixture {
+    let f =
+        Fixture::with_protocol(false, Some(Arc::new(crate::journal::NativeShieldProtocol))).await;
+    assert!(matches!(
+        f.client
+            .submit_shielded_once(f.call().await, &f.signer, &options(&f))
+            .await,
+        Err(SubmitFailure::PendingShield { .. })
+    ));
+    f
+}
+
+#[tokio::test]
+async fn native_protocol_code_change_inside_window_certifies_after_expiry_then_reseals_once() {
+    let f = native_missing_inner().await;
+    let record = f.binding.record().unwrap();
+    let (start, end) = (record.attempts[0].start, record.attempts[0].expiry.unwrap());
+    // A runtime upgrade activates inside the signed validity window. Neither
+    // code is listed; each is qualified from its own signing metadata.
+    let upgraded = f.node.mutate_state(|state| {
+        (start + 2..=end + 1)
+            .filter_map(|n| state.block_hash(n))
+            .collect::<Vec<_>>()
+    });
+    f.node.mutate_state(|state| {
+        state.set_handler("state_getStorageHash", move |_, request| {
+            let code = if upgraded.iter().any(|hash| request.params[1] == *hash) {
+                44
+            } else {
+                42
+            };
+            rtao_testkit::Reply::result(json!(crate::hash_hex(H256([code; 32]))))
+        });
+    });
+    let tip = f.node.mutate_state(|state| state.finalized);
+    f.node
+        .mutate_state(|state| state.set_finalized(end))
+        .unwrap();
+    assert!(matches!(
+        f.binding.recover(&f.client, 128).await.unwrap(),
+        RecoveryStatus::Unresolved(RecoveryReason::AwaitingFinality { .. })
+    ));
+    assert!(
+        !f.binding.record().unwrap().shield_pairs[0]
+            .extensions
+            .contains_key(CERTIFICATE)
+    );
+    f.node
+        .mutate_state(|state| state.set_finalized(tip))
+        .unwrap();
+    let result = f.binding.recover(&f.client, 128).await.unwrap();
+    assert!(matches!(&result, RecoveryStatus::Rebuildable), "{result:?}");
+    let record = f.binding.record().unwrap();
+    assert!(record.incompatibility.is_none());
+    let evidence = &record.shield_pairs[0].extensions[CODE_EVIDENCE];
+    assert_eq!(evidence["version"], json!(1));
+    let codes = evidence["codes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["code"].clone())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        codes,
+        vec![json!(H256([42; 32])), json!(H256([44; 32]))],
+        "both codes are retained beside the certificate"
+    );
+    // A retained certificate re-qualifies from the evidence; no metadata reread.
+    let metadata = |f: &Fixture| {
+        f.node
+            .requests()
+            .iter()
+            .filter(|r| r.method == "state_getMetadata" || r.method == "state_call")
+            .count()
+    };
+    let before = metadata(&f);
+    assert!(matches!(
+        f.binding.recover(&f.client, 0).await.unwrap(),
+        RecoveryStatus::Rebuildable
+    ));
+    assert_eq!(metadata(&f), before);
+    install_inner_history(&f.node, f.binding.clone());
+    let report = f
+        .client
+        .submit_shielded_once(f.call().await, &f.signer, &options(&f))
+        .await
+        .unwrap();
+    let record = f.binding.record().unwrap();
+    assert_eq!(record.shield_pairs.len(), 2);
+    assert_eq!(
+        record.attempt(record.shield_pairs[1].inner).unwrap().hash,
+        report.hash
+    );
+    assert_eq!(author_reads(&f), 2);
+    f.client.close().await;
+}
+
+#[tokio::test]
+async fn deferred_shield_effects_hold_the_pair_without_reseal() {
+    for case in 0..4 {
+        let f = Fixture::with_protocol(false, Some(Arc::new(crate::journal::NativeShieldProtocol)))
+            .await;
+        let who = f.signer.account().to_ss58(42);
+        let success = json!({"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System",
+            "event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,
+            "proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]});
+        f.node
+            .mutate_state(|state| -> Result<(), rtao_core::CoreError> {
+                match case {
+                    // Carrier stored for later dispatch: no nonce/era check.
+                    0 => state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+                        events: json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,
+                            "module_id":"MevShield","event_id":"ExtrinsicStored",
+                            "attributes":{"index":0,"who":who},"topics":[]}, success]),
+                    }),
+                    // Successful carrier without its submission event.
+                    1 => state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+                        events: json!([success]),
+                    }),
+                    // Stored work for this account at the certificate boundary.
+                    2 => state.seed_python(
+                        "MevShield",
+                        "PendingExtrinsics",
+                        &[json!(0)],
+                        json!({"who":who,"encrypted_call":"0x0102","submitted_at":1}),
+                    )?,
+                    // A stored entry that does not decode is never skipped.
+                    _ => {
+                        let mut key = rtao_core::mlkem::twox_128(b"MevShield").to_vec();
+                        key.extend(rtao_core::mlkem::twox_128(b"PendingExtrinsics"));
+                        key.extend(7u32.to_le_bytes());
+                        state.seed_encoded(key, vec![1, 2, 3]);
+                    }
+                }
+                Ok(())
+            })
+            .unwrap();
+        assert!(matches!(
+            f.client
+                .submit_shielded_once(f.call().await, &f.signer, &options(&f))
+                .await,
+            Err(SubmitFailure::PendingShield { .. })
+        ));
+        let result = f.binding.recover(&f.client, 128).await.unwrap();
+        assert!(
+            matches!(
+                &result,
+                RecoveryStatus::Unresolved(RecoveryReason::ShieldProtocolUnverified { attempt: 1 })
+            ),
+            "case {case}: {result:?}"
+        );
+        let record = f.binding.record().unwrap();
+        let expected = if case < 2 {
+            "shield-carrier-effect"
+        } else {
+            "shield-pending-extrinsics"
+        };
+        assert_eq!(record.incompatibility.as_ref().unwrap().code, expected);
+        assert_eq!(record.attempts[0].outcome, AttemptOutcome::Unresolved);
+        assert!(!record.shield_pairs[0].extensions.contains_key(CERTIFICATE));
+        assert!(matches!(
+            f.client
+                .submit_shielded_once(f.call().await, &f.signer, &options(&f))
+                .await,
+            Err(SubmitFailure::PendingShield { .. })
+        ));
+        assert_eq!(author_reads(&f), 1, "case {case}");
+        f.client.close().await;
+    }
+}

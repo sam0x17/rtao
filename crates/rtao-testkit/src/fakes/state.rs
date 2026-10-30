@@ -1049,8 +1049,18 @@ impl FakeState {
         let bytes = hex_param(params.first(), "extrinsic")?;
         let hash = hex_bytes(&Blake2b::<U32>::digest(&bytes));
         self.submissions.push(bytes.clone());
-        let script = self.submit_scripts.pop_front().unwrap_or(SubmitScript::InBlockThenFinalized {
-            events: json!([{"phase": "ApplyExtrinsic", "extrinsic_idx": 0, "module_id": "System", "event_id": "ExtrinsicSuccess", "attributes": {"dispatch_info": {"weight": self.weight, "class": "Normal", "pays_fee": "Yes"}}, "topics": []}]),
+        let script = self.submit_scripts.pop_front().unwrap_or_else(|| {
+            let success = json!({"phase": "ApplyExtrinsic", "extrinsic_idx": 0, "module_id": "System", "event_id": "ExtrinsicSuccess", "attributes": {"dispatch_info": {"weight": self.weight, "class": "Normal", "pays_fee": "Yes"}}, "topics": []});
+            // A signed-inner shield carrier announces its submitter, as the
+            // native pallet does; every other call reports success alone.
+            let events = match self.shield_submitter(&bytes) {
+                Some(who) => json!([
+                    {"phase": "ApplyExtrinsic", "extrinsic_idx": 0, "module_id": "MevShield", "event_id": "EncryptedSubmitted", "attributes": {"id": hash, "who": who}, "topics": []},
+                    success
+                ]),
+                None => json!([success]),
+            };
+            SubmitScript::InBlockThenFinalized { events }
         });
         let events = match script {
             SubmitScript::InBlockThenFinalized { events } => events,
@@ -1130,6 +1140,21 @@ impl FakeState {
             statuses,
             false,
         ))
+    }
+
+    /// Signer of a decodable `MevShield.submit_encrypted` carrier.
+    fn shield_submitter(&self, bytes: &[u8]) -> Option<String> {
+        let extrinsic = self.runtime.decode_extrinsic(bytes, true).ok()?;
+        let call = extrinsic.field("call")?;
+        (call.field("call_module").and_then(ValueExt::as_str) == Some("MevShield")
+            && call.field("call_function").and_then(ValueExt::as_str) == Some("submit_encrypted"))
+        .then(|| {
+            extrinsic
+                .field("address")
+                .and_then(ValueExt::as_str)
+                .map(str::to_owned)
+        })
+        .flatten()
     }
 
     fn consume_nonce(&mut self, bytes: &[u8]) {

@@ -908,7 +908,6 @@ impl Executor {
                 )
                 .into());
             }
-            self.client.check_journal_shield_dispatch()?;
             if binding
                 .record()
                 .map_err(rtao_client::ClientError::Journal)?

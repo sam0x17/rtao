@@ -765,7 +765,9 @@ impl WeightScheduler {
     /// Explicitly request shielded weight submission through the same public
     /// executor/journal. Ordinary scheduling remains the default. Reinstall on
     /// restart; the journal retains the original per-operation shield policy.
-    /// The client release guard and trusted protocol checks still apply.
+    /// Runtime code is qualified by `NativeShieldProtocol` unless
+    /// [`Self::with_shield_protocol`] installs another adapter; finalized
+    /// waits, native author custody and the semantic guard still apply.
     pub fn with_shielded_submission(mut self, period: rtao_client::ShieldPeriod) -> Self {
         self.shield_period = Some(period);
         self

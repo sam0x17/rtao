@@ -1,12 +1,14 @@
 //! Real local sockets and files, synthetic runtime execution/body/events.
 //! No native decryption, finality verification, live funding or deployed code
-//! qualification is implied. The fixed synthetic genesis gates public dispatch.
+//! qualification is implied. `JournalLab::new` uses the fixed synthetic
+//! genesis and its allowlist; `JournalLab::public` keeps the peer's own
+//! genesis and qualifies runtime code with `NativeShieldProtocol`.
 use crate::{FakeNode, FakeState, Reply};
 use rtao_client::{
     Client, ClientConfig, Network,
     journal::{
-        Incompatibility, JournalBinding, OperationIntent, OperationJournal, OperationRecord,
-        PairPhase, ShieldProtocolGuard,
+        Incompatibility, JournalBinding, NativeShieldProtocol, OperationIntent, OperationJournal,
+        OperationRecord, PairPhase, ShieldProtocolGuard,
     },
 };
 use rtao_primitives::{AccountId, CryptoType, H256};
@@ -257,8 +259,10 @@ pub struct JournalLab {
     pub client: Client,
     /// Fixed test key, never printed or persisted in the operation journal.
     pub signer: Arc<LabSigner>,
-    /// Installed synthetic runtime-code qualification.
+    /// Synthetic runtime-code allowlist, installed by [`Self::new`].
     pub protocol: Arc<SyntheticProtocol>,
+    guard: Arc<dyn ShieldProtocolGuard>,
+    synthetic: bool,
     journal: Option<Arc<OperationJournal>>,
     path: PathBuf,
     config: ClientConfig,
@@ -271,7 +275,20 @@ impl JournalLab {
         path: impl AsRef<Path>,
         crypto: CryptoType,
     ) -> LabResult<Self> {
-        Self::construct(state, path, crypto, false).await
+        Self::construct(state, path, crypto, false, true).await
+    }
+    /// Keep the peer's own (non-synthetic) genesis and qualify every runtime
+    /// code from its signing metadata, as a production embedding would.
+    pub async fn public(
+        state: FakeState,
+        path: impl AsRef<Path>,
+        crypto: CryptoType,
+    ) -> LabResult<Self> {
+        Self::construct(state, path, crypto, false, false).await
+    }
+    /// The protocol guard [`Self::bind`] and [`Self::begin`] install.
+    pub fn guard(&self) -> Arc<dyn ShieldProtocolGuard> {
+        self.guard.clone()
     }
     /// Also start the actual client head tracker for scheduler/metagraph tests.
     /// The controlled peer remains the sole source and runtime execution is synthetic.
@@ -280,19 +297,22 @@ impl JournalLab {
         path: impl AsRef<Path>,
         crypto: CryptoType,
     ) -> LabResult<Self> {
-        Self::construct(state, path, crypto, true).await
+        Self::construct(state, path, crypto, true, true).await
     }
     async fn construct(
         mut state: FakeState,
         path: impl AsRef<Path>,
         crypto: CryptoType,
         track_heads: bool,
+        synthetic: bool,
     ) -> LabResult<Self> {
         let path = path.as_ref().to_owned();
         if path.exists() {
             return Err("existing journal retained; choose a fresh disposable path".into());
         }
-        state.genesis_hash = format!("0x{}", hex::encode(Client::SYNTHETIC_JOURNAL_GENESIS.0));
+        if synthetic {
+            state.genesis_hash = format!("0x{}", hex::encode(Client::SYNTHETIC_JOURNAL_GENESIS.0));
+        }
         state.seed_constant("Aura", "SlotDuration", json!(1))?;
         state.seed_typed("MevShield", "NextKey", (), vec![0u8; 1184])?;
         state.set_result(
@@ -308,7 +328,9 @@ impl JournalLab {
             rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(url::Url::parse(node.url())?))
                 .await?;
         let client = Client::from_session(session, config.clone()).await?;
-        client.enable_synthetic_journal_dispatch().await?;
+        if synthetic {
+            client.enable_synthetic_journal_dispatch().await?;
+        }
         let journal = OperationJournal::open(&path)?;
         let control = Arc::new(Mutex::new(Control {
             journal: Arc::downgrade(&journal),
@@ -448,11 +470,18 @@ impl JournalLab {
             }
             reply
         }));
+        let protocol = Arc::new(SyntheticProtocol::default());
         Ok(Self {
             node,
             client,
             signer: Arc::new(LabSigner::new(crypto)?),
-            protocol: Arc::new(SyntheticProtocol::default()),
+            protocol: protocol.clone(),
+            guard: if synthetic {
+                protocol
+            } else {
+                Arc::new(NativeShieldProtocol)
+            },
+            synthetic,
             journal: Some(journal),
             path,
             config,
@@ -467,10 +496,7 @@ impl JournalLab {
     }
     /// Bind a retained logical operation and reinstall its trusted test adapter.
     pub fn bind(&self, id: &str) -> LabResult<JournalBinding> {
-        Ok(self
-            .journal()?
-            .bind(id)?
-            .with_shield_protocol(self.protocol.clone()))
+        Ok(self.journal()?.bind(id)?.with_shield_protocol(self.guard()))
     }
     /// Persist new public synthetic intent/material before any author request.
     pub fn begin(&self, id: &str, effects: Value, material: Value) -> LabResult<JournalBinding> {
@@ -487,7 +513,7 @@ impl JournalLab {
                 semantic_policy: None,
                 extensions: Default::default(),
             })?
-            .with_shield_protocol(self.protocol.clone())
+            .with_shield_protocol(self.guard())
             .material(material)?)
     }
     /// Script the next finite author requests; exhausted scripts include an inner.
@@ -589,7 +615,9 @@ impl JournalLab {
         )?))
         .await?;
         self.client = Client::from_session(session, self.config.clone()).await?;
-        self.client.enable_synthetic_journal_dispatch().await?;
+        if self.synthetic {
+            self.client.enable_synthetic_journal_dispatch().await?;
+        }
         Ok(())
     }
     /// End owned sockets and journal handles, preserving files for inspection.

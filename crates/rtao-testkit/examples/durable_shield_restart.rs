@@ -1,5 +1,5 @@
 //! Finite synthetic-chain process crash/restart. No external RPC, native
-//! decryption, real funds, consensus verification or production dispatch.
+//! decryption, real funds or consensus verification.
 //! Run with journal-shield enabled and RTAO_TEMP_ROOT beneath local scratch.
 use rtao_client::{
     Client, ClientConfig, JournalShieldReadiness, Network, ShieldOptions, ShieldPeriod, Wait,

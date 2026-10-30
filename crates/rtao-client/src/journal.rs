@@ -13,7 +13,9 @@ mod ownership;
 pub use ownership::JournalPreparation;
 mod shield;
 pub use graph::{AttemptRole, ExecutionMode, PairPhase, ShieldPair, ShieldPolicy};
-pub use shield::ShieldProtocolGuard;
+#[cfg(test)]
+pub(crate) use shield::verify_native_shield_semantics;
+pub use shield::{NativeShieldProtocol, ShieldProtocolGuard};
 pub(crate) use shield::{QualifiedShieldRuntime, ShieldPreparation};
 #[cfg(test)]
 mod tests;

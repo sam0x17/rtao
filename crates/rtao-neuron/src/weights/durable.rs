@@ -169,9 +169,11 @@ impl WeightScheduler {
         self.semantic_guard = Some(guard);
         self
     }
-    /// Install the independently audited signed-inner protocol adapter for
-    /// retained shield recovery. Reinstall after restart; this does not enable
-    /// journaled shield dispatch or establish application economic compatibility.
+    /// Install a signed-inner protocol adapter for journaled shield dispatch
+    /// and retained shield recovery, replacing the default. Without one, a
+    /// scheduler using [`Self::with_shielded_submission`], or holding retained
+    /// shielded work, binds [`rtao_client::journal::NativeShieldProtocol`].
+    /// Reinstall after restart; it never establishes application economics.
     pub fn with_shield_protocol(
         mut self,
         guard: Arc<dyn rtao_client::journal::ShieldProtocolGuard>,
@@ -214,6 +216,14 @@ impl WeightScheduler {
             }
             if let Some(guard) = &self.shield_protocol {
                 binding = binding.with_shield_protocol(guard.clone());
+            } else if self.shield_period.is_some()
+                || matches!(
+                    record.mode,
+                    rtao_client::journal::ExecutionMode::Shielded(_)
+                )
+            {
+                binding = binding
+                    .with_shield_protocol(Arc::new(rtao_client::journal::NativeShieldProtocol));
             }
             result = Some((binding, work));
         }

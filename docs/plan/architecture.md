@@ -2131,7 +2131,8 @@ pub struct ShieldOptions { pub period: ShieldPeriod /* P8 */, pub wait: Wait /* 
      deadlines, waiting one block doubling to eight. Only proven non-inclusion qualifies: the author refused it as
      `Stale` or `PriorityTooLow`, so it never pooled; or the pool reported it `invalid` or `usurped` while the
      account's next index had moved past it and finalized history then passed its era without it. Reconciliation
-     that finds it included resolves its inner instead. Journaled pairs keep D-083's fail-closed `PendingShield`.
+     that finds it included resolves its inner instead. A journaled pair counts these re-seals in its persisted
+     pair budget and re-seals only after a finalized absence certificate past its era (D-087).
    - Python takes n from its cache and pins n+1, then n (`PY/executor.py:1037-1052`;
      `PY/_transport/interface.py:519-523`; `PY/_transport/extrinsics.py:67-81`). Its cache is left at n, so the next
      submission from that process reuses n+1 and is rejected as `Stale` once the inner has landed

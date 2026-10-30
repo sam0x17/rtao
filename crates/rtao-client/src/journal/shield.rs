@@ -1,20 +1,157 @@
 //! Paired preparation/ownership in the existing operation journal.
 use super::*;
 mod negative;
-pub(in crate::journal) use negative::{ABSENCE, replacement_proven, validate_certificate};
+pub(in crate::journal) use negative::{
+    ABSENCE, CODE_EVIDENCE, replacement_proven, validate_certificate,
+};
 
 /// Trusted adapter qualification for native signed-inner execution semantics.
 ///
 /// The SDK obtains actual code hashes at pinned states from the configured
-/// history/submission RPC. This guard must match those hashes against trusted
-/// independently audited code identities, never a peer-provided claim, spec
-/// version alone, or metadata shape alone. It does not establish application
-/// economics (SemanticGuard does that) or independent consensus/RPC honesty.
+/// history/submission RPC. [`Self::check`] matches those hashes against code
+/// identities the adapter trusts, never a peer-provided claim or spec version.
+/// An adapter that also returns true from [`Self::qualify_unlisted`] lets the
+/// SDK qualify any other code from its fresh, hash-checked signing metadata:
+/// the carrier call/event shape and the nonce and mortality extensions that
+/// make finalized era expiry an absence proof (see [`NativeShieldProtocol`]).
+/// It does not establish application economics (SemanticGuard does that) or
+/// independent consensus/RPC honesty.
 pub trait ShieldProtocolGuard: Send + Sync {
-    /// Stable audited signed-inner protocol identity, retained across restart.
+    /// Stable signed-inner protocol identity, retained across restart.
     fn profile(&self) -> &str;
-    /// Qualify this chain and exact runtime code for the audited semantics.
+    /// Qualify this chain and exact runtime code from the adapter's own list.
     fn check(&self, genesis: H256, code_hash: H256) -> Result<(), Incompatibility>;
+    /// Whether code that [`Self::check`] does not list may be qualified from
+    /// its own signing metadata. Allowlist adapters keep the default, false,
+    /// so any unlisted code stays refused exactly as before.
+    fn qualify_unlisted(&self) -> bool {
+        false
+    }
+}
+
+/// Signed-inner protocol qualified per runtime from evidence, not a code list.
+///
+/// Every runtime code, including one activated after this SDK was built, is
+/// qualified from its own fresh signing metadata: `MevShield.submit_encrypted`
+/// takes exactly one byte-sequence `ciphertext`, `MevShield.EncryptedSubmitted`
+/// carries `who`, and the transaction extensions include `CheckNonce` and
+/// `CheckMortality`. A runtime that fails any of these is a real interface
+/// change and records a typed per-operation `Incompatibility`. Recovery
+/// additionally requires each included carrier's receipt to show only
+/// `EncryptedSubmitted` for the signer and no stored `PendingExtrinsics`
+/// entry for the account, so a deferred-dispatch route cannot be mistaken for
+/// expiry. The qualification is retained beside each absence certificate.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct NativeShieldProtocol;
+impl NativeShieldProtocol {
+    /// Retained profile; journaled pairs bind to it across restart.
+    pub const PROFILE: &'static str = "rtao-native-signed-inner-v1";
+}
+impl ShieldProtocolGuard for NativeShieldProtocol {
+    fn profile(&self) -> &str {
+        Self::PROFILE
+    }
+    fn check(&self, _genesis: H256, _code_hash: H256) -> Result<(), Incompatibility> {
+        Err(incompatible(
+            "shield-code-unlisted",
+            "runtime code is qualified from its signing metadata",
+        ))
+    }
+    fn qualify_unlisted(&self) -> bool {
+        true
+    }
+}
+
+pub(super) fn incompatible(code: &str, detail: impl Into<String>) -> Incompatibility {
+    Incompatibility {
+        code: code.into(),
+        descriptor: None,
+        detail: detail.into(),
+        extensions: Default::default(),
+    }
+}
+
+/// Follow single-field wrappers (`BoundedVec`) to a `Vec<u8>` sequence.
+fn is_byte_sequence(runtime: &rtao_core::runtime::Runtime, id: u32, depth: usize) -> bool {
+    use scale_info::{TypeDef, TypeDefPrimitive};
+    let Ok(ty) = runtime.resolve(id) else {
+        return false;
+    };
+    match &ty.type_def {
+        TypeDef::Sequence(sequence) => runtime
+            .resolve(sequence.type_param.id)
+            .is_ok_and(|e| matches!(e.type_def, TypeDef::Primitive(TypeDefPrimitive::U8))),
+        TypeDef::Composite(composite) if depth < 8 => match composite.fields.as_slice() {
+            [field] => is_byte_sequence(runtime, field.ty.id, depth + 1),
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+/// Native signed-inner semantics from one runtime's own metadata. Each failure
+/// is a real interface change, reported as a typed per-operation refusal.
+pub(crate) fn verify_native_shield_semantics(
+    runtime: &rtao_core::runtime::Runtime,
+) -> Result<(), Incompatibility> {
+    use scale_info::TypeDef;
+    let variant = |id: Option<u32>, name: &str| {
+        let ty = runtime.resolve(id?).ok()?;
+        match &ty.type_def {
+            TypeDef::Variant(v) => v.variants.iter().find(|v| v.name == name).cloned(),
+            _ => None,
+        }
+    };
+    let pallet = runtime
+        .pallet("MevShield")
+        .ok_or_else(|| incompatible("shield-carrier-shape", "runtime has no MevShield pallet"))?;
+    let call = variant(pallet.calls_type, "submit_encrypted").ok_or_else(|| {
+        incompatible(
+            "shield-carrier-shape",
+            "MevShield.submit_encrypted is absent from the runtime",
+        )
+    })?;
+    match call.fields.as_slice() {
+        [field]
+            if field.name.as_deref() == Some("ciphertext")
+                && is_byte_sequence(runtime, field.ty.id, 0) => {}
+        _ => {
+            return Err(incompatible(
+                "shield-carrier-shape",
+                "MevShield.submit_encrypted no longer takes one byte-sequence ciphertext",
+            ));
+        }
+    }
+    let event = variant(pallet.events_type, "EncryptedSubmitted").ok_or_else(|| {
+        incompatible(
+            "shield-carrier-effect-shape",
+            "MevShield.EncryptedSubmitted is absent from the runtime",
+        )
+    })?;
+    if !event
+        .fields
+        .iter()
+        .any(|f| f.name.as_deref() == Some("who"))
+    {
+        return Err(incompatible(
+            "shield-carrier-effect-shape",
+            "MevShield.EncryptedSubmitted no longer names its submitter",
+        ));
+    }
+    for name in ["CheckNonce", "CheckMortality"] {
+        if !runtime
+            .extrinsic
+            .signed_extensions
+            .iter()
+            .any(|e| e.identifier == name)
+        {
+            return Err(incompatible(
+                "shield-replay-protection",
+                format!("transaction extension {name} is absent; era expiry proves nothing"),
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub(crate) struct ShieldPreparation {
@@ -31,6 +168,8 @@ pub(crate) struct QualifiedShieldRuntime {
     spec_version: u32,
     transaction_version: u32,
     metadata_hash: H256,
+    /// Qualified from its own signing metadata rather than the guard's list.
+    pub(in crate::journal) unlisted: bool,
 }
 
 impl JournalBinding {
@@ -105,23 +244,11 @@ impl JournalBinding {
         let code_hash = crate::parse_hash(&code).map_err(|_| {
             JournalError::Blocked("pinned runtime code identity unavailable".into())
         })?;
-        if let Err(mut reason) = guard.check(client.genesis(), code_hash) {
-            reason
-                .extensions
-                .entry("rtao_runtime_state".into())
-                .or_insert(serde_json::json!(state));
-            reason
-                .extensions
-                .entry("rtao_runtime_code".into())
-                .or_insert(serde_json::json!(code_hash));
-            self.journal.update(|image| {
-                image
-                    .operations
-                    .get_mut(&self.id)
-                    .ok_or(JournalError::Identity)?
-                    .incompatibility = Some(reason.clone());
-                Ok(())
-            })?;
+        let listed = guard.check(client.genesis(), code_hash);
+        if let Err(reason) = &listed
+            && !guard.qualify_unlisted()
+        {
+            self.refuse_shield_code(reason.clone(), state, code_hash)?;
             return Err(JournalError::Blocked(
                 "shield runtime protocol is not qualified".into(),
             ));
@@ -140,16 +267,65 @@ impl JournalBinding {
                 .and_then(|n| u32::try_from(n).ok())
                 .ok_or(JournalError::Identity)
         };
+        let spec_version = number("specVersion")?;
+        let transaction_version = number("transactionVersion")?;
         let metadata = client.fresh_signing_metadata(state).await.map_err(|_| {
             JournalError::Blocked("fresh pinned signing metadata unavailable".into())
         })?;
+        let metadata_hash = digest(&metadata);
+        let unlisted = listed.is_err();
+        if unlisted {
+            let verdict = crate::offload(move || {
+                let runtime = rtao_core::runtime::Runtime::parse(
+                    &metadata,
+                    spec_version,
+                    transaction_version,
+                    42,
+                )
+                .map_err(|_| incompatible("shield-metadata", "signing metadata does not parse"))?;
+                verify_native_shield_semantics(&runtime)
+            })
+            .await
+            .map_err(|_| JournalError::Storage("shield qualification worker stopped".into()))?;
+            if let Err(reason) = verdict {
+                self.refuse_shield_code(reason, state, code_hash)?;
+                return Err(JournalError::Blocked(
+                    "shield runtime protocol is not qualified".into(),
+                ));
+            }
+        }
         Ok(QualifiedShieldRuntime {
-            metadata_hash: digest(&metadata),
+            metadata_hash,
             profile: guard.profile().to_owned(),
             code_hash,
             state,
-            spec_version: number("specVersion")?,
-            transaction_version: number("transactionVersion")?,
+            spec_version,
+            transaction_version,
+            unlisted,
+        })
+    }
+    /// Retain a typed per-operation refusal naming the runtime that caused it.
+    fn refuse_shield_code(
+        &self,
+        mut reason: Incompatibility,
+        state: H256,
+        code_hash: H256,
+    ) -> Result<(), JournalError> {
+        reason
+            .extensions
+            .entry("rtao_runtime_state".into())
+            .or_insert(serde_json::json!(state));
+        reason
+            .extensions
+            .entry("rtao_runtime_code".into())
+            .or_insert(serde_json::json!(code_hash));
+        self.journal.update(|image| {
+            image
+                .operations
+                .get_mut(&self.id)
+                .ok_or(JournalError::Identity)?
+                .incompatibility = Some(reason.clone());
+            Ok(())
         })
     }
 
@@ -171,13 +347,18 @@ impl JournalBinding {
         let state = crate::parse_hash(&best).map_err(|_| JournalError::Identity)?;
         self.qualify_shield_runtime(&chain, state).await
     }
+    /// The persisted pair budget is one original pair plus every reseal this
+    /// invocation's options allow, after a dropped inner or a carrier that
+    /// lost its nonce, capped at the adapter's total pair bound. Each reseal
+    /// still needs its own finalized absence certificate.
     pub(crate) fn shield_policy(
         &self,
         period: u64,
-        retries: u32,
+        dropped_inner_retries: u32,
+        nonce_conflict_retries: u32,
         maximum_inner_fee: Option<u64>,
     ) -> Result<ShieldPolicy, JournalError> {
-        if retries >= negative::MAX_PAIRS {
+        if dropped_inner_retries >= negative::MAX_PAIRS {
             return Err(JournalError::Blocked(
                 "shield supports at most 16 total pairs".into(),
             ));
@@ -188,9 +369,10 @@ impl JournalBinding {
         Ok(ShieldPolicy {
             protocol: guard.profile().to_owned(),
             period,
-            maximum_pairs: retries
-                .checked_add(1)
-                .ok_or_else(|| JournalError::Blocked("shield pair budget overflow".into()))?,
+            maximum_pairs: dropped_inner_retries
+                .saturating_add(nonce_conflict_retries)
+                .saturating_add(1)
+                .min(negative::MAX_PAIRS),
             extensions: BTreeMap::from([
                 ("policy_version".into(), serde_json::json!(1)),
                 (

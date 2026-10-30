@@ -36,5 +36,8 @@ start a node or a network connection.
 before dispatch, with a versioned storage interface and exclusive native
 atomic-file backend. Supply a binding through `SubmitOptions::journal`, then
 use finite recovery before replacement. Missing history remains unresolved;
-Debug omits signed bytes/material. See `docs/recovery/durable-work.md` for the
-storage contract, pause controls, semantic guards, limits and offline example.
+Debug omits signed bytes/material. A journaled shielded submission also needs
+a signed-inner protocol adapter on the binding, normally
+`journal::NativeShieldProtocol`, which qualifies each runtime from its own
+metadata. See `docs/recovery/durable-work.md` for the storage contract, pause
+controls, semantic guards, limits and offline example.

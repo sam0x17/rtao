@@ -115,9 +115,12 @@ author refusal as stale or outbid, so the carrier never entered a pool, or a
 pool report of `invalid` or `usurped` while the account's next nonce has moved
 past the carrier, followed by finalized history passing the carrier's era
 without it. If reconciliation finds the carrier included after all, its inner
-is resolved instead and nothing is resent. Journaled submissions stay
-pending for recovery. Set `nonce_conflict_retries` to zero to disable the
-retry. Reconciliation examines history rather than sending another
+is resolved instead and nothing is resent. A journaled submission counts
+these re-seals in its persisted pair budget (one pair plus
+`dropped_inner_retries` plus `nonce_conflict_retries`, at most 16) and
+re-seals only after a finalized certificate proves the pair absent past its
+era, reconciling again after the same block backoff while finality catches
+up. Set `nonce_conflict_retries` to zero to disable the retry. Reconciliation examines history rather than sending another
 carrier. Keep an unresolved hash until its fate is known before deciding
 whether to prepare a new transaction. The executor can rebuild after a
 pre-broadcast runtime mismatch, and its separate owner rate-limit rule can

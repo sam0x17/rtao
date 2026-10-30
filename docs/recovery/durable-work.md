@@ -65,12 +65,13 @@ postconditions before authorizing different logical work. The SDK cannot infer
 business-level idempotency from a transaction hash or nonce alone. Callers must
 not bypass the journal with a second unjournaled submission path.
 
-General journaled MEV shield pairs still fail closed on production chains.
-The shared durable carrier/inner implementation is exercised through public
-Client and Executor APIs on a fixed synthetic genesis under `test-util`.
-Production enablement needs independent review and native protocol qualification;
-the guard cannot be disabled by an ordinary runtime flag. No shielded dispatch
-silently ignores the journal option.
+Journaled MEV shield pairs dispatch on every chain (D-087). The former
+release guard, `Client::check_journal_shield_dispatch`, always succeeds and
+the `test-util` synthetic latch only checks identity. What made the pairs safe
+is enforced on the path itself: a finalized inner wait before any key use,
+native author `Session` custody, account and genesis identity, an installed
+`ShieldProtocolGuard`, the semantic guard, pause control and the persisted
+pair budget. No shielded dispatch silently ignores the journal option.
 
 Journaled client/executor submissions reserve the signing account and logical
 operation before preparing or resolving private keys. The account scope spans
@@ -93,13 +94,23 @@ guarantee. A supplied opaque `RpcClient` wrapping a Session is still opaque.
 
 ## Guarded paired preparation implementation
 
-An internal paired path now selects an immutable policy, qualifies the actual
-submission runtime's pinned code identity through an installed trusted
+The paired path selects an immutable policy, qualifies the actual
+submission runtime's pinned code identity through the installed
 `ShieldProtocolGuard`, and checks the application semantic guard on the inner
 call. Fresh metadata is checked even when the spec version has not changed.
-The guard represents an independently audited code identity; metadata shape,
-spec equality and an endpoint's own claims cannot supply that qualification.
-It does not establish application economics or independent finality.
+An allowlist guard accepts only the code identities it lists. A guard whose
+`qualify_unlisted` returns true, such as `journal::NativeShieldProtocol`
+(profile `rtao-native-signed-inner-v1`), qualifies any other code from the
+fresh, hash-checked signing metadata at that pinned state:
+`MevShield.submit_encrypted` takes exactly one byte-sequence `ciphertext`,
+`MevShield.EncryptedSubmitted` names `who`, and the transaction extensions
+include `CheckNonce` and `CheckMortality`, which make finalized era expiry an
+absence proof. A runtime that fails one of these is a real interface change: the
+operation retains a typed `Incompatibility` (`shield-carrier-shape`,
+`shield-carrier-effect-shape` or `shield-replay-protection`, with the runtime
+state and code) and nothing is signed; a later conforming runtime proceeds.
+A spec version alone never qualifies or refuses code. Neither guard
+establishes application economics or independent finality.
 
 This path publishes the signed inner before sealing, then the signed carrier
 and pair link, then a separate durable dispatch-authorization barrier before
@@ -116,24 +127,39 @@ leave a typed `PendingShield` after durable authorization. The weight recovery
 projection selects material by the unique finalized effect and report hash,
 never the vector tail; it composes the existing reveal watcher/checkpoint.
 
-**Public journaled shield dispatch remains refused pending completion and
-review.** The internal implementation now reconciles an earlier authorized pair
-before another preparation. It reconstructs the complete canonical signed
-envelopes using fresh historical metadata and verifies signatures, payloads,
-nonces, mortality and the signed birth hash. Carrier qualification accepts the
-signed-inner `MevShield.submit_encrypted` route. Deferred encrypted storage is
-outside this adapter. All actual execution parents throughout the signed
-validity window need an installed trusted code qualification. Old unqualified
-recovery cursors cannot supply any part of that negative evidence.
+The path reconciles an earlier authorized pair before another preparation.
+It reconstructs the complete canonical signed envelopes using fresh historical
+metadata and verifies signatures, payloads, nonces, mortality and the signed
+birth hash. Carrier qualification accepts the signed-inner
+`MevShield.submit_encrypted` route. All actual execution parents throughout the
+signed validity window need a code qualification, from the guard's list or
+from that parent's own metadata. Old unqualified recovery cursors cannot supply
+any part of that negative evidence.
+
+Deferred encrypted storage (`MevShield.store_encrypted`, dispatched later from
+`on_initialize` as `Signed(who)` with no nonce or era check) would make an era
+expiry proof meaningless, so each certificate also needs effect evidence. An
+included carrier's finalized receipt, decoded with its historical metadata,
+must show `MevShield.EncryptedSubmitted` for the signer and no other MevShield
+event (a failed carrier shows none). At the certificate's finalized boundary,
+`MevShield.PendingExtrinsics`, when the runtime has it, is enumerated by name
+(at most 256 entries) and each entry's `who` decoded. A stored entry for the
+account, an entry that does not decode, or more entries than the bound hold the
+pair as `ShieldProtocolUnverified` with a typed `shield-carrier-effect` or
+`shield-pending-extrinsics` incompatibility, and nothing is resealed.
 
 A version1 pair certificate retains the actual hashes, material generation,
 profile, covered canonical blocks/parent code identities and finalized boundary.
 It is published atomically with the negative outcome in the schema3 extension
-`rtao_shield_absence_v1`. Original attempts and authorization revision remain.
-The graph refuses certificate replacement/deletion. Repeated recovery rechecks
-the retained finality anchor and installed code qualification; a late conflicting
-receipt retains both pieces of evidence and blocks new author I/O. Older SDKs
-preserve the extension and continue refusing shield replacement.
+`rtao_shield_absence_v1`. Codes qualified from metadata are published in the
+same update beside it, in `rtao_shield_code_evidence_v1` (code, profile, state
+and metadata hash), so the certificate format is unchanged. Original attempts
+and authorization revision remain. The graph refuses certificate or evidence
+replacement/deletion. Repeated recovery rechecks the retained finality anchor
+and the code qualification, from the guard's list or the retained evidence,
+without needing pruned historical metadata again; a late conflicting receipt
+retains both pieces of evidence and blocks new author I/O. Older SDKs preserve
+both extensions and continue refusing shield replacement.
 
 The internal route can then reseal within the originally persisted policy using
 fresh nonce, key and signing context. It uses typed recovery states and never
@@ -157,21 +183,27 @@ Unavailable history, metadata, canonical encoding or profile leaves work held.
 `WeightScheduler::with_shield_protocol` reinstalls the trusted adapter on rebound
 journal bindings; this recovery hook does not enable public shield submission.
 
-This remains a guarded implementation rather than full shield restart support.
-Public Client/Executor result hooks, complete scheduler composition, the full
-upgrade/crash lifecycle and a public executable shield recovery example still
-require completion and review. The ordinary default weight route remains
-journaled and unchanged. Qualification assumes the audited native signature,
-nonce and mortality rules; it cannot promise safety under a future runtime that
-deliberately revives expired authorizations or changes those rules. A metadata
-shape match, current spec equality or an RPC's claim cannot attest that protocol.
+The ordinary default weight route remains journaled and unchanged.
+Qualification assumes the native signature, nonce and mortality rules that the
+named extensions implement; it cannot promise safety under a future runtime
+that deliberately revives expired authorizations, keeps those extension names
+while changing their rules, or defers execution of a signed inner without any
+event or `PendingExtrinsics` entry. Those residual cases are outside what
+metadata and finalized receipts can show; an RPC's claim cannot attest them.
 
 Local native tests cover publication-before-author, finalized-inner-only
 results, carrier-only uncertainty, stale nonce refresh, retired preparation,
 cancellation of offloaded publication, actual journal/session restart, typed
 qualified reseal, missing/unknown historical context, canonical nested calls,
 original budget limits, paused recovery and interrupted certificate publication
-before/after its durable CAS. A separate native-socket weight fixture
+before/after its durable CAS. Native-protocol tests run on a non-synthetic
+genesis: an unlisted code dispatches and finalizes; a code change inside the
+era window is certified only after finality passes expiry and reseals once;
+each shape change refuses per operation without signing and a later
+conforming runtime proceeds; stored or unknown carrier effects and
+`PendingExtrinsics` entries hold the pair; a carrier refused as stale waits
+for its certificate and reseals within the persisted budget; an allowlist
+guard keeps refusing unlisted code. A separate native-socket weight fixture
 sends a real signed encrypted carrier, models the inner body/events and native
 commitment queue synthetically, discards all client/journal owners before
 handoff, reopens while paused and restores one reveal without resubmission.
@@ -223,31 +255,26 @@ with its stable attempt ID. This is a
 configured-RPC history trust boundary, not independent consensus or body-root
 verification.
 
-Shield pairs still cannot authorize dispatch or reseal. Even complete expiry
-scans remain `ShieldAdapterRequired` without the actual carrier/inner adapter
-and historical protocol qualification. Signed-pair recovery fixtures test this
-storage/evidence foundation, not a live shield submission pipeline. Ordinary
-default weights remain journaled and do not require enabling shield.
+A shield pair still cannot reseal without a protocol adapter: even complete
+expiry scans remain `ShieldAdapterRequired` until one is installed on the
+binding. Ordinary default weights remain journaled and do not require enabling
+shield.
 
-Before durable shield author support can be enabled, the live path must refuse
-nonfinal waits before key preparation and gate effect consumers on exact
-finalized inner receipts. Native queued frames also need explicit ownership
-and write-retirement guarantees: cancellation of an outer RPC future or an
-asynchronous queue Cancel does not prove its captured socket write retired.
-Injected author transports without that capability must refuse. Those hooks,
-writer lifecycle tests, runtime-profile qualification and end-to-end scheduler/
-reveal composition remain work beyond this storage foundation.
+Durable shield author support relies on the live path refusing nonfinal waits
+before key preparation and gating effect consumers on exact finalized inner
+receipts. Native queued frames carry explicit ownership and write-retirement
+guarantees: cancellation of an outer RPC future or an asynchronous queue Cancel
+does not prove its captured socket write retired. Injected author transports
+without that capability refuse.
 
-## Public composition under the release guard
+## Public composition
 
 `Client::prepare_journal_shield` reconciles before private-key resolution. It
 returns either an exact historical `Finalized` inner receipt or owned `Ready`
 preparation. Hold the preparation while passing its scoped binding to the
 existing `submit_shielded` path. This is neither a transferable author permit
-nor proof of chain consensus. The public release guard remains on; the
-`test-util` latch only accepts the fixed synthetic genesis with explicit native
-Session custody and is not persisted across restart. Public-network genesis
-refuses even in a test build.
+nor proof of chain consensus. Every chain is accepted; `JournalLab::public` in
+the testkit exercises a non-synthetic genesis with `NativeShieldProtocol`.
 
 Typed, dynamic and raw Executor routes share this readiness and submission
 engine. A pending pair returns `TxError::PendingOperation` before typed output
@@ -255,7 +282,13 @@ decoding, result extras, registration completion or owner-rate replanning.
 Carrier inclusion is never decoded as the intended effect. Exact finalized
 inner failures are retained as executed failures and cannot trigger a replacement.
 The original whole-operation and admission deadlines cover all reseals; the
-persisted pair limit survives further calls and process restart.
+persisted pair limit survives further calls and process restart. That limit
+is one pair plus `dropped_inner_retries` plus `nonce_conflict_retries`, capped
+at 16, fixed when the operation first selects the shield route. A carrier that
+lost its nonce is never resealed on the pool's word: the invocation reconciles
+again after a block backoff (one block, doubling to eight, at most
+`nonce_conflict_retries` times) until a finalized certificate proves the pair
+absent past its era, then reseals with a fresh key, anchor and nonce pair.
 
 Executor signing snapshots its reviewed call hash, runtime stamps, intent/args
 and result extras in the version-2 value of `rtao_submission_context_v1` beside
@@ -278,8 +311,9 @@ a place for signer secrets. Existing signed evidence remains immutable.
 
 An embedded `WeightScheduler::with_shielded_submission(period)` explicitly
 selects the same public Executor shield route. Ordinary default weights remain
-ordinary. `with_shield_protocol` reinstalls the trusted code guard after restart;
-neither method bypasses the client release guard. `next_action` checks
+ordinary. Without `with_shield_protocol`, a scheduler that selects the shield
+route or holds retained shielded work binds `NativeShieldProtocol`;
+`with_shield_protocol` installs another adapter instead. `next_action` checks
 read-only preparation readiness on the selected route, including the retained
 shield protocol, period, original pair budget and qualified absence evidence.
 A `Ready` opportunity neither claims ownership nor changes/renews policy. Live

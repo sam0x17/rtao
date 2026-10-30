@@ -24,6 +24,7 @@ struct Fixture {
     binding: crate::journal::JournalBinding,
     config: crate::ClientConfig,
     include_inner: bool,
+    protocol: Option<Arc<dyn ShieldProtocolGuard>>,
 }
 struct TestOnlyProtocol {
     genesis: H256,
@@ -46,6 +47,10 @@ impl ShieldProtocolGuard for TestOnlyProtocol {
 }
 impl Fixture {
     async fn new(inner: bool) -> Self {
+        Self::with_protocol(inner, None).await
+    }
+    /// `None` installs the synthetic allowlist; otherwise this guard.
+    async fn with_protocol(inner: bool, protocol: Option<Arc<dyn ShieldProtocolGuard>>) -> Self {
         static NEXT: AtomicU64 = AtomicU64::new(0);
         let root = PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").unwrap()).join(format!(
             "paired-native-{}-{}",
@@ -91,8 +96,10 @@ impl Fixture {
                 extensions: Default::default(),
             })
             .unwrap()
-            .with_shield_protocol(Arc::new(TestOnlyProtocol {
-                genesis: client.genesis(),
+            .with_shield_protocol(protocol.clone().unwrap_or_else(|| {
+                Arc::new(TestOnlyProtocol {
+                    genesis: client.genesis(),
+                })
             }))
             .material(json!({"required":"synthetic-material-marker"}))
             .unwrap();
@@ -109,6 +116,7 @@ impl Fixture {
             binding,
             config,
             include_inner: inner,
+            protocol,
         }
     }
     async fn restart(&mut self) {
@@ -129,13 +137,13 @@ impl Fixture {
         drop(std::mem::replace(&mut self.journal, temporary));
         // This would refuse if any old native journal owner survived.
         self.journal = OperationJournal::open(self.root.join("journal.json")).unwrap();
-        self.binding = self
-            .journal
-            .bind(&id)
-            .unwrap()
-            .with_shield_protocol(Arc::new(TestOnlyProtocol {
-                genesis: self.client.genesis(),
-            }));
+        self.binding = self.journal.bind(&id).unwrap().with_shield_protocol(
+            self.protocol.clone().unwrap_or_else(|| {
+                Arc::new(TestOnlyProtocol {
+                    genesis: self.client.genesis(),
+                })
+            }),
+        );
         let session = rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(
             url::Url::parse(self.node.url()).unwrap(),
         ))
@@ -159,6 +167,7 @@ impl Fixture {
             period: ShieldPeriod::P4,
             wait: Wait::Finalization,
             dropped_inner_retries: 0,
+            nonce_conflict_retries: 0,
             submit: SubmitOptions {
                 journal: Some(self.binding.clone()),
                 deadline: Some(Duration::from_secs(3)),
@@ -370,8 +379,97 @@ impl Signer for CountingSigner {
     }
 }
 #[tokio::test]
-async fn paired_native_public_gate_and_nonfinal_private_wait_do_not_sign_or_dispatch() {
+async fn paired_native_nonfinal_waits_do_not_sign_or_dispatch_on_any_chain() {
+    // A public (non-synthetic) genesis passes the former release check, but a
+    // journaled shield still needs a finalized inner wait before any key use.
     let f = Fixture::new(true).await;
+    assert!(f.client.check_journal_shield_dispatch().is_ok());
+    let signer = CountingSigner {
+        inner: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap(),
+        prepares: AtomicU64::new(0),
+        signs: AtomicU64::new(0),
+    };
+    for wait in [Wait::Pool, Wait::Inclusion] {
+        let mut options = f.options();
+        options.wait = wait;
+        assert!(matches!(
+            f.client
+                .submit_shielded(f.call().await, &signer, &options)
+                .await,
+            Err(SubmitFailure::Client(ClientError::Journal(
+                JournalError::Blocked(_)
+            )))
+        ));
+        assert!(matches!(
+            f.client
+                .submit_shielded_once(f.call().await, &signer, &options)
+                .await,
+            Err(SubmitFailure::Client(ClientError::Journal(
+                JournalError::Blocked(_)
+            )))
+        ));
+    }
+    assert_eq!(signer.prepares.load(Ordering::SeqCst), 0);
+    assert_eq!(signer.signs.load(Ordering::SeqCst), 0);
+    assert!(f.binding.record().unwrap().attempts.is_empty());
+    assert!(
+        f.node
+            .requests()
+            .iter()
+            .all(|r| !r.method.starts_with("author_submit"))
+    );
+    f.client.close().await;
+}
+
+#[tokio::test]
+async fn native_protocol_dispatches_unlisted_code_on_a_public_genesis_from_metadata() {
+    // An unlisted `:code` on a non-synthetic genesis: qualified from its own
+    // signing metadata, dispatched through the public API, finalized inner.
+    let f =
+        Fixture::with_protocol(true, Some(Arc::new(crate::journal::NativeShieldProtocol))).await;
+    assert_ne!(f.client.genesis(), H256([0xd7; 32]));
+    let report = f
+        .client
+        .submit_shielded(f.call().await, &f.signer, &f.options())
+        .await
+        .unwrap();
+    let record = f.binding.record().unwrap();
+    assert_eq!(report.inclusion, crate::Inclusion::Finalized);
+    assert!(report.success);
+    assert_eq!(
+        report.hash,
+        record.attempt(record.shield_pairs[0].inner).unwrap().hash
+    );
+    assert!(record.incompatibility.is_none());
+    assert!(matches!(
+        &record.mode,
+        ExecutionMode::Shielded(policy) if policy.protocol == "rtao-native-signed-inner-v1"
+    ));
+    assert_eq!(
+        record.shield_pairs[0].extensions["signing_context"]["runtime_code_hash"],
+        json!(H256([42; 32]))
+    );
+    assert_eq!(
+        f.node
+            .requests()
+            .iter()
+            .filter(|r| r.method == "author_submitAndWatchExtrinsic")
+            .count(),
+        1
+    );
+    f.client.close().await;
+}
+
+/// An allowlist guard that never qualifies unlisted code keeps refusing it.
+#[tokio::test]
+async fn allowlist_guard_keeps_refusing_unlisted_code_without_signing() {
+    let f = Fixture::new(true).await;
+    f.node.mutate_state(|state| {
+        state.set_result(
+            "state_getStorageHash",
+            json!(crate::hash_hex(H256([43; 32]))),
+        );
+    });
     let signer = CountingSigner {
         inner: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap(),
         prepares: AtomicU64::new(0),
@@ -385,19 +483,12 @@ async fn paired_native_public_gate_and_nonfinal_private_wait_do_not_sign_or_disp
             JournalError::Blocked(_)
         )))
     ));
-    let mut options = f.options();
-    options.wait = Wait::Pool;
-    assert!(matches!(
-        f.client
-            .submit_shielded_once(f.call().await, &signer, &options)
-            .await,
-        Err(SubmitFailure::Client(ClientError::Journal(
-            JournalError::Blocked(_)
-        )))
-    ));
-    assert_eq!(signer.prepares.load(Ordering::SeqCst), 0);
+    let record = f.binding.record().unwrap();
+    assert_eq!(
+        record.incompatibility.as_ref().unwrap().code,
+        "synthetic-profile-refused"
+    );
     assert_eq!(signer.signs.load(Ordering::SeqCst), 0);
-    assert!(f.binding.record().unwrap().attempts.is_empty());
     assert!(
         f.node
             .requests()
@@ -405,6 +496,298 @@ async fn paired_native_public_gate_and_nonfinal_private_wait_do_not_sign_or_disp
             .all(|r| !r.method.starts_with("author_submit"))
     );
     f.client.close().await;
+}
+
+#[tokio::test]
+async fn journaled_nonce_conflict_waits_for_certified_absence_then_reseals_within_budget() {
+    let f = Fixture::new(false).await;
+    let authors = Arc::new(AtomicU64::new(0));
+    let bodies = Arc::new(std::sync::Mutex::new(Vec::<(String, Vec<u8>)>::new()));
+    let observing = f.binding.clone();
+    let (counted, included) = (authors.clone(), bodies.clone());
+    f.node.mutate_state(|state| {
+        state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
+            if counted.fetch_add(1, Ordering::SeqCst) == 0 {
+                // The first carrier lost its nonce and never entered a pool.
+                return rtao_testkit::Reply::error(
+                    1010,
+                    "Invalid Transaction",
+                    Some(json!("Transaction is outdated")),
+                );
+            }
+            let reply = state.dispatch(request);
+            let record = observing.record().unwrap();
+            let inner = record
+                .attempt(record.shield_pairs.last().unwrap().inner)
+                .unwrap();
+            let hash = state.block_hash(state.block).unwrap();
+            included.lock().unwrap().push((hash, inner.bytes.clone()));
+            state.set_nonce(record.intent.account.to_string(), inner.nonce + 1);
+            reply
+        });
+        let advancing = authors.clone();
+        let certified = f.binding.clone();
+        state.set_handler("chain_getFinalizedHead", move |state, request| {
+            // Finality moves one block per read once the carrier was refused,
+            // until its absence is certified.
+            if advancing.load(Ordering::SeqCst) == 1
+                && !certified.record().unwrap().shield_pairs[0]
+                    .extensions
+                    .contains_key("rtao_shield_absence_v1")
+            {
+                state.advance(1);
+            }
+            state.dispatch(request)
+        });
+        let included = bodies.clone();
+        state.set_handler("chain_getBlock", move |state, request| {
+            let mut reply = state.dispatch(request);
+            let found = included
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|(hash, _)| request.params[0] == *hash)
+                .map(|(_, inner)| inner.clone());
+            if let (Some(inner), Some(Ok(raw))) = (found, &mut reply.outcome)
+                && let Some(list) = raw["block"]["extrinsics"].as_array_mut()
+            {
+                let index = list.len();
+                list.push(json!(format!("0x{}", hex::encode(&inner))));
+                let events = (0..=index)
+                    .map(|i| {
+                        json!({"phase":"ApplyExtrinsic","extrinsic_idx":i,
+                    "module_id":"System","event_id":"ExtrinsicSuccess",
+                    "attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},
+                    "class":"Normal","pays_fee":"Yes"}},"topics":[]})
+                    })
+                    .collect::<Vec<_>>();
+                state
+                    .seed_events(request.params[0].as_str().unwrap(), json!(events))
+                    .unwrap();
+            }
+            reply
+        });
+    });
+    let mut options = f.options();
+    options.nonce_conflict_retries = SHIELD_NONCE_CONFLICT_RETRIES;
+    options.submit.deadline = Some(Duration::from_secs(20));
+    let report = f
+        .client
+        .submit_shielded(f.call().await, &f.signer, &options)
+        .await
+        .unwrap();
+    let record = f.binding.record().unwrap();
+    assert_eq!(report.inclusion, crate::Inclusion::Finalized);
+    assert_eq!(record.shield_pairs.len(), 2);
+    assert!(
+        record.shield_pairs[0]
+            .extensions
+            .contains_key("rtao_shield_absence_v1")
+    );
+    assert_eq!(
+        record.attempt(record.shield_pairs[1].inner).unwrap().hash,
+        report.hash
+    );
+    let ExecutionMode::Shielded(policy) = &record.mode else {
+        panic!("shielded record");
+    };
+    assert_eq!(policy.maximum_pairs, 1 + SHIELD_NONCE_CONFLICT_RETRIES);
+    assert_eq!(authors.load(Ordering::SeqCst), 2);
+    f.client.close().await;
+}
+
+/// Rewrite the served metadata in place, keeping spec and transaction versions.
+fn reshape(
+    state: &mut FakeState,
+    change: impl FnOnce(&mut frame_metadata::v15::RuntimeMetadataV15),
+) {
+    use frame_metadata::{RuntimeMetadata, RuntimeMetadataPrefixed};
+    use parity_scale_codec::{Decode, Encode};
+    let mut metadata =
+        RuntimeMetadataPrefixed::decode(&mut state.runtime.metadata_bytes.as_slice()).unwrap();
+    let RuntimeMetadata::V15(v15) = &mut metadata.1 else {
+        panic!("V15 fixture required");
+    };
+    change(v15);
+    state.runtime = Arc::new(
+        rtao_core::runtime::Runtime::parse(
+            &metadata.encode(),
+            state.runtime.spec_version,
+            state.runtime.transaction_version,
+            state.runtime.ss58_format,
+        )
+        .unwrap(),
+    );
+}
+fn shield_call_variant(
+    metadata: &mut frame_metadata::v15::RuntimeMetadataV15,
+) -> &mut scale_info::Variant<scale_info::form::PortableForm> {
+    let id = metadata
+        .pallets
+        .iter()
+        .find(|p| p.name == "MevShield")
+        .unwrap()
+        .calls
+        .as_ref()
+        .unwrap()
+        .ty
+        .id;
+    let ty = metadata
+        .types
+        .types
+        .iter_mut()
+        .find(|t| t.id == id)
+        .unwrap();
+    let scale_info::TypeDef::Variant(variants) = &mut ty.ty.type_def else {
+        panic!("call enum");
+    };
+    variants
+        .variants
+        .iter_mut()
+        .find(|v| v.name == "submit_encrypted")
+        .unwrap()
+}
+
+#[tokio::test]
+async fn native_protocol_refuses_real_shape_changes_per_operation_then_follows_a_conforming_upgrade()
+ {
+    type Change = fn(&mut frame_metadata::v15::RuntimeMetadataV15);
+    let cases: [(Change, &str); 4] = [
+        (
+            |m| {
+                let u32_id = m
+                    .types
+                    .types
+                    .iter()
+                    .find(|t| {
+                        matches!(
+                            t.ty.type_def,
+                            scale_info::TypeDef::Primitive(scale_info::TypeDefPrimitive::U32)
+                        )
+                    })
+                    .unwrap()
+                    .id;
+                shield_call_variant(m).fields[0].ty = u32_id.into();
+            },
+            "shield-carrier-shape",
+        ),
+        (
+            |m| shield_call_variant(m).name = "submit_encrypted_v0".into(),
+            "shield-carrier-shape",
+        ),
+        (
+            |m| {
+                m.extrinsic
+                    .signed_extensions
+                    .retain(|e| e.identifier != "CheckNonce")
+            },
+            "shield-replay-protection",
+        ),
+        (
+            |m| {
+                m.extrinsic
+                    .signed_extensions
+                    .retain(|e| e.identifier != "CheckMortality")
+            },
+            "shield-replay-protection",
+        ),
+    ];
+    for (change, expected) in cases {
+        let f = Fixture::with_protocol(true, Some(Arc::new(crate::journal::NativeShieldProtocol)))
+            .await;
+        let call = f.call().await;
+        let original = f.node.mutate_state(|state| {
+            let original = state.runtime.clone();
+            reshape(state, change);
+            original
+        });
+        let signer = CountingSigner {
+            inner: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap(),
+            prepares: AtomicU64::new(0),
+            signs: AtomicU64::new(0),
+        };
+        assert!(matches!(
+            f.client
+                .submit_shielded(call.clone(), &signer, &f.options())
+                .await,
+            Err(SubmitFailure::Client(ClientError::Journal(
+                JournalError::Blocked(_)
+            )))
+        ));
+        let record = f.binding.record().unwrap();
+        let refusal = record.incompatibility.as_ref().unwrap();
+        assert_eq!(refusal.code, expected);
+        assert_eq!(
+            refusal.extensions["rtao_runtime_code"],
+            json!(H256([42; 32]))
+        );
+        assert_eq!(signer.signs.load(Ordering::SeqCst), 0);
+        assert!(record.attempts.is_empty());
+        assert!(
+            f.node
+                .requests()
+                .iter()
+                .all(|r| !r.method.starts_with("author_submit"))
+        );
+        // The refusal belongs to that runtime, not to the operation: a later
+        // conforming runtime under new, unlisted code is followed.
+        f.node.mutate_state(|state| {
+            state.runtime = original;
+            state.set_result(
+                "state_getStorageHash",
+                json!(crate::hash_hex(H256([44; 32]))),
+            );
+        });
+        let report = f
+            .client
+            .submit_shielded(call, &signer, &f.options())
+            .await
+            .unwrap();
+        assert_eq!(report.inclusion, crate::Inclusion::Finalized);
+        assert!(f.binding.record().unwrap().incompatibility.is_none());
+        f.client.close().await;
+    }
+}
+
+#[test]
+fn native_semantics_accept_the_pinned_runtime_and_name_each_missing_piece() {
+    let state = FakeState::default();
+    let runtime = |change: Option<fn(&mut rtao_core::runtime::Runtime)>| {
+        let mut runtime = rtao_core::runtime::Runtime::parse(
+            &state.runtime.metadata_bytes,
+            state.runtime.spec_version,
+            state.runtime.transaction_version,
+            42,
+        )
+        .unwrap();
+        if let Some(change) = change {
+            change(&mut runtime);
+        }
+        crate::journal::verify_native_shield_semantics(&runtime).map_err(|e| e.code)
+    };
+    assert_eq!(runtime(None), Ok(()));
+    assert_eq!(
+        runtime(Some(|r| {
+            let shield = r
+                .pallets
+                .iter()
+                .position(|p| p.name == "MevShield")
+                .unwrap();
+            r.pallets[shield].events_type = None;
+        })),
+        Err("shield-carrier-effect-shape".into())
+    );
+    assert_eq!(
+        runtime(Some(|r| {
+            let shield = r
+                .pallets
+                .iter()
+                .position(|p| p.name == "MevShield")
+                .unwrap();
+            r.pallets[shield].calls_type = None;
+        })),
+        Err("shield-carrier-shape".into())
+    );
 }
 
 #[tokio::test]
@@ -607,7 +990,7 @@ async fn paired_native_cancelled_publication_retains_actual_account_claim_until_
     intent.id = "competing-account-operation".into();
     let competing = journal.begin(intent).unwrap();
     let preparation = binding
-        .claim_shield(binding.shield_policy(4, 0, None).unwrap())
+        .claim_shield(binding.shield_policy(4, 0, 0, None).unwrap())
         .unwrap();
     let context = binding.qualify_shield_head(&f.client).await.unwrap();
     let unsigned = f
