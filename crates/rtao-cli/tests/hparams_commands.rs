@@ -487,6 +487,54 @@ fn single_parameter_machine_record_is_exact_and_missing_names_refuse() -> TestRe
     Ok(())
 }
 
+// Deliberate divergence from hyperparams_view.py: the owner sets the three
+// emission slots with `subnets emission`, so they are not labelled root-only.
+#[test]
+fn emission_slots_point_at_the_emission_command_instead_of_root_only() -> TestResult {
+    for (name, note) in [
+        (
+            "owner_emission",
+            "the subnet owner sets this with `rtao subnets emission set --netuid 1`, not `hparams set`",
+        ),
+        (
+            "validator_emission",
+            "the subnet owner sets this with `rtao subnets emission set --netuid 1`, not `hparams set`",
+        ),
+        (
+            "miner_emission",
+            "the subnet owner sets this with `rtao subnets emission set --netuid 1`, not `hparams set`",
+        ),
+        (
+            "subnet_is_active",
+            "not settable by the subnet owner (root/governance only)",
+        ),
+    ] {
+        let params = Some(serde_json::Map::from_iter([(name.into(), json!(1))]));
+        let sink = MemorySink::default();
+        let output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+        hparams::render_hyperparameters(&output, NetUid(1), &params, Some(name))?;
+        let human = sink.text(Stream::Stdout)?;
+        assert!(human.contains(note), "{name}: {human}");
+        assert!(!human.contains("set it"), "{name}: {human}");
+        if name != "subnet_is_active" {
+            assert!(!human.contains("root/governance"), "{name}: {human}");
+        }
+        let sink = MemorySink::default();
+        let output = Output::new(
+            OutputOptions {
+                json_mode: true,
+                ..Default::default()
+            },
+            Arc::new(sink.clone()),
+        );
+        hparams::render_hyperparameters(&output, NetUid(1), &params, Some(name))?;
+        let payload: Value = serde_json::from_str(&sink.text(Stream::Stdout)?)?;
+        // The machine record is unchanged: `hparams set` still cannot set it.
+        assert_eq!(payload["owner_settable"], false, "{name}");
+    }
+    Ok(())
+}
+
 #[test]
 fn parameter_examples_use_human_units_and_preserve_raw_machine_values() -> TestResult {
     for (name, raw, example) in [
