@@ -107,7 +107,7 @@ Each judge's lens contributes the parts where its winner was strongest:
   operator-first milestone ordering.
 - **From A (chain-fidelity winner)**: the tokio-tungstenite transport that reproduces `rpc.py`'s refusal contract, the
   Python-faithful write path (finalized-anchored era 128, immortal zero-signature fee probe, nonce semantics, receipt
-  port), `commit_reveal_version = 4` with an early refusal when storage differs, `parity/map.toml` with git blob SHAs, the
+  port), `commit_reveal_version = 4` with an early refusal when storage differs (narrowed by D-086), `parity/map.toml` with git blob SHAs, the
   Rust-native Python AST symbol diff, `#[doc(alias = "bittensor.…")]`, and `f64::round_ties_even` weight quantization.
 - **From B (best measurements and types)**: the decode benchmark and its consequences, the shape-gated borrowed
   `MetagraphView`, `KeySource<Role>` compile-time roles, `Balance<Tao>`/`Balance<Alpha>`, transaction-safety types
@@ -178,7 +178,7 @@ B/C/D echoing `CommitRevealWeightsVersion`, A's inheritance of the core's epoch 
 | 16 | Receipts use Python's semantics (6 nested wrappers, MevShield failure events, fee fallback), staged as `ops::receipt` and upstreamed; the `retracted` and `finalityTimeout` watch statuses are resolved instead of reported as failures (D-024) | §3.9 |
 | 17 | Intents: generated interfaces and dispatch, generated pass-through `build()` for 46 of 83 (the generator lands in M2), hand-ported bodies; `AnyIntent` plus a shrink-only `pending.toml` | §4.2, §4.3 |
 | 18 | Compile-time signer roles (`KeySource<Role>`), with a `dyn` path that keeps Python's runtime check | §4.2, §6.4 |
-| 19 | `commit_reveal_version` stays 4 (one constant per supported tlock payload format); the framework refuses early when storage differs; the intents are unchanged from Python | §9.3 |
+| 19 | The payload format stays version 4 (one constant per supported tlock payload format); the framework tags commits with the stored `commit_reveal_version` only under runtime code known to reveal that payload and otherwise pauses commits early without failing (D-086); the intents are unchanged from Python | §9.3 |
 | 20 | Reveal-round prediction reads the schedule at the best head, as Python does, and uses a pallet-faithful epoch predicate with an injectable clock and a clock-skew guard; the predicate is a registered Python divergence with an upstream fix | §1.6, §9.3 |
 | 21 | Weight quantization uses `f64::round_ties_even` and Python's summation order, pinned by oracle vectors with `.5` ties | §9.3 |
 | 22 | `Balance` text emulates Python's float formatting exactly, so read JSON is value-equal to `btcli --json` | §5.3 |
@@ -4299,7 +4299,7 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
        (`guards/check_weights.rs:97-104`, custom code 255) and at dispatch (`subnets/weights.rs:17-26`), which Python
        also refuses client-side (`PY/intents/weights.py:184-190`);
      - rate limited (scheduled, not failed);
-     - `CommitRevealWeightsVersion ≠ SUPPORTED_CR_VERSION` (below);
+     - `CommitRevealWeightsVersion ≠ NATIVE_CR_PAYLOAD_VERSION` under runtime code not known to reveal it (below);
      - configured `version_key < WeightsVersionKey`: the chain checks the version key at **reveal** time, so a stale
        key silently loses the reveal ([R] C1 §2.3; `check_version_key`, weights.rs:1285-1292).
    - **Warnings only**: a missing validator permit on Yuma subnets and stake below `StakeThreshold`. The client would
@@ -4307,20 +4307,42 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
      recompute the pallet's stake weight, and C's hard preflight risks false negatives [J-CF §3.3 defect 5].
    - Codes match the chain's (`NotRegistered`, `RateLimited`, `NotAuthorized`, `InvalidArgument`), and each comes with
      remediation text.
-3. **Commit-reveal version gate (D-016)** [J-CF concern 1].
+3. **Commit-reveal version gate (D-016, D-086)** [J-CF concern 1].
    - The chain requires `commit_reveal_version == CommitRevealWeightsVersion` and documents it as "the client
      (bittensor-drand) version" that "must match … used to gate runtime upgrades" (`UP/pallets/subtensor/src/subnets/
      weights.rs:318-337`; `macros/dispatches.rs:1946` [V]). The check is at dispatch, on a `Pays::No` call
      (`dispatches.rs:1947-1948` [V]).
-   - rtao keeps Python's constant: `pub const SUPPORTED_CR_VERSION: u16 = 4`, which is `DEFAULT_COMMIT_REVEAL_VERSION`
-     (`PY/intents/weights.py:33` [V]) and is tied to the core's `WeightsTlockPayload` format.
+   - The value is only a tag. Root sets one global `u16` (`AdminUtils.sudo_set_commit_reveal_version`, default 4), and
+     the commit path compares it. Reveal never reads it: `reveal_crv3_commits_for_subnet` decrypts and decodes
+     `WeightsTlockPayload` (freeze_struct `b6833b5029be4127`), then the legacy payload, and only logs a failed decode
+     (`coinbase/reveal_commits.rs:140-184` [V]). The payload format is therefore fixed by runtime code, and it is not
+     in metadata, since the commit is opaque bytes.
+   - rtao encodes one format: `pub const NATIVE_CR_PAYLOAD_VERSION: u16 = 4`, which is `DEFAULT_COMMIT_REVEAL_VERSION`
+     (`PY/intents/weights.py:33` [V]) and the core's `WeightsTlockPayload`. `SUPPORTED_CR_VERSION` is its deprecated
+     alias.
    - **The intents are unchanged from Python**: `SetWeights` always tags 4 (`weights.py:411` [V]), and `CommitWeights`
-     has the field `commit_reveal_version` with default 4 (`:472-477` [V]). The oracle checks both.
-   - **The framework refuses early** when storage differs, with `ChainError { name: "IncorrectCommitRevealVersion" }`,
-     the remediation "the chain requires commit-reveal client version N; this rtao build supports 4; upgrade rtao", an
-     alert metric, and no submission.
-   - B, C and D echo the storage value instead. After a root bump that would tag a v4-format payload with the new
-     version and turn a loud dispatch error into a possible silent reveal loss. That is rejected.
+     has the field `commit_reveal_version` with default 4 (`:472-477` [V]). The oracle checks both. A mismatch is the
+     chain's loud, fee-free dispatch error.
+   - **The framework follows the tag only under known code** (D-086). When commit-reveal is on and the stored tag is
+     not 4, the preflight adds one `state_getStorageHash(:code)` read at its block. The scheduler tags the commit with
+     the stored value when that code hash is a reviewed pinned runtime (`REVIEWED_CR_RUNTIME_CODE`, checked against
+     `docs/compat/*-provenance.json` and the vendored reveal source) or when the reveal watcher saw one of this
+     validator's own commitments reveal under it. That evidence is the parent block's `:code` hash for a success
+     event bound to the exact parent-queue ciphertext. Identical code decodes identically, whatever the tag.
+   - **Otherwise it pauses early, without failing**: the outcome is `Refused(ChainError { name:
+     "IncorrectCommitRevealVersion" })` naming the stored version, the native format, the live code hash and the
+     metadata default, and saying to upgrade rtao if nothing else resolves it. It is logged once while it lasts, sets
+     `rtao_weights_cr_version_paused{mech}`, counts `rtao_weights_cr_version_mismatch_total` and clears
+     `last_weight_succeeded`, but it is not a scheduler error; `next_action` returns `Paused`. Other mechanisms, the
+     metagraph, the axon and reveal observation continue, and the next head resumes once the tag returns to 4 or the
+     code is proven. The public `WeightPreflight::check` stays strict.
+   - A root bump between preflight and inclusion is a fee-free `IncorrectCommitRevealVersion`: the scheduler re-reads
+     the preflight and re-selects the tag once, as for `InvalidRevealRound`, unless a journal binding requires
+     reconciliation first.
+   - B, C and D echo the storage value blindly instead. After a root bump that ships new runtime code, that would tag
+     a v4-format payload with the new version and turn a loud dispatch error into a possible silent reveal loss. That
+     is rejected. Reveal still runs under the code live at reveal time, so a code change after a commit can drop it at
+     any tag; the watcher reports such a miss.
 4. **Conform**, a port of `normalize` and `clip_to_max_weight` (`PY/intents/weights.py:54-114` [V]) and `_conform`
    (`:218-258`):
    - validate: equal lengths; finite, non-negative values; uids ≤ 65535; no duplicates;
@@ -5135,9 +5157,10 @@ every-push/nightly/weekly lane schedule is retired. Use a bounded hosted job onl
   3. two mechanisms: per-mechanism commits and `LastUpdate[idx]`;
   4. Null consensus: raw u16 rows, sole permit holder, trim-null batches;
   5. the owner bumps `WeightsVersionKey` mid-run: the validator refuses with remediation, is reconfigured, resumes;
-  6. **the CR version gate**: sudo sets `CommitRevealWeightsVersion = 5`; the framework refuses with
-     `IncorrectCommitRevealVersion` before submitting, while the `SetWeights` intent (Python parity) gets the dispatch
-     error from the chain;
+  6. **the CR version gate**: sudo sets `CommitRevealWeightsVersion = 5`; a fresh framework on unreviewed localnet code
+     refuses with `IncorrectCommitRevealVersion` before submitting and without failing, while the `SetWeights` intent
+     (Python parity) gets the dispatch error from the chain; a planned hosted step (not yet run) checks that after an
+     observed reveal under the same code the framework follows the new tag (D-086);
   7. a lost watch: the session test hook drops the socket mid-commit; reconciliation is definitive and later nonces
      are correct;
   8. a **runtime upgrade mid-session** (M2; the offline-payload assertion joins in M5 with `prepare_call`): while a
@@ -6137,7 +6160,7 @@ divergences. Classes:
 | D-013 | `Executor.execute` | composes and submits, even across a runtime upgrade | refuses spec-mismatched `CallBytes` and re-plans once | stricter | `rtao_tx::executor::spec_version_change_replans_once_and_refuses_a_second_change`; `rtao_tx::executor::transaction_version_change_replans_once_and_rechecks_policy` | Active source and independent review; hosted validation pending; no new filing |
 | D-014 | `btcli query` | no block flag | `rtao query <read> --block <n>` | addition | `rtao_cli::generated_commands::block_query_pins_real_storage_and_does_not_read_the_current_head_value` | Active source; hosted validation pending; no new filing |
 | D-015 | RpcSession | no client-side rate limit | With the rate-limit feature enabled, public presets pace requests through a shared token bucket; accepted request and result bytes are unchanged. | addition | `rtao_testkit::rpc::ratelimit_paces_public_presets`; `rtao_testkit::rpc::rate_bucket_prioritizes_submissions_and_drops_cancelled_queue_entries` | Active source; hosted validation pending; no new filing |
-| D-016 | `WeightScheduler / SetWeights` | n/a (no framework) | When commit-reveal is enabled, WeightScheduler refuses CommitRevealWeightsVersion other than 4 through its public preflight check; the low-level intents are unchanged. | addition | `rtao_neuron::weights::tests::preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates` | Active source; hosted validation pending; no new filing |
+| D-016 | `WeightScheduler / SetWeights` | n/a (no framework) | When commit-reveal is enabled, the public preflight check refuses CommitRevealWeightsVersion other than 4; the low-level intents are unchanged. Since D-086 the scheduler follows a changed tag only under runtime code known to reveal the version 4 payload and otherwise pauses commits without failing. | addition | `rtao_neuron::weights::tests::preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates` | Active source; hosted validation pending; no new filing |
 | D-017 | `ServeAxonTls` | a certificate over 65 bytes is silently dropped on chain | rejected client-side after hex syntax validation | stricter | `rtao_intents::serving::tests::{certificate_length_counts_decoded_bytes_at_the_chain_boundary,tls_validation_orders_ip_then_hex_syntax_then_certificate_length}` | Source fixtures authored; current hosted run pending; no new filing |
 | D-018 | `Python advanced documentation on hotkey shielding` | the docs claim a hotkey-shield refusal that the code lacks | follows the code (no refusal) | kept | `rtao_tx::executor::tests::dynamic_shield_acquires_only_the_instance_hotkey_after_review` | Active source; hosted validation pending; no new filing |
 | D-019 | Metagraph.total_stake | alpha-tagged `Balance` | `StakeWeight` type; JSON unchanged | typed-only | `rtao_runtime::generated::semantic_model_fields_and_native_fixed_fraction_are_typed`; `rtao_metagraph::decode::stake_weight_accessors_preserve_alpha_tagged_total_stake_json` | Active source and independent review; hosted validation pending; no new filing |

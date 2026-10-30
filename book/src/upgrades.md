@@ -68,9 +68,17 @@ version key is also an application contract: configure
 `--weights-version-key` only for a scoring implementation that supports that
 version. Raising the number alone does not upgrade the implementation.
 
-Commit-reveal has a separate client version check. The scheduler supports
-version 4 and refuses a different chain requirement while commit-reveal is
-enabled. Follow the [validator guide](validator.md) for reveal observations,
+Commit-reveal commits carry a version tag that root sets in
+`CommitRevealWeightsVersion`. The chain only checks that the tag matches; the
+runtime code decides which payload a reveal can decode. rtao encodes the
+version 4 payload. When the stored tag changes, the scheduler follows it
+without a rebuild if the live runtime code is a reviewed pinned runtime or has
+already revealed one of the validator's own commitments. Otherwise timelocked
+commits pause for that mechanism, with one warning, until the tag returns to 4
+or the code is proven; other duties keep running. A runtime pin must review
+the reveal path and add the new code hash to `REVIEWED_CR_RUNTIME_CODE` when
+the payload format is unchanged; a test keeps the newest pin in that list.
+Follow the [validator guide](validator.md) for reveal observations,
 shutdown and saved-state compatibility. Retain application checkpoints when
 updating the binary; a changed state format needs an explicit schema version
 and recovery plan.

@@ -88,6 +88,7 @@ async fn public_weight_pair_restarts_into_paused_reveal_and_retains_actual_nativ
             row: (vec![Uid(1)], vec![u16::MAX]),
             version_key: 0,
             commit: Some(commit.clone()),
+            commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
         };
         let queue_commit = commit.clone();
         lab.after_inclusion(move |state, _record, number| {
@@ -455,6 +456,199 @@ async fn finalized_scheduler_callback_preserves_queued_work_across_pause_restart
     assert_eq!(record.intent.correlation_id.as_deref(), Some("app:two"));
     assert_eq!(record.attempts.len(), 2);
     assert_eq!(record.shield_pairs.len(), 1);
+    drop(scheduler);
+    cx.metagraph.shutdown().await;
+    cx.shutdown.cancel();
+    drop(cx);
+    lab.close().await;
+    Ok(())
+}
+
+/// A changed `CommitRevealWeightsVersion` under unproven runtime code pauses
+/// timelocked commits without errors or signing, every finalized head, until a
+/// reveal under the live code proves it decodes the native payload. The commit
+/// then carries the chain's tag (D-086).
+#[tokio::test]
+async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow::Result<()> {
+    use crate::{EpochClock, EpochStatus, NeuronCx};
+    use rtao_metagraph::{MetagraphSync, Preset, SyncPolicy};
+    use rtao_runtime::SelectiveMetagraphIndex;
+    use rtao_wallet::{RegenerateFrom, SecretString, Wallet, WriteOptions};
+    let root = std::path::PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").expect("scratch"))
+        .join(format!("scheduler-cr-version-{}", std::process::id()));
+    let wallet = Wallet::new("synthetic", "validator", root.join("wallet"))?;
+    let account = wallet
+        .regenerate_hotkey(
+            RegenerateFrom::PrivateKey(SecretString::new(format!("0x{}", "07".repeat(32)))),
+            CryptoType::Ed25519,
+            WriteOptions::hotkey(),
+        )
+        .await?;
+    let mut state = super::super::tests::fixture_state()?;
+    state.set_finalized(state.block)?;
+    state.seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), 5u16)?;
+    state.seed_typed("SubtensorModule", "Uids", (NetUid(1), account), 0u16)?;
+    state.seed(
+        &super::super::st::MECHANISM_COUNT_CURRENT,
+        (NetUid(1),),
+        MechId(1),
+    )?;
+    state.seed(
+        &super::super::st::SUBNET_OWNER_HOTKEY,
+        (NetUid(1),),
+        rtao_primitives::AccountId([9; 32]).into(),
+    )?;
+    state.seed_runtime("SubnetInfoRuntimeApi","get_selective_mechagraph",json!({"netuid":1,"block":100,"tempo":10,"last_step":100,"blocks_since_last_step":0,"num_uids":3,"hotkeys":[account.to_string(),rtao_primitives::AccountId([8;32]).to_string(),rtao_primitives::AccountId([9;32]).to_string()]}))?;
+    let mut lab =
+        JournalLab::with_head_tracking(state, root.join("journal.json"), CryptoType::Ed25519)
+            .await
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    let shutdown = tokio_util::sync::CancellationToken::new();
+    let (metagraph, _) = MetagraphSync::spawn(
+        lab.client.clone(),
+        NetUid(1),
+        MechId(0),
+        SyncPolicy {
+            preset: Preset::Custom(vec![SelectiveMetagraphIndex::Hotkeys]),
+            ..SyncPolicy::validator()
+        },
+        shutdown.clone(),
+    )
+    .await?;
+    let cx = NeuronCx {
+        executor: Executor::new(lab.client.clone()),
+        client: lab.client.clone(),
+        netuid: NetUid(1),
+        hotkey: wallet.hotkey_only(),
+        metagraph,
+        epochs: EpochClock::new(EpochStatus::default()),
+        http: rtao_btauth::client::SignedClient::new(wallet.unlock_hotkey().await?)?,
+        shutdown,
+        metrics: Metrics::default(),
+        state_dir: root.join("state"),
+    };
+    let mut scheduler = WeightScheduler::new(
+        WeightPolicy::default(),
+        Arc::new(ChainClock::new(1_800_000_000_000)),
+        ClockGuard::default(),
+    )?
+    .with_journal(
+        lab.journal().unwrap().clone(),
+        lab.client.genesis(),
+        NetUid(1),
+        account,
+    )?
+    .with_shield_protocol(lab.protocol.clone())
+    .with_shielded_submission(ShieldPeriod::P4);
+    let advance = |lab: &JournalLab| -> anyhow::Result<BlockHeader> {
+        let raw = lab
+            .node
+            .mutate_state(|s| -> anyhow::Result<_> {
+                s.advance(1);
+                s.set_finalized(s.block)?;
+                Ok(s.block_hash(s.block).and_then(|h| s.header(&h)))
+            })?
+            .expect("finalized head");
+        Ok(BlockHeader::from_json(raw)?)
+    };
+    // The lab answers every `:code` read with this synthetic identity.
+    let code = H256([42; 32]);
+    for _ in 0..3 {
+        let head = advance(&lab)?;
+        Box::pin(scheduler.on_finalized(&cx, &head, |_| {
+            panic!("a paused commit-reveal mechanism must not score")
+        }))
+        .await?;
+    }
+    assert_eq!(lab.authors(), 0, "no commit is signed or submitted");
+    let Some(super::super::WeightAttemptOutcome::Refused(refusal)) = scheduler
+        .last_attempt(MechId(0))
+        .map(|attempt| attempt.outcome.clone())
+    else {
+        panic!(
+            "expected a refusal: {:?}",
+            scheduler.last_attempt(MechId(0))
+        )
+    };
+    assert_eq!(refusal.name, "IncorrectCommitRevealVersion");
+    assert!(
+        refusal
+            .remediation
+            .contains(&format!("0x{}", hex::encode(code.0)))
+    );
+    assert!(refusal.remediation.contains("upgrade"));
+    let rendered = cx.metrics.render();
+    assert!(
+        rendered.contains("rtao_weights_cr_version_mismatch_total 3"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("rtao_weights_cr_version_paused{mech=\"0\"} 1"),
+        "{rendered}"
+    );
+    assert!(
+        !rendered.contains("rtao_weights_errors_total"),
+        "{rendered}"
+    );
+    assert!(!cx.metrics.readiness().last_weight_succeeded);
+    let best = lab.client.at(BlockRef::Best).await?;
+    let preflight = WeightPreflight::fetch(&best, NetUid(1), MechId(0), account).await?;
+    assert_eq!(preflight.runtime_code, Some(code));
+    assert_eq!(
+        scheduler.next_action(MechId(0), account, &preflight)?,
+        super::super::WeightOpportunity::Paused
+    );
+
+    // An earlier commitment revealed under the live code: follow the tag.
+    scheduler.reveals.remember_revealed_code(code);
+    let signed = Arc::new(std::sync::Mutex::new(None::<(Vec<u8>, u64)>));
+    let captured = signed.clone();
+    lab.after_inclusion(move |state, record, number| {
+        let pair = record.shield_pairs.last().expect("shield pair");
+        let inner = record.attempt(pair.inner).expect("inner attempt");
+        let (ciphertext, round): (Vec<u8>, u64) =
+            serde_json::from_value(record.material["commit"].clone()).expect("commit material");
+        *captured.lock().unwrap() = Some((inner.bytes.clone(), round));
+        super::super::tests::seed_at(
+            state,
+            number,
+            "SubtensorModule",
+            "TimelockedWeightCommits",
+            (NetUidStorageIndex(1), 5u64),
+            vec![(account, number, ciphertext, round)],
+        )
+        .expect("native queue model");
+    });
+    let head = advance(&lab)?;
+    Box::pin(scheduler.on_finalized(&cx, &head, |_| {
+        super::super::WeightsProposal::Set(WeightsInput::Parallel {
+            uids: vec![Uid(1)],
+            weights: vec![1.0],
+        })
+    }))
+    .await?;
+    assert_eq!(lab.authors(), 1, "{:?}", scheduler.last_attempt(MechId(0)));
+    assert!(matches!(
+        scheduler.last_attempt(MechId(0)).unwrap().outcome,
+        super::super::WeightAttemptOutcome::Submitted { .. }
+    ));
+    let (bytes, round) = signed.lock().unwrap().take().expect("signed commit");
+    // The call closes the signed extrinsic: `.., reveal_round: u64, version: u16`.
+    let tail = [round.to_le_bytes().as_slice(), &5u16.to_le_bytes()].concat();
+    assert!(
+        bytes.ends_with(&tail),
+        "commit is not tagged with version 5"
+    );
+    assert_eq!(scheduler.reveals.pending(), 1);
+    let rendered = cx.metrics.render();
+    assert!(
+        rendered.contains("rtao_weights_cr_version_paused{mech=\"0\"} 0"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("rtao_weights_submitted_total 1"),
+        "{rendered}"
+    );
     drop(scheduler);
     cx.metagraph.shutdown().await;
     cx.shutdown.cancel();

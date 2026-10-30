@@ -1,7 +1,6 @@
 // Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/weights.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Execute already conformed rows through the public policy-aware executor.
 
-use super::SUPPORTED_CR_VERSION;
 use crate::NeuronCx;
 use rtao_client::View;
 use rtao_intents::weights::PreparedWeightCommit;
@@ -25,6 +24,9 @@ pub(super) struct PreparedWeights {
     pub(super) row: (Vec<Uid>, Vec<u16>),
     pub(super) version_key: u64,
     pub(super) commit: Option<PreparedWeightCommit>,
+    /// Tag the runtime requires on a timelocked commit; the payload format
+    /// stays [`super::NATIVE_CR_PAYLOAD_VERSION`] (D-086).
+    pub(super) commit_reveal_version: u16,
 }
 impl IntentInterface for PreparedWeights {
     const SPEC: &'static rtao_catalog::IntentSpec =
@@ -46,7 +48,7 @@ impl PreparedWeights {
                 self.mechanism,
                 commit.ciphertext.clone(),
                 commit.reveal_round,
-                SUPPORTED_CR_VERSION,
+                self.commit_reveal_version,
             )
         } else {
             calls::set_mechanism_weights(
@@ -81,6 +83,8 @@ impl Intent for PreparedWeights {
 enum SubmissionError {
     #[error("{0}")]
     InvalidRevealRound(String),
+    #[error("{0}")]
+    IncorrectCommitRevealVersion(String),
     #[error("weight submission fate is unresolved: {0}")]
     Uncertain(String),
     #[error("weight submission rejected: {0}")]
@@ -109,12 +113,13 @@ impl SubmissionOptions {
     }
 }
 
+/// Submit `row`, or `commit` tagged with its commit-reveal version.
 pub(super) async fn execute(
     cx: &NeuronCx,
     mechanism: MechId,
     row: (Vec<Uid>, Vec<u16>),
     version_key: u64,
-    commit: Option<&PreparedWeightCommit>,
+    commit: Option<(&PreparedWeightCommit, u16)>,
     block_time: f64,
     options: SubmissionOptions,
 ) -> anyhow::Result<WeightSubmission> {
@@ -123,7 +128,8 @@ pub(super) async fn execute(
         mechanism,
         row,
         version_key,
-        commit: commit.cloned(),
+        commit: commit.map(|(commit, _)| commit.clone()),
+        commit_reveal_version: commit.map_or(super::NATIVE_CR_PAYLOAD_VERSION, |(_, tag)| tag),
     };
     let options = options.execution(block_time);
     let result = cx.executor.execute(&intent, &cx.hotkey, &options).await?;
@@ -131,15 +137,19 @@ pub(super) async fn execute(
         return Err(SubmissionError::Uncertain(format!("0x{}", hex::encode(hash.0))).into());
     }
     if !result.success {
-        if result
+        match result
             .error
             .as_ref()
             .and_then(|error| error.name.as_deref())
-            == Some("InvalidRevealRound")
         {
-            return Err(SubmissionError::InvalidRevealRound(result.message).into());
+            Some("InvalidRevealRound") => {
+                return Err(SubmissionError::InvalidRevealRound(result.message).into());
+            }
+            Some("IncorrectCommitRevealVersion") => {
+                return Err(SubmissionError::IncorrectCommitRevealVersion(result.message).into());
+            }
+            _ => return Err(SubmissionError::Rejected(result.message).into()),
         }
-        return Err(SubmissionError::Rejected(result.message).into());
     }
     let block_hash = result
         .block_hash
@@ -169,6 +179,12 @@ pub(super) fn invalid_reveal_round(error: &anyhow::Error) -> bool {
     error.downcast_ref::<SubmissionError>().is_some_and(|error| matches!(error, SubmissionError::InvalidRevealRound(_)))
         || error.downcast_ref::<rtao_tx::TxError>().is_some_and(|error| matches!(error, rtao_tx::TxError::Chain(chain) if chain.name.as_deref() == Some("InvalidRevealRound")))
 }
+/// Root changed `CommitRevealWeightsVersion` after preflight. The dispatch is
+/// fee-free and certain, so the scheduler may re-select the tag once.
+pub(super) fn incorrect_cr_version(error: &anyhow::Error) -> bool {
+    error.downcast_ref::<SubmissionError>().is_some_and(|error| matches!(error, SubmissionError::IncorrectCommitRevealVersion(_)))
+        || error.downcast_ref::<rtao_tx::TxError>().is_some_and(|error| matches!(error, rtao_tx::TxError::Chain(chain) if chain.name.as_deref() == Some("IncorrectCommitRevealVersion")))
+}
 pub(super) fn uncertain(error: &anyhow::Error) -> bool {
     error
         .downcast_ref::<SubmissionError>()
@@ -185,6 +201,7 @@ pub(super) fn uncertain(error: &anyhow::Error) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::panic)]
     use super::*;
     #[test]
     fn only_current_mechanism_calls_are_constructed() {
@@ -194,6 +211,7 @@ mod tests {
             row: (vec![Uid(0)], vec![123]),
             version_key: 42,
             commit: None,
+            commit_reveal_version: 4,
         };
         assert_eq!(intent.call().descriptor.call_index, 119);
         intent.commit = Some(PreparedWeightCommit {
@@ -201,6 +219,37 @@ mod tests {
             reveal_round: 123,
         });
         assert_eq!(intent.call().descriptor.call_index, 118);
+    }
+    #[test]
+    fn timelocked_commit_carries_the_selected_tag() {
+        let commit = PreparedWeightCommit {
+            ciphertext: vec![1, 2],
+            reveal_round: 123,
+        };
+        for tag in [4u16, 5, 3] {
+            let intent = PreparedWeights {
+                netuid: NetUid(1),
+                mechanism: MechId(0),
+                row: (vec![Uid(0)], vec![1]),
+                version_key: 0,
+                commit: Some(commit.clone()),
+                commit_reveal_version: tag,
+            };
+            let call = intent.call();
+            let rtao_core::codec::Value::Dict(fields) = &call.args else {
+                panic!("call arguments are not a record")
+            };
+            let carried = fields
+                .iter()
+                .find(|(name, _)| {
+                    *name == rtao_core::codec::Value::Str("commit_reveal_version".into())
+                })
+                .map(|(_, value)| value.clone());
+            assert_eq!(
+                carried,
+                Some(rtao_primitives::IntoCoreValue::into_core_value(tag))
+            );
+        }
     }
     #[test]
     fn only_known_round_rejection_recomputes() {
@@ -212,5 +261,14 @@ mod tests {
                 .into()
         ));
         assert!(uncertain(&SubmissionError::Uncertain("hash".into()).into()));
+        assert!(incorrect_cr_version(
+            &SubmissionError::IncorrectCommitRevealVersion("tag".into()).into()
+        ));
+        assert!(!incorrect_cr_version(
+            &SubmissionError::InvalidRevealRound("round".into()).into()
+        ));
+        assert!(!invalid_reveal_round(
+            &SubmissionError::IncorrectCommitRevealVersion("tag".into()).into()
+        ));
     }
 }

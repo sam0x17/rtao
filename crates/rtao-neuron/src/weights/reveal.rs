@@ -145,6 +145,19 @@ struct Unlocated {
     report: super::submit::WeightSubmission,
 }
 
+/// Runtime code that revealed one of this validator's commitments (D-086).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RevealedCode {
+    /// Payload format the revealed commitment used.
+    payload_version: u16,
+    /// `:code` storage hash at the reveal block's parent.
+    code: rtao_primitives::H256,
+}
+
+/// Most runtime code identities retained as reveal evidence.
+const REVEALED_CODE_LIMIT: usize = 16;
+
 /// Retains outstanding reveals and the last 256 completed outcomes.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -153,8 +166,34 @@ pub struct RevealWatcher {
     unlocated: Vec<Unlocated>,
     outcomes: VecDeque<RevealOutcome>,
     last_observed_block: Option<u64>,
+    /// Absent from checkpoints written before D-086 and while empty.
+    #[serde(default, skip_serializing_if = "VecDeque::is_empty")]
+    revealed_code: VecDeque<RevealedCode>,
 }
 impl RevealWatcher {
+    /// Whether runtime code `code` revealed one of this validator's commitments
+    /// in the [`super::NATIVE_CR_PAYLOAD_VERSION`] payload.
+    ///
+    /// The evidence is a success event bound to the exact ciphertext in the
+    /// parent queue, under the parent block's `:code`. Identical code decodes
+    /// identically, whatever `CommitRevealWeightsVersion` stores.
+    pub fn reveals_native_payload(&self, code: rtao_primitives::H256) -> bool {
+        self.revealed_code.iter().any(|known| {
+            known.code == code && known.payload_version == super::NATIVE_CR_PAYLOAD_VERSION
+        })
+    }
+    /// Retain evidence that `code` revealed the native payload.
+    pub(super) fn remember_revealed_code(&mut self, code: rtao_primitives::H256) {
+        let known = RevealedCode {
+            payload_version: super::NATIVE_CR_PAYLOAD_VERSION,
+            code,
+        };
+        self.revealed_code.retain(|entry| *entry != known);
+        if self.revealed_code.len() == REVEALED_CODE_LIMIT {
+            self.revealed_code.pop_front();
+        }
+        self.revealed_code.push_back(known);
+    }
     /// Inspect pending native obligations without exposing ciphertext or keys.
     pub fn outstanding(&self) -> Vec<PendingReveal> {
         self.pending
@@ -622,6 +661,14 @@ impl RevealWatcher {
                 completed.push((pending.mechanism, pending.inclusion_block, Some(reason)));
             }
         }
+        if completed.iter().any(|(_, _, missed)| missed.is_none()) {
+            // The reveal ran under the parent's code. Evidence is optional:
+            // a failed identity read only delays following a changed tag.
+            match super::runtime_code_hash(client, parent.block().hash).await {
+                Ok(code) => self.remember_revealed_code(code),
+                Err(error) => tracing::debug!(%error, "reveal code identity unavailable"),
+            }
+        }
         for (mechanism, inclusion, missed) in completed {
             if let Some(position) = self.pending.iter().position(|pending| {
                 pending.mechanism == mechanism && pending.inclusion_block == inclusion
@@ -968,16 +1015,28 @@ mod tests {
             1,
             "earlier epoch's same-account event cannot complete this commit"
         );
+        assert!(watcher.revealed_code.is_empty());
         chain.mutate_state(|state| {
             let hash = state.block_hash(120).expect("actual reveal hash");
             state
                 .seed_events(hash, success_event())
                 .expect("seed actual reveal");
+            // The reveal block executes under its parent's `:code`.
+            let parent = state.block_hash(119).expect("parent hash");
+            state.seed_at(parent, b":code".to_vec(), Some(b"reveal code".to_vec()));
         });
         watcher
             .observe(&client, &header(&chain, 120)?, &metrics)
             .await?;
         assert_eq!(watcher.pending(), 0);
+        let code = rtao_primitives::H256(
+            <blake2::Blake2b<blake2::digest::consts::U32> as blake2::Digest>::digest(
+                b"reveal code",
+            )
+            .into(),
+        );
+        assert!(watcher.reveals_native_payload(code));
+        assert_eq!(watcher.revealed_code.len(), 1);
         let result = watcher.outcomes().front().expect("outcome");
         assert_eq!(result.commit_epoch, 6);
         assert_eq!(result.reveal_epoch, 7);
@@ -1019,6 +1078,10 @@ mod tests {
         assert_eq!(
             watcher.outcomes().front().expect("miss").missed,
             Some(RevealMissReason::DrandRound)
+        );
+        assert!(
+            watcher.revealed_code.is_empty(),
+            "a missed reveal proves nothing about the runtime's decoder"
         );
         assert!(
             metrics
@@ -1169,6 +1232,44 @@ mod tests {
             Some(RevealMissReason::NotRegistered)
         );
         client.close().await;
+        Ok(())
+    }
+
+    #[test]
+    fn revealed_code_evidence_is_bounded_and_checkpoint_compatible() -> anyhow::Result<()> {
+        // Checkpoints written before D-086 carry no evidence field.
+        let old =
+            serde_json::json!({"pending":[],"unlocated":[],"outcomes":[],"last_observed_block":7});
+        let mut watcher: RevealWatcher = serde_json::from_value(old.clone())?;
+        assert!(watcher.revealed_code.is_empty());
+        assert_eq!(
+            serde_json::to_value(&watcher)?,
+            old,
+            "empty evidence is omitted"
+        );
+        for byte in 0..=u8::try_from(REVEALED_CODE_LIMIT)? {
+            watcher.remember_revealed_code(rtao_primitives::H256([byte; 32]));
+        }
+        // Fresh evidence for known code moves it behind older entries.
+        watcher.remember_revealed_code(rtao_primitives::H256([1; 32]));
+        watcher.remember_revealed_code(rtao_primitives::H256([17; 32]));
+        assert_eq!(watcher.revealed_code.len(), REVEALED_CODE_LIMIT);
+        for (byte, retained) in [(0, false), (1, true), (2, false), (3, true), (17, true)] {
+            assert_eq!(
+                watcher.reveals_native_payload(rtao_primitives::H256([byte; 32])),
+                retained,
+                "code {byte}"
+            );
+        }
+        let restored: RevealWatcher = serde_json::from_value(serde_json::to_value(&watcher)?)?;
+        assert_eq!(restored.revealed_code, watcher.revealed_code);
+        // Evidence for another payload format never satisfies the native one.
+        let mut other = RevealWatcher::default();
+        other.revealed_code.push_back(RevealedCode {
+            payload_version: 9,
+            code: rtao_primitives::H256([3; 32]),
+        });
+        assert!(!other.reveals_native_payload(rtao_primitives::H256([3; 32])));
         Ok(())
     }
 
@@ -1421,6 +1522,10 @@ mod tests {
             .await?;
         assert_eq!(watcher.pending(), 1);
         assert!(watcher.outcomes().is_empty());
+        assert!(
+            watcher.revealed_code.is_empty(),
+            "an ambiguous reveal is not evidence for this validator's payload"
+        );
         // A current queue proves retention despite the predicted window ending.
         watcher.last_observed_block = Some(129);
         watcher

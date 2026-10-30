@@ -135,6 +135,13 @@ async fn finality_lag_three_preflight_uses_best_state_in_one_seventeen_key_rpc()
         storage[0].params[1],
         serde_json::json!(format!("0x{}", hex::encode(best.block().hash.0)))
     );
+    assert!(
+        !requests[before..]
+            .iter()
+            .any(|request| request.method == "state_getStorageHash"),
+        "the native commit-reveal tag needs no runtime code identity"
+    );
+    assert_eq!(state.runtime_code, None);
     assert_eq!(state.schedule.current_block, 100);
     assert_eq!(state.schedule.last_epoch_block, 100);
     assert_eq!(state.schedule.subnet_epoch_index, 5);
@@ -190,6 +197,166 @@ async fn preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates() -
         rtao_catalog::ErrorCode::NotRegistered
     );
     client.close().await;
+    Ok(())
+}
+
+/// Seed `:code` at the fixture's best block and return its storage hash.
+fn seed_code(chain: &FakeChain, code: &[u8]) -> rtao_primitives::H256 {
+    chain.mutate_state(|state| {
+        let hash = state.block_hash(state.block).expect("best block");
+        state.seed_at(hash, b":code".to_vec(), Some(code.to_vec()));
+    });
+    rtao_primitives::H256(Blake2b::<U32>::digest(code).into())
+}
+
+fn fresh_scheduler() -> anyhow::Result<WeightScheduler> {
+    WeightScheduler::new(
+        WeightPolicy::default(),
+        Arc::new(crate::ChainClock::new(1_000_000)),
+        ClockGuard::default(),
+    )
+}
+
+#[tokio::test]
+async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() -> anyhow::Result<()>
+{
+    let (chain, client) = fixture().await?;
+    chain.mutate_state(|state| state.seed(&st::COMMIT_REVEAL_WEIGHTS_VERSION, (), 5u16))?;
+    let code = seed_code(&chain, b"runtime code A");
+    let before = chain.requests().len();
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+    let identity = chain.requests()[before..]
+        .iter()
+        .filter(|request| request.method == "state_getStorageHash")
+        .map(|request| request.params.clone())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        identity,
+        [serde_json::json!([
+            "0x3a636f6465",
+            format!("0x{}", hex::encode(best.block().hash.0))
+        ])]
+    );
+    assert_eq!(state.commit_reveal_version, 5);
+    assert_eq!(state.runtime_code, Some(code));
+
+    let mut scheduler = fresh_scheduler()?;
+    let refusal = scheduler
+        .commit_reveal_tag(&state)
+        .expect_err("unproven code pauses");
+    assert_eq!(refusal.name, "IncorrectCommitRevealVersion");
+    for needle in [
+        "version 5",
+        "version 4 payload",
+        &format!("0x{}", hex::encode(code.0)),
+        "metadata default 4",
+        "upgrade",
+    ] {
+        assert!(
+            refusal.remediation.contains(needle),
+            "{needle} absent from {refusal}"
+        );
+    }
+    assert_eq!(
+        scheduler.next_action(MechId(0), HOTKEY, &state)?,
+        WeightOpportunity::Paused
+    );
+
+    // A reveal of this validator's own commitment under the same code proves it.
+    scheduler.reveals.remember_revealed_code(code);
+    assert_eq!(scheduler.commit_reveal_tag(&state)?, 5);
+    assert_ne!(
+        scheduler.next_action(MechId(0), HOTKEY, &state)?,
+        WeightOpportunity::Paused
+    );
+    // The public preflight check stays strict; only the scheduler follows.
+    assert_eq!(
+        state
+            .check(0)
+            .expect_err("strict check")
+            .downcast_ref::<WeightRefusal>()
+            .expect("typed refusal")
+            .name,
+        "IncorrectCommitRevealVersion"
+    );
+
+    // A runtime upgrade to unproven code pauses again.
+    let upgraded = seed_code(&chain, b"runtime code B");
+    let best = client.at(BlockRef::Best).await?;
+    let upgraded_state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+    assert_eq!(upgraded_state.runtime_code, Some(upgraded));
+    assert!(scheduler.commit_reveal_tag(&upgraded_state).is_err());
+
+    // Reviewed pinned runtimes are followed without prior evidence.
+    let reviewed = REVIEWED_CR_RUNTIME_CODE[REVIEWED_CR_RUNTIME_CODE.len() - 1].1;
+    let mut bytes = [0u8; 32];
+    hex::decode_to_slice(&reviewed[2..], &mut bytes)?;
+    state.runtime_code = Some(rtao_primitives::H256(bytes));
+    assert_eq!(reviewed_cr_runtime(rtao_primitives::H256(bytes)), Some(486));
+    assert_eq!(fresh_scheduler()?.commit_reveal_tag(&state)?, 5);
+    // Missing identity never follows a changed tag.
+    state.runtime_code = None;
+    assert!(fresh_scheduler()?.commit_reveal_tag(&state).is_err());
+
+    // The native tag and direct rows never depend on code identity.
+    state.commit_reveal_version = NATIVE_CR_PAYLOAD_VERSION;
+    assert_eq!(fresh_scheduler()?.commit_reveal_tag(&state)?, 4);
+    state.commit_reveal_version = 5;
+    state.commit_reveal = false;
+    assert_eq!(fresh_scheduler()?.commit_reveal_tag(&state)?, 4);
+    client.close().await;
+    Ok(())
+}
+
+/// Every reviewed entry comes from a pinned provenance record, the newest pin
+/// is reviewed, and the pinned reveal path still decodes the native payload
+/// without reading the stored version. A pin that changes reveal decoding must
+/// leave its code out and revisit [`NATIVE_CR_PAYLOAD_VERSION`].
+#[test]
+fn reviewed_cr_runtimes_match_pinned_provenance_and_reveal_source() -> anyhow::Result<()> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut pinned = Vec::new();
+    for entry in std::fs::read_dir(root.join("docs/compat"))? {
+        let path = entry?.path();
+        let name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("");
+        if !name.ends_with("-provenance.json") {
+            continue;
+        }
+        let record: serde_json::Value = serde_json::from_slice(&std::fs::read(&path)?)?;
+        let finney = &record["finney"];
+        let spec = finney["spec"]
+            .as_u64()
+            .or_else(|| finney["spec_version"].as_u64())
+            .ok_or_else(|| anyhow::anyhow!("{name} has no Finney spec"))?;
+        let code = finney["code_hash"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("{name} has no Finney code hash"))?;
+        pinned.push((u32::try_from(spec)?, code.to_owned()));
+    }
+    pinned.sort();
+    let newest = pinned.last().expect("pinned provenance");
+    assert!(
+        REVIEWED_CR_RUNTIME_CODE
+            .iter()
+            .any(|(spec, code)| (*spec, code.to_string()) == *newest),
+        "review the commit-reveal path of the newest pin {newest:?}"
+    );
+    for (spec, code) in REVIEWED_CR_RUNTIME_CODE {
+        assert!(
+            pinned.iter().any(|entry| *entry == (spec, code.to_owned())),
+            "reviewed runtime {spec} {code} has no provenance record"
+        );
+    }
+    let reveal = std::fs::read_to_string(
+        root.join("vendor/upstream/src/pallets/subtensor/src/coinbase/reveal_commits.rs"),
+    )?;
+    assert!(reveal.contains("#[freeze_struct(\"b6833b5029be4127\")]"));
+    assert!(reveal.contains("WeightsTlockPayload::decode"));
+    assert!(!reveal.contains("commit_reveal_weights_version"));
     Ok(())
 }
 

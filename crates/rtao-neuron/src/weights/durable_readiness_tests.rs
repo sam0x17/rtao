@@ -62,6 +62,7 @@ fn intent() -> super::super::submit::PreparedWeights {
         row: (vec![Uid(1)], vec![u16::MAX]),
         version_key: 0,
         commit: None,
+        commit_reveal_version: super::super::NATIVE_CR_PAYLOAD_VERSION,
     }
 }
 #[tokio::test(start_paused = true)]

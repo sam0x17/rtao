@@ -902,7 +902,7 @@ upstream_report = "Existing implementation and named regression bodies were sour
 id = "D-016"
 upstream_symbol = "WeightScheduler / SetWeights"
 python_behavior = "n/a (no framework)"
-rtao_behavior = "When commit-reveal is enabled, WeightScheduler refuses CommitRevealWeightsVersion other than 4 through its public preflight check; the low-level intents are unchanged."
+rtao_behavior = "When commit-reveal is enabled, the public preflight check refuses CommitRevealWeightsVersion other than 4; the low-level intents are unchanged. Since D-086 the scheduler follows a changed tag only under runtime code known to reveal the version 4 payload and otherwise pauses commits without failing."
 rationale = "The scheduler calls the checked preflight before proposal submission and again after refresh. The fake-chain fixture checks unsupported version 5, supported version 4, version-key and registration gates. No live testnet scenario is claimed. Source review only; hosted validation remains pending."
 status = "active"
 class = "addition"
@@ -1126,6 +1126,28 @@ pinning_tests = [
 ]
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/intent_prompts.py#L137-L145"
 upstream_report = "Generic native improvement with fixture coverage; focused local checks pass, hosted validation pending. No new upstream filing."
+
+[[divergences]]
+id = "D-086"
+upstream_symbol = "WeightScheduler commit_timelocked_mechanism_weights commit_reveal_version"
+python_behavior = "n/a (no framework); `CommitWeights` tags its `commit_reveal_version` field, default 4, and lets the chain refuse a mismatch (`PY/intents/weights.py:33, 472-477`)"
+rtao_behavior = "The scheduler encodes the version 4 `WeightsTlockPayload` and tags it with the stored `CommitRevealWeightsVersion` when that is 4, or when the live `:code` hash is a reviewed pinned runtime or revealed one of this validator's own commitments (bound to its exact parent-queue ciphertext). Otherwise timelocked commits pause per mechanism as an `IncorrectCommitRevealVersion` refusal, logged once, with no error count, re-checked every block; other duties continue. A fee-free `IncorrectCommitRevealVersion` dispatch re-selects the tag once when no journal binding exists."
+rationale = "Reveal decoding is fixed by runtime code and never reads the stored version (`coinbase/reveal_commits.rs`), so a root storage bump under identical code cannot change what decodes. Identical code is the same decoder; unproven code could drop a v4 payload silently, so it pauses instead of echoing the tag blindly. The low-level intents keep Python's behavior."
+decision = "D-086; operator report that a commit-reveal version change defers commits until a rebuild"
+status = "active"
+class = "addition"
+milestone = "M8"
+pinning_tests = [
+  "rtao_neuron::weights::tests::changed_cr_version_reads_code_identity_and_follows_only_known_code",
+  "rtao_neuron::weights::tests::reviewed_cr_runtimes_match_pinned_provenance_and_reveal_source",
+  "rtao_neuron::weights::tests::finality_lag_three_preflight_uses_best_state_in_one_seventeen_key_rpc",
+  "rtao_neuron::weights::durable::public_tests::changed_cr_version_pauses_quietly_then_follows_proven_code",
+  "rtao_neuron::weights::reveal::tests::inclusion_slip_follows_actual_epoch_and_never_counts_a_miss",
+  "rtao_neuron::weights::reveal::tests::revealed_code_evidence_is_bounded_and_checkpoint_compatible",
+  "rtao_neuron::weights::submit::tests::timelocked_commit_carries_the_selected_tag",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/pallets/subtensor/src/coinbase/reveal_commits.rs"
+upstream_report = "Generic native improvement with FakeChain coverage; focused local checks pass, hosted validation pending. No new upstream filing."
 
 [[divergences]]
 id = "D-027"

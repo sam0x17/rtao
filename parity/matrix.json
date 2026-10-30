@@ -2708,6 +2708,20 @@
         ]
       },
       {
+        "id": "D-086",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_neuron::weights::tests::changed_cr_version_reads_code_identity_and_follows_only_known_code",
+          "rtao_neuron::weights::tests::reviewed_cr_runtimes_match_pinned_provenance_and_reveal_source",
+          "rtao_neuron::weights::tests::finality_lag_three_preflight_uses_best_state_in_one_seventeen_key_rpc",
+          "rtao_neuron::weights::durable::public_tests::changed_cr_version_pauses_quietly_then_follows_proven_code",
+          "rtao_neuron::weights::reveal::tests::inclusion_slip_follows_actual_epoch_and_never_counts_a_miss",
+          "rtao_neuron::weights::reveal::tests::revealed_code_evidence_is_bounded_and_checkpoint_compatible",
+          "rtao_neuron::weights::submit::tests::timelocked_commit_carries_the_selected_tag"
+        ]
+      },
+      {
         "id": "D-027",
         "oracle": "unverified",
         "rtao": "active",

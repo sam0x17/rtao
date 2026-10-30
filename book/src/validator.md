@@ -47,7 +47,12 @@ ready. A row containing positive weights only for self or owner is held. Every
 mechanism has a separate cadence and rate-limit slot. The scheduler reads its
 preflight at one best head, while finalized heads trigger attempts and anchor
 transaction mortality. Commit-reveal off uses direct mechanism weights;
-commit-reveal on uses timelocked mechanism weights with client version 4.
+commit-reveal on uses timelocked mechanism weights with the version 4 payload.
+The commit is tagged with the chain's `CommitRevealWeightsVersion`. A tag
+other than 4 is followed only under runtime code known to reveal that payload;
+otherwise `last_attempt` reports an `IncorrectCommitRevealVersion` refusal,
+`rtao_weights_cr_version_paused{mech="N"}` is 1 and commits wait while the
+rest of the validator keeps running.
 The weights version key defaults to zero. After upgrading the subnet binary,
 set `--weights-version-key` to the version that release supports. The scheduler
 refuses keys below the chain requirement and never follows that requirement
