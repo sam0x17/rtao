@@ -76,6 +76,32 @@ An approval-only multisig receipt does not establish pruning progress.
 `--switch-to-yuma` is an explicit option and checks its prerequisites after
 pruning. Never discard a recovery journal just to repeat a transaction.
 
+## Emission weights
+
+`rtao subnets emission show --netuid <n>` prints how the subnet splits its
+alpha emission as `[burn, recycle, owner, validator, miner]`, what root keeps,
+the allowed range of every slot and the next owner change window. `set`
+writes owner, validator and miner in one go; `set-value`, `increase` and
+`decrease` move one slot and rescale the other two so the vector still sums
+to 100%. Shares are percentages (`41%`), 0..1 fractions (`0.41`) or raw u64
+parts. Every write is checked against the chain's live rules before signing,
+and `--dry-run` previews the before/after vector without submitting. The
+`owner_emission`, `validator_emission` and `miner_emission` hyperparameters
+show the same slots; change them here, not with `hparams set`.
+
+A write waits for finalized inclusion and then reads the subnet's stored
+vector back at that block. It prints each slot as a percentage and in exact
+parts, and says whether the stored vector equals the submitted one exactly.
+With `--json` the receipt is followed by a second document,
+`{"readback": {...}}`, with `status` (`match`, `mismatch` or `skipped`),
+`matches`, `netuid`, `block`, `block_hash`, `submitted`, `stored`,
+`stored_shares` and `differs` (the slots that differ). A mismatch means
+another change to the vector landed with or after this one; the command
+exits 1 even though its own extrinsic was finalized. Inspect the vector with
+`show` before submitting again. Previews read nothing back. A saved multisig
+approval that has not executed the change, or a receipt without finalized
+inclusion, skips the read-back with an explicit reason (`status` `skipped`).
+
 ## Coverage
 
 Owner planner, routing, registration and pruning regressions use committed

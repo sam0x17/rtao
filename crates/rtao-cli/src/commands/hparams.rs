@@ -57,6 +57,8 @@ fn mutation(name: &str) -> Option<&'static str> {
 
 const TAKE_HELP: &str =
     "New take: a 0..1 fraction with a decimal point (e.g. 0.18) or the raw u16 integer (0..65535).";
+/// Emission-vector slots the owner changes with `subnets emission`, not `hparams set`.
+const EMISSION_SLOTS: [&str; 3] = ["owner_emission", "validator_emission", "miner_emission"];
 
 fn validator_fields(op: &str) -> Result<Vec<schema::Field>, CliError> {
     let spec = rtao_catalog::INTENTS
@@ -1195,6 +1197,12 @@ fn render_hyperparameters_with_hint(
             "note".into(),
             json!(if settable {
                 format!("--value takes {}", TABLE.value_forms(name))
+            } else if EMISSION_SLOTS.contains(&name) {
+                // Deliberate divergence from Python's root/governance note:
+                // the owner sets these slots through the emission command.
+                format!(
+                    "the subnet owner sets this with `rtao subnets emission set --netuid {netuid}`, not `hparams set`"
+                )
             } else {
                 "not settable by the subnet owner (root/governance only)".into()
             }),
