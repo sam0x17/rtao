@@ -548,7 +548,13 @@ impl Client {
                     Ok(crate::journal::RecoveryStatus::Unresolved(
                         reason @ crate::journal::RecoveryReason::AwaitingFinality { .. },
                     )) if waits < opts.nonce_conflict_retries => {
-                        let delay = crate::nonce::block_backoff(self.block_time().await?, waits);
+                        // The pair is authorized and may still execute: a
+                        // failed block-time read keeps its pending identity.
+                        let block = limits.full.run(self, self.block_time()).await;
+                        let Ok(block) = block else {
+                            return Err(pending(reason));
+                        };
+                        let delay = crate::nonce::block_backoff(block, waits);
                         waits += 1;
                         tracing::info!(
                             operation = %operation,

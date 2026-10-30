@@ -1064,3 +1064,86 @@ async fn paired_native_cancelled_publication_retains_actual_account_claim_until_
 
 #[path = "negative_tests.rs"]
 mod negative_tests;
+
+/// A journaled pair whose carrier lost its nonce is reconciled again after a
+/// block backoff, up to `nonce_conflict_retries` times. Neither exhausting
+/// those retries nor a failed block-time read drops its pending identity.
+#[tokio::test]
+async fn journaled_reconcile_backoff_keeps_pending_identity() {
+    let mut reads = Vec::new();
+    for slot_duration in [true, false] {
+        let mut f = Fixture::new(false).await;
+        if !slot_duration {
+            f.node.mutate_state(|state| {
+                reshape(state, |metadata| {
+                    let aura = metadata
+                        .pallets
+                        .iter_mut()
+                        .find(|p| p.name == "Aura")
+                        .unwrap();
+                    aura.constants.retain(|c| c.name != "SlotDuration");
+                })
+            });
+            f.restart().await;
+        }
+        let authors = Arc::new(AtomicU64::new(0));
+        let counted = authors.clone();
+        f.node.mutate_state(|state| {
+            state.set_handler("author_submitAndWatchExtrinsic", move |_, _| {
+                counted.fetch_add(1, Ordering::SeqCst);
+                // The carrier lost its nonce; finality never reaches expiry.
+                rtao_testkit::Reply::error(
+                    1010,
+                    "Invalid Transaction",
+                    Some(json!("Transaction is outdated")),
+                )
+            });
+        });
+        let mut options = f.options();
+        options.nonce_conflict_retries = SHIELD_NONCE_CONFLICT_RETRIES;
+        options.submit.deadline = Some(Duration::from_secs(20));
+        let before = finalized_reads(&f);
+        let result = f
+            .client
+            .submit_shielded(f.call().await, &f.signer, &options)
+            .await;
+        let Err(SubmitFailure::PendingShield {
+            carrier_hash,
+            inner_hash,
+            reason,
+            ..
+        }) = &result
+        else {
+            panic!("slot duration {slot_duration}: {result:?}");
+        };
+        assert!(
+            matches!(
+                reason,
+                crate::journal::RecoveryReason::AwaitingFinality { .. }
+            ),
+            "{reason:?}"
+        );
+        let record = f.binding.record().unwrap();
+        let pair = &record.shield_pairs[0];
+        assert_eq!(record.attempt(pair.inner).unwrap().hash, *inner_hash);
+        assert_eq!(
+            record.attempt(pair.carrier.unwrap()).unwrap().hash,
+            *carrier_hash
+        );
+        assert_eq!(record.shield_pairs.len(), 1);
+        assert_eq!(authors.load(Ordering::SeqCst), 1);
+        reads.push(finalized_reads(&f) - before);
+        f.client.close().await;
+    }
+    assert!(
+        reads[0] > reads[1],
+        "retries reconcile again only with a block time: {reads:?}"
+    );
+}
+fn finalized_reads(f: &Fixture) -> usize {
+    f.node
+        .requests()
+        .iter()
+        .filter(|r| r.method == "chain_getFinalizedHead")
+        .count()
+}

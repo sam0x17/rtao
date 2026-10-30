@@ -60,7 +60,8 @@ enum CodeVerdict {
     Qualified(Option<CodeEvidence>),
     /// A real interface change or an allowlist refusal.
     Refused(Incompatibility),
-    /// Metadata could not be read; nothing is proven either way.
+    /// Metadata could not be fetched or the worker stopped; nothing is
+    /// proven either way.
     Unavailable,
 }
 async fn qualify_code(
@@ -101,7 +102,13 @@ async fn qualify_code(
             metadata_hash,
         })),
         Ok(Some(Err(reason))) => CodeVerdict::Refused(reason),
-        Ok(None) | Err(_) => CodeVerdict::Unavailable,
+        // Metadata fetched for a pinned state is deterministic: a parse
+        // failure is a typed refusal recorded per operation, as on dispatch.
+        Ok(None) => CodeVerdict::Refused(super::incompatible(
+            "shield-metadata",
+            "signing metadata does not parse",
+        )),
+        Err(_) => CodeVerdict::Unavailable,
     }
 }
 
@@ -747,8 +754,15 @@ impl JournalBinding {
                         &known,
                     )
                     .await;
-                    if !matches!(verdict, CodeVerdict::Qualified(_)) {
-                        return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
+                    match verdict {
+                        CodeVerdict::Qualified(_) => {}
+                        CodeVerdict::Refused(reason) => {
+                            self.retain_code_refusal(reason, state, code).await?;
+                            return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
+                        }
+                        CodeVerdict::Unavailable => {
+                            return Ok(RecoveryStatus::Unresolved(unverified(pair.inner)));
+                        }
                     }
                 }
                 continue;

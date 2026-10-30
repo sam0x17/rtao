@@ -175,6 +175,17 @@ async fn qualified_shield_recovery_exposes_readiness_without_authority() -> anyh
         WeightOpportunity::Reconcile,
         "restart must reinstall trusted protocol"
     );
+    // Work retained under a non-native profile is not bound to the native
+    // default; recovery names the missing adapter.
+    let (retained, _) = scheduler.pending_work(MechId(0))?.unwrap();
+    let result = retained.recover(&lab.client, 128).await?;
+    assert!(
+        matches!(
+            result,
+            RecoveryStatus::Unresolved(rtao_client::journal::RecoveryReason::ShieldAdapterRequired)
+        ),
+        "{result:?}"
+    );
     scheduler = scheduler.with_shield_protocol(lab.protocol.clone());
     lab.upgrade(482, 2, rtao_primitives::H256([43; 32]))
         .map_err(|e| anyhow::anyhow!(e.to_string()))?;

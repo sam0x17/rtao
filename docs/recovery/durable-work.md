@@ -109,6 +109,8 @@ absence proof. A runtime that fails one of these is a real interface change: the
 operation retains a typed `Incompatibility` (`shield-carrier-shape`,
 `shield-carrier-effect-shape` or `shield-replay-protection`, with the runtime
 state and code) and nothing is signed; a later conforming runtime proceeds.
+Signing metadata that this build cannot parse is the same kind of refusal
+(`shield-metadata`), at dispatch and in recovery.
 A spec version alone never qualifies or refuses code. Neither guard
 establishes application economics or independent finality.
 
@@ -312,8 +314,10 @@ a place for signer secrets. Existing signed evidence remains immutable.
 An embedded `WeightScheduler::with_shielded_submission(period)` explicitly
 selects the same public Executor shield route. Ordinary default weights remain
 ordinary. Without `with_shield_protocol`, a scheduler that selects the shield
-route or holds retained shielded work binds `NativeShieldProtocol`;
-`with_shield_protocol` installs another adapter instead. `next_action` checks
+route or holds retained shielded work under the native profile binds
+`NativeShieldProtocol`; `with_shield_protocol` installs another adapter
+instead. Work retained under another profile stays unbound, so its recovery
+reports `ShieldAdapterRequired` until that adapter is reinstalled. `next_action` checks
 read-only preparation readiness on the selected route, including the retained
 shield protocol, period, original pair budget and qualified absence evidence.
 A `Ready` opportunity neither claims ownership nor changes/renews policy. Live

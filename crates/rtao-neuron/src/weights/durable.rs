@@ -172,8 +172,10 @@ impl WeightScheduler {
     /// Install a signed-inner protocol adapter for journaled shield dispatch
     /// and retained shield recovery, replacing the default. Without one, a
     /// scheduler using [`Self::with_shielded_submission`], or holding retained
-    /// shielded work, binds [`rtao_client::journal::NativeShieldProtocol`].
-    /// Reinstall after restart; it never establishes application economics.
+    /// shielded work under the native profile, binds
+    /// [`rtao_client::journal::NativeShieldProtocol`]. Work retained under
+    /// another profile reports the adapter as required until it is
+    /// reinstalled after restart. It never establishes application economics.
     pub fn with_shield_protocol(
         mut self,
         guard: Arc<dyn rtao_client::journal::ShieldProtocolGuard>,
@@ -214,14 +216,18 @@ impl WeightScheduler {
             {
                 binding = binding.with_guard(guard.clone());
             }
+            // The native default binds only work it could have created: a
+            // record retained under another adapter's profile stays unbound,
+            // so recovery reports that adapter as required.
+            let native = match &record.mode {
+                rtao_client::journal::ExecutionMode::Shielded(policy) => {
+                    policy.protocol == rtao_client::journal::NativeShieldProtocol::PROFILE
+                }
+                _ => self.shield_period.is_some(),
+            };
             if let Some(guard) = &self.shield_protocol {
                 binding = binding.with_shield_protocol(guard.clone());
-            } else if self.shield_period.is_some()
-                || matches!(
-                    record.mode,
-                    rtao_client::journal::ExecutionMode::Shielded(_)
-                )
-            {
+            } else if native {
                 binding = binding
                     .with_shield_protocol(Arc::new(rtao_client::journal::NativeShieldProtocol));
             }
