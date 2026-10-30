@@ -245,18 +245,13 @@ fn verify_call_shape(runtime: &RuntimeHandle, descriptor: &CallDescriptor) -> Re
 
 /// Check one call's live contract without rejecting unrelated drift.
 ///
-/// A moved pallet or call index is breaking drift and requires regenerated
-/// descriptors, even when its argument encoding is unchanged.
+/// The call is resolved by pallet and call name; its field names, order and
+/// argument shape must match the compiled descriptor. The compiled pallet and
+/// call indices are not compared: composition encodes with the live indices
+/// resolved by name, so a moved index with an unchanged shape still encodes
+/// correctly. [`verify_surface_with`] reports such a move as behavioural.
 pub fn verify_call(runtime: &RuntimeHandle, descriptor: &CallDescriptor) -> Result<(), String> {
-    verify_call_shape(runtime, descriptor)?;
-    if runtime.pallet_index(descriptor.pallet) != Some(descriptor.pallet_index)
-        || runtime.call_index(descriptor.pallet, descriptor.name) != Some(descriptor.call_index)
-    {
-        return Err(
-            "call pallet/variant index changed; regenerated descriptors are required".into(),
-        );
-    }
-    Ok(())
+    verify_call_shape(runtime, descriptor)
 }
 
 impl Call {
@@ -550,8 +545,8 @@ pub fn verify_surface_with(
                     report.push(
                         &id,
                         SurfaceKind::Call,
-                        SurfaceClass::Breaking,
-                        "call pallet/variant index changed; regenerated descriptors are required",
+                        SurfaceClass::Behavioural,
+                        "call pallet/variant index changed; calls encode with the live index",
                     );
                 }
             }
@@ -1037,7 +1032,7 @@ mod tests {
     }
 
     #[test]
-    fn moved_index_requires_regeneration_and_encoder_then_uses_the_live_index() {
+    fn moved_index_with_unchanged_shape_composes_with_the_live_index() {
         let baseline = runtime();
         let expected = descriptor(&baseline, "System", "remark");
         let mut core = parse_core();
@@ -1051,17 +1046,38 @@ mod tests {
             .index = free_index;
         let changed = RuntimeHandle::new(core).unwrap();
         let report = verify_surface_with(&changed, &[SurfaceDescriptor::Call(expected)]);
-        assert_eq!(report.breaking_items(), 1);
+        assert_eq!(report.breaking_items(), 0, "{:#?}", report.changes);
+        assert_eq!(report.behavioural_items(), 1);
+        assert!(report.is_compatible());
         assert!(report.shapes_match());
-        assert!(matches!(
-            remark(expected).compose(&changed),
-            Err(ComposeError::SurfaceChanged { .. })
-        ));
+        assert!(report.shape_matches("call:System.remark"));
+        assert!(report.changes.iter().any(|change| {
+            change.descriptor == "call:System.remark"
+                && change.kind == SurfaceKind::Call
+                && change.class == SurfaceClass::Behavioural
+                && change.detail.contains("index changed")
+        }));
+        let encoded = remark(expected).compose(&changed).unwrap();
+        assert_eq!(encoded.as_bytes().first(), Some(&free_index));
+        let live = changed
+            .core()
+            .compose_call("System", "remark", &remark(expected).args)
+            .unwrap();
+        assert_eq!(encoded.as_bytes(), live);
         let mut regenerated = *expected;
         regenerated.pallet_index = free_index;
         let regenerated = Box::leak(Box::new(regenerated));
-        let encoded = remark(regenerated).compose(&changed).unwrap();
-        assert_eq!(encoded.as_bytes().first(), Some(&free_index));
+        assert_eq!(
+            remark(regenerated).compose(&changed).unwrap().as_bytes(),
+            encoded.as_bytes()
+        );
+        let mut reshaped = *expected;
+        reshaped.shape = ShapeHash([255; 32]);
+        let reshaped = Box::leak(Box::new(reshaped));
+        assert!(matches!(
+            remark(reshaped).compose(&changed),
+            Err(ComposeError::SurfaceChanged { .. })
+        ));
     }
 
     #[test]
