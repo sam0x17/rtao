@@ -488,7 +488,8 @@ fn single_parameter_machine_record_is_exact_and_missing_names_refuse() -> TestRe
 }
 
 // Deliberate divergence from hyperparams_view.py: the owner sets the three
-// emission slots with `subnets emission`, so they are not labelled root-only.
+// emission slots, and turns the derived owner_cut_enabled off, with
+// `subnets emission`, so they are not labelled root-only.
 #[test]
 fn emission_slots_point_at_the_emission_command_instead_of_root_only() -> TestResult {
     for (name, note) in [
@@ -503,6 +504,10 @@ fn emission_slots_point_at_the_emission_command_instead_of_root_only() -> TestRe
         (
             "miner_emission",
             "the subnet owner sets this with `rtao subnets emission set --netuid 1`, not `hparams set`",
+        ),
+        (
+            "owner_cut_enabled",
+            "the subnet owner turns the owner cut off with `rtao subnets emission set-value --netuid 1 --slot owner --value 0`, not `hparams set`",
         ),
         (
             "subnet_is_active",

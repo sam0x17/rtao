@@ -1203,6 +1203,11 @@ fn render_hyperparameters_with_hint(
                 format!(
                     "the subnet owner sets this with `rtao subnets emission set --netuid {netuid}`, not `hparams set`"
                 )
+            } else if name == "owner_cut_enabled" {
+                // Derived from the owner slot; its old setter is Deprecated.
+                format!(
+                    "the subnet owner turns the owner cut off with `rtao subnets emission set-value --netuid {netuid} --slot owner --value 0`, not `hparams set`"
+                )
             } else {
                 "not settable by the subnet owner (root/governance only)".into()
             }),
