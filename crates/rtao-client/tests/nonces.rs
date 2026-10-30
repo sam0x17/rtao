@@ -308,7 +308,7 @@ async fn cleared_cache_after_a_pending_carrier_never_returns_its_inner_nonce() {
 }
 
 #[tokio::test]
-async fn pool_probe_ignores_other_accounts_plain_transactions_and_undecodable_entries() {
+async fn pool_probe_ignores_other_accounts_plain_transactions_and_unrelated_entries() {
     use rtao_signer::Signer;
     let fake = FakeChain::from_state(shield_state(1));
     let client = client_over(&fake).await;
@@ -328,13 +328,8 @@ async fn pool_probe_ignores_other_accounts_plain_transactions_and_undecodable_en
         )
         .await
         .unwrap();
-    fake.mutate_state(|state| {
-        state.pool.push(vec![0xde, 0xad]);
-        // Carries this account's key but is not an extrinsic.
-        let mut garbage = vec![0x84, 0, 0, 0];
-        garbage.extend_from_slice(&who.0);
-        state.pool.push(garbage);
-    });
+    // Does not carry this account's key, so it is never decoded.
+    fake.mutate_state(|state| state.pool.push(vec![0xde, 0xad]));
     let other = client_over(&fake).await;
     let before = pool_reads(&fake);
     let lease = other.nonces().lease(&who).await.unwrap();
@@ -342,6 +337,39 @@ async fn pool_probe_ignores_other_accounts_plain_transactions_and_undecodable_en
     assert_eq!(lease.value(), 1);
     lease.settle();
     assert_eq!(pool_reads(&fake) - before, 1);
+}
+
+// Paused: the wait sleeps a block between pool reads.
+#[tokio::test(start_paused = true)]
+async fn undecodable_pool_entry_with_this_accounts_key_is_waited_on_as_a_possible_carrier() {
+    let fake = FakeChain::from_state(shield_state(1_000));
+    let who = AccountId([9; 32]);
+    let address = who.to_string();
+    // Carries this account's key but does not decode under the head runtime,
+    // as after an extrinsic format change the client does not yet read.
+    let mut undecodable = vec![0x84, 0, 0, 0];
+    undecodable.extend_from_slice(&who.0);
+    let reads = Arc::new(AtomicUsize::new(0));
+    let counter = reads.clone();
+    fake.mutate_state(|state| {
+        state.set_nonce(address.clone(), 3);
+        state.pool.push(undecodable);
+        state.set_handler("author_pendingExtrinsics", move |state, request| {
+            // It leaves the pool, as a carrier does, while the second read is made.
+            if counter.fetch_add(1, Ordering::SeqCst) == 1 {
+                state.include_pool();
+                state.set_nonce(address.clone(), 5);
+            }
+            state.dispatch(request)
+        });
+    });
+    let client = client_over(&fake).await;
+    let started = tokio::time::Instant::now();
+    let lease = client.nonces().lease(&who).await.unwrap();
+    assert_eq!(lease.value(), 5);
+    lease.settle();
+    assert_eq!(reads.load(Ordering::SeqCst), 2);
+    assert!(started.elapsed() >= std::time::Duration::from_secs(1));
 }
 
 #[tokio::test]

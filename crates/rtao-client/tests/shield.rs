@@ -529,6 +529,53 @@ async fn second_client_waits_for_a_pending_carrier_instead_of_taking_its_inner_n
     }
 }
 
+#[tokio::test]
+async fn pending_carrier_wait_does_not_age_the_shield_era_anchor() {
+    let (client, fake, signer) = fixture().await;
+    let address = signer.account().to_string();
+    fake.mutate_state(|state| {
+        state.set_nonce(address.clone(), 7);
+        state.queue_submit(SubmitScript::Pooled);
+    });
+    client
+        .submit_shielded(call(&client, 1).await, &signer, &pool())
+        .await
+        .unwrap();
+    // A finality lag of three, as on Finney. The chain moves two blocks per
+    // pool read and the pending pair lands on the third: seven blocks in all,
+    // past the default eight-block era measured from a pre-wait anchor.
+    let reads = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let landed = Arc::new(std::sync::Mutex::new(None));
+    let finalized = landed.clone();
+    fake.mutate_state(|state| {
+        let best = state.block;
+        state.set_finalized(best - 3).unwrap();
+        state.set_handler("author_pendingExtrinsics", move |state, request| {
+            let read = reads.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            state.advance(2);
+            if read == 2 {
+                state.include_pool();
+                state.set_nonce(address.clone(), 9);
+                *finalized.lock().unwrap() = state.block_hash(state.finalized);
+            }
+            state.dispatch(request)
+        });
+    });
+    let other = second_client(&fake).await;
+    other
+        .submit_shielded(call(&other, 2).await, &signer, &pool())
+        .await
+        .unwrap();
+    let signed = signer.signed.lock().unwrap().clone();
+    assert_eq!(signed.len(), 4);
+    assert_eq!(signed[2].json["nonce"], json!("0x0000000a"));
+    assert_eq!(signed[3].json["nonce"], json!("0x00000009"));
+    // Both signatures share the anchor chosen after the wait.
+    let anchor = landed.lock().unwrap().clone().unwrap();
+    assert_eq!(signed[2].json["blockHash"], json!(anchor));
+    assert_eq!(signed[3].json["blockHash"], json!(anchor));
+}
+
 /// Finalized history advances whenever it is read once `armed` is set, and
 /// requested heights above the best head are produced.
 fn advance_history(fake: &FakeChain, armed: Arc<std::sync::atomic::AtomicBool>) {

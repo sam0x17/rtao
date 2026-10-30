@@ -28,10 +28,11 @@ pub(crate) fn block_backoff(block: Duration, attempt: u32) -> Duration {
 }
 
 /// Waits while the submission endpoint's ready pool holds an MEV-shield
-/// carrier from the account. Fails only when the client has closed or its
-/// submission endpoint cannot be opened, which the nonce read needs too.
+/// carrier from the account, reporting whether it slept. Fails only when the
+/// client has closed or its submission endpoint cannot be opened, which the
+/// nonce read needs too.
 pub(crate) type CarrierWait =
-    Arc<dyn Fn(AccountId) -> BoxFuture<'static, Result<(), ClientError>> + Send + Sync>;
+    Arc<dyn Fn(AccountId) -> BoxFuture<'static, Result<bool, ClientError>> + Send + Sync>;
 
 /// Per-account next-index cache for pipelined submissions.
 ///
@@ -179,13 +180,16 @@ impl NonceManager {
             .clone()
     }
 
+    /// The first allocated nonce, its cell and whether a fresh read waited
+    /// for pending shield carriers.
     async fn allocate(
         &self,
         address: &str,
         count: u64,
-    ) -> Result<(u64, Arc<AccountNonce>), ClientError> {
+    ) -> Result<(u64, Arc<AccountNonce>, bool), ClientError> {
         let cell = self.cell(address);
         let _fetch = cell.fetch.lock().await;
+        let mut waited = false;
         loop {
             let (latest, generation) = {
                 let state = lock(&cell.state);
@@ -195,7 +199,11 @@ impl NonceManager {
                 Some(nonce) => nonce
                     .checked_add(1)
                     .ok_or_else(|| ClientError::Protocol("account nonce overflow".into()))?,
-                None => self.query(address).await?,
+                None => {
+                    let (nonce, slept) = self.query_waited(address).await?;
+                    waited |= slept;
+                    nonce
+                }
             };
             let last = first
                 .checked_add(count - 1)
@@ -207,13 +215,13 @@ impl NonceManager {
                 continue;
             }
             state.latest = Some(last);
-            return Ok((first, cell.clone()));
+            return Ok((first, cell.clone(), waited));
         }
     }
 
     /// Reserve one nonce, serialized with other allocations for this account.
     pub async fn lease(&self, who: &AccountId) -> Result<NonceLease, ClientError> {
-        let (nonce, cell) = self.allocate(&who.to_ss58(42), 1).await?;
+        let (nonce, cell, _) = self.allocate(&who.to_ss58(42), 1).await?;
         Ok(NonceLease {
             who: *who,
             nonce,
@@ -227,14 +235,23 @@ impl NonceManager {
         &self,
         who: &AccountId,
     ) -> Result<(NonceLease, NonceLease), ClientError> {
-        let (nonce, cell) = self.allocate(&who.to_ss58(42), 2).await?;
+        self.lease_pair_waited(who).await.map(|(pair, _)| pair)
+    }
+
+    /// [`Self::lease_pair`], also reporting whether the fresh nonce read slept
+    /// while pending shield carriers left the pool, which ages era anchors.
+    pub(crate) async fn lease_pair_waited(
+        &self,
+        who: &AccountId,
+    ) -> Result<((NonceLease, NonceLease), bool), ClientError> {
+        let (nonce, cell, waited) = self.allocate(&who.to_ss58(42), 2).await?;
         let make = |nonce| NonceLease {
             who: *who,
             nonce,
             cell: Arc::downgrade(&cell),
             settled: false,
         };
-        Ok((make(nonce), make(nonce + 1)))
+        Ok(((make(nonce), make(nonce + 1)), waited))
     }
 
     /// Query the pool-aware nonce without reserving or modifying cached state.
@@ -292,19 +309,25 @@ impl NonceManager {
         if !use_cache {
             return self.query(address).await;
         }
-        self.allocate(address, 1).await.map(|(nonce, _)| nonce)
+        self.allocate(address, 1).await.map(|(nonce, _, _)| nonce)
     }
 
     async fn query(&self, address: &str) -> Result<u64, ClientError> {
+        self.query_waited(address).await.map(|(nonce, _)| nonce)
+    }
+
+    /// The fresh nonce and whether it waited for pending shield carriers.
+    async fn query_waited(&self, address: &str) -> Result<(u64, bool), ClientError> {
         // A pending shield carrier at n holds n+1 for its encrypted inner,
         // which the pool cannot see: account_nextIndex would answer n+1 and a
         // transaction signed with it is invalidated when the pair lands.
+        let mut waited = false;
         if let Some(wait) = &self.carriers
             && let Ok(who) = address.parse::<AccountId>()
         {
-            wait(who).await?;
+            waited = wait(who).await?;
         }
-        self.next_index(address).await
+        Ok((self.next_index(address).await?, waited))
     }
 
     async fn next_index(&self, address: &str) -> Result<u64, ClientError> {
@@ -373,14 +396,14 @@ impl crate::Client {
     /// would wait in the future queue. The carrier leaves the pool within its
     /// era of at most eight blocks, included with its inner or expired. When
     /// the pool cannot be read or the polls run out this returns, and the
-    /// caller uses `account_nextIndex` as reported.
+    /// caller uses `account_nextIndex` as reported. Reports whether it slept.
     async fn wait_for_pending_carriers(
         &self,
         who: AccountId,
         unavailable: &AtomicBool,
-    ) -> Result<(), ClientError> {
+    ) -> Result<bool, ClientError> {
         if unavailable.load(Ordering::Acquire) {
-            return Ok(());
+            return Ok(false);
         }
         let chain = self.submit_client().await?;
         let mut block = None;
@@ -400,11 +423,11 @@ impl crate::Client {
                         "cannot read the transaction pool for pending MEV-shield carriers; \
                          using account_nextIndex, which cannot see a pending carrier's inner nonce"
                     );
-                    return Ok(());
+                    return Ok(poll > 0);
                 }
             };
             if carriers.is_empty() {
-                return Ok(());
+                return Ok(poll > 0);
             }
             if poll + 1 == SHIELD_CARRIER_POLLS {
                 tracing::warn!(
@@ -413,7 +436,7 @@ impl crate::Client {
                     "MEV-shield carriers from this account are still pending; using \
                      account_nextIndex, which cannot see their inner nonces"
                 );
-                return Ok(());
+                return Ok(poll > 0);
             }
             let interval = match block {
                 Some(interval) => interval,
@@ -427,7 +450,7 @@ impl crate::Client {
                             "cannot read the block time to wait for pending MEV-shield \
                              carriers; using account_nextIndex, which cannot see their inner nonces"
                         );
-                        return Ok(());
+                        return Ok(poll > 0);
                     }
                 },
             };
@@ -443,14 +466,17 @@ impl crate::Client {
                 () = tokio::time::sleep(delay) => {}
             }
         }
-        Ok(())
+        Ok(true)
     }
 
     /// Nonces of `who`'s `MevShield.submit_encrypted` carriers in this
     /// endpoint's ready pool, matched by name through the head runtime.
     ///
-    /// Entries that do not decode are skipped; they are not this account's
-    /// carriers as far as the current runtime can tell.
+    /// Only entries carrying `who`'s key are decoded. One of those that the
+    /// head runtime cannot read, such as after an extrinsic format change, is
+    /// logged with its error and counted as a possible carrier with an
+    /// unknown nonce, so the bounded wait still applies instead of silently
+    /// switching off.
     async fn pending_carrier_nonces(
         &self,
         who: AccountId,
@@ -480,7 +506,18 @@ impl crate::Client {
         let decode = move || {
             candidates
                 .iter()
-                .filter_map(|bytes| carrier_nonce(runtime.core(), who, bytes))
+                .filter_map(|bytes| match carrier_nonce(runtime.core(), who, bytes) {
+                    Ok(carrier) => carrier,
+                    Err(error) => {
+                        tracing::warn!(
+                            %error,
+                            account = %who,
+                            "a pending extrinsic carrying this account's key does not decode \
+                             under the head runtime; treating it as a possible MEV-shield carrier"
+                        );
+                        Some(None)
+                    }
+                })
                 .collect::<Vec<_>>()
         };
         if large {
@@ -495,13 +532,21 @@ impl crate::Client {
 
 /// The nonce of a signed `MevShield.submit_encrypted` from `who`, if `bytes`
 /// is one under this runtime.
+///
+/// Fails when `bytes` does not decode, or is signed by `who` with a call whose
+/// pallet and name cannot be read; neither proves it is not a carrier.
 fn carrier_nonce(
     runtime: &rtao_core::runtime::Runtime,
     who: AccountId,
     bytes: &[u8],
-) -> Option<Option<u64>> {
-    let decoded = runtime.decode_extrinsic(bytes, true).ok()?;
-    let address = decoded.field("address")?;
+) -> Result<Option<Option<u64>>, String> {
+    let decoded = runtime
+        .decode_extrinsic(bytes, true)
+        .map_err(|error| error.to_string())?;
+    // Unsigned: no account's carrier.
+    let Some(address) = decoded.field("address") else {
+        return Ok(None);
+    };
     let signer = address
         .as_str()
         .and_then(|text| text.parse::<AccountId>().ok())
@@ -512,19 +557,24 @@ fn carrier_nonce(
                 .map(AccountId)
         });
     if signer != Some(who) {
-        return None;
+        return Ok(None);
     }
-    let call = decoded.field("call")?;
-    if call.field("call_module").and_then(ValueExt::as_str) != Some("MevShield")
-        || call.field("call_function").and_then(ValueExt::as_str) != Some("submit_encrypted")
-    {
-        return None;
+    let call = decoded.field("call");
+    let name = |field: &str| {
+        call.and_then(|call| call.field(field))
+            .and_then(ValueExt::as_str)
+    };
+    let (Some(module), Some(function)) = (name("call_module"), name("call_function")) else {
+        return Err("signed by this account, but its call's pallet or name is unreadable".into());
+    };
+    if module != "MevShield" || function != "submit_encrypted" {
+        return Ok(None);
     }
     // A carrier without a readable nonce field still holds an inner nonce.
-    Some(
+    Ok(Some(
         decoded
             .field("nonce")
             .and_then(ValueExt::as_u128)
             .and_then(|nonce| u64::try_from(nonce).ok()),
-    )
+    ))
 }

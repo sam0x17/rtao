@@ -2116,11 +2116,16 @@ pub struct ShieldOptions { pub period: ShieldPeriod /* P8 */, pub wait: Wait /* 
      `account_nextIndex` afresh, and while carrier n is pending the node answers n+1, the inner's nonce: a
      transaction signed with it is accepted, then invalidated when the pair lands. So every fresh nonce first reads
      `author_pendingExtrinsics` on the same endpoint and decodes this account's entries through the head runtime,
-     matching `MevShield.submit_encrypted` by name; undecodable entries are skipped. While such a carrier is
-     pending the read repeats after one block, doubling to eight, at most 10 times; it never skips to n+2, which
-     would strand every later nonce if the inner were dropped. The carrier leaves the pool within its era of at most
-     eight blocks. An unavailable or refused pool read, or exhausted polls, fall back to `account_nextIndex` with a
-     warning. Fee probes do not wait. This is D-084.
+     matching `MevShield.submit_encrypted` by name. Only entries carrying the account's 32-byte key are decoded;
+     one of those that the head runtime cannot decode, or whose signed call has no readable pallet and name, is
+     logged with its error and counted as a possible carrier, so a changed extrinsic format cannot silently turn the
+     wait off. While such a carrier is pending the read repeats after one block, doubling to eight, at most 10 times;
+     it never skips to n+2, which would strand every later nonce if the inner were dropped. The carrier leaves the
+     pool within its era of at most eight blocks. An unavailable or refused pool read, or exhausted polls, fall back
+     to `account_nextIndex` with a warning. Fee probes do not wait. This is D-084.
+   - A shielded submission leases its pair only after its finalized era anchor passes the headroom check, so a
+     finality refusal reserves nothing. When that lease waited for a pending carrier, the anchor has aged by the
+     wait, so it is selected again under the same rules, holding the lease, before either signature.
    - A carrier that still loses its nonce (a lagging backend, or a concurrent signer) is re-sealed with a fresh key,
      anchor and pair, at most `ShieldOptions::nonce_conflict_retries` (default 10) times within the invocation's
      deadlines, waiting one block doubling to eight. Only proven non-inclusion qualifies: the author refused it as

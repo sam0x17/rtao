@@ -730,47 +730,65 @@ impl Client {
             // The anchor is the read endpoint's finalized head, where the
             // signing payload resolves it; best is the submission endpoint's.
             // A lagging read endpoint only widens the measured lag.
-            let waiting = tokio::time::Instant::now();
-            let finalized = loop {
-                let best = limits
-                    .admission
-                    .run(self, chain.at(BlockRef::Best))
-                    .await?
-                    .block()
-                    .number;
-                let finalized = limits
-                    .admission
-                    .run(self, self.at(BlockRef::Finalized))
-                    .await?
-                    .block()
-                    .number;
-                let roomy = best.saturating_sub(finalized) <= era_headroom_lag(opts.period);
-                match check_era(opts.period, best, finalized) {
-                    Ok(()) if roomy || waiting.elapsed() >= opts.finality_wait => break finalized,
-                    Err(refusal) if waiting.elapsed() >= opts.finality_wait => {
-                        return Err(refusal);
+            //
+            // The pair is leased only once an anchor passes, so a refusal
+            // reserves nothing. A fresh lease may wait several blocks for this
+            // account's pending carriers, which ages that anchor; after such a
+            // wait the anchor is chosen again, holding the lease.
+            let mut leased = None;
+            let (finalized, (carrier_lease, inner_lease)) = loop {
+                let waiting = tokio::time::Instant::now();
+                let finalized = loop {
+                    let best = limits
+                        .admission
+                        .run(self, chain.at(BlockRef::Best))
+                        .await?
+                        .block()
+                        .number;
+                    let finalized = limits
+                        .admission
+                        .run(self, self.at(BlockRef::Finalized))
+                        .await?
+                        .block()
+                        .number;
+                    let roomy = best.saturating_sub(finalized) <= era_headroom_lag(opts.period);
+                    match check_era(opts.period, best, finalized) {
+                        Ok(()) if roomy || waiting.elapsed() >= opts.finality_wait => {
+                            break finalized;
+                        }
+                        Err(refusal) if waiting.elapsed() >= opts.finality_wait => {
+                            return Err(refusal);
+                        }
+                        _ => {
+                            limits
+                                .admission
+                                .run(self, async {
+                                    tokio::time::sleep(SHIELD_FINALITY_POLL).await;
+                                    Ok::<(), ClientError>(())
+                                })
+                                .await?;
+                        }
                     }
-                    _ => {
-                        limits
-                            .admission
-                            .run(self, async {
-                                tokio::time::sleep(SHIELD_FINALITY_POLL).await;
-                                Ok::<(), ClientError>(())
-                            })
-                            .await?;
-                    }
+                };
+                if let Some(pair) = leased.take() {
+                    break (finalized, pair);
                 }
+                if durable.is_some() {
+                    // Other clients/restarts sharing the journal do not share
+                    // this connection's nonce cache. The account owner is held
+                    // here; resolve the actual author endpoint before
+                    // allocating a pair.
+                    self.nonces().clear_account(&account);
+                }
+                let (pair, waited) = limits
+                    .admission
+                    .run(self, self.nonces().lease_pair_waited(&account))
+                    .await?;
+                if !waited {
+                    break (finalized, pair);
+                }
+                leased = Some(pair);
             };
-            if durable.is_some() {
-                // Other clients/restarts sharing the journal do not share this
-                // connection's nonce cache. The account owner is held here;
-                // resolve the actual author endpoint before allocating a pair.
-                self.nonces().clear_account(&account);
-            }
-            let (carrier_lease, inner_lease) = limits
-                .admission
-                .run(self, self.nonces().lease_pair(&account))
-                .await?;
             let inner = limits
                 .admission
                 .run(

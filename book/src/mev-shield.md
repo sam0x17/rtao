@@ -56,7 +56,11 @@ client waits one block, doubling to eight, for at most
 `SHIELD_CARRIER_POLLS` (10) reads. A carrier leaves the pool within its era,
 either included with its inner or expired. If the pool cannot be read, or the
 carrier is still pending after the last read, the client logs a warning and
-uses the reported nonce. Fee estimates do not wait.
+uses the reported nonce. A pool entry carrying the account's key that the
+current runtime cannot decode is logged and treated as a possible carrier.
+When a shielded submission waited this way, it chooses its finalized era
+anchor again afterwards, so the wait does not use up the era. Fee estimates do
+not wait.
 
 The client calls `Signer::prepare_shielded` before selecting that anchor or
 reserving either nonce. Vault connects its page and requests camera startup
