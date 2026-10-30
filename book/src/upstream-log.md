@@ -251,6 +251,25 @@ well. These local source checks leave runtime range null and the attested
 runtime catalog empty;
 they are not hosted CI or semantic approval of the port.
 
+## 2026-10-29: finalized v486 runtime and Python parity
+
+Advance parity v484 (`5749dbfbe4a78ccd3938d46ffae45e059488feb7`) to the final
+[v486 release](https://github.com/RaoFoundation/subtensor/releases/tag/v486)
+(`72323e13249c9e25c7e792a2b3c08502c84651d5`), a deployed-runtime publication
+without an upgrade manifest. Finalized Finney block 9,393,482,
+`0xf8bea834abdd103986b19ee128522de4c3a7fb6358eb03f32b3360552a48642b`, reports
+spec 486 and code `0x49781ac4cfda0ac6cf6e53cfceea7c728394d9c28da7881f47e3fbfbc239800f`,
+matching the release wasm and its deployment record; testnet runs the same code.
+`xtask pin` now proves such releases from `deployment.json`. Core v478 and its
+patch remain.
+
+The metadata drift is surface-unchanged (System.Version only). Import 390
+artifacts, regenerate 86 intents and 105 reads, and reconcile 364 watched
+sources: 363 unchanged, and `upgrade_helpers.py` adds `CONST_RANDOM_SEED` to the
+srtool reproduce recipe (ported, tested). See the
+[upgrade record](../../docs/compat/v486-upgrade.md). No hosted CI, oracle
+comparison, localnet e2e or image execution; the validated range stays null.
+
 ## 2026-10-25: finalized v484 runtime and Python parity
 
 Advance parity v482 (`8cf229f8ef969389d054a4c161b53ffd164a041f`) to the final

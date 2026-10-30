@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "release": {
+    "tag": "v486",
+    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+    "url": "https://github.com/RaoFoundation/subtensor/releases/tag/v486",
+    "kind": "deployed-runtime publication (no upgrade-manifest.json)",
+    "published_at": "2026-10-26T18:46:26Z",
+    "assets": {
+      "deployment.json": {
+        "sha256": "d5b1106aa8f3e2d14a609d1798450209a769f03cec2769773e8e6e0b866ea39d",
+        "content": {
+          "spec_version": 486,
+          "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+          "code_hash": "0x49781ac4cfda0ac6cf6e53cfceea7c728394d9c28da7881f47e3fbfbc239800f",
+          "first_mainnet_block": 9369470
+        }
+      },
+      "subtensor-digest.json": {
+        "sha256": "10217a2ddb48bf9adc0fce02e8e987cb5d69b4f105658808dad9331e57afd07d",
+        "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+        "srtool": "srtool v0.18.3",
+        "rustc": "rustc 1.89.0 (29483883e 2025-08-04)"
+      },
+      "subtensor.wasm": {
+        "sha256": "0x46a07a802272d3b66f6e67213be8cc4c9b3f8788e91153686f192077d3df4457",
+        "blake2_256": "0x49781ac4cfda0ac6cf6e53cfceea7c728394d9c28da7881f47e3fbfbc239800f",
+        "size": 2678238
+      }
+    }
+  },
+  "finney": {
+    "finalized_block": 9393482,
+    "finalized_head": "0xf8bea834abdd103986b19ee128522de4c3a7fb6358eb03f32b3360552a48642b",
+    "spec": 486,
+    "code_hash": "0x49781ac4cfda0ac6cf6e53cfceea7c728394d9c28da7881f47e3fbfbc239800f",
+    "metadata": {
+      "v15": "vendor/metadata/finney/486.v15.scale",
+      "v15_sha256": "582b1d0568a4c1a4c5e9ab2b0038ea4c0f8c61f4972ce1af91fa6dfb0ab01a81",
+      "v16": "vendor/metadata/finney/486.v16.scale",
+      "v16_sha256": "e96a429def2d05791ac2bbf57f9f5287d6fb07c44900d71353c2697d8a7b6da4"
+    }
+  },
+  "testnet": {
+    "spec": 486,
+    "code_hash": "0x49781ac4cfda0ac6cf6e53cfceea7c728394d9c28da7881f47e3fbfbc239800f",
+    "note": "read-only state_getStorageHash(:code) at a finalized block; equal to Finney"
+  },
+  "localnet": {
+    "image": "ghcr.io/raofoundation/subtensor-localnet",
+    "pinned": {
+      "tag": "v486",
+      "digest": "sha256:597778ceb7de7e39e60545a7e5f18829ca1530d8e5be7e097c17cf404e742ff0"
+    },
+    "mainnet": {
+      "tag": "mainnet",
+      "digest": "sha256:597778ceb7de7e39e60545a7e5f18829ca1530d8e5be7e097c17cf404e742ff0"
+    },
+    "testnet": {
+      "tag": "testnet",
+      "digest": "sha256:5e4eaefb768d08bf13345d9c60eeb04719a8bb1a9d0fdb14e4f05bbb95a5602e"
+    },
+    "devnet": {
+      "tag": "devnet",
+      "digest": "sha256:64f56c4b5485c2bf1f299ce792423517217acd7e763549dab311c74e784bee2b"
+    },
+    "main": {
+      "tag": "main",
+      "digest": "sha256:decee127d9a5ea00a6f8885bf3ba4f44e57e0b2e0da47226ed90b2437e0b10b6"
+    }
+  },
+  "core": {
+    "tag": "v478",
+    "commit": "850f2755bb05a3851f948489f0ab27b0645cebce",
+    "fingerprint": "b3:edc9f51ac0953af2b9b60665398e0146567ae4ca9988d7f018d3788f01a73b86"
+  },
+  "scope": "Registry and release identities only; the image was not executed and no reproducible build was performed."
+}

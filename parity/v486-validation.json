@@ -1,0 +1,782 @@
+{
+  "schema": 1,
+  "scope": "Local development validation of the finalized v486 source candidate; no hosted CI, independent Python oracle, localnet e2e or image execution. Suites overlap; counts must not be summed as unique tests.",
+  "base_commit": "36ffc503 (v484 branch) + main 9f7b0f3b",
+  "parity_commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+  "execution_policy": {
+    "umask": "022",
+    "cargo": "sequential under one exclusive lock with one shared target",
+    "temporary_files": "task-scoped root",
+    "public_sources_only": true
+  },
+  "live_readonly": {
+    "testnet_cli": "rtao subnets emission show --netuid 601 --network test connects on spec 486 without a guard refusal",
+    "finney_pin_rpc": "about 9 calls by pin --prepare-candidate"
+  },
+  "checks": [
+    {
+      "command": "cargo --offline xtask pin --parity v486 --prepare-candidate",
+      "status": "passed",
+      "log": {
+        "name": "prepare-candidate.log",
+        "sha256": "feba94fb3eadf2e34862005c7347b853858786ad110d04659ba73e8405423369",
+        "bytes": 2256
+      }
+    },
+    {
+      "command": "cargo --offline xtask import-upstream",
+      "status": "passed",
+      "log": {
+        "name": "import-upstream.log",
+        "sha256": "0636a51fb2881891b6669e4c1df31c4e1371bf966858eae8314dc000762683bb",
+        "bytes": 1600
+      }
+    },
+    {
+      "command": "cargo --offline xtask extract",
+      "status": "passed",
+      "log": {
+        "name": "extract.log",
+        "sha256": "75419d04a5289eb94a23895aaabb878b58a1e7004ba12a437c1d417ca6164e37",
+        "bytes": 1632
+      }
+    },
+    {
+      "command": "cargo --offline xtask regen",
+      "status": "passed",
+      "log": {
+        "name": "regen.log",
+        "sha256": "9e12af316c5c9bab6bacc45e75ed4752bb9aac2d8beb264326a04e0818b16eb9",
+        "bytes": 2128
+      }
+    },
+    {
+      "command": "cargo --offline xtask drift diff 484 -> 486 (V15/V16)",
+      "status": "passed",
+      "log": {
+        "name": "drift.log",
+        "sha256": "3d299193205dcac193f20b04827340eee61735e918cc2716abcea06977f8f594",
+        "bytes": 5693
+      }
+    },
+    {
+      "command": "cargo --offline xtask parity report --base <baseline>",
+      "status": "passed",
+      "log": {
+        "name": "porting-report.log",
+        "sha256": "39cacec4026c5a767f51500636efa27d87db6bb570d3e611b4363ea9ef3b7aca",
+        "bytes": 1887
+      }
+    },
+    {
+      "command": "cargo --offline xtask parity bless <all 364 reviewed paths>",
+      "status": "passed",
+      "log": {
+        "name": "final-parity-bless.log",
+        "sha256": "ddd1da8ef932958c9e60e9ee674f4d235a10bfcaef753a6f4bb677eb791d19aa",
+        "bytes": 15537
+      }
+    },
+    {
+      "command": "cargo --offline xtask parity matrix",
+      "status": "passed",
+      "log": {
+        "name": "final-parity-matrix.log",
+        "sha256": "15bd5fe3a3d949d4fa881f9e407ce9f8d309747b15ba3fcce6f866efd697f1e3",
+        "bytes": 161
+      }
+    },
+    {
+      "command": "cargo --offline xtask compat --measure-build-weight --build-target aarch64-apple-darwin",
+      "status": "passed",
+      "log": {
+        "name": "compat-measure.log",
+        "sha256": "3e1c00aec9ad23f77bf78949c0cf0b0e8e715b36afb67511ce30f7c454f8e8b3",
+        "bytes": 312
+      }
+    },
+    {
+      "command": "cargo --offline xtask parity check --strict",
+      "status": "passed",
+      "log": {
+        "name": "final-parity-strict.log",
+        "sha256": "43b67a181b7aa58afd69e2a62c50dc228c6521d139d26939c189820236c528e0",
+        "bytes": 3733
+      }
+    },
+    {
+      "command": "cargo --offline xtask import-upstream --verify-only",
+      "status": "passed",
+      "log": {
+        "name": "validate-import.log",
+        "sha256": "2d56dddeadd418f49738490eb97ba492c0f0d4444ee75c8d96e518fc53d9a5e7",
+        "bytes": 181
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask pin --check --source-only",
+      "status": "passed",
+      "log": {
+        "name": "validate-pin-source.log",
+        "sha256": "e0e552a89dfceab3e5b653d5a86c0372eeb315e118122a94b12ecf6cd591a22d",
+        "bytes": 327
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask extract --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-extract.log",
+        "sha256": "5cacd21710cbeaffddf834edf6d45378c4e0d9f4a1ef018bcb2d48f028d2f0f8",
+        "bytes": 206
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask regen --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-regen.log",
+        "sha256": "2981ab458582d54f5abfa8e47ab2185e473249f36d274e4685319e53a7ce18c0",
+        "bytes": 492
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask probe pins --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-probe-check.log",
+        "sha256": "40015e35bfba02e1279d2ef37fa4c2103e2cdfac67cbec2ce4a2c9132e128904",
+        "bytes": 138
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask compat --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-compat-check.log",
+        "sha256": "e957325c6df78a0b7e69129b693ac0cd0f61b60579c9a1bbb61a3ce6d61f7f09",
+        "bytes": 197
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline xtask parity check --strict",
+      "status": "passed",
+      "log": {
+        "name": "validate-parity-strict.log",
+        "sha256": "42c26371f2ddd88edc88130181f17f40215543afe67deabf8f57d5407facc72b",
+        "bytes": 3733
+      },
+      "suites": []
+    },
+    {
+      "command": "cargo --offline fmt --all --check",
+      "status": "passed",
+      "log": {
+        "name": "validate-fmt-check-rerun.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "suites": [],
+      "note": "Initial run flagged formatting of two new tests; fixed in f4e90bf8 and rerun."
+    },
+    {
+      "command": "cargo --offline test -p xtask pin::tests",
+      "status": "passed",
+      "log": {
+        "name": "validate-xtask-pin.log",
+        "sha256": "e34ad242b48131f122f55371a55c3fc954ac734a79d547d0281aa83d45da01b6",
+        "bytes": 2349
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 25,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p xtask core_patch::tests",
+      "status": "refused-by-design",
+      "log": {
+        "name": "validate-xtask-core-patch.log",
+        "sha256": "800c2061f43dba99195a4c2f1c973742c1e92bed439dee22286828f4ab4572b4",
+        "bytes": 1023
+      },
+      "suites": [
+        {
+          "status": "FAILED",
+          "passed": 3,
+          "failed": 1,
+          "ignored": 0
+        }
+      ],
+      "note": "hosted_git_fixture_proves_exact_trees_path_modes_and_append_only_history refuses locally (core-patch builds run only in hosted Linux CI, PLAN Q30); the other 3 pass, as in 484."
+    },
+    {
+      "command": "cargo --offline test -p xtask extract",
+      "status": "passed",
+      "log": {
+        "name": "validate-xtask-extract.log",
+        "sha256": "ffbabf98bb0edd47234ac061a4f2e278c6158b40edc9fe71c5282826e2d5b435",
+        "bytes": 10244
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 91,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p xtask parity::tests",
+      "status": "passed",
+      "log": {
+        "name": "validate-xtask-parity.log",
+        "sha256": "659b9ddf45b17ad6740e650f0da6037525a218a013c249c81a888571ca51ed67",
+        "bytes": 2957
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 31,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p xtask regen",
+      "status": "passed",
+      "log": {
+        "name": "validate-xtask-regen-rerun.log",
+        "sha256": "025ca358a9ad8f09914fca040044d21398f4e5db53eca3b0116db4abf34b9839",
+        "bytes": 3059
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 28,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "note": "Initial run lacked the $RTAO_TEMP_ROOT/tmp directory the drift preview test creates into; rerun after creating it."
+    },
+    {
+      "command": "cargo --offline test -p rtao-runtime --lib --tests",
+      "status": "passed",
+      "log": {
+        "name": "validate-runtime.log",
+        "sha256": "4499180c2afc2013f0ee4ea646811b9ad5d61728037e45eb1b9a8d58040ee073",
+        "bytes": 7461
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 60,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-client --lib",
+      "status": "passed",
+      "log": {
+        "name": "validate-client-unit.log",
+        "sha256": "c6c14ba4cb3a226e5d2aa4e6300a31eb6fe02a1d1292c4033bc40414f1fc1356",
+        "bytes": 19192
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 194,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-reads --tests",
+      "status": "passed",
+      "log": {
+        "name": "validate-reads.log",
+        "sha256": "7c883f36fcfd16f21be0019d569608da41c3ad81e562affb19cf3b6134385f39",
+        "bytes": 14514
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --lib commands::upgrade",
+      "status": "passed",
+      "log": {
+        "name": "validate-cli-upgrade.log",
+        "sha256": "ff069347a7608aa3fbfa1c262f892d2e153d4ef5ab57c2a4c9d37c1c180d514d",
+        "bytes": 4195
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 25,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --test subnets_commands --test subnet_emission_commands --test generated_commands --no-fail-fast",
+      "status": "passed",
+      "log": {
+        "name": "validate-cli-subnets-emission.log",
+        "sha256": "f9714f42920b4f8a425805fdc82b2254d14b9b3c6a7fcbbd046b44f0bd45a4b1",
+        "bytes": 5163
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 32,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-intents --all-features --test emission_weights",
+      "status": "passed",
+      "log": {
+        "name": "validate-intents-emission.log",
+        "sha256": "d1a6a6b65f38c38145ca3642a800d56fddcde4a67e1d679051e5647992306078",
+        "bytes": 1991
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-primitives --test emission_weights",
+      "status": "passed",
+      "log": {
+        "name": "validate-primitives-emission.log",
+        "sha256": "40e111b774d100df8c228b4a733629033e79ec2c49e2311e328a2e93a483b2fb",
+        "bytes": 1767
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 20,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-core-ext timelock_commit",
+      "status": "passed",
+      "log": {
+        "name": "validate-core-ext-timelock.log",
+        "sha256": "24217ef6e52c2d5bc1adeec0319cb681b060f2526951f9c04d32b8065493abff",
+        "bytes": 5773
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-core-ext epoch_schedule",
+      "status": "passed",
+      "log": {
+        "name": "validate-core-ext-epoch.log",
+        "sha256": "ed240904a92d0bf9262ea5b701776d6da4f972a0eea9caeebe52128801d95ae8",
+        "bytes": 3115
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-intents --all-features --lib weights",
+      "status": "passed",
+      "log": {
+        "name": "validate-intents-weights.log",
+        "sha256": "94355756cda9e80fe2f655eb659bf66a8193cd426c2e400929fd78381cdff063",
+        "bytes": 2917
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 28,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-neuron weights",
+      "status": "passed",
+      "log": {
+        "name": "validate-neuron-all.log",
+        "sha256": "9505e1106d132dad6cdea93b524a2e88880ac49e583c82879b667c49a4230a31",
+        "bytes": 21496
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 222,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "note": "The plain filter matched no tests (the weights path is behind the validator feature); rerun as `cargo test -p rtao-neuron --all-features` (223 passed)."
+    },
+    {
+      "command": "cargo --offline test -p rtao-cli --test weights_axon_commands --test m7_timelock_commands --test null_weights_file --no-fail-fast",
+      "status": "passed",
+      "log": {
+        "name": "validate-cli-weights.log",
+        "sha256": "304a81af90dfd1ebb802c40c1df8e820804e84d05dc0b0b703999432f48061eb",
+        "bytes": 3108
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "status": "ok",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao --features blocking --test facade_contract",
+      "status": "passed",
+      "log": {
+        "name": "validate-blocking-facade.log",
+        "sha256": "fcc1a15dfab81e3d535e6a51678e71d8c0090d452c544514ad65beaf19260829",
+        "bytes": 1893
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline test -p rtao-metagraph --test decode",
+      "status": "passed",
+      "log": {
+        "name": "validate-metagraph.log",
+        "sha256": "5b996b3c7b835c4d52d2d00f13d9137d1414830d1ca88a4d115fc965a1d5eaff",
+        "bytes": 2586
+      },
+      "suites": [
+        {
+          "status": "ok",
+          "passed": 16,
+          "failed": 0,
+          "ignored": 1
+        }
+      ]
+    },
+    {
+      "command": "cargo --offline clippy -p rtao -p rtao-cli -p rtao-evm -p rtao-reads -p rtao-intents -p rtao-runtime -p rtao-client -p xtask --all-targets --features rtao/blocking -- -D warnings",
+      "status": "passed",
+      "log": {
+        "name": "validate-clippy.log",
+        "sha256": "142be9983d6b57fc6d1fbb08f2193706d6226ee9067e681298cbaac62fb867e6",
+        "bytes": 2968
+      },
+      "suites": []
+    }
+  ],
+  "compatibility": {
+    "validated_spec_range": null,
+    "validated_runtimes": [],
+    "oracle_status": "optional-unverified"
+  }
+}
