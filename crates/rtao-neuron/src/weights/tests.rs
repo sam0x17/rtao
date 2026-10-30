@@ -671,3 +671,148 @@ fn advisories_log_when_a_condition_starts_and_again_after_it_clears() {
     assert!(!advisory_started(&mut reported, false));
     assert!(advisory_started(&mut reported, true));
 }
+
+mod validator_surface {
+    use super::super::ValidatorSurface;
+    use rtao_core::runtime::Runtime;
+    use rtao_runtime::RuntimeHandle;
+    use scale_info::{TypeDef, Variant, form::PortableForm};
+
+    fn pinned() -> Runtime {
+        Runtime::parse(
+            include_bytes!("../../../../vendor/metadata/finney/486.v15.scale"),
+            486,
+            1,
+            42,
+        )
+        .expect("pinned metadata")
+    }
+
+    fn enum_variants(core: &mut Runtime, type_id: u32) -> &mut Vec<Variant<PortableForm>> {
+        let ty = core
+            .types
+            .types
+            .iter_mut()
+            .find(|ty| ty.id == type_id)
+            .expect("enum type");
+        let TypeDef::Variant(variants) = &mut ty.ty.type_def else {
+            unreachable!("pallet call and error types are enums")
+        };
+        &mut variants.variants
+    }
+
+    /// Point one call argument at the type of its first argument.
+    fn reshape_call(core: &mut Runtime, pallet: &str, call: &str, field: &str) {
+        let calls = core
+            .pallet(pallet)
+            .and_then(|pallet| pallet.calls_type)
+            .expect("call enum");
+        let variant = enum_variants(core, calls)
+            .iter_mut()
+            .find(|variant| variant.name == call)
+            .expect("call variant");
+        let first = variant.fields[0].ty;
+        let target = variant
+            .fields
+            .iter_mut()
+            .find(|candidate| candidate.name.as_deref() == Some(field))
+            .expect("call field");
+        assert_ne!(target.ty, first, "{pallet}.{call}.{field} must change type");
+        target.ty = first;
+    }
+
+    #[test]
+    fn pinned_runtime_satisfies_every_validator_dependency() {
+        let runtime = RuntimeHandle::new(pinned()).expect("runtime");
+        let surface = ValidatorSurface::check(&runtime);
+        assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
+        assert!(surface.unrelated.is_empty(), "{:#?}", surface.unrelated);
+        assert!(crate::runtime::weight_calls_verified(
+            runtime.surface_report()
+        ));
+    }
+
+    #[test]
+    fn unrelated_breaking_drift_is_only_a_warning() {
+        let mut core = pinned();
+        reshape_call(&mut core, "SubtensorModule", "burned_register", "hotkey");
+        let errors = core
+            .pallet("Balances")
+            .and_then(|pallet| pallet.errors_type)
+            .expect("Balances errors");
+        let catalogued = rtao_runtime::errors::MODULE_ERRORS
+            .iter()
+            .find(|error| error.pallet == "Balances")
+            .expect("catalogued Balances error");
+        enum_variants(&mut core, errors).retain(|variant| variant.name != catalogued.name);
+        let runtime = RuntimeHandle::new(core).expect("runtime");
+        let report = runtime.surface_report();
+        // The former global gate refused this runtime.
+        assert!(report.breaking_items() >= 2, "{:#?}", report.changes);
+        let surface = ValidatorSurface::check(&runtime);
+        assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
+        let unrelated = surface
+            .unrelated
+            .iter()
+            .map(|change| change.descriptor.as_str())
+            .collect::<Vec<_>>();
+        assert!(unrelated.contains(&"call:SubtensorModule.burned_register"));
+        let error = format!("error:Balances.{}", catalogued.name);
+        assert!(unrelated.contains(&error.as_str()), "{unrelated:?}");
+        assert!(crate::runtime::weight_calls_verified(report));
+    }
+
+    #[test]
+    fn changed_validator_weight_call_shape_fails_the_check() {
+        for call in [
+            "set_mechanism_weights",
+            "commit_timelocked_mechanism_weights",
+        ] {
+            let mut core = pinned();
+            let field = if call == "set_mechanism_weights" {
+                "version_key"
+            } else {
+                "reveal_round"
+            };
+            reshape_call(&mut core, "SubtensorModule", call, field);
+            let runtime = RuntimeHandle::new(core).expect("runtime");
+            assert!(!crate::runtime::weight_calls_verified(
+                runtime.surface_report()
+            ));
+            let surface = ValidatorSurface::check(&runtime);
+            assert!(!surface.is_compatible());
+            let id = format!("call:SubtensorModule.{call}");
+            assert!(
+                surface
+                    .incompatible
+                    .iter()
+                    .any(|line| line.starts_with(&id)),
+                "{:#?}",
+                surface.incompatible
+            );
+        }
+    }
+
+    #[test]
+    fn missing_preflight_storage_fails_the_check() {
+        let mut core = pinned();
+        let pallet = core
+            .pallets
+            .iter_mut()
+            .find(|pallet| pallet.name == "SubtensorModule")
+            .expect("SubtensorModule");
+        pallet
+            .storage
+            .retain(|entry| entry.name != "WeightsSetRateLimit");
+        let runtime = RuntimeHandle::new(core).expect("runtime");
+        let surface = ValidatorSurface::check(&runtime);
+        assert!(
+            surface
+                .incompatible
+                .iter()
+                .any(|line| line.starts_with("storage:SubtensorModule.WeightsSetRateLimit")),
+            "{:#?}",
+            surface.incompatible
+        );
+    }
+}

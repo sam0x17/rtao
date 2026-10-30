@@ -561,6 +561,26 @@ impl rtao_tx::Clock for ExecutorClock {
             .unwrap_or(std::time::UNIX_EPOCH)
     }
 }
+/// Typed weight calls a validator composes; their shape gates weight submission.
+pub(crate) const WEIGHT_CALLS: [&rtao_runtime::CallDescriptor; 2] = [
+    &rtao_runtime::calls::subtensor_module::COMMIT_TIMELOCKED_MECHANISM_WEIGHTS,
+    &rtao_runtime::calls::subtensor_module::SET_MECHANISM_WEIGHTS,
+];
+
+/// Surface identity of one typed call, as carried by `SurfaceChange::descriptor`.
+pub(crate) fn call_identity(call: &rtao_runtime::CallDescriptor) -> String {
+    format!("call:{}.{}", call.pallet, call.name)
+}
+
+/// Whether every validator weight call keeps its argument shape.
+///
+/// The validator run loop pauses weight submission when this is false.
+pub(crate) fn weight_calls_verified(report: &rtao_runtime::SurfaceReport) -> bool {
+    WEIGHT_CALLS
+        .iter()
+        .all(|call| report.shape_matches(&call_identity(call)))
+}
+
 async fn epoch_at(
     client: &Client,
     netuid: NetUid,
@@ -581,8 +601,7 @@ async fn epoch_at(
         report.shape_matches("call:SubtensorModule.serve_axon")
             && report.shape_matches("call:SubtensorModule.serve_axon_tls")
     } else {
-        report.shape_matches("call:SubtensorModule.commit_timelocked_mechanism_weights")
-            && report.shape_matches("call:SubtensorModule.set_mechanism_weights")
+        weight_calls_verified(report)
     };
     Ok((
         EpochStatus {

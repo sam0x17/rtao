@@ -98,8 +98,11 @@ status 130. A systemd unit should use `Restart=on-failure`, `KillSignal=SIGTERM`
 and `TimeoutStopSec=90`.
 
 The `rtao-validator` binary also accepts `--check-connection`. This checks the
-configured endpoint's TLS connection, chain identity and required runtime
-metadata, then closes before loading a wallet. It supports
+configured endpoint's TLS connection, chain identity, signing support and the
+runtime metadata the validator uses (its weight calls, preflight storage and
+metagraph API), then closes before loading a wallet. Breaking drift in other
+calls, pallets or module errors is logged as a warning and does not fail the
+check. It supports
 `--network finney --chain-endpoint wss://your-node.example` and the ordinary TLS
 root configuration. It is useful for verifying container certificates before
 providing the hotkey mount.

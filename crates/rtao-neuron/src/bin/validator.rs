@@ -98,9 +98,19 @@ async fn main() -> anyhow::Result<()> {
         let client = rtao_client::Client::connect(rtao_neuron::client_config(&config)?).await?;
         client.ensure_signing().await?;
         let runtime = client.refresh_runtime().await?;
+        // Only what this validator uses gates the check; unrelated drift is a warning.
+        let surface = rtao_neuron::weights::ValidatorSurface::check(&runtime);
+        for change in &surface.unrelated {
+            tracing::warn!(
+                descriptor = %change.descriptor,
+                detail = %change.detail,
+                "runtime surface changed outside what the validator uses"
+            );
+        }
         anyhow::ensure!(
-            runtime.surface_report().breaking_items() == 0,
-            "runtime has incompatible required metadata"
+            surface.is_compatible(),
+            "runtime has incompatible validator metadata: {}",
+            surface.incompatible.join(", ")
         );
         client.close().await;
         println!("connection verified");

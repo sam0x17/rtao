@@ -231,6 +231,120 @@ fn refuse(
     .into()
 }
 
+/// Storage read by [`WeightPreflight::fetch`], in fetch order.
+pub const PREFLIGHT_STORAGE: [rtao_runtime::StorageSurface; 17] = [
+    st::UIDS.surface(),
+    st::LAST_UPDATE.surface(),
+    st::WEIGHTS_SET_RATE_LIMIT.surface(),
+    st::COMMIT_REVEAL_WEIGHTS_ENABLED.surface(),
+    st::COMMIT_REVEAL_WEIGHTS_VERSION.surface(),
+    st::REVEAL_PERIOD_EPOCHS.surface(),
+    st::WEIGHTS_VERSION_KEY.surface(),
+    st::MIN_ALLOWED_WEIGHTS.surface(),
+    st::MAX_WEIGHTS_LIMIT.surface(),
+    st::SUBNETWORK_N.surface(),
+    st::SUBNET_EPOCH_CONSENSUS.surface(),
+    st::VALIDATOR_PERMIT.surface(),
+    st::TEMPO.surface(),
+    st::LAST_EPOCH_BLOCK.surface(),
+    st::PENDING_EPOCH_AT.surface(),
+    st::SUBNET_EPOCH_INDEX.surface(),
+    st::BLOCKS_SINCE_LAST_STEP.surface(),
+];
+
+/// Runtime API read by the validator's mechanism metagraph sync.
+pub const METAGRAPH_API: rtao_runtime::ApiSurface =
+    rtao_runtime::runtime_apis::subnet_info_runtime_api::GET_MECHAGRAPH.surface();
+
+/// Live-surface compatibility of what a validator actually uses.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ValidatorSurface {
+    /// Validator dependencies this build cannot use under the live runtime,
+    /// as `descriptor: detail` lines.
+    pub incompatible: Vec<String>,
+    /// Breaking drift in items the validator does not use. Diagnostics report
+    /// these as warnings; they do not affect validator operation.
+    pub unrelated: Vec<rtao_runtime::SurfaceChange>,
+}
+
+impl ValidatorSurface {
+    /// Check the validator's weight calls, preflight storage, metagraph API
+    /// and signing surface against the live runtime.
+    ///
+    /// The weight calls use the run loop's own pause predicate. Breaking
+    /// signing drift (V15 metadata level, extrinsic version, signed
+    /// extensions) stays a hard requirement. Breaking drift elsewhere is
+    /// collected in [`Self::unrelated`] instead of refusing a compatible
+    /// runtime.
+    pub fn check(runtime: &rtao_runtime::RuntimeHandle) -> Self {
+        use rtao_runtime::{SurfaceClass, SurfaceKind};
+        let report = runtime.surface_report();
+        let mut used = crate::runtime::WEIGHT_CALLS
+            .iter()
+            .map(|call| crate::runtime::call_identity(call))
+            .collect::<Vec<_>>();
+        used.extend(
+            PREFLIGHT_STORAGE
+                .iter()
+                .map(|storage| format!("storage:{}.{}", storage.pallet, storage.name)),
+        );
+        used.push(format!("api:{}.{}", METAGRAPH_API.api, METAGRAPH_API.name));
+        let details = |descriptor: &str| {
+            report
+                .changes
+                .iter()
+                .filter(|change| change.descriptor == descriptor)
+                .map(|change| change.detail.as_str())
+                .collect::<Vec<_>>()
+                .join("; ")
+        };
+        let mut surface = Self::default();
+        if !crate::runtime::weight_calls_verified(report) {
+            surface.incompatible.extend(
+                crate::runtime::WEIGHT_CALLS
+                    .iter()
+                    .map(|call| crate::runtime::call_identity(call))
+                    .filter(|id| !report.shape_matches(id))
+                    .map(|id| format!("{id}: weight submission pauses; {}", details(&id))),
+            );
+        }
+        surface.incompatible.extend(
+            used.iter()
+                .skip(crate::runtime::WEIGHT_CALLS.len())
+                .filter(|id| !report.shape_matches(id))
+                .map(|id| {
+                    let detail = details(id);
+                    if detail.is_empty() {
+                        format!("{id}: not verified by this rtao build")
+                    } else {
+                        format!("{id}: {detail}")
+                    }
+                }),
+        );
+        for change in &report.changes {
+            if change.class != SurfaceClass::Breaking || used.contains(&change.descriptor) {
+                continue;
+            }
+            if matches!(
+                change.kind,
+                SurfaceKind::Metadata | SurfaceKind::Extrinsic | SurfaceKind::Extension
+            ) {
+                surface
+                    .incompatible
+                    .push(format!("{}: {}", change.descriptor, change.detail));
+            } else {
+                surface.unrelated.push(change.clone());
+            }
+        }
+        surface
+    }
+
+    /// Whether the validator can operate under the checked runtime.
+    pub fn is_compatible(&self) -> bool {
+        self.incompatible.is_empty()
+    }
+}
+
 /// The seventeen storage fields used by one mechanism's preflight.
 #[derive(Clone, Debug)]
 pub struct WeightPreflight {
@@ -275,29 +389,14 @@ impl WeightPreflight {
         let index = NetUidStorageIndex::new(netuid, mech)?;
         let net = vec![netuid.into_core_value()];
         let mut plan = ReadPlan::new();
-        plan.push(
-            st::UIDS.surface(),
-            vec![netuid.into_core_value(), hotkey.into_core_value()],
-        );
-        plan.push(st::LAST_UPDATE.surface(), vec![index.into_core_value()]);
-        plan.push(st::WEIGHTS_SET_RATE_LIMIT.surface(), net.clone());
-        plan.push(st::COMMIT_REVEAL_WEIGHTS_ENABLED.surface(), net.clone());
-        plan.push(st::COMMIT_REVEAL_WEIGHTS_VERSION.surface(), Vec::new());
-        for surface in [
-            st::REVEAL_PERIOD_EPOCHS.surface(),
-            st::WEIGHTS_VERSION_KEY.surface(),
-            st::MIN_ALLOWED_WEIGHTS.surface(),
-            st::MAX_WEIGHTS_LIMIT.surface(),
-            st::SUBNETWORK_N.surface(),
-            st::SUBNET_EPOCH_CONSENSUS.surface(),
-            st::VALIDATOR_PERMIT.surface(),
-            st::TEMPO.surface(),
-            st::LAST_EPOCH_BLOCK.surface(),
-            st::PENDING_EPOCH_AT.surface(),
-            st::SUBNET_EPOCH_INDEX.surface(),
-            st::BLOCKS_SINCE_LAST_STEP.surface(),
-        ] {
-            plan.push(surface, net.clone());
+        for (position, surface) in PREFLIGHT_STORAGE.into_iter().enumerate() {
+            let keys = match position {
+                0 => vec![netuid.into_core_value(), hotkey.into_core_value()],
+                1 => vec![index.into_core_value()],
+                4 => Vec::new(),
+                _ => net.clone(),
+            };
+            plan.push(surface, keys);
         }
         let values = snapshot.fetch(plan).await?;
         anyhow::ensure!(
