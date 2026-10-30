@@ -201,6 +201,7 @@ pub struct FakeState {
     runtimes_at: BTreeMap<String, Arc<Runtime>>,
     runtime_results: BTreeMap<(String, Vec<u8>), Vec<u8>>,
     runtime_defaults: BTreeMap<String, Vec<u8>>,
+    runtime_at: BTreeMap<(String, String), Vec<u8>>,
     nonces: BTreeMap<String, u64>,
     blocks: BTreeMap<String, Block>,
     canonical: BTreeMap<u64, String>,
@@ -274,6 +275,7 @@ impl FakeState {
             runtimes_at: BTreeMap::new(),
             runtime_results: BTreeMap::new(),
             runtime_defaults: BTreeMap::new(),
+            runtime_at: BTreeMap::new(),
             nonces: BTreeMap::new(),
             blocks: BTreeMap::new(),
             canonical: BTreeMap::new(),
@@ -486,6 +488,26 @@ impl FakeState {
             .map_err(CoreError::from)?;
         self.runtime_defaults
             .insert(format!("{api}_{method}"), bytes);
+        Ok(())
+    }
+
+    /// Encode runtime-API output for one block hash, ahead of exact and default
+    /// results, so a call at any other block keeps the earlier answer.
+    pub fn seed_runtime_at(
+        &mut self,
+        hash: impl Into<String>,
+        api: &str,
+        method: &str,
+        value: Value,
+    ) -> Result<(), CoreError> {
+        let info = rtao_core::ops::runtime_api::runtime_api_method(&self.runtime, api, method)?;
+        let value = fill_defaults(&self.runtime, info.output, value)?;
+        let bytes = self
+            .runtime
+            .encode_spec(&TypeSpec::Id(info.output), &value)
+            .map_err(CoreError::from)?;
+        self.runtime_at
+            .insert((hash.into(), format!("{api}_{method}")), bytes);
         Ok(())
     }
 
@@ -1087,9 +1109,11 @@ impl FakeState {
                 &vec![if runtime.is_v15 { 15u32 } else { 14u32 }].encode()
             )));
         }
-        if let Some(output) = self
-            .runtime_results
-            .get(&(method.into(), input.clone()))
+        let at = self
+            .optional_hash(params.get(2))?
+            .and_then(|hash| self.runtime_at.get(&(hash, method.to_owned())));
+        if let Some(output) = at
+            .or_else(|| self.runtime_results.get(&(method.into(), input.clone())))
             .or_else(|| self.runtime_defaults.get(method))
         {
             return Ok(json!(hex_bytes(output)));
