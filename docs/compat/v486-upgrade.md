@@ -65,17 +65,31 @@ both. A release that carries both records or neither is refused. Tests:
   `CommitRevealWeightsVersion` 4.
 - The owner emission split (`AdminUtils.sudo_set_subnet_emission_weights`,
   pallet 19, call 114) is unchanged and already shipped as
-  `rtao subnets emission`.
+  `rtao subnets emission`. `crates/rtao-runtime/tests/emission_weights_call.rs`
+  pins its pallet and call index and its argument types in the 486 metadata.
+  Writes now read the stored vector back once the inclusion block is final
+  (bounded wait, 3 minutes by default). The read-back goes through the
+  submit endpoint when the read node lags, and compares against the vector the
+  `SubnetEmissionWeightsSet` event applied. It exits 1 only for a real mismatch,
+  and skips with a reason otherwise. Under `--json` it is a second document
+  after the receipt. `subnets hyperparameters` now points the three emission
+  slots and `owner_cut_enabled` at `rtao subnets emission` instead of
+  "root/governance only". Both divergences from the upstream CLI are recorded in
+  the parity map.
 
 ## Validation and remaining gaps
 
-Local validation is recorded in [parity/v486-validation.json](../../parity/v486-validation.json).
-The xtask import, pin source, extract, regen, probe, compat and strict parity
-checks pass. So do the focused runtime, client, reads, CLI upgrade,
-subnets/emission, intents/primitives emission, core-ext timelock/epoch,
-intents weights, neuron (all features, 223 tests) and CLI weights/timelock
-suites, plus clippy `-D warnings` and fmt. The release CLI connects
-read-only to testnet on 486 without a guard refusal.
+Local validation on head `20f94c1a` is recorded in
+[parity/v486-validation.json](../../parity/v486-validation.json). The xtask
+import, pin source, extract, regen, probe, compat and strict parity checks pass.
+So do these focused suites, plus clippy `-D warnings` and fmt:
+runtime (72), client (194), reads (137), CLI upgrade (25), CLI subnets and
+emission (60), CLI hparams with `extension` (19), CLI lib (224), intents and
+primitives emission (9, 20), the emission call metadata test (2), core-ext
+timelock and epoch (3, 7), intents weights (28), neuron with all features
+(223), CLI weights and timelock (28), testkit (13), blocking facade (3) and
+metagraph (16). The release CLI connects read-only to testnet on 486 without a
+guard refusal.
 
 `core_patch::tests::hosted_git_fixture_*` refuses locally by design (PLAN Q30),
 as in 484. No hosted CI, independent Python oracle comparison, localnet e2e or
