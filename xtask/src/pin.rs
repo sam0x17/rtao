@@ -693,11 +693,22 @@ struct ReleaseProof {
     branch: Option<String>,
 }
 
+/// How a release identifies its runtime. Train releases carry an
+/// `upgrade-manifest.json`. A runtime deployed outside the release train is
+/// published after the fact (upstream `publish-deployed-runtime.yml`, from
+/// v486) with a `deployment.json` that records the mainnet code hash the
+/// srtool build was compared against; it has no upgrade manifest.
+#[derive(Clone, Copy)]
+enum Provenance<'a> {
+    Train(&'a Json),
+    Deployed(&'a Json),
+}
+
 fn validate_release(
     release: &Json,
     tag: &str,
     commit: &str,
-    manifest: &Json,
+    provenance: Provenance<'_>,
     digest: &Json,
     wasm: &[u8],
 ) -> Result<String> {
@@ -709,37 +720,67 @@ fn validate_release(
         release["tag_name"].as_str() == Some(tag),
         "release tag differs from requested tag"
     );
-    ensure!(
-        manifest["tag"].as_str() == Some(tag) && manifest["commit"].as_str() == Some(commit),
-        "upgrade manifest does not identify the immutable tag commit"
-    );
-    ensure!(
-        manifest["repo"].as_str() == Some(REPOSITORY)
-            && manifest["network"].as_str() == Some("finney"),
-        "upgrade manifest has unexpected repository or network"
-    );
-    ensure!(
-        manifest["spec_version"].as_u64() == Some(u64::from(release_spec(tag)?)),
-        "upgrade manifest spec differs from release"
-    );
+    let spec = u64::from(release_spec(tag)?);
+    let sha256 = format!("0x{:x}", Sha256::digest(wasm));
+    let hash = format!("0x{:x}", Blake2b::<U32>::digest(wasm));
+    match provenance {
+        Provenance::Train(manifest) => {
+            ensure!(
+                manifest["tag"].as_str() == Some(tag)
+                    && manifest["commit"].as_str() == Some(commit),
+                "upgrade manifest does not identify the immutable tag commit"
+            );
+            ensure!(
+                manifest["repo"].as_str() == Some(REPOSITORY)
+                    && manifest["network"].as_str() == Some("finney"),
+                "upgrade manifest has unexpected repository or network"
+            );
+            ensure!(
+                manifest["spec_version"].as_u64() == Some(spec),
+                "upgrade manifest spec differs from release"
+            );
+            ensure!(
+                manifest["wasm_sha256"].as_str() == Some(&sha256),
+                "release wasm sha256 differs from upgrade manifest"
+            );
+        }
+        Provenance::Deployed(deployment) => {
+            // The deployment record names the immutable commit, the spec and
+            // the finalized mainnet code hash; the release wasm must be
+            // exactly that code. The Finney :code read below re-proves it.
+            ensure!(
+                deployment["commit"].as_str() == Some(commit),
+                "deployment record does not identify the immutable tag commit"
+            );
+            ensure!(
+                deployment["spec_version"].as_u64() == Some(spec),
+                "deployment record spec differs from release"
+            );
+            ensure!(
+                deployment["code_hash"].as_str() == Some(&hash),
+                "release wasm BLAKE2b-256 differs from the deployed mainnet code hash"
+            );
+            ensure!(
+                deployment["first_mainnet_block"].as_u64().is_some(),
+                "deployment record has no first mainnet block"
+            );
+        }
+    }
     ensure!(
         digest["commit"].as_str() == Some(commit),
         "srtool digest commit differs from release tag"
     );
-    let sha256 = format!("0x{:x}", Sha256::digest(wasm));
     ensure!(
-        manifest["wasm_sha256"].as_str() == Some(&sha256)
-            && digest["sha256"].as_str() == Some(&sha256),
-        "release wasm sha256 differs from manifest or srtool digest"
+        digest["sha256"].as_str() == Some(&sha256),
+        "release wasm sha256 differs from srtool digest"
     );
-    let hash = format!("0x{:x}", Blake2b::<U32>::digest(wasm));
     ensure!(
         digest["runtimes"]["compressed"]["blake2_256"].as_str() == Some(&hash),
         "release wasm BLAKE2b-256 differs from srtool digest"
     );
     ensure!(
         digest["runtimes"]["compressed"]["subwasm"]["core_version"]["specVersion"].as_u64()
-            == Some(u64::from(release_spec(tag)?)),
+            == Some(spec),
         "release wasm spec differs from requested release"
     );
     Ok(hash)
@@ -786,13 +827,24 @@ fn release_proof(repo: &Path, requested: &str) -> Result<ReleaseProof> {
         );
         http(url, &[], None, false)
     };
-    let manifest: Json = serde_json::from_slice(&asset("upgrade-manifest.json")?)?;
+    let named = |name: &str| assets.iter().any(|a| a["name"].as_str() == Some(name));
+    let record: Json = match (named("upgrade-manifest.json"), named("deployment.json")) {
+        (true, false) => serde_json::from_slice(&asset("upgrade-manifest.json")?)?,
+        (false, true) => serde_json::from_slice(&asset("deployment.json")?)?,
+        (true, true) => bail!("release carries both an upgrade manifest and a deployment record"),
+        (false, false) => bail!("release has neither an upgrade manifest nor a deployment record"),
+    };
+    let provenance = if named("upgrade-manifest.json") {
+        Provenance::Train(&record)
+    } else {
+        Provenance::Deployed(&record)
+    };
     let srtool: Json = serde_json::from_slice(&asset("subtensor-digest.json")?)?;
     let expected_hash = validate_release(
         &release,
         &tag,
         &commit,
-        &manifest,
+        provenance,
         &srtool,
         &asset("subtensor.wasm")?,
     )?;
@@ -1808,11 +1860,11 @@ mod tests {
     #[test]
     fn release_provenance_fails_closed_on_each_identity() -> Result<()> {
         let (release, manifest, digest, wasm) = release_fixture();
-        validate_release(&release, "v478", "commit", &manifest, &digest, &wasm)?;
+        validate_release(&release, "v478", "commit", Provenance::Train(&manifest), &digest, &wasm)?;
         for key in ["draft", "prerelease"] {
             let mut bad = release.clone();
             bad[key] = json!(true);
-            ensure!(validate_release(&bad, "v478", "commit", &manifest, &digest, &wasm).is_err());
+            ensure!(validate_release(&bad, "v478", "commit", Provenance::Train(&manifest), &digest, &wasm).is_err());
         }
         for (key, bad_value) in [
             ("commit", json!("other")),
@@ -1824,14 +1876,14 @@ mod tests {
         ] {
             let mut bad = manifest.clone();
             bad[key] = bad_value;
-            ensure!(validate_release(&release, "v478", "commit", &bad, &digest, &wasm).is_err());
+            ensure!(validate_release(&release, "v478", "commit", Provenance::Train(&bad), &digest, &wasm).is_err());
         }
         ensure!(
             validate_release(
                 &release,
                 "v478",
                 "commit",
-                &manifest,
+                Provenance::Train(&manifest),
                 &digest,
                 b"different wasm"
             )
@@ -1839,7 +1891,39 @@ mod tests {
         );
         let mut bad = digest.clone();
         bad["runtimes"]["compressed"]["blake2_256"] = json!("0xdead");
-        ensure!(validate_release(&release, "v478", "commit", &manifest, &bad, &wasm).is_err());
+        ensure!(validate_release(&release, "v478", "commit", Provenance::Train(&manifest), &bad, &wasm).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn deployed_release_provenance_fails_closed_on_each_identity() -> Result<()> {
+        // v486 shape: deployment.json instead of upgrade-manifest.json.
+        let (release, _, digest, wasm) = release_fixture();
+        let code = format!("0x{:x}", Blake2b::<U32>::digest(&wasm));
+        let deployment = json!({"spec_version": 478, "commit": "commit", "code_hash": code, "first_mainnet_block": 9369470});
+        let ok = |d: &Json, g: &Json, w: &[u8]| {
+            validate_release(&release, "v478", "commit", Provenance::Deployed(d), g, w)
+        };
+        ensure!(ok(&deployment, &digest, &wasm)? == code);
+        for (key, bad_value) in [
+            ("commit", json!("other")),
+            ("spec_version", json!(477)),
+            ("code_hash", json!("0xdead")),
+            ("first_mainnet_block", json!(null)),
+        ] {
+            let mut bad = deployment.clone();
+            bad[key] = bad_value;
+            ensure!(ok(&bad, &digest, &wasm).is_err(), "{key} accepted");
+        }
+        ensure!(ok(&deployment, &digest, b"different wasm").is_err());
+        for path in [["sha256", ""], ["runtimes", "compressed"]] {
+            let mut bad = digest.clone();
+            match path {
+                ["sha256", _] => bad["sha256"] = json!("0xdead"),
+                _ => bad["runtimes"]["compressed"]["blake2_256"] = json!("0xdead"),
+            }
+            ensure!(ok(&deployment, &bad, &wasm).is_err());
+        }
         Ok(())
     }
 
