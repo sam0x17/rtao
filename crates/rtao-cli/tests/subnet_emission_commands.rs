@@ -3,17 +3,18 @@
 //! `subnets emission` views and checked writes against the encoded fake chain.
 
 use rtao::{
-    client::{Client, ClientConfig, Network},
+    client::{Client, ClientConfig, Network, View},
     primitives::{
-        AlphaBalance, NetUid, TaoBalance,
+        AccountId, AlphaBalance, CryptoType, DefaultAccount, NetUid, TaoBalance,
         emission_weights::{self as ew, DEFAULT_OWNER, ONE},
     },
+    signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
 };
 use rtao_cli::{
     application,
     books::Books,
     commands::subnets::{self, Request},
-    context::{AppContext, SubmissionOptions},
+    context::{AppContext, ExternalSignerFactory, SubmissionOptions},
     error::CliError,
     globals::Globals,
     output::{MemorySink, Output, OutputOptions, Stream},
@@ -21,7 +22,7 @@ use rtao_cli::{
 };
 use rtao_runtime::storage::{subtensor_module as st, swap};
 use rtao_testkit::{
-    FakeChain, FakeState,
+    FakeChain, FakeState, Reply,
     fixtures::catalog_samples::{
         COLD, EMISSION_ALPHA_ISSUANCE, EMISSION_ROOT_TAO, EMISSION_TAO_WEIGHT, SUBNET,
         emission_root_baseline_share, emission_weights_info, intent_state,
@@ -114,6 +115,16 @@ async fn run(
     wallet: &Path,
     args: &[&str],
 ) -> Result<Outcome, Box<dyn std::error::Error>> {
+    run_with(client, wallet, args, None).await
+}
+
+/// Run one invocation; a signing source routes it as an external signer.
+async fn run_with(
+    client: &Client,
+    wallet: &Path,
+    args: &[&str],
+    signer: Option<&Factory>,
+) -> Result<Outcome, Box<dyn std::error::Error>> {
     let mut argv = vec![
         "rtao",
         "--wallet-path",
@@ -134,6 +145,10 @@ async fn run(
         |_| None,
     )?;
     globals.apply_with_env(leaf, &subnets::reserved(group)?, |_| None)?;
+    if let Some(signer) = signer {
+        globals.signer_backend = Some("extension".into());
+        globals.signer_address = Some(signer.0.key.account().to_string());
+    }
     let mut ctx = AppContext::new(
         globals,
         config,
@@ -157,7 +172,7 @@ async fn run(
         client,
         &request,
         SubmissionOptions::default(),
-        None,
+        signer.map(|signer| signer as &dyn ExternalSignerFactory),
         &mut history,
     )
     .await
@@ -485,6 +500,12 @@ async fn writes_dry_run_through_the_real_plan_with_structured_previews() -> Test
         baseline() * 100.0
     )));
     assert!(human.stdout.contains("alpha validators get"));
+    // A preview submits nothing, so nothing is read back.
+    for preview in [&dry, &human] {
+        assert!(!preview.stdout.contains("readback"), "{}", preview.stdout);
+        assert!(!preview.stdout.contains("read back"), "{}", preview.stdout);
+        assert!(!preview.stdout.contains("read-back"), "{}", preview.stdout);
+    }
 
     for (verb, delta) in [("increase", 1i128), ("decrease", -1)] {
         let adjusted = run(
@@ -767,6 +788,292 @@ async fn rate_limited_owner_dry_run_is_blocked_with_exit_1() -> TestResult {
         json!(false)
     );
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
+/// In-memory test key standing in for an external signer; no wallet secret exists.
+struct Keys {
+    key: KeypairSigner,
+}
+impl KeyView for Keys {
+    fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+        Ok(self.key.account())
+    }
+    fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+        Ok(self.key.account())
+    }
+    fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+        Ok(self.key.account().0)
+    }
+}
+impl DynKeySource for Keys {
+    fn signer_for<'a>(
+        &'a self,
+        role: SignerRole,
+    ) -> BoxFuture<'a, Result<Arc<dyn Signer>, SignerError>> {
+        Box::pin(async move {
+            assert_eq!(role, SignerRole::Coldkey);
+            Ok(Arc::new(self.key.clone()) as Arc<dyn Signer>)
+        })
+    }
+}
+struct Factory(Arc<Keys>);
+impl Factory {
+    fn new() -> Result<Self, SignerError> {
+        Ok(Self(Arc::new(Keys {
+            key: KeypairSigner::from_seed(&[23; 32], CryptoType::Ed25519)?,
+        })))
+    }
+    fn account(&self) -> AccountId {
+        self.0.key.account()
+    }
+}
+impl ExternalSignerFactory for Factory {
+    fn keys<'a>(
+        &'a self,
+        _: &'a Globals,
+        _: SignerRole,
+    ) -> BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
+        Box::pin(async move { Ok(self.0.clone() as Arc<dyn DynKeySource>) })
+    }
+}
+
+/// The emission fixture with the test key as the subnet owner.
+fn owned_state(owner: AccountId) -> Result<FakeState, Box<dyn std::error::Error>> {
+    let mut state = state()?;
+    state.seed(&st::SUBNET_OWNER, (SUBNET,), DefaultAccount::from(owner))?;
+    Ok(state)
+}
+
+/// Once an extrinsic is submitted the runtime API reports `stored`, as the
+/// chain would after applying a change (ours, or another that landed with it).
+fn store_on_submit(state: &mut FakeState, stored: ew::Weights) {
+    state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
+        let mut info = emission_weights_info(SUBNET);
+        info["weights"] = json!(stored);
+        info["owner"] = json!(stored[ew::OWNER]);
+        info["validator"] = json!(stored[ew::VALIDATOR]);
+        info["miner"] = json!(stored[ew::MINER]);
+        match state.seed_runtime("SubnetInfoRuntimeApi", "get_subnet_emission_weights", info) {
+            Ok(()) => state.dispatch(request),
+            Err(error) => Reply::error(-32602, error.to_string(), None),
+        }
+    });
+}
+
+fn documents(stdout: &str) -> Result<Vec<Value>, serde_json::Error> {
+    serde_json::Deserializer::from_str(stdout)
+        .into_iter::<Value>()
+        .collect()
+}
+
+fn owner_at(share: &str) -> Result<ew::Weights, Box<dyn std::error::Error>> {
+    Ok(ew::renormalize(
+        &ew::default_weights(DEFAULT_OWNER),
+        &[(ew::OWNER, ew::parse_share(share)?)],
+    )?)
+}
+
+#[tokio::test]
+async fn finalized_write_reads_the_stored_vector_back_and_reports_a_match() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let expected = owner_at("10%")?;
+    let mut state = owned_state(signer.account())?;
+    store_on_submit(&mut state, expected);
+    let (client, chain) = client(state).await?;
+    let netuid = netuid();
+    let write = [
+        "--yes",
+        "--no-mev-shield",
+        "subnets",
+        "emission",
+        "set-value",
+        "--netuid",
+        &netuid,
+        "--slot",
+        "owner",
+        "--value",
+        "10%",
+    ];
+    let json_args = [&["--json"], &write[..]].concat();
+    let written = run_with(&client, wallet.path(), &json_args, Some(&signer)).await?;
+    assert_eq!(code(&written), 0, "{}", written.stderr);
+    let documents = documents(&written.stdout)?;
+    assert_eq!(documents.len(), 2, "{}", written.stdout);
+    let (receipt, readback) = (&documents[0], &documents[1]["readback"]);
+    assert_eq!(receipt["success"], json!(true), "{receipt}");
+    assert_eq!(readback["status"], json!("match"), "{readback}");
+    assert_eq!(readback["matches"], json!(true));
+    assert_eq!(readback["differs"], json!([]));
+    assert_eq!(readback["netuid"], json!(SUBNET.0));
+    assert_eq!(readback["submitted"], json!(expected));
+    assert_eq!(readback["stored"], json!(expected));
+    assert!(
+        (readback["stored_shares"]["owner"]
+            .as_f64()
+            .ok_or("owner share")?
+            - 0.10)
+            .abs()
+            < 1e-9
+    );
+    // Read at the finalized inclusion block the receipt names.
+    assert_eq!(readback["block_hash"], receipt["block_hash"]);
+    let included = chain.mutate_state(|state| state.block);
+    assert_eq!(readback["block"], json!(included));
+
+    // The vector read back is compared with the one the extrinsic carried.
+    let submissions = chain.mutate_state(|state| state.submissions.clone());
+    assert_eq!(submissions.len(), 1);
+    let runtime = View::runtime(&client).await?;
+    let decoded =
+        rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
+            .to_json();
+    assert_eq!(
+        decoded["call"]["call_function"],
+        json!("sudo_set_subnet_emission_weights"),
+        "{decoded}"
+    );
+    assert_eq!(
+        decoded["call"]["call_args"],
+        json!([
+            {"name": "netuid", "type": "NetUid", "value": SUBNET.0},
+            {"name": "uids", "type": "Vec<u16>", "value": [0, 1, 2, 3, 4]},
+            {"name": "values", "type": "Vec<u64>", "value": expected},
+        ]),
+        "{decoded}"
+    );
+
+    let human = run_with(&client, wallet.path(), &write, Some(&signer)).await?;
+    assert_eq!(code(&human), 0, "{}", human.stderr);
+    for needle in [
+        format!("subnet {netuid} emission weights read back at finalized block"),
+        "Stored".into(),
+        format!("owner  10.0000%  {} parts", expected[ew::OWNER]),
+        format!(
+            "validator  {}  {} parts",
+            ew::format_share(expected[ew::VALIDATOR], 4),
+            expected[ew::VALIDATOR]
+        ),
+        format!(
+            "miner  {}  {} parts",
+            ew::format_share(expected[ew::MINER], 4),
+            expected[ew::MINER]
+        ),
+        "burn  0.0000%  0 parts".into(),
+        "recycle  0.0000%  0 parts".into(),
+        "result  matches the submitted vector exactly".into(),
+    ] {
+        assert!(human.stdout.contains(&needle), "{needle}\n{}", human.stdout);
+    }
+    assert!(!human.stdout.contains("submitted 0 parts"));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let submitted = owner_at("10%")?;
+    // Another change landed with ours: the chain keeps owner at 12%.
+    let stored = owner_at("12%")?;
+    let mut state = owned_state(signer.account())?;
+    store_on_submit(&mut state, stored);
+    let (client, chain) = client(state).await?;
+    let netuid = netuid();
+    let written = run_with(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--yes",
+            "--no-mev-shield",
+            "subnets",
+            "emission",
+            "set-value",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "owner",
+            "--value",
+            "10%",
+        ],
+        Some(&signer),
+    )
+    .await?;
+    assert_eq!(code(&written), 1, "{}", written.stderr);
+    let error = written.result.as_ref().err().ok_or("mismatch error")?;
+    assert!(
+        error
+            .submitted_receipt
+            .as_ref()
+            .is_some_and(|receipt| receipt.success),
+        "the finalized receipt is retained"
+    );
+    let documents = documents(&written.stdout)?;
+    assert_eq!(documents.len(), 2, "{}", written.stdout);
+    let readback = &documents[1]["readback"];
+    assert_eq!(readback["status"], json!("mismatch"), "{readback}");
+    assert_eq!(readback["matches"], json!(false));
+    assert_eq!(readback["differs"], json!(["owner", "validator", "miner"]));
+    assert_eq!(readback["submitted"], json!(submitted));
+    assert_eq!(readback["stored"], json!(stored));
+    let diagnostic: Value = serde_json::from_str(&written.stderr)?;
+    let text = diagnostic["error"].as_str().ok_or("error")?;
+    assert!(
+        text.starts_with(&format!(
+            "the emission vector stored on subnet {netuid} at finalized block"
+        )),
+        "{text}"
+    );
+    assert!(text.ends_with("differs from the one submitted (owner, validator, miner)"));
+    assert!(
+        diagnostic["note"]
+            .as_str()
+            .ok_or("note")?
+            .contains("another change")
+    );
+    assert!(
+        diagnostic["help"]
+            .as_str()
+            .ok_or("help")?
+            .contains(&format!("rtao subnets emission show --netuid {netuid}"))
+    );
+    assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+
+    let human = run_with(
+        &client,
+        wallet.path(),
+        &[
+            "--yes",
+            "--no-mev-shield",
+            "subnets",
+            "emission",
+            "set-value",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "owner",
+            "--value",
+            "10%",
+        ],
+        Some(&signer),
+    )
+    .await?;
+    assert_eq!(code(&human), 1, "{}", human.stderr);
+    for needle in [
+        format!(
+            "owner  12.0000%  {} parts; submitted {} parts",
+            stored[ew::OWNER],
+            submitted[ew::OWNER]
+        ),
+        "result  differs from the submitted vector".into(),
+    ] {
+        assert!(human.stdout.contains(&needle), "{needle}\n{}", human.stdout);
+    }
+    assert!(human.stderr.contains("differs from the one submitted"));
     client.close().await;
     Ok(())
 }
