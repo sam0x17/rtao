@@ -1111,6 +1111,45 @@ async fn connected_add_stake_targets_a_named_wallet_hotkey_without_the_picker() 
     .await?;
     assert_eq!(tx.args["hotkey_ss58"], json!(OTHER));
     assert!(prompts.lock().map_err(|_| "prompts")?.is_empty());
+
+    // A missing named hotkey stays an input error and never opens the picker.
+    let parsed = parse(&[
+        "rtao",
+        "stake",
+        "add",
+        "--netuid",
+        "1",
+        "--amount",
+        "1",
+        "--wallet",
+        "chosen",
+        "--wallet-hotkey",
+        "absent",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    ctx.globals.wallet_path = root.path().to_owned();
+    assert!(ctx.globals.hotkey_given);
+    let prompts = interactive(&mut ctx, &["Other"]);
+    let leaf = parsed
+        .subcommand()
+        .ok_or("group")?
+        .1
+        .subcommand()
+        .ok_or("leaf")?
+        .1;
+    let error = TxRequest::from_matches_with_client(
+        &mut ctx,
+        &client,
+        "add_stake",
+        leaf,
+        &mut PromptHistory::default(),
+    )
+    .await
+    .err()
+    .ok_or("a missing named hotkey must refuse")?;
+    assert_eq!(error.code, 2, "{}", error.message);
+    assert!(error.message.contains("absent"), "{}", error.message);
+    assert!(prompts.lock().map_err(|_| "prompts")?.is_empty());
     client.close().await;
     Ok(())
 }

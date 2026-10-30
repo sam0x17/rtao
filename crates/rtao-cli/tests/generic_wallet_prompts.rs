@@ -1778,6 +1778,57 @@ fn stake_add_without_a_named_hotkey_still_offers_the_terminal_target_picker() ->
     Ok(())
 }
 
+// D-085: skipping the picker for a named hotkey never falls back to it, or
+// to another hotkey, when that hotkey file is missing.
+#[test]
+fn interactive_stake_add_with_a_missing_named_hotkey_is_an_input_error_without_prompting()
+-> TestResult {
+    let root = Root::new()?;
+    public_hotkey(&root, "configured", AccountId([31; 32]))?;
+    let base = ["rtao", "stake", "add", "--netuid", "1", "--amount", "1"];
+    let flag = [
+        &base[..],
+        &["--wallet", "configured", "--wallet-hotkey", "absent"],
+    ]
+    .concat();
+    let root_flag = [
+        &[
+            "rtao",
+            "--wallet-hotkey",
+            "absent",
+            "--wallet",
+            "configured",
+        ][..],
+        &base[1..],
+    ]
+    .concat();
+    let env_only = [&base[..], &["--wallet", "configured"]].concat();
+    for (argv, env_hotkey) in [(flag, None), (root_flag, None), (env_only, Some("absent"))] {
+        let (input, trace) = terminal(&["1"], true, true);
+        let (mut app, leaf) = stake_add_context(&root, &argv, input, env_hotkey)?;
+        assert!(app.globals.hotkey_given, "{argv:?}");
+        let error = match TxRequest::from_matches(
+            &mut app,
+            "add_stake",
+            &leaf,
+            &mut PromptHistory::default(),
+        ) {
+            Ok(request) => {
+                return Err(format!("unexpected request {:?} for {argv:?}", request.args).into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(error.code, 2, "{argv:?}: {}", error.message);
+        assert!(
+            error.message.contains("absent"),
+            "{argv:?}: {}",
+            error.message
+        );
+        assert!(trace.lock().map_err(|_| "trace")?.is_empty(), "{argv:?}");
+    }
+    Ok(())
+}
+
 #[test]
 fn noninteractive_stake_add_defaults_to_the_wallet_hotkey_or_fails_without_prompting() -> TestResult
 {
