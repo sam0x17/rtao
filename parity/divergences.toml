@@ -1107,6 +1107,27 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 upstream_report = "Generic native improvement with FakeChain coverage; focused local checks pass, hosted validation pending. No new upstream filing."
 
 [[divergences]]
+id = "D-085"
+upstream_symbol = "intent_prompts.apply_intent_prompt_policy add_stake target"
+python_behavior = "On a human terminal without `--yes` or the extension signer, `add_stake` and `add_stake_limit` show the stake-target picker whenever `--hotkey` is omitted, even when `--wallet-hotkey` names the wallet hotkey (`PY/cli/intent_prompts.py:137-145`); unattended runs default to the wallet hotkey"
+rtao_behavior = "An explicit root or leaf `--wallet-hotkey`, or a non-empty `BT_WALLET_HOTKEY`, is the `add_stake`/`add_stake_limit` target without a picker; the omitted field resolves to that hotkey's public address and a missing hotkey file is exit 2. Configured hotkeys, source pickers, move destinations and claim-root keep Python's prompts; unattended runs are unchanged and never prompt."
+rationale = "The `--hotkey` help already says it defaults to the wallet hotkey, and naming that hotkey is an explicit choice of target, so asking again contradicts the flag. Only the wallet-defaulted `hotkey_ss58` target is affected; the resolved value is still read from the hotkey's public file and type-checked as an account."
+decision = "D-085; operator report that `stake add --wallet-hotkey` still asked for a target"
+status = "active"
+class = "improved"
+milestone = "M8"
+pinning_tests = [
+  "rtao_cli::intent_prompts::tests::add_stake_policy_uses_named_wallet_hotkey_without_target_picker",
+  "rtao_cli::intent_prompts::tests::named_wallet_hotkey_keeps_source_destination_and_claim_root_pickers",
+  "rtao_cli::generic_wallet_prompts::stake_add_targets_a_named_wallet_hotkey_without_the_terminal_picker",
+  "rtao_cli::generic_wallet_prompts::stake_add_without_a_named_hotkey_still_offers_the_terminal_target_picker",
+  "rtao_cli::generic_wallet_prompts::noninteractive_stake_add_defaults_to_the_wallet_hotkey_or_fails_without_prompting",
+  "rtao_cli::m8_stake_commands::connected_add_stake_targets_a_named_wallet_hotkey_without_the_picker",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/cli/intent_prompts.py#L137-L145"
+upstream_report = "Generic native improvement with fixture coverage; focused local checks pass, hosted validation pending. No new upstream filing."
+
+[[divergences]]
 id = "D-027"
 upstream_symbol = "sync.SyncClient` namespaces"
 python_behavior = "13 attributes, `collateral` absent (`PY/sync.py:186-241`)"

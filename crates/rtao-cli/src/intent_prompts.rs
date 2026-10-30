@@ -63,6 +63,9 @@ fn rules(op: &str) -> Vec<Rule> {
 ///
 /// Richer flows run only without --yes or the extension signer on a human TTY.
 /// Supplied fields stay intact; zero/false/empty-string values are supplied too.
+/// An explicitly named wallet hotkey is the stake target of `add_stake` and
+/// `add_stake_limit`, so their target picker is skipped (D-085; Python still
+/// asks). The omitted field then resolves to that hotkey's public address.
 pub fn apply_intent_prompt_policy(
     context: &PromptContext,
     terminal: &mut dyn Terminal,
@@ -86,6 +89,10 @@ pub fn apply_intent_prompt_policy(
     }
     for rule in rules(op) {
         if supplied(answers, rule.field) {
+            continue;
+        }
+        if wallet_hotkey_target(context, &rule) {
+            missing.retain(|spec| spec.field != rule.field);
             continue;
         }
         missing.retain(|spec| spec.field != rule.field);
@@ -118,6 +125,14 @@ pub fn apply_intent_prompt_policy(
         }
     }
     Ok(missing)
+}
+
+/// Only the canonical wallet-defaulted `hotkey_ss58` target follows a named
+/// wallet hotkey; sources, move destinations and claim-root keep their flows.
+fn wallet_hotkey_target(context: &PromptContext, rule: &Rule) -> bool {
+    context.wallet_hotkey_given
+        && rule.field == "hotkey_ss58"
+        && rule.flow == PromptFlow::StakeTarget
 }
 
 /// Enforce fields that cannot silently fall back after policy prompting.
@@ -256,6 +271,110 @@ mod tests {
             }
         );
         assert_eq!(result[1].flow, PromptFlow::StakeTarget);
+    }
+
+    // D-085: Python asks for the target even after --wallet-hotkey.
+    #[test]
+    fn add_stake_policy_uses_named_wallet_hotkey_without_target_picker() {
+        let mut terminal = TerminalFixture {
+            interactive: true,
+            ..Default::default()
+        };
+        let named = PromptContext {
+            wallet_hotkey_given: true,
+            ..Default::default()
+        };
+        for op in ["add_stake", "add_stake_limit"] {
+            for missing in [
+                specs(&["netuid", "amount_tao"]),
+                specs(&["netuid", "hotkey_ss58", "amount_tao"]),
+            ] {
+                let result =
+                    apply_intent_prompt_policy(&named, &mut terminal, op, missing, &Map::new())
+                        .unwrap();
+                assert_eq!(
+                    result
+                        .iter()
+                        .map(|spec| spec.field.as_str())
+                        .collect::<Vec<_>>(),
+                    ["netuid", "amount_tao"],
+                    "{op}"
+                );
+                assert!(result[1].free_balance);
+            }
+            let unnamed = apply_intent_prompt_policy(
+                &PromptContext::default(),
+                &mut terminal,
+                op,
+                specs(&["netuid", "amount_tao"]),
+                &Map::new(),
+            )
+            .unwrap();
+            assert_eq!(unnamed[1].field, "hotkey_ss58");
+            assert_eq!(unnamed[1].flow, PromptFlow::StakeTarget);
+        }
+        assert!(terminal.messages.is_empty());
+    }
+
+    #[test]
+    fn named_wallet_hotkey_keeps_source_destination_and_claim_root_pickers() {
+        let mut terminal = TerminalFixture {
+            interactive: true,
+            ..Default::default()
+        };
+        let named = PromptContext {
+            wallet_hotkey_given: true,
+            ..Default::default()
+        };
+        let moved = apply_intent_prompt_policy(
+            &named,
+            &mut terminal,
+            "move_stake",
+            specs(&["amount_alpha"]),
+            &Map::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            moved
+                .iter()
+                .map(|spec| (spec.field.as_str(), spec.flow.clone()))
+                .collect::<Vec<_>>(),
+            [
+                (
+                    "origin_hotkey_ss58",
+                    PromptFlow::StakeSource {
+                        netuid_field: Some("origin_netuid".into())
+                    }
+                ),
+                ("dest_hotkey_ss58", PromptFlow::StakeTarget),
+                ("amount_alpha", PromptFlow::Plain),
+            ]
+        );
+        for (op, subnet) in [
+            ("remove_stake", Some("netuid")),
+            ("unstake_all", None),
+            ("swap_stake", Some("origin_netuid")),
+        ] {
+            let result =
+                apply_intent_prompt_policy(&named, &mut terminal, op, Vec::new(), &Map::new())
+                    .unwrap();
+            assert_eq!(result[0].field, "hotkey_ss58");
+            assert_eq!(
+                result[0].flow,
+                PromptFlow::StakeSource {
+                    netuid_field: subnet.map(String::from)
+                }
+            );
+        }
+        let claim = apply_intent_prompt_policy(
+            &named,
+            &mut terminal,
+            "claim_root_with_hotkey",
+            Vec::new(),
+            &Map::new(),
+        )
+        .unwrap();
+        assert_eq!(claim[0].flow, PromptFlow::ClaimRootSource);
     }
 
     #[test]

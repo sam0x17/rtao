@@ -2254,6 +2254,7 @@ impl AppContext {
                 .signer_backend
                 .as_deref()
                 .is_some_and(|v| crate::globals::normalize_signer_backend(v) == "extension"),
+            wallet_hotkey_given: self.globals.hotkey_given,
         }
     }
 }

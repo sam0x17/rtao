@@ -93,7 +93,12 @@ quiet mode suppress intermediate retry errors and retain the final diagnostic.
 `rtao stake --help` includes add/remove/move/transfer/swap, whole-position exits,
 position views, auto-stake and child-key settings. Interactive stake commands
 can select a source position and fill both its hotkey and subnet. Destination
-selection happens before an amount prompt. `rtao stake wizard` prints the
+selection happens before an amount prompt. `rtao stake add` without `--hotkey`
+stakes to the wallet hotkey when `--wallet-hotkey` or `BT_WALLET_HOTKEY` names
+one, without showing the target picker (D-085); otherwise a terminal session
+offers the picker. JSON, quiet, `--yes` and unattended runs never prompt: they
+use the configured wallet hotkey, and a missing hotkey file is an input error
+(exit 2). `rtao stake wizard` prints the
 movement guide without connecting to a node. An exit across multiple hotkeys
 uses one atomic batch and the ordinary shielding policy.
 

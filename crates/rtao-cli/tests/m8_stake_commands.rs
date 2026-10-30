@@ -1062,6 +1062,59 @@ async fn generated_target_and_destination_pickers_record_only_public_selected_ac
     Ok(())
 }
 
+// D-085: a named wallet hotkey is the add-stake target on a terminal too.
+#[tokio::test]
+async fn connected_add_stake_targets_a_named_wallet_hotkey_without_the_picker() -> TestResult {
+    use rtao_cli::commands::generated::TxRequest;
+    let root = TempRoot::new();
+    let hotkeys = root.path().join("chosen").join("hotkeys");
+    std::fs::create_dir_all(&hotkeys)?;
+    std::fs::write(
+        root.path().join("chosen").join("coldkeypub.txt"),
+        serde_json::to_vec(&json!({"ss58Address":OWNER,"cryptoType":1}))?,
+    )?;
+    let public = serde_json::to_vec(&json!({"ss58Address":OTHER,"cryptoType":1}))?;
+    std::fs::write(hotkeys.join("workerpub.txt"), &public)?;
+    std::fs::write(hotkeys.join("worker"), public)?;
+    let (client, _) = client(FakeState::try_default()?).await?;
+    let parsed = parse(&[
+        "rtao",
+        "stake",
+        "add",
+        "--netuid",
+        "1",
+        "--amount",
+        "1",
+        "--wallet",
+        "chosen",
+        "--wallet-hotkey",
+        "worker",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    ctx.globals.wallet_path = root.path().to_owned();
+    assert!(ctx.globals.hotkey_given);
+    let prompts = interactive(&mut ctx, &[]);
+    let leaf = parsed
+        .subcommand()
+        .ok_or("group")?
+        .1
+        .subcommand()
+        .ok_or("leaf")?
+        .1;
+    let tx = TxRequest::from_matches_with_client(
+        &mut ctx,
+        &client,
+        "add_stake",
+        leaf,
+        &mut PromptHistory::default(),
+    )
+    .await?;
+    assert_eq!(tx.args["hotkey_ss58"], json!(OTHER));
+    assert!(prompts.lock().map_err(|_| "prompts")?.is_empty());
+    client.close().await;
+    Ok(())
+}
+
 #[tokio::test]
 async fn empty_human_positions_still_show_accrued_yield_and_claim_guidance() -> TestResult {
     for accrued_rao in [0u64, 500_000_000] {

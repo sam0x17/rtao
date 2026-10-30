@@ -2695,6 +2695,19 @@
         ]
       },
       {
+        "id": "D-085",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_cli::intent_prompts::tests::add_stake_policy_uses_named_wallet_hotkey_without_target_picker",
+          "rtao_cli::intent_prompts::tests::named_wallet_hotkey_keeps_source_destination_and_claim_root_pickers",
+          "rtao_cli::generic_wallet_prompts::stake_add_targets_a_named_wallet_hotkey_without_the_terminal_picker",
+          "rtao_cli::generic_wallet_prompts::stake_add_without_a_named_hotkey_still_offers_the_terminal_target_picker",
+          "rtao_cli::generic_wallet_prompts::noninteractive_stake_add_defaults_to_the_wallet_hotkey_or_fails_without_prompting",
+          "rtao_cli::m8_stake_commands::connected_add_stake_targets_a_named_wallet_hotkey_without_the_picker"
+        ]
+      },
+      {
         "id": "D-027",
         "oracle": "unverified",
         "rtao": "active",

@@ -338,6 +338,9 @@ pub struct PromptContext {
     pub external_signer: bool,
     /// Skip richer intent pickers for the extension signer.
     pub extension_signer: bool,
+    /// An explicit `--wallet-hotkey` or `BT_WALLET_HOTKEY` named the wallet
+    /// hotkey, so a wallet-defaulted stake target needs no picker (D-085).
+    pub wallet_hotkey_given: bool,
 }
 impl Default for PromptContext {
     fn default() -> Self {
@@ -348,6 +351,7 @@ impl Default for PromptContext {
             assume_yes: false,
             external_signer: false,
             extension_signer: false,
+            wallet_hotkey_given: false,
         }
     }
 }

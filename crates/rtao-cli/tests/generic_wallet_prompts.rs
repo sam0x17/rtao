@@ -1687,3 +1687,131 @@ fn required_conviction_boolean_choices_preserve_signer_order_real_intents_and_ca
     }
     Ok(())
 }
+
+fn stake_add_context(
+    root: &Root,
+    argv: &[&str],
+    terminal: SharedTerminal,
+    env_hotkey: Option<&str>,
+) -> Result<(AppContext, clap::ArgMatches), Box<dyn std::error::Error>> {
+    use rtao_cli::commands::stake;
+    let parsed = application::command_tree([stake::command()?]).try_get_matches_from(argv)?;
+    let config = Map::from_iter([
+        ("wallet".into(), json!("configured")),
+        ("wallet_path".into(), json!(root.0)),
+    ]);
+    let env = |name: &str| {
+        (name == "BT_WALLET_HOTKEY")
+            .then(|| env_hotkey.map(str::to_owned))
+            .flatten()
+    };
+    let mut globals = Globals::resolve(&parsed, &config, Path::new("/fixture/no-user-home"), env)?;
+    let group = parsed.subcommand().ok_or("stake group")?.1;
+    globals.apply_with_env(invocation_leaf(group), &stake::reserved(group)?, env)?;
+    let mut app = AppContext::new(globals, config, Books::default(), terminal);
+    app.output = Output::new(OutputOptions::default(), Arc::new(MemorySink::default()));
+    let leaf = invocation_leaf(&parsed).clone();
+    Ok((app, leaf))
+}
+
+// D-085: Python's terminal target picker ignores --wallet-hotkey.
+#[test]
+fn stake_add_targets_a_named_wallet_hotkey_without_the_terminal_picker() -> TestResult {
+    let root = Root::new()?;
+    let worker = AccountId([31; 32]);
+    public_hotkey(&root, "configured", worker)?;
+    let base = ["rtao", "stake", "add", "--netuid", "1", "--amount", "1"];
+    let flag = [
+        &base[..],
+        &["--wallet", "configured", "--wallet-hotkey", "worker"],
+    ]
+    .concat();
+    let root_flag = [
+        &[
+            "rtao",
+            "--wallet-hotkey",
+            "worker",
+            "--wallet",
+            "configured",
+        ][..],
+        &base[1..],
+    ]
+    .concat();
+    let env_only = [&base[..], &["--wallet", "configured"]].concat();
+    for (argv, env_hotkey) in [(flag, None), (root_flag, None), (env_only, Some("worker"))] {
+        let (input, trace) = terminal(&[], true, true);
+        let (mut app, leaf) = stake_add_context(&root, &argv, input, env_hotkey)?;
+        assert!(app.globals.hotkey_given, "{argv:?}");
+        let mut history = PromptHistory::default();
+        let request = TxRequest::from_matches(&mut app, "add_stake", &leaf, &mut history)?;
+        assert_eq!(request.args["hotkey_ss58"], json!(worker), "{argv:?}");
+        request.intent()?;
+        assert!(trace.lock().map_err(|_| "trace")?.is_empty(), "{argv:?}");
+    }
+    Ok(())
+}
+
+#[test]
+fn stake_add_without_a_named_hotkey_still_offers_the_terminal_target_picker() -> TestResult {
+    let root = Root::new()?;
+    public_hotkey(&root, "configured", AccountId([31; 32]))?;
+    let argv = [
+        "rtao",
+        "stake",
+        "add",
+        "--netuid",
+        "1",
+        "--amount",
+        "1",
+        "--wallet",
+        "configured",
+    ];
+    let (input, trace) = terminal(&["1"], true, true);
+    let (mut app, leaf) = stake_add_context(&root, &argv, input, None)?;
+    assert!(!app.globals.hotkey_given);
+    let request =
+        TxRequest::from_matches(&mut app, "add_stake", &leaf, &mut PromptHistory::default())?;
+    assert!(request.args["hotkey_ss58"].is_string());
+    let reads = trace.lock().map_err(|_| "trace")?.clone();
+    assert_eq!(reads.len(), 1, "{reads:?}");
+    assert!(reads[0].contains("hotkey"), "{reads:?}");
+    Ok(())
+}
+
+#[test]
+fn noninteractive_stake_add_defaults_to_the_wallet_hotkey_or_fails_without_prompting() -> TestResult
+{
+    let root = Root::new()?;
+    let worker = AccountId([31; 32]);
+    public_hotkey(&root, "configured", worker)?;
+    let base = ["rtao", "stake", "add", "--netuid", "1", "--amount", "1"];
+    for (extra, tty) in [
+        (&["--wallet-hotkey", "worker"][..], false),
+        (&["--wallet-hotkey", "worker", "--json"][..], true),
+        (&["--wallet-hotkey", "worker", "--yes"][..], true),
+    ] {
+        let argv = [&base[..], extra].concat();
+        let (input, trace) = terminal(&[], tty, tty);
+        let (mut app, leaf) = stake_add_context(&root, &argv, input, None)?;
+        let request =
+            TxRequest::from_matches(&mut app, "add_stake", &leaf, &mut PromptHistory::default())?;
+        assert_eq!(request.args["hotkey_ss58"], json!(worker), "{argv:?}");
+        assert!(trace.lock().map_err(|_| "trace")?.is_empty(), "{argv:?}");
+    }
+    let argv = [&base[..], &["--wallet-hotkey", "absent"]].concat();
+    let (input, trace) = terminal(&[], false, false);
+    let (mut app, leaf) = stake_add_context(&root, &argv, input, None)?;
+    let error = match TxRequest::from_matches(
+        &mut app,
+        "add_stake",
+        &leaf,
+        &mut PromptHistory::default(),
+    ) {
+        Ok(request) => return Err(format!("unexpected request {:?}", request.args).into()),
+        Err(error) => error,
+    };
+    assert_eq!(error.code, 2, "{}", error.message);
+    assert!(error.message.contains("absent"), "{}", error.message);
+    assert!(trace.lock().map_err(|_| "trace")?.is_empty());
+    Ok(())
+}
