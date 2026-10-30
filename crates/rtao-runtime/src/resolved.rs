@@ -29,6 +29,7 @@ use rtao_core::runtime::Runtime;
 use scale_info::{Field, Type, TypeDef, TypeDefPrimitive, form::PortableForm};
 
 use crate::handle::{CallBytes, ComposeError, MetadataLevel, RuntimeHandle};
+use crate::resolved_read::scaled_wrapper;
 
 /// Deepest chain of transparent layers followed for one argument.
 const MAX_LAYERS: usize = 16;
@@ -190,6 +191,9 @@ fn resolve(core: &Runtime, id: u32) -> Result<&Type<PortableForm>, String> {
 fn compact_bits(core: &Runtime, mut id: u32) -> Result<u8, String> {
     for _ in 0..MAX_LAYERS {
         let ty = resolve(core, id)?;
+        if let Some(detail) = scaled_wrapper(ty) {
+            return Err(format!("is a compact {detail}"));
+        }
         match &ty.type_def {
             TypeDef::Primitive(primitive) => {
                 return unsigned_bits(primitive)
@@ -213,6 +217,11 @@ fn layout(core: &Runtime, id: u32, class: &ArgClass, depth: usize) -> Result<Lay
     }
     let ty = resolve(core, id)?;
     let mismatch = || format!("is {}, expected {class}", describe(ty));
+    // A ratio or fixed-point wrapper changes what its integer means, so it is
+    // never unwrapped to encode a plain integer argument.
+    if let Some(detail) = scaled_wrapper(ty) {
+        return Err(format!("is a {detail}, expected {class}"));
+    }
     match (&ty.type_def, class) {
         (TypeDef::Composite(composite), _) if composite.fields.len() == 1 => {
             let field = &composite.fields[0];

@@ -552,3 +552,71 @@ fn inspection_reports_nested_calls_and_refuses_untyped_fields() {
     assert_eq!(only.field("netuid").unwrap().value, Some(ArgValue::Uint(7)));
     assert_eq!(only.field("dests").unwrap().value, None);
 }
+
+#[test]
+fn integers_that_became_ratios_or_fixed_point_refuse_instead_of_encoding_raw_parts() {
+    // A single-field newtype keeps its integer's meaning, but a ratio or a
+    // fixed-point number scales it: encoding the old integer as its raw parts
+    // would sign a different value.
+    let cases: [(&[&str], Option<&str>, &str); 3] = [
+        (
+            &["sp_arithmetic", "per_things", "Permill"],
+            None,
+            "per-thing ratio (sp_arithmetic::per_things::Permill)",
+        ),
+        (
+            &["sp_arithmetic", "fixed_point", "FixedU128"],
+            None,
+            "fixed-point number (sp_arithmetic::fixed_point::FixedU128)",
+        ),
+        (
+            &["substrate_fixed", "FixedU128"],
+            Some("bits"),
+            "fixed-point number (substrate_fixed::FixedU128)",
+        ),
+    ];
+    for (path, name, expected) in cases {
+        let runtime = changed(SET, |core| {
+            let u64 = primitive(core, TypeDefPrimitive::U64);
+            let scaled = add_type(
+                core,
+                TypeDef::Composite(TypeDefComposite {
+                    fields: vec![field(name, u64)],
+                }),
+                path,
+            );
+            retype(core, SET, "version_key", scaled);
+        });
+        let detail = refused(
+            compose_resolved(&runtime, PALLET, SET, &set_args()),
+            "version_key",
+        );
+        assert!(detail.contains(expected), "{detail}");
+    }
+    let runtime = changed(COMMIT, |core| {
+        let u64 = primitive(core, TypeDefPrimitive::U64);
+        let ratio = add_type(
+            core,
+            TypeDef::Composite(TypeDefComposite {
+                fields: vec![field(None, u64)],
+            }),
+            &["sp_arithmetic", "per_things", "Perbill"],
+        );
+        let compact = add_type(
+            core,
+            TypeDef::Compact(TypeDefCompact {
+                type_param: ratio.into(),
+            }),
+            &[],
+        );
+        retype(core, COMMIT, "reveal_round", compact);
+    });
+    let detail = refused(
+        compose_resolved(&runtime, PALLET, COMMIT, &commit_args()),
+        "reveal_round",
+    );
+    assert!(
+        detail.contains("compact per-thing ratio (sp_arithmetic::per_things::Perbill)"),
+        "{detail}"
+    );
+}

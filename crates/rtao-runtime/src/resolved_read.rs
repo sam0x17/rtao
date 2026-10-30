@@ -269,7 +269,7 @@ const PER_THINGS: &[&str] = &["Percent", "PerU16", "Permill", "Perbill", "Perqui
 /// (`FixedU128(u128)` holds 10^-18 units, `substrate_fixed::FixedU128 { bits }`
 /// holds a binary fraction) does not: a plain integer that became one of
 /// these refuses rather than reading its raw parts as the old value.
-fn scaled_wrapper(ty: &Type<PortableForm>) -> Option<String> {
+pub(crate) fn scaled_wrapper(ty: &Type<PortableForm>) -> Option<String> {
     let TypeDef::Composite(composite) = &ty.type_def else {
         return None;
     };
