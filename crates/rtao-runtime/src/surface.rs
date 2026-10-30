@@ -605,11 +605,12 @@ fn verify_global_surface(runtime: &RuntimeHandle, report: &mut SurfaceReport) {
                 SurfaceClass::Breaking,
                 "pallet is absent",
             ),
+            // Calls resolve pallets by name and encode the live index.
             Some(index) if index != expected.index => report.push(
                 &id,
                 SurfaceKind::Pallet,
-                SurfaceClass::Breaking,
-                "pallet outer index changed",
+                SurfaceClass::Behavioural,
+                "pallet outer index changed; calls encode with the live index",
             ),
             Some(_) => {}
         }
@@ -913,6 +914,47 @@ mod tests {
             runtime.surface_report(),
             runtime.clone().surface_report()
         ));
+    }
+
+    #[test]
+    fn moved_pallet_index_is_behavioural_but_an_absent_pallet_is_breaking() {
+        let pallet_change = |core: Runtime| {
+            let runtime =
+                RuntimeHandle::new_with_api_versions(core, pinned_api_versions()).unwrap();
+            let report = verify_surface(&runtime);
+            let change = report
+                .changes
+                .iter()
+                .find(|change| change.descriptor == "pallet:Timestamp")
+                .cloned()
+                .unwrap_or_else(|| panic!("{:#?}", report.changes));
+            (report, change)
+        };
+        let mut moved = parse_core();
+        let free_index = (0..=255)
+            .find(|index| moved.pallets.iter().all(|pallet| pallet.index != *index))
+            .unwrap();
+        moved
+            .pallets
+            .iter_mut()
+            .find(|pallet| pallet.name == "Timestamp")
+            .unwrap()
+            .index = free_index;
+        let (report, change) = pallet_change(moved);
+        assert_eq!(change.kind, SurfaceKind::Pallet);
+        assert_eq!(change.class, SurfaceClass::Behavioural);
+        assert!(change.detail.contains("live index"), "{}", change.detail);
+        assert_eq!(report.breaking_items(), 0, "{:#?}", report.changes);
+        let mut renamed = parse_core();
+        renamed
+            .pallets
+            .iter_mut()
+            .find(|pallet| pallet.name == "Timestamp")
+            .unwrap()
+            .name = "RenamedTimestamp".into();
+        let (_, change) = pallet_change(renamed);
+        assert_eq!(change.class, SurfaceClass::Breaking);
+        assert_eq!(change.detail, "pallet is absent");
     }
 
     #[test]
