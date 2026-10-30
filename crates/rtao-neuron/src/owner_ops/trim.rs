@@ -1321,6 +1321,10 @@ impl SubmissionJournal {
             .as_array()
             .and_then(|a| a.first())
             .ok_or_else(|| self.unresolved())?;
+        // On-chain multisig binds the call hash and opening timepoint, both
+        // checked here with the call data. A runtime upgrade between
+        // signatories therefore does not invalidate the approval; each
+        // attempt records the versions it was composed and signed under.
         if record["approval_confirmed"] != json!(true)
             || multisig.is_null()
             || record["multisig"] != multisig
@@ -1328,12 +1332,21 @@ impl SubmissionJournal {
             || record["operation"] != json!(action.operation())
             || record["pending_timepoint"].is_null()
             || plan.args["timepoint"] != record["pending_timepoint"]
-            || first["spec_version"] != json!(plan.call().spec_version())
-            || first["transaction_version"] != json!(plan.call().transaction_version())
         {
             return Err(invalid(
                 "retained pruning approval requires the identical multisig group, inner call and non-null opening timepoint",
             ));
+        }
+        if first["spec_version"] != json!(plan.call().spec_version())
+            || first["transaction_version"] != json!(plan.call().transaction_version())
+        {
+            tracing::info!(
+                first_spec_version = %first["spec_version"],
+                first_transaction_version = %first["transaction_version"],
+                spec_version = plan.call().spec_version(),
+                transaction_version = plan.call().transaction_version(),
+                "Null pruning approval continues under a different runtime version with the identical multisig call hash"
+            );
         }
         let attempts = record["attempts"]
             .as_array_mut()

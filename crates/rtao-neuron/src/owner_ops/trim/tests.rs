@@ -1439,6 +1439,159 @@ async fn finalized_pending_approval_retains_one_journal_and_requires_same_timepo
     Ok(())
 }
 
+#[tokio::test]
+async fn retained_approval_survives_runtime_upgrade_but_refuses_changed_call() -> anyhow::Result<()>
+{
+    let f = fixture(300, []).await?;
+    let mut session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig::default(),
+    )
+    .await?;
+    let TrimNullStep::Submit(action) = session.next_action().await? else {
+        anyhow::bail!("expected batch");
+    };
+    let opening_runtime = f.owner.client().refresh_runtime().await?;
+    let inner = rtao_runtime::calls::admin_utils::sudo_trim_null_uids_batch(NET, TARGET)
+        .compose(&opening_runtime)?;
+    let other = AccountId([9; 32]);
+    let group =
+        rtao_tx::multisig::Multisig::new(&opening_runtime, &[f.owner.keys.address()?, other], 2)?;
+    f.owner
+        .keys
+        .signer
+        .steps
+        .lock()
+        .expect("steps")
+        .push_back(Step::Approval(group.address, H256(inner.hash()), 101, 0));
+    let mut approval = ApprovalIntent {
+        semantic: action.intent().to_json_dyn(),
+        inner,
+        others: vec![other],
+        threshold: 2,
+        timepoint: None,
+    };
+    let opening = f
+        .owner
+        .executor
+        .plan(&approval, f.owner.keys.as_ref(), &PlanOptions::default())
+        .await?;
+    session.before_attempt(&action, &opening)?;
+    let receipt = f
+        .owner
+        .executor
+        .execute(&approval, f.owner.keys.as_ref(), &ExecuteOptions::default())
+        .await?;
+    assert!(
+        session
+            .finish_action(action.clone(), &receipt)
+            .await
+            .is_err()
+    );
+    drop(session);
+    let confirmed = fs::read(&f.recovery)?;
+    let recorded: Json = serde_json::from_slice(&confirmed)?;
+    assert_eq!(recorded["approval_confirmed"], json!(true));
+    let (old_spec, old_tx) = (
+        opening_runtime.spec_version(),
+        opening_runtime.transaction_version(),
+    );
+    assert_eq!(recorded["attempts"][0]["spec_version"], json!(old_spec));
+    assert_eq!(
+        recorded["attempts"][0]["transaction_version"],
+        json!(old_tx)
+    );
+
+    // A compatible runtime upgrade lands before the next signatory approves.
+    f.chain.mutate_state(|state| -> anyhow::Result<()> {
+        let upgraded = rtao_core::runtime::Runtime::parse(
+            &state.runtime.metadata_bytes,
+            old_spec + 1,
+            old_tx + 1,
+            42,
+        )?;
+        state.runtime = Arc::new(upgraded);
+        Ok(())
+    })?;
+    let upgraded = f.owner.client().refresh_runtime().await?;
+    assert_eq!(upgraded.spec_version(), old_spec + 1);
+    assert_eq!(upgraded.transaction_version(), old_tx + 1);
+    let session = TrimNullSession::begin(
+        f.owner.client().clone(),
+        f.owner.effective_owner()?,
+        NET,
+        Some(TARGET),
+        &f.recovery,
+        TrimNullConfig::default(),
+    )
+    .await?;
+    approval.timepoint = Some(rtao_runtime::models::MultisigTimepoint {
+        height: 101,
+        index: 0,
+    });
+    // Each attempt recomposes the inner call under the live runtime; with a
+    // compatible upgrade its bytes and multisig call hash are unchanged.
+    let recomposed = rtao_runtime::calls::admin_utils::sudo_trim_null_uids_batch(NET, TARGET)
+        .compose(&upgraded)?;
+    assert_eq!(recomposed.as_bytes(), approval.inner.as_bytes());
+    assert_ne!(recomposed.stamp(), approval.inner.stamp());
+    approval.inner = recomposed;
+
+    // A different inner call has a different hash and data and stays refused.
+    let mut changed = approval.clone();
+    changed.inner = rtao_runtime::calls::admin_utils::sudo_trim_null_uids_batch(NET, TARGET + 1)
+        .compose(&upgraded)?;
+    let changed_plan = f
+        .owner
+        .executor
+        .plan(&changed, f.owner.keys.as_ref(), &PlanOptions::default())
+        .await?;
+    let error = session
+        .before_attempt(&action, &changed_plan)
+        .expect_err("changed inner call must be refused");
+    assert!(
+        error.to_string().contains("identical multisig group"),
+        "{error}"
+    );
+    assert_eq!(fs::read(&f.recovery)?, confirmed);
+
+    let followup = f
+        .owner
+        .executor
+        .plan(&approval, f.owner.keys.as_ref(), &PlanOptions::default())
+        .await?;
+    assert_eq!(followup.call().spec_version(), old_spec + 1);
+    assert_eq!(followup.call().transaction_version(), old_tx + 1);
+
+    // Retained call data that no longer matches the reviewed bytes is refused.
+    let mut tampered = recorded.clone();
+    tampered["multisig"]["call_data"] = json!("0x00");
+    fs::write(&f.recovery, serde_json::to_vec(&tampered)?)?;
+    assert!(session.before_attempt(&action, &followup).is_err());
+    let mut tampered = recorded.clone();
+    tampered["multisig"]["call_hash"] = json!(format!("0x{}", hex::encode([1u8; 32])));
+    fs::write(&f.recovery, serde_json::to_vec(&tampered)?)?;
+    assert!(session.before_attempt(&action, &followup).is_err());
+    fs::write(&f.recovery, &confirmed)?;
+
+    // The identical call hash under the newer runtime continues the approval.
+    session.before_attempt(&action, &followup)?;
+    let updated: Json = serde_json::from_slice(&fs::read(&f.recovery)?)?;
+    let attempts = updated["attempts"].as_array().expect("attempts");
+    assert_eq!(attempts.len(), 2);
+    assert_eq!(attempts[0]["spec_version"], json!(old_spec));
+    assert_eq!(attempts[0]["transaction_version"], json!(old_tx));
+    assert_eq!(attempts[1]["spec_version"], json!(old_spec + 1));
+    assert_eq!(attempts[1]["transaction_version"], json!(old_tx + 1));
+    assert_eq!(updated["multisig"], recorded["multisig"]);
+    f.owner.client().close().await;
+    Ok(())
+}
+
 #[test]
 fn retained_receipt_hash_accepts_current_hex_and_legacy_arrays_but_refuses_malformed_values() {
     let bytes: [u8; 32] =
