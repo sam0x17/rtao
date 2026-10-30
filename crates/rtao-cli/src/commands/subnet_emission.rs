@@ -10,17 +10,21 @@
 //! names the rule and the allowed range, so nothing the chain would refuse is
 //! signed.
 //!
-//! Writes wait for finalized inclusion, then read the subnet's stored vector
-//! back at that block and compare it, slot by slot and in exact parts, with
-//! the vector the command submitted. A difference means another change landed
-//! too and is an error. Previews read nothing back, and a receipt without a
-//! finalized inclusion (a saved multisig approval that has not executed yet)
-//! skips the read-back with an explicit note.
+//! Writes print the receipt at inclusion, as Python does, then wait up to
+//! [`FINALITY_WAIT`] (or the submission deadline) for the inclusion block to
+//! finalize, read the subnet's stored vector back at that block and compare
+//! it, slot by slot and in exact parts, with the vector the extrinsic applied:
+//! its `SubnetEmissionWeightsSet` event, else the previewed vector. A
+//! difference means another change landed in the same block and is an error.
+//! When finality does not arrive in time, the read fails, or a saved multisig
+//! approval has not executed yet, the read-back is skipped with the reason and
+//! the receipt stands. Previews read nothing back.
 //!
-//! Exit codes: 0 success; 1 the subnet does not exist, the change is blocked
-//! right now (owner rate limit), the chain rejected it or the vector read back
-//! after finality differs from the one submitted; 2 invalid input or a vector
-//! the chain's rules would reject.
+//! Exit codes: 0 success, including a skipped read-back; 1 the subnet does not
+//! exist, the change is blocked right now (owner rate limit), the chain
+//! rejected it or the vector read back at the finalized inclusion block
+//! differs from the one the extrinsic applied; 2 invalid input or a vector the
+//! chain's rules would reject.
 
 use crate::{
     context::{AppContext, CommandReview, ExternalSignerFactory, SubmissionOptions},
@@ -38,8 +42,9 @@ use rtao::{
 };
 use rtao_intents::SetSubnetEmissionWeights;
 use serde_json::{Value, json};
+use std::time::Duration;
 
-const EXIT_CODES: &str = "Exit codes: 0 done; 1 subnet missing, change blocked right now, rejected by the chain, or the vector read back after finality differs from the one submitted; 2 invalid input or a vector the chain's rules would reject.";
+const EXIT_CODES: &str = "Exit codes: 0 done, including a read-back skipped with its reason; 1 subnet missing, change blocked right now, rejected by the chain, or the vector read back at the finalized inclusion block differs from the one the extrinsic applied; 2 invalid input or a vector the chain's rules would reject.";
 const NETUID_HELP: &str = "Numeric identifier of the subnet.";
 const SLOT_HELP: &str = "Slot to change: owner, validator or miner.";
 const SHARE_HELP: &str = "A percentage (41%), a 0..1 fraction (0.41), or raw u64 parts.";
@@ -84,7 +89,7 @@ pub fn command() -> Command {
             "Subnet emission weights: how a subnet splits its alpha emission between the owner, validators and miners.",
         )
         .long_about(format!(
-            "Subnet emission weights: how a subnet splits its alpha emission between the owner, validators and miners.\n\nOnly the subnet owner coldkey can change the vector, once every 50,400 blocks (about 7 days) per subnet. Root is paid its baseline share of emission off the top of the validator slot every block, whatever the subnet sets. Add --dry-run to any write to preview the before/after vector and what root and validators keep; --json for machine-readable output. A write waits for finality, then reads the stored vector back and checks it equals the one submitted.\n\n{EXIT_CODES}\n\nGuide: {}/guides/subnets",
+            "Subnet emission weights: how a subnet splits its alpha emission between the owner, validators and miners.\n\nOnly the subnet owner coldkey can change the vector, once every 50,400 blocks (about 7 days) per subnet. Root is paid its baseline share of emission off the top of the validator slot every block, whatever the subnet sets. Add --dry-run to any write to preview the before/after vector and what root and validators keep; --json for machine-readable output. A write prints its receipt at inclusion, then waits up to 3 minutes for that block to finalize, reads the stored vector back there and checks it equals the vector the extrinsic applied; if finality does not arrive in time or the read fails, the read-back is skipped with the reason. With --json the receipt and the {{\"readback\": ...}} result are two documents.\n\n{EXIT_CODES}\n\nGuide: {}/guides/subnets",
             rtao_catalog::py::DOCS_URL
         ))
         .subcommand_required(true)
@@ -542,15 +547,15 @@ async fn submit(
             rows: card(info, &preview),
         }],
     );
-    // The read-back needs an irreversible block to compare against, so wait
-    // for finalized inclusion as the pruning workflow does.
+    // The receipt is rendered at inclusion, as in Python; the read-back then
+    // waits, bounded, for that block to finalize.
+    let finality_wait = options.deadline.unwrap_or(FINALITY_WAIT);
     let receipt = ctx
         .submit_with_options(
             client,
             &intent,
             SubmissionOptions {
                 review: Some(&review),
-                wait_for_finalization: true,
                 ..options
             },
             external,
@@ -560,16 +565,34 @@ async fn submit(
     match receipt {
         // A preview or a declined confirmation submitted nothing.
         None => Ok(None),
-        Some(receipt) => read_back(ctx, client, info.netuid, proposed, receipt).await,
+        Some(receipt) => {
+            read_back(ctx, client, info.netuid, proposed, receipt, finality_wait).await
+        }
     }
 }
 
-/// The finalized block to read a write back at, or why there is none.
+/// How long a write waits for its inclusion block to finalize before it skips
+/// the read-back; an explicit submission deadline replaces it.
+pub const FINALITY_WAIT: Duration = Duration::from_secs(180);
+const FINALITY_POLL: Duration = Duration::from_secs(2);
+
+/// Whether a saved multisig approval left the change unexecuted: the vector
+/// only moves once the final approval executes it.
 ///
-/// `saved_proposal` is a saved multisig approval that did not execute the
-/// change: the vector only moves once the final approval executes it.
-fn readback_block(saved_proposal: bool, receipt: &ExtrinsicResult) -> Result<H256, &'static str> {
-    if saved_proposal {
+/// `entry` is the wallet's multisig book entry. `as_multi_threshold_1`
+/// dispatches immediately and emits no MultisigExecuted, as in proxy kill.
+fn saved_unexecuted(entry: Option<&Value>, executed: bool) -> bool {
+    entry.is_some_and(|entry| entry.get("threshold").and_then(Value::as_u64) != Some(1))
+        && !executed
+}
+
+/// The block to read a write back at and whether it is already finalized,
+/// or why there is none.
+fn readback_block(
+    saved_unexecuted: bool,
+    receipt: &ExtrinsicResult,
+) -> Result<(H256, bool), &'static str> {
+    if saved_unexecuted {
         return Err(
             "the multisig approval is saved but has not executed the change; the vector changes only when the final approval executes it",
         );
@@ -578,17 +601,93 @@ fn readback_block(saved_proposal: bool, receipt: &ExtrinsicResult) -> Result<H25
         return Err("the extrinsic did not succeed");
     }
     match (receipt.inclusion, receipt.block_hash) {
-        (Inclusion::Finalized, Some(block)) => Ok(block),
-        _ => Err("the receipt has no finalized inclusion block to read at"),
+        (Inclusion::Finalized, Some(block)) => Ok((block, true)),
+        (Inclusion::InBlock, Some(block)) => Ok((block, false)),
+        _ => Err("the receipt has no inclusion block to read at"),
     }
 }
 
-/// The machine shape of a read-back: the stored vector beside the submitted one.
+/// The full vector the extrinsic applied, from its `SubnetEmissionWeightsSet`
+/// event; the chain stores exactly this post-merge vector.
+fn applied_weights(receipt: &ExtrinsicResult, netuid: NetUid) -> Option<ew::Weights> {
+    receipt
+        .events
+        .iter()
+        .rev()
+        .filter(|event| event.matches("SubtensorModule", "SubnetEmissionWeightsSet"))
+        .find_map(|event| {
+            let attributes = rtao::core::DynValue::new(event.attributes.clone()).to_json();
+            if attributes.get("netuid")?.as_u64()? != u64::from(netuid.0) {
+                return None;
+            }
+            let weights: Vec<u64> =
+                serde_json::from_value(attributes.get("weights")?.clone()).ok()?;
+            weights.try_into().ok()
+        })
+}
+
+/// Wait until the endpoint that reported `block` finalizes its height, and
+/// say whether `block` is the block finalized there.
+async fn finalizes(client: &Client, block: H256) -> Result<bool, rtao::client::ClientError> {
+    let chain = client.receipt_client().await?;
+    let number = chain.at(BlockRef::Hash(block)).await?.block().number;
+    loop {
+        if chain.at(BlockRef::Finalized).await?.block().number >= number {
+            return Ok(chain.at(BlockRef::Number(number)).await?.block().hash == block);
+        }
+        tokio::time::sleep(FINALITY_POLL).await;
+    }
+}
+
+/// The vector stored at the inclusion block once it is final, or why it was
+/// not read. Every failure here leaves the receipt authoritative.
+async fn stored_at(
+    client: &Client,
+    netuid: NetUid,
+    block: H256,
+    finalized: bool,
+    finality_wait: Duration,
+) -> Result<SubnetEmissionWeights, String> {
+    if !finalized {
+        match tokio::time::timeout(finality_wait, finalizes(client, block)).await {
+            Err(_) => {
+                return Err(format!(
+                    "the inclusion block was not finalized within {finality_wait:?}; the change is included but not verified"
+                ));
+            }
+            Ok(Err(error)) => {
+                return Err(format!(
+                    "the finality of the inclusion block could not be checked: {error}"
+                ));
+            }
+            Ok(Ok(false)) => {
+                return Err(
+                    "the inclusion block is not on the finalized chain; the change may not have landed".into(),
+                );
+            }
+            Ok(Ok(true)) => {}
+        }
+    }
+    // The submission endpoint serves the block when the read endpoint lags.
+    let snapshot = client
+        .at_receipt(block)
+        .await
+        .map_err(|error| format!("the inclusion block could not be read: {error}"))?;
+    subnet_emission_weights(&snapshot, netuid)
+        .await
+        .map_err(|error| format!("the vector could not be read at the inclusion block: {error}"))?
+        .ok_or_else(|| "the subnet has no emission vector at the inclusion block".into())
+}
+
+/// The machine shape of a read-back: the stored vector beside the one the
+/// extrinsic applied (its event), or the previewed one when there is no event.
 pub fn readback_record(
-    submitted: &ew::Weights,
+    previewed: &ew::Weights,
+    applied: Option<&ew::Weights>,
     stored: &SubnetEmissionWeights,
     block_hash: H256,
 ) -> Value {
+    let submitted = applied.unwrap_or(previewed);
     let differs: Vec<&str> = (0..ew::SLOT_NAMES.len())
         .filter(|slot| submitted[*slot] != stored.weights[*slot])
         .map(|slot| ew::SLOT_NAMES[slot])
@@ -600,20 +699,42 @@ pub fn readback_record(
         "block": stored.block,
         "block_hash": format!("0x{}", hex::encode(block_hash.0)),
         "submitted": submitted,
+        "submitted_from": if applied.is_some() { "event" } else { "preview" },
+        "previewed": previewed,
+        "base_changed": applied.is_some_and(|applied| applied != previewed),
         "stored": stored.weights,
         "stored_shares": stored.shares,
         "differs": differs,
     })
 }
 
+/// Print a skipped read-back with its reason; the receipt stands.
+fn skipped(ctx: &AppContext, netuid: NetUid, reason: &str) -> Result<(), CliError> {
+    ctx.output
+        .kv_sections(
+            Some(&format!(
+                "subnet {netuid} emission weights read-back skipped"
+            )),
+            &[KvSection {
+                header: None,
+                rows: vec![("reason".into(), reason.into(), None)],
+            }],
+            &json!({"readback": {"status": "skipped", "matches": null, "reason": reason}}),
+            Some(&show_hint(netuid)),
+        )
+        .map_err(|error| CliError::failure(error.to_string()))
+}
+
 /// Read the vector back at the finalized inclusion block and compare it with
-/// what was submitted. A mismatch is an error that keeps the receipt.
+/// what the extrinsic applied. Only a mismatch is an error, and it keeps the
+/// receipt; a read-back that cannot run is skipped with the reason.
 async fn read_back(
     ctx: &AppContext,
     client: &Client,
     netuid: NetUid,
-    submitted: &ew::Weights,
+    previewed: &ew::Weights,
     receipt: ExtrinsicResult,
+    finality_wait: Duration,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
     let keep = |mut error: CliError| {
         // An empty message was already rendered; only add the receipt then.
@@ -623,30 +744,26 @@ async fn read_back(
         error.submitted_receipt = Some(Box::new(receipt.clone()));
         error
     };
-    let saved_proposal = ctx.books.multisig(&ctx.globals.wallet_name).is_some()
-        && !crate::call::multisig_executed(&receipt);
-    let block =
-        match readback_block(saved_proposal, &receipt) {
-            Ok(block) => block,
-            Err(reason) => {
-                ctx.output
-                .kv_sections(
-                    Some(&format!("subnet {netuid} emission weights read-back skipped")),
-                    &[KvSection {
-                        header: None,
-                        rows: vec![("reason".into(), reason.into(), None)],
-                    }],
-                    &json!({"readback": {"status": "skipped", "matches": null, "reason": reason}}),
-                    Some(&show_hint(netuid)),
-                )
-                .map_err(|error| keep(CliError::failure(error.to_string())))?;
-                return Ok(Some(receipt));
-            }
-        };
-    let stored = fetch(ctx, client, netuid, BlockRef::Hash(block))
-        .await
-        .map_err(keep)?;
-    let record = readback_record(submitted, &stored, block);
+    let unexecuted = saved_unexecuted(
+        ctx.books.multisig(&ctx.globals.wallet_name),
+        crate::call::multisig_executed(&receipt),
+    );
+    let read = match readback_block(unexecuted, &receipt) {
+        Ok((block, finalized)) => stored_at(client, netuid, block, finalized, finality_wait)
+            .await
+            .map(|stored| (block, stored)),
+        Err(reason) => Err(reason.to_owned()),
+    };
+    let (block, stored) = match read {
+        Ok(read) => read,
+        Err(reason) => {
+            skipped(ctx, netuid, &reason).map_err(keep)?;
+            return Ok(Some(receipt));
+        }
+    };
+    let applied = applied_weights(&receipt, netuid);
+    let submitted = applied.unwrap_or(*previewed);
+    let record = readback_record(previewed, applied.as_ref(), &stored, block);
     let matches = record["matches"] == json!(true);
     let mut vector = Vec::new();
     for slot in ew::ADJUSTABLE_SLOTS
@@ -669,6 +786,35 @@ async fn read_back(
     } else {
         "differs from the submitted vector"
     };
+    let mut rows = vec![
+        ("result".into(), result.into(), None),
+        (
+            "block".into(),
+            stored.block.to_string(),
+            Some(format!("0x{}", hex::encode(block.0))),
+        ),
+    ];
+    match applied {
+        Some(applied) if applied != *previewed => rows.push((
+            "base".into(),
+            "changed before submission".into(),
+            Some(format!(
+                "the change was rebuilt on a newer vector: owner {} / validator {} / miner {} instead of the previewed {} / {} / {}",
+                ew::format_share(applied[ew::OWNER], 4),
+                ew::format_share(applied[ew::VALIDATOR], 4),
+                ew::format_share(applied[ew::MINER], 4),
+                ew::format_share(previewed[ew::OWNER], 4),
+                ew::format_share(previewed[ew::VALIDATOR], 4),
+                ew::format_share(previewed[ew::MINER], 4),
+            )),
+        )),
+        Some(_) => {}
+        None => rows.push((
+            "compared with".into(),
+            "the previewed vector".into(),
+            Some("the receipt has no SubnetEmissionWeightsSet event".into()),
+        )),
+    }
     ctx.output
         .kv_sections(
             Some(&format!(
@@ -682,14 +828,7 @@ async fn read_back(
                 },
                 KvSection {
                     header: Some("Read-back".into()),
-                    rows: vec![
-                        ("result".into(), result.into(), None),
-                        (
-                            "block".into(),
-                            stored.block.to_string(),
-                            Some(format!("0x{}", hex::encode(block.0))),
-                        ),
-                    ],
+                    rows,
                 },
             ],
             &json!({ "readback": record }),
@@ -716,7 +855,11 @@ async fn read_back(
             "the emission vector stored on subnet {netuid} at finalized block {} differs from the one submitted ({differs})",
             fmt_grouped(u128::from(stored.block))
         ),
-        Some("another change to this subnet's emission weights landed with or after this one"),
+        Some(if applied.is_some() {
+            "another change to this subnet's emission weights landed in the same block after this one"
+        } else {
+            "another change landed in the same block, or the vector moved before submission; the receipt has no SubnetEmissionWeightsSet event to tell them apart"
+        }),
         Some(&format!(
             "the change was finalized; inspect the vector with `rtao subnets emission show --netuid {netuid}` before submitting again"
         )),
@@ -1002,31 +1145,65 @@ mod tests {
     }
 
     #[test]
-    fn read_back_needs_a_finalized_executed_receipt() {
+    fn read_back_needs_an_included_executed_receipt() {
         let block = H256([7; 32]);
         assert_eq!(
             readback_block(false, &receipt(true, Inclusion::Finalized, Some(block))),
-            Ok(block)
+            Ok((block, true))
+        );
+        // An in-block receipt is read back once its block finalizes.
+        assert_eq!(
+            readback_block(false, &receipt(true, Inclusion::InBlock, Some(block))),
+            Ok((block, false))
         );
         // A saved approval that did not execute changes nothing yet.
         assert!(
             readback_block(true, &receipt(true, Inclusion::Finalized, Some(block)))
                 .is_err_and(|reason| reason.contains("multisig approval is saved"))
         );
-        for unfinalized in [
-            receipt(true, Inclusion::InBlock, Some(block)),
+        for unincluded in [
             receipt(true, Inclusion::PoolAccepted, None),
             receipt(true, Inclusion::Unobserved, None),
             receipt(true, Inclusion::Finalized, None),
+            receipt(true, Inclusion::InBlock, None),
         ] {
             assert_eq!(
-                readback_block(false, &unfinalized),
-                Err("the receipt has no finalized inclusion block to read at")
+                readback_block(false, &unincluded),
+                Err("the receipt has no inclusion block to read at")
             );
         }
         assert_eq!(
             readback_block(false, &receipt(false, Inclusion::Finalized, Some(block))),
             Err("the extrinsic did not succeed")
+        );
+    }
+
+    #[test]
+    fn only_a_saved_multisig_of_threshold_two_or_more_can_leave_the_change_unexecuted() {
+        let one = json!({"name": "team", "threshold": 1, "signatories": []});
+        let two = json!({"name": "team", "threshold": 2, "signatories": []});
+        // Not a saved multisig: the receipt is the change.
+        assert!(!saved_unexecuted(None, false));
+        // as_multi_threshold_1 dispatched the call without MultisigExecuted.
+        assert!(!saved_unexecuted(Some(&one), false));
+        assert!(!saved_unexecuted(Some(&one), true));
+        // A threshold >= 2 approval executes only with MultisigExecuted.
+        assert!(saved_unexecuted(Some(&two), false));
+        assert!(!saved_unexecuted(Some(&two), true));
+        let block = H256([7; 32]);
+        assert_eq!(
+            readback_block(
+                saved_unexecuted(Some(&one), false),
+                &receipt(true, Inclusion::InBlock, Some(block))
+            ),
+            Ok((block, false))
+        );
+        assert!(
+            readback_block(
+                saved_unexecuted(Some(&two), false),
+                &receipt(true, Inclusion::InBlock, Some(block))
+            )
+            .is_err()
         );
     }
 }

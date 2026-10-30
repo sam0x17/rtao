@@ -89,18 +89,27 @@ and `--dry-run` previews the before/after vector without submitting. The
 `owner_emission`, `validator_emission` and `miner_emission` hyperparameters
 show the same slots; change them here, not with `hparams set`.
 
-A write waits for finalized inclusion and then reads the subnet's stored
-vector back at that block. It prints each slot as a percentage and in exact
-parts, and says whether the stored vector equals the submitted one exactly.
-With `--json` the receipt is followed by a second document,
-`{"readback": {...}}`, with `status` (`match`, `mismatch` or `skipped`),
-`matches`, `netuid`, `block`, `block_hash`, `submitted`, `stored`,
-`stored_shares` and `differs` (the slots that differ). A mismatch means
-another change to the vector landed with or after this one; the command
-exits 1 even though its own extrinsic was finalized. Inspect the vector with
-`show` before submitting again. Previews read nothing back. A saved multisig
-approval that has not executed the change, or a receipt without finalized
-inclusion, skips the read-back with an explicit reason (`status` `skipped`).
+A write prints its receipt at inclusion, as btcli does. It then waits up to
+3 minutes for the inclusion block to finalize and reads the subnet's stored
+vector back at that block, from the submission endpoint when the read
+endpoint has not imported it yet. It prints each slot as a percentage and in
+exact parts, and says whether the stored vector equals, exactly, the vector
+the extrinsic applied (its `SubnetEmissionWeightsSet` event, or the previewed
+vector when the receipt has no such event). With `--json` the receipt is
+followed by a second document, `{"readback": {...}}`, with `status`
+(`match`, `mismatch` or `skipped`), `matches`, `netuid`, `block`,
+`block_hash`, `submitted`, `submitted_from` (`event` or `preview`),
+`previewed`, `base_changed`, `stored`, `stored_shares` and `differs` (the
+slots that differ); a skipped read-back carries `status`, `matches` (null)
+and `reason`. `base_changed` means the vector moved between the preview and
+the build, so the change was rebuilt on the newer vector; that is not an
+error. A mismatch means another change landed in the same block after this
+one; the command exits 1 even though its own extrinsic succeeded. Inspect the
+vector with `show` before submitting again. Previews read nothing back. A
+saved multisig approval that has not executed the change (threshold 2 or
+more without `MultisigExecuted`), a block that does not finalize within the
+bound, or a failed read skips the read-back with an explicit reason; the
+receipt stands and the command exits 0.
 
 ## Coverage
 

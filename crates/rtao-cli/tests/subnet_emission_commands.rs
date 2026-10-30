@@ -22,7 +22,7 @@ use rtao_cli::{
 };
 use rtao_runtime::storage::{subtensor_module as st, swap};
 use rtao_testkit::{
-    FakeChain, FakeState, Reply,
+    FakeChain, FakeState, Reply, SubmitScript,
     fixtures::catalog_samples::{
         COLD, EMISSION_ALPHA_ISSUANCE, EMISSION_ROOT_TAO, EMISSION_TAO_WEIGHT, SUBNET,
         emission_root_baseline_share, emission_weights_info, intent_state,
@@ -33,6 +33,7 @@ use serde_json::{Value, json};
 use std::{
     path::Path,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 #[path = "../../rtao-wallet/tests/support/mod.rs"]
@@ -125,6 +126,30 @@ async fn run_with(
     args: &[&str],
     signer: Option<&Factory>,
 ) -> Result<Outcome, Box<dyn std::error::Error>> {
+    run_setup(client, wallet, args, signer, &Setup::default()).await
+}
+
+/// A saved multisig wallet `team`, signed by the selected members.
+struct Saved {
+    multisigs: Value,
+    signatories: Vec<String>,
+    store: TempRoot,
+}
+
+/// Submission deadline and saved-multisig context for one invocation.
+#[derive(Default)]
+struct Setup {
+    deadline: Option<Duration>,
+    saved: Option<Saved>,
+}
+
+async fn run_setup(
+    client: &Client,
+    wallet: &Path,
+    args: &[&str],
+    signer: Option<&Factory>,
+    setup: &Setup,
+) -> Result<Outcome, Box<dyn std::error::Error>> {
     let mut argv = vec![
         "rtao",
         "--wallet-path",
@@ -149,12 +174,27 @@ async fn run_with(
         globals.signer_backend = Some("extension".into());
         globals.signer_address = Some(signer.0.key.account().to_string());
     }
+    let mut books = Books::default();
+    if let Some(saved) = &setup.saved {
+        globals.wallet_name = "team".into();
+        globals.wallet_given = true;
+        globals.signer_backend = None;
+        globals.signer_address = None;
+        globals.signatories = saved.signatories.clone();
+        books = Books::from_values(json!([]), json!([]), saved.multisigs.clone());
+    }
     let mut ctx = AppContext::new(
         globals,
         config,
-        Books::default(),
+        books,
         Arc::new(Mutex::new(Box::new(NoTerminal))),
     );
+    if let Some(saved) = &setup.saved {
+        // Saved-call caching stays inside this fixture's root.
+        ctx.config_store = Some(rtao::client::config::Store::new(
+            rtao::client::config::Paths::new(saved.store.path(), |_| None),
+        ));
+    }
     let sink = MemorySink::default();
     ctx.output = Output::new(
         OutputOptions {
@@ -171,7 +211,10 @@ async fn run_with(
         &mut ctx,
         client,
         &request,
-        SubmissionOptions::default(),
+        SubmissionOptions {
+            deadline: setup.deadline,
+            ..Default::default()
+        },
         signer.map(|signer| signer as &dyn ExternalSignerFactory),
         &mut history,
     )
@@ -846,20 +889,92 @@ fn owned_state(owner: AccountId) -> Result<FakeState, Box<dyn std::error::Error>
     Ok(state)
 }
 
-/// Once an extrinsic is submitted the runtime API reports `stored`, as the
-/// chain would after applying a change (ours, or another that landed with it).
-fn store_on_submit(state: &mut FakeState, stored: ew::Weights) {
+fn emission_info(weights: ew::Weights) -> Value {
+    let mut info = emission_weights_info(SUBNET);
+    info["weights"] = json!(weights);
+    info["owner"] = json!(weights[ew::OWNER]);
+    info["validator"] = json!(weights[ew::VALIDATOR]);
+    info["miner"] = json!(weights[ew::MINER]);
+    info
+}
+
+/// How one write lands on the fake chain.
+#[derive(Clone, Copy)]
+struct Landed {
+    /// Weights of the receipt's SubnetEmissionWeightsSet event, if any.
+    applied: Option<ew::Weights>,
+    /// The vector the runtime API reports at the inclusion block.
+    stored: ew::Weights,
+    /// Fail every emission read once the extrinsic is included.
+    fail_reads: bool,
+}
+
+/// Inclusion blocks of the writes, as (number, hash).
+type Inclusions = Arc<Mutex<Vec<(u64, String)>>>;
+
+/// Land each submitted extrinsic as `landed` says. Only the inclusion block
+/// reports `stored`: every earlier block keeps the fixture's vector, and the
+/// head moves one block past the inclusion where it is back to that vector
+/// (as if a later change restored it), so a read-back at any block but the
+/// inclusion one sees a different vector.
+fn land_on_submit(state: &mut FakeState, landed: Landed) -> Inclusions {
+    let inclusions = Inclusions::default();
+    let seen = inclusions.clone();
     state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
-        let mut info = emission_weights_info(SUBNET);
-        info["weights"] = json!(stored);
-        info["owner"] = json!(stored[ew::OWNER]);
-        info["validator"] = json!(stored[ew::VALIDATOR]);
-        info["miner"] = json!(stored[ew::MINER]);
-        match state.seed_runtime("SubnetInfoRuntimeApi", "get_subnet_emission_weights", info) {
-            Ok(()) => state.dispatch(request),
-            Err(error) => Reply::error(-32602, error.to_string(), None),
+        let mut events = Vec::new();
+        if let Some(applied) = landed.applied {
+            events.push(json!({"phase": "ApplyExtrinsic", "extrinsic_idx": 0, "module_id": "SubtensorModule", "event_id": "SubnetEmissionWeightsSet", "attributes": {"netuid": SUBNET.0, "weights": applied}, "topics": []}));
         }
+        events.push(json!({"phase": "ApplyExtrinsic", "extrinsic_idx": 0, "module_id": "System", "event_id": "ExtrinsicSuccess", "attributes": {"dispatch_info": {"weight": state.weight, "class": "Normal", "pays_fee": "Yes"}}, "topics": []}));
+        state.queue_submit(SubmitScript::InBlockThenFinalized {
+            events: json!(events),
+        });
+        let reply = state.dispatch(request);
+        let number = state.block;
+        let Some(hash) = state.block_hash(number) else {
+            return Reply::error(-32602, "no inclusion block", None);
+        };
+        if let Err(error) = state.seed_runtime_at(
+            hash.clone(),
+            "SubnetInfoRuntimeApi",
+            "get_subnet_emission_weights",
+            emission_info(landed.stored),
+        ) {
+            return Reply::error(-32602, error.to_string(), None);
+        }
+        state.advance(1);
+        if landed.fail_reads {
+            state.set_handler("state_call", |state, request| {
+                if request.params[0] == "SubnetInfoRuntimeApi_get_subnet_emission_weights" {
+                    Reply::error(-32000, "emission read unavailable", None)
+                } else {
+                    state.dispatch(request)
+                }
+            });
+        }
+        if let Ok(mut seen) = seen.lock() {
+            seen.push((number, hash));
+        }
+        reply
     });
+    inclusions
+}
+
+fn landed(applied: ew::Weights) -> Landed {
+    Landed {
+        applied: Some(applied),
+        stored: applied,
+        fail_reads: false,
+    }
+}
+
+fn last_inclusion(inclusions: &Inclusions) -> Result<(u64, String), Box<dyn std::error::Error>> {
+    Ok(inclusions
+        .lock()
+        .map_err(|_| "inclusions")?
+        .last()
+        .cloned()
+        .ok_or("no inclusion")?)
 }
 
 fn documents(stdout: &str) -> Result<Vec<Value>, serde_json::Error> {
@@ -875,30 +990,37 @@ fn owner_at(share: &str) -> Result<ew::Weights, Box<dyn std::error::Error>> {
     )?)
 }
 
-#[tokio::test]
-async fn finalized_write_reads_the_stored_vector_back_and_reports_a_match() -> TestResult {
-    let wallet = wallet()?;
-    let signer = Factory::new()?;
-    let expected = owner_at("10%")?;
-    let mut state = owned_state(signer.account())?;
-    store_on_submit(&mut state, expected);
-    let (client, chain) = client(state).await?;
-    let netuid = netuid();
-    let write = [
+fn set_owner<'a>(netuid: &'a str, value: &'a str) -> Vec<&'a str> {
+    vec![
         "--yes",
         "--no-mev-shield",
         "subnets",
         "emission",
         "set-value",
         "--netuid",
-        &netuid,
+        netuid,
         "--slot",
         "owner",
         "--value",
-        "10%",
-    ];
-    let json_args = [&["--json"], &write[..]].concat();
-    let written = run_with(&client, wallet.path(), &json_args, Some(&signer)).await?;
+        value,
+    ]
+}
+
+fn json_args<'a>(args: &[&'a str]) -> Vec<&'a str> {
+    [&["--json"], args].concat()
+}
+
+#[tokio::test]
+async fn finalized_write_reads_the_stored_vector_back_at_the_inclusion_block() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let expected = owner_at("10%")?;
+    let mut state = owned_state(signer.account())?;
+    let inclusions = land_on_submit(&mut state, landed(expected));
+    let (client, chain) = client(state).await?;
+    let netuid = netuid();
+    let write = set_owner(&netuid, "10%");
+    let written = run_with(&client, wallet.path(), &json_args(&write), Some(&signer)).await?;
     assert_eq!(code(&written), 0, "{}", written.stderr);
     let documents = documents(&written.stdout)?;
     assert_eq!(documents.len(), 2, "{}", written.stdout);
@@ -909,6 +1031,9 @@ async fn finalized_write_reads_the_stored_vector_back_and_reports_a_match() -> T
     assert_eq!(readback["differs"], json!([]));
     assert_eq!(readback["netuid"], json!(SUBNET.0));
     assert_eq!(readback["submitted"], json!(expected));
+    assert_eq!(readback["submitted_from"], json!("event"));
+    assert_eq!(readback["previewed"], json!(expected));
+    assert_eq!(readback["base_changed"], json!(false));
     assert_eq!(readback["stored"], json!(expected));
     assert!(
         (readback["stored_shares"]["owner"]
@@ -918,12 +1043,15 @@ async fn finalized_write_reads_the_stored_vector_back_and_reports_a_match() -> T
             .abs()
             < 1e-9
     );
-    // Read at the finalized inclusion block the receipt names.
-    assert_eq!(readback["block_hash"], receipt["block_hash"]);
-    let included = chain.mutate_state(|state| state.block);
+    // Read at the inclusion block, not at the head past it, which reports the
+    // old vector again; reading anywhere else would be a mismatch.
+    let (included, hash) = last_inclusion(&inclusions)?;
     assert_eq!(readback["block"], json!(included));
+    assert_eq!(readback["block_hash"], json!(hash));
+    assert_eq!(receipt["block_hash"], json!(hash));
+    assert_eq!(chain.mutate_state(|state| state.block), included + 1);
 
-    // The vector read back is compared with the one the extrinsic carried.
+    // The extrinsic carried the vector its event reports.
     let submissions = chain.mutate_state(|state| state.submissions.clone());
     assert_eq!(submissions.len(), 1);
     let runtime = View::runtime(&client).await?;
@@ -968,6 +1096,8 @@ async fn finalized_write_reads_the_stored_vector_back_and_reports_a_match() -> T
         assert!(human.stdout.contains(&needle), "{needle}\n{}", human.stdout);
     }
     assert!(!human.stdout.contains("submitted 0 parts"));
+    assert!(!human.stdout.contains("base  changed"));
+    assert!(!human.stdout.contains("compared with"));
     client.close().await;
     Ok(())
 }
@@ -977,32 +1107,21 @@ async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> Test
     let wallet = wallet()?;
     let signer = Factory::new()?;
     let submitted = owner_at("10%")?;
-    // Another change landed with ours: the chain keeps owner at 12%.
+    // Another change landed in the same block after ours: owner ends at 12%.
     let stored = owner_at("12%")?;
     let mut state = owned_state(signer.account())?;
-    store_on_submit(&mut state, stored);
+    land_on_submit(
+        &mut state,
+        Landed {
+            applied: Some(submitted),
+            stored,
+            fail_reads: false,
+        },
+    );
     let (client, chain) = client(state).await?;
     let netuid = netuid();
-    let written = run_with(
-        &client,
-        wallet.path(),
-        &[
-            "--json",
-            "--yes",
-            "--no-mev-shield",
-            "subnets",
-            "emission",
-            "set-value",
-            "--netuid",
-            &netuid,
-            "--slot",
-            "owner",
-            "--value",
-            "10%",
-        ],
-        Some(&signer),
-    )
-    .await?;
+    let write = set_owner(&netuid, "10%");
+    let written = run_with(&client, wallet.path(), &json_args(&write), Some(&signer)).await?;
     assert_eq!(code(&written), 1, "{}", written.stderr);
     let error = written.result.as_ref().err().ok_or("mismatch error")?;
     assert!(
@@ -1010,7 +1129,7 @@ async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> Test
             .submitted_receipt
             .as_ref()
             .is_some_and(|receipt| receipt.success),
-        "the finalized receipt is retained"
+        "the receipt is retained"
     );
     let documents = documents(&written.stdout)?;
     assert_eq!(documents.len(), 2, "{}", written.stdout);
@@ -1019,6 +1138,7 @@ async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> Test
     assert_eq!(readback["matches"], json!(false));
     assert_eq!(readback["differs"], json!(["owner", "validator", "miner"]));
     assert_eq!(readback["submitted"], json!(submitted));
+    assert_eq!(readback["base_changed"], json!(false));
     assert_eq!(readback["stored"], json!(stored));
     let diagnostic: Value = serde_json::from_str(&written.stderr)?;
     let text = diagnostic["error"].as_str().ok_or("error")?;
@@ -1029,11 +1149,11 @@ async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> Test
         "{text}"
     );
     assert!(text.ends_with("differs from the one submitted (owner, validator, miner)"));
-    assert!(
-        diagnostic["note"]
-            .as_str()
-            .ok_or("note")?
-            .contains("another change")
+    assert_eq!(
+        diagnostic["note"],
+        json!(
+            "another change to this subnet's emission weights landed in the same block after this one"
+        )
     );
     assert!(
         diagnostic["help"]
@@ -1043,25 +1163,7 @@ async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> Test
     );
     assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
 
-    let human = run_with(
-        &client,
-        wallet.path(),
-        &[
-            "--yes",
-            "--no-mev-shield",
-            "subnets",
-            "emission",
-            "set-value",
-            "--netuid",
-            &netuid,
-            "--slot",
-            "owner",
-            "--value",
-            "10%",
-        ],
-        Some(&signer),
-    )
-    .await?;
+    let human = run_with(&client, wallet.path(), &write, Some(&signer)).await?;
     assert_eq!(code(&human), 1, "{}", human.stderr);
     for needle in [
         format!(
@@ -1075,5 +1177,270 @@ async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> Test
     }
     assert!(human.stderr.contains("differs from the one submitted"));
     client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn read_back_compares_with_the_applied_event_and_reports_a_base_change_apart() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let netuid = netuid();
+    let previewed = owner_at("10%")?;
+    // The vector moved before the build: owner is still 10%, but the other
+    // two were rescaled from a newer validator/miner split.
+    let rebuilt = ew::renormalize(
+        &ew::renormalize(
+            &ew::default_weights(DEFAULT_OWNER),
+            &[(ew::VALIDATOR, ew::parse_share("30%")?)],
+        )?,
+        &[(ew::OWNER, ew::parse_share("10%")?)],
+    )?;
+    assert_ne!(rebuilt, previewed);
+    let mut state = owned_state(signer.account())?;
+    land_on_submit(&mut state, landed(rebuilt));
+    let (client, _) = client(state).await?;
+    let write = set_owner(&netuid, "10%");
+    let written = run_with(&client, wallet.path(), &json_args(&write), Some(&signer)).await?;
+    assert_eq!(code(&written), 0, "{}", written.stderr);
+    let readback = &documents(&written.stdout)?[1]["readback"];
+    assert_eq!(readback["status"], json!("match"), "{readback}");
+    assert_eq!(readback["submitted"], json!(rebuilt));
+    assert_eq!(readback["submitted_from"], json!("event"));
+    assert_eq!(readback["previewed"], json!(previewed));
+    assert_eq!(readback["base_changed"], json!(true));
+    let human = run_with(&client, wallet.path(), &write, Some(&signer)).await?;
+    assert_eq!(code(&human), 0, "{}", human.stderr);
+    for needle in [
+        "result  matches the submitted vector exactly",
+        "base  changed before submission",
+        "the change was rebuilt on a newer vector: owner 10.0000%",
+    ] {
+        assert!(human.stdout.contains(needle), "{needle}\n{}", human.stdout);
+    }
+    client.close().await;
+
+    // Without the event the preview is the only reference, and the note
+    // cannot tell a moved base from a concurrent change.
+    for (stored, status) in [(previewed, "match"), (rebuilt, "mismatch")] {
+        let mut state = owned_state(signer.account())?;
+        land_on_submit(
+            &mut state,
+            Landed {
+                applied: None,
+                stored,
+                fail_reads: false,
+            },
+        );
+        let (client, _) = crate::client(state).await?;
+        let written = run_with(&client, wallet.path(), &json_args(&write), Some(&signer)).await?;
+        let readback = &documents(&written.stdout)?[1]["readback"];
+        assert_eq!(readback["status"], json!(status), "{readback}");
+        assert_eq!(readback["submitted"], json!(previewed));
+        assert_eq!(readback["submitted_from"], json!("preview"));
+        assert_eq!(readback["base_changed"], json!(false));
+        if status == "match" {
+            assert_eq!(code(&written), 0, "{}", written.stderr);
+            let human = run_with(&client, wallet.path(), &write, Some(&signer)).await?;
+            assert!(
+                human
+                    .stdout
+                    .contains("compared with  the previewed vector  the receipt has no SubnetEmissionWeightsSet event"),
+                "{}",
+                human.stdout
+            );
+        } else {
+            assert_eq!(code(&written), 1, "{}", written.stderr);
+            let diagnostic: Value = serde_json::from_str(&written.stderr)?;
+            assert!(
+                diagnostic["note"]
+                    .as_str()
+                    .ok_or("note")?
+                    .contains("or the vector moved before submission"),
+                "{diagnostic}"
+            );
+        }
+        client.close().await;
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn lagging_read_endpoint_reads_back_through_the_submit_endpoint() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let expected = owner_at("10%")?;
+    let read = FakeChain::from_state(owned_state(signer.account())?);
+    let mut node_state = owned_state(signer.account())?;
+    let inclusions = land_on_submit(&mut node_state, landed(expected));
+    let node = FakeChain::from_state(node_state);
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = Client::from_rpc_with_submit(
+        RpcClient::new(read.clone()),
+        RpcClient::new(node.clone()),
+        config,
+    )
+    .await?;
+    let netuid = netuid();
+    let written = run_with(
+        &client,
+        wallet.path(),
+        &json_args(&set_owner(&netuid, "10%")),
+        Some(&signer),
+    )
+    .await?;
+    assert_eq!(code(&written), 0, "{}", written.stderr);
+    let documents = documents(&written.stdout)?;
+    let readback = &documents[1]["readback"];
+    assert_eq!(readback["status"], json!("match"), "{readback}");
+    let (included, hash) = last_inclusion(&inclusions)?;
+    assert_eq!(readback["block"], json!(included));
+    assert_eq!(readback["block_hash"], json!(hash));
+    // The read endpoint never imported the inclusion block, so the vector
+    // came from the submission endpoint that reported it.
+    assert!(read.mutate_state(|state| state.header(&hash).is_none()));
+    assert!(
+        node.requests().iter().any(|request| {
+            request.method == "state_call"
+                && request.params[0] == "SubnetInfoRuntimeApi_get_subnet_emission_weights"
+                && request.params[2] == json!(hash)
+        }),
+        "the inclusion-block read reached the submission endpoint"
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn read_back_that_cannot_run_is_skipped_and_the_command_succeeds() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let netuid = netuid();
+    let write = set_owner(&netuid, "10%");
+    let applied = owner_at("10%")?;
+
+    // A read error after the successful receipt.
+    let mut state = owned_state(signer.account())?;
+    land_on_submit(
+        &mut state,
+        Landed {
+            fail_reads: true,
+            ..landed(applied)
+        },
+    );
+    let (client, _) = client(state).await?;
+    let written = run_with(&client, wallet.path(), &json_args(&write), Some(&signer)).await?;
+    assert_eq!(code(&written), 0, "{}", written.stderr);
+    let documents = documents(&written.stdout)?;
+    assert_eq!(documents.len(), 2, "{}", written.stdout);
+    assert_eq!(documents[0]["success"], json!(true));
+    let readback = &documents[1]["readback"];
+    assert_eq!(readback["status"], json!("skipped"), "{readback}");
+    assert_eq!(readback["matches"], Value::Null);
+    assert!(
+        readback["reason"]
+            .as_str()
+            .ok_or("reason")?
+            .starts_with("the vector could not be read at the inclusion block"),
+        "{readback}"
+    );
+    client.close().await;
+
+    // Finality never reaches the inclusion block within the bound.
+    let mut state = owned_state(signer.account())?;
+    state.set_finalized(95)?;
+    land_on_submit(&mut state, landed(applied));
+    let (client, chain) = crate::client(state).await?;
+    let bounded = Setup {
+        deadline: Some(Duration::from_secs(2)),
+        saved: None,
+    };
+    let written = run_setup(
+        &client,
+        wallet.path(),
+        &json_args(&write),
+        Some(&signer),
+        &bounded,
+    )
+    .await?;
+    assert_eq!(code(&written), 0, "{}", written.stderr);
+    let documents = crate::documents(&written.stdout)?;
+    assert_eq!(documents[0]["success"], json!(true), "{}", written.stdout);
+    let readback = &documents[1]["readback"];
+    assert_eq!(readback["status"], json!("skipped"), "{readback}");
+    assert_eq!(
+        readback["reason"],
+        json!(
+            "the inclusion block was not finalized within 2s; the change is included but not verified"
+        )
+    );
+    assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+    let human = run_setup(&client, wallet.path(), &write, Some(&signer), &bounded).await?;
+    assert_eq!(code(&human), 0, "{}", human.stderr);
+    for needle in [
+        format!("subnet {netuid} emission weights read-back skipped"),
+        "reason  the inclusion block was not finalized within 2s".into(),
+    ] {
+        assert!(human.stdout.contains(&needle), "{needle}\n{}", human.stdout);
+    }
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn saved_multisig_reads_back_only_once_the_change_executes() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let other = KeypairSigner::from_seed(&[24; 32], CryptoType::Ed25519)?.account();
+    let netuid = netuid();
+    let applied = owner_at("10%")?;
+    for threshold in [1u16, 2] {
+        let members = [signer.account(), other];
+        let (probe, _) = client(owned_state(signer.account())?).await?;
+        let group = rtao::Executor::new(probe.clone())
+            .multisig(&members, threshold)
+            .await?;
+        probe.close().await;
+        // The multisig owns the subnet.
+        let mut state = owned_state(group.address)?;
+        land_on_submit(&mut state, landed(applied));
+        let (client, chain) = client(state).await?;
+        let setup = Setup {
+            deadline: None,
+            saved: Some(Saved {
+                multisigs: json!([{"name": "team", "threshold": threshold, "signatories": members.iter().map(ToString::to_string).collect::<Vec<_>>()}]),
+                signatories: vec![format!("{}=extension", signer.account())],
+                store: TempRoot::new(),
+            }),
+        };
+        let written = run_setup(
+            &client,
+            wallet.path(),
+            &json_args(&set_owner(&netuid, "10%")),
+            Some(&signer),
+            &setup,
+        )
+        .await?;
+        assert_eq!(code(&written), 0, "{threshold}: {}", written.stderr);
+        assert_eq!(chain.mutate_state(|state| state.submissions.len()), 1);
+        let documents = documents(&written.stdout)?;
+        let readback = &documents.last().ok_or("readback")?["readback"];
+        if threshold == 1 {
+            // as_multi_threshold_1 dispatched the change at once.
+            assert_eq!(readback["status"], json!("match"), "{readback}");
+        } else {
+            assert_eq!(readback["status"], json!("skipped"), "{readback}");
+            assert!(
+                readback["reason"]
+                    .as_str()
+                    .ok_or("reason")?
+                    .starts_with("the multisig approval is saved but has not executed"),
+                "{readback}"
+            );
+        }
+        client.close().await;
+    }
     Ok(())
 }
