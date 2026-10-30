@@ -544,6 +544,9 @@ fn reproduce_recipe(ctx: &AppContext, bundle: &ProposalBundle) -> Result<(), Cli
         format!("  -e PACKAGE=node-subtensor-runtime {slash}"),
         format!("  -e BUILD_OPTS=\"--features=metadata-hash\" {slash}"),
         format!("  -e PROFILE=production {slash}"),
+        // Upstream v486: deployed runtimes are built with this seed; without
+        // it the reproduced wasm does not match the on-chain code.
+        format!("  -e CONST_RANDOM_SEED=subtensor-runtime {slash}"),
         format!("  -v \"$(pwd)\":/build {slash}"),
         format!(
             "  {} /srtool/build --app",

@@ -131,7 +131,7 @@ use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
 BEGIN cargo xtask import-upstream attribution
-Copied byte for byte from RaoFoundation/subtensor @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7
+Copied byte for byte from RaoFoundation/subtensor @ 72323e13249c9e25c7e792a2b3c08502c84651d5
 https://github.com/RaoFoundation/subtensor
 License: Apache-2.0 (upstream LICENSE preserved in vendor/upstream/src/LICENSE).
 All watched files are retained for offline checks and Rust-native extraction;
@@ -150,7 +150,7 @@ eco-tests/src/mock.rs -> vendor/upstream/src/eco-tests/src/mock.rs; 3e05b0e7c58c
 eco-tests/src/tests.rs -> vendor/upstream/src/eco-tests/src/tests.rs; f127a55157a0c9f9a746ebdafb8e367664c4c8e088440220cddfdbe1125ec3d9
 eco-tests/src/tests_mentat_indexer.rs -> vendor/upstream/src/eco-tests/src/tests_mentat_indexer.rs; 61604627b22b0c3e17789f88e2f5cec08b232239fa3c379c2ee242b0bb16bd68
 eco-tests/src/tests_taocom_indexer.rs -> vendor/upstream/src/eco-tests/src/tests_taocom_indexer.rs; c3c5a26cde9461490b56b07259d6310abf48202cb1b4d6d96a13d3fe0e3b1cca
-git:watched-tree -> vendor/upstream/tree.txt; 51011e9f768f96a69855acdd342ca574b3cebfca31035e5a314991f6b81693e5
+git:watched-tree -> vendor/upstream/tree.txt; a11a3e734a84552d88941da643f06de303a1475d8b37a9001821faf0bf2e54bb
 pallets/admin-utils/src/lib.rs -> vendor/upstream/src/pallets/admin-utils/src/lib.rs; 6e2d3657f384fb342c3e90958ede4e0d3c664fdbff4ccecb2f44c44ff641dd44
 pallets/subtensor/src/coinbase/reveal_commits.rs -> vendor/upstream/src/pallets/subtensor/src/coinbase/reveal_commits.rs; 33098bed261a1ad7c970c7e38c02c7446316c00483e945ef0a86dddb9485f683
 pallets/subtensor/src/coinbase/run_coinbase.rs -> vendor/upstream/src/pallets/subtensor/src/coinbase/run_coinbase.rs; 60dbf8a8866962c96ced8bbad08893323a289f31bc12f0367ab26adefba9ac1f
@@ -325,7 +325,7 @@ sdk/python/bittensor/cli/secrets.py -> vendor/upstream/src/sdk/python/bittensor/
 sdk/python/bittensor/cli/stake_exit.py -> vendor/upstream/src/sdk/python/bittensor/cli/stake_exit.py; a0f7accbca4d43054c3be0b219d37c000253dd1ea22b588be581465bf0b94238
 sdk/python/bittensor/cli/stake_picker.py -> vendor/upstream/src/sdk/python/bittensor/cli/stake_picker.py; 1df0e8809c1132aa952fcfdf556387d2b5801a078af7c6bf2f4ab4405ce19fb4
 sdk/python/bittensor/cli/tx.py -> vendor/upstream/src/sdk/python/bittensor/cli/tx.py; 8fed2519961670549de882637a3e4486e14858ab9b68e66a605bcad9530827a7
-sdk/python/bittensor/cli/upgrade_helpers.py -> vendor/upstream/src/sdk/python/bittensor/cli/upgrade_helpers.py; c79abc3c08021e1e436ee8f60fab9d0a92b5e0141c9765abfbdc2ef15262ccda
+sdk/python/bittensor/cli/upgrade_helpers.py -> vendor/upstream/src/sdk/python/bittensor/cli/upgrade_helpers.py; d2eca7310f321191dac519a87e7d1c3b4bc6ba8717d383b3c35ef0c72b86893f
 sdk/python/bittensor/client.py -> vendor/upstream/src/sdk/python/bittensor/client.py; 99e2645ddf45f2f9600413df0e165fb2da0cd3d389918e9ba9d95655e9c42e28
 sdk/python/bittensor/config.py -> vendor/upstream/src/sdk/python/bittensor/config.py; 4487adac344720e9aff68f4712655b0553055491f0b711c3ffa4cbac08ca26e2
 sdk/python/bittensor/emission_weights.py -> vendor/upstream/src/sdk/python/bittensor/emission_weights.py; 5751eb5c31f9af4ff3d929c84654002e6d60224f473dfd8388d91f200c8e01d3

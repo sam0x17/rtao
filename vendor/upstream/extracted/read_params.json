@@ -1,10 +1,10 @@
 {
   "catalog": {
-    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
+    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
     "count": 105,
     "path": "website/apps/bittensor-website/public/catalog/reads.json",
     "sha256": "c8fd505c3d697270d71ff3275ead4bbe95138d1f6fb87f74fa24576a0c275e84",
-    "tag": "v484"
+    "tag": "v486"
   },
   "format": 1,
   "modules": {
@@ -20,8 +20,8 @@
     ]
   },
   "parity": {
-    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
-    "tag": "v484"
+    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+    "tag": "v486"
   },
   "reads": [
     {

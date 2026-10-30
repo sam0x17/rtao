@@ -8934,7 +8934,7 @@
           "crates/rtao-cli/src/commands/upgrade/chain.rs",
           "crates/rtao-cli/src/commands/multisig.rs"
         ],
-        "synced_blob": "6bfdca77bb4ccaf005f50073e32f7d752591c234"
+        "synced_blob": "961958a7b3f1a6da8450a78a9f6b298b7fb0be5d"
       },
       {
         "kind": "ported",
@@ -12484,8 +12484,8 @@
     ]
   },
   "pin": {
-    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
-    "tag": "v484"
+    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+    "tag": "v486"
   },
   "schema": 1,
   "status_semantics": {

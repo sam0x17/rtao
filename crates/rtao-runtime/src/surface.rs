@@ -882,10 +882,10 @@ mod tests {
     use blake2::Digest;
     use rtao_core::codec::Value;
 
-    const METADATA: &[u8] = include_bytes!("../../../vendor/metadata/finney/484.v15.scale");
+    const METADATA: &[u8] = include_bytes!("../../../vendor/metadata/finney/486.v15.scale");
 
     fn parse_core() -> Runtime {
-        Runtime::parse(METADATA, 484, 1, 42).unwrap()
+        Runtime::parse(METADATA, 486, 1, 42).unwrap()
     }
 
     fn runtime() -> RuntimeHandle {

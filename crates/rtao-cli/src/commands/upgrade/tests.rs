@@ -949,3 +949,38 @@ async fn pending_uses_configured_repository_and_retains_discovery_when_enrichmen
     client.close().await;
     Ok(())
 }
+
+#[test]
+fn reproduce_recipe_matches_the_upstream_srtool_recipe() -> TestResult {
+    // upgrade_helpers.py srtool_recipe at v486: the deployed runtime is built
+    // with CONST_RANDOM_SEED, so a recipe without it cannot reproduce the code.
+    let parsed = parse(&["check", "--url", "A/B@v1"])?;
+    let (mut ctx, _, sink) = context(&parsed, OTHER)?;
+    ctx.globals.json = false;
+    ctx.output = Output::new(OutputOptions::default(), Arc::new(sink.clone()));
+    let bundle = ProposalBundle {
+        blob: Vec::new(),
+        manifest: Some(json!({"repo": "RaoFoundation/subtensor", "tag": "v486", "srtool_rustc": "1.89.0"})),
+        wasm: None,
+        digest: None,
+        wasm_source: Some("release"),
+        notes: Vec::new(),
+    };
+    reproduce_recipe(&ctx, &bundle)?;
+    let human = sink.text(Stream::Stderr)?;
+    let lines: Vec<&str> = human.lines().map(str::trim).collect();
+    let at = |needle: &str| lines.iter().position(|l| l.starts_with(needle));
+    for needle in [
+        "-e PACKAGE=node-subtensor-runtime",
+        "-e BUILD_OPTS=\"--features=metadata-hash\"",
+        "-e PROFILE=production",
+        "-e CONST_RANDOM_SEED=subtensor-runtime",
+        "-v \"$(pwd)\":/build",
+    ] {
+        assert!(at(needle).is_some(), "recipe lacks {needle}: {human}");
+    }
+    // Same order as upstream: the seed follows PROFILE and precedes the mount.
+    assert!(at("-e PROFILE=production") < at("-e CONST_RANDOM_SEED=subtensor-runtime"));
+    assert!(at("-e CONST_RANDOM_SEED=subtensor-runtime") < at("-v \"$(pwd)\":/build"));
+    Ok(())
+}

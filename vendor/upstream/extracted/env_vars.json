@@ -688,7 +688,7 @@
       "missing_value": "returns_default_or_none",
       "name": "GH_TOKEN",
       "source": {
-        "blob": "6bfdca77bb4ccaf005f50073e32f7d752591c234",
+        "blob": "961958a7b3f1a6da8450a78a9f6b298b7fb0be5d",
         "end_byte": 4125,
         "end_line": 107,
         "line": 107,
@@ -698,7 +698,7 @@
       "truthy_fallback": {
         "condition": "missing_or_empty",
         "source": {
-          "blob": "6bfdca77bb4ccaf005f50073e32f7d752591c234",
+          "blob": "961958a7b3f1a6da8450a78a9f6b298b7fb0be5d",
           "end_byte": 4159,
           "end_line": 107,
           "line": 107,
@@ -709,7 +709,7 @@
           {
             "kind": "resolved",
             "source": {
-              "blob": "6bfdca77bb4ccaf005f50073e32f7d752591c234",
+              "blob": "961958a7b3f1a6da8450a78a9f6b298b7fb0be5d",
               "end_byte": 4159,
               "end_line": 107,
               "line": 107,
@@ -734,7 +734,7 @@
       "missing_value": "returns_default_or_none",
       "name": "GITHUB_TOKEN",
       "source": {
-        "blob": "6bfdca77bb4ccaf005f50073e32f7d752591c234",
+        "blob": "961958a7b3f1a6da8450a78a9f6b298b7fb0be5d",
         "end_byte": 4159,
         "end_line": 107,
         "line": 107,
@@ -1380,8 +1380,8 @@
     "status": "matches"
   },
   "provenance": {
-    "commit": "5749dbfbe4a78ccd3938d46ffae45e059488feb7",
-    "tag": "v484"
+    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+    "tag": "v486"
   },
   "scope": {
     "authenticated_modules": 197,

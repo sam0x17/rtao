@@ -23,18 +23,18 @@ paths = ["sdk/bittensor-core/src/signers/mod.rs", "sdk/bittensor-core/src/signer
 probe = ["bittensor_core::signers::ApduTransport", "bittensor_core::signers::ledger::LedgerDevice::with_transport"]
 
 [parity]
-tag = "v484"
-commit = "5749dbfbe4a78ccd3938d46ffae45e059488feb7"
-spec_version = 484
+tag = "v486"
+commit = "72323e13249c9e25c7e792a2b3c08502c84651d5"
+spec_version = 486
 python_package_version = "11.3.1.dev0"
 
 [localnet]
 image = "ghcr.io/raofoundation/subtensor-localnet"
-pinned = { tag = "v484", digest = "sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35" }
-mainnet = { tag = "mainnet", digest = "sha256:6cdbb3daa48256895d5b9c2486a9d7b85c3d42f662d6adcd242a10ba149d3b35" }
+pinned = { tag = "v486", digest = "sha256:597778ceb7de7e39e60545a7e5f18829ca1530d8e5be7e097c17cf404e742ff0" }
+mainnet = { tag = "mainnet", digest = "sha256:597778ceb7de7e39e60545a7e5f18829ca1530d8e5be7e097c17cf404e742ff0" }
 testnet = { tag = "testnet", digest = "sha256:5e4eaefb768d08bf13345d9c60eeb04719a8bb1a9d0fdb14e4f05bbb95a5602e" }
 devnet = { tag = "devnet", digest = "sha256:64f56c4b5485c2bf1f299ce792423517217acd7e763549dab311c74e784bee2b" }
-main = { tag = "main", digest = "sha256:9f4a42e08dd2dbbb9eab01b9f8f3f9152766a56608a1b97958eaaad3671141a9" }
+main = { tag = "main", digest = "sha256:decee127d9a5ea00a6f8885bf3ba4f44e57e0b2e0da47226ed90b2437e0b10b6" }
 
 [networks]
 
@@ -43,13 +43,13 @@ genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
 genesis_endpoint = "https://entrypoint-finney.opentensor.ai:443"
 
 [networks.finney.metadata]
-spec = 484
-code_hash = "0x23041f50d3529b359e9be3b90f3ca40474678e834e97f49fb401d0c691097760"
-finalized_head = "0x0c856f3c0a470a23703858e652949a726369549288f5b1b1917897084d77e7a7"
-v15 = "vendor/metadata/finney/484.v15.scale"
-v15_sha256 = "17183e36d52a18aa8cc15caf054b82f7559608ca6decc45923313e7be5c8d32f"
-v16 = "vendor/metadata/finney/484.v16.scale"
-v16_sha256 = "5f7b01288df379ddd32bc7665f61fccc30b157c6662a13ea80008d1bc440192c"
+spec = 486
+code_hash = "0x49781ac4cfda0ac6cf6e53cfceea7c728394d9c28da7881f47e3fbfbc239800f"
+finalized_head = "0xf8bea834abdd103986b19ee128522de4c3a7fb6358eb03f32b3360552a48642b"
+v15 = "vendor/metadata/finney/486.v15.scale"
+v15_sha256 = "582b1d0568a4c1a4c5e9ab2b0038ea4c0f8c61f4972ce1af91fa6dfb0ab01a81"
+v16 = "vendor/metadata/finney/486.v16.scale"
+v16_sha256 = "e96a429def2d05791ac2bbf57f9f5287d6fb07c44900d71353c2697d8a7b6da4"
 
 [networks.testnet]
 genesis = "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105"
@@ -71,7 +71,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "eco-tests/src/tests.rs" = { to = "vendor/upstream/src/eco-tests/src/tests.rs", sha256 = "f127a55157a0c9f9a746ebdafb8e367664c4c8e088440220cddfdbe1125ec3d9" }
 "eco-tests/src/tests_mentat_indexer.rs" = { to = "vendor/upstream/src/eco-tests/src/tests_mentat_indexer.rs", sha256 = "61604627b22b0c3e17789f88e2f5cec08b232239fa3c379c2ee242b0bb16bd68" }
 "eco-tests/src/tests_taocom_indexer.rs" = { to = "vendor/upstream/src/eco-tests/src/tests_taocom_indexer.rs", sha256 = "c3c5a26cde9461490b56b07259d6310abf48202cb1b4d6d96a13d3fe0e3b1cca" }
-"git:watched-tree" = { to = "vendor/upstream/tree.txt", sha256 = "51011e9f768f96a69855acdd342ca574b3cebfca31035e5a314991f6b81693e5" }
+"git:watched-tree" = { to = "vendor/upstream/tree.txt", sha256 = "a11a3e734a84552d88941da643f06de303a1475d8b37a9001821faf0bf2e54bb" }
 "pallets/admin-utils/src/lib.rs" = { to = "vendor/upstream/src/pallets/admin-utils/src/lib.rs", sha256 = "6e2d3657f384fb342c3e90958ede4e0d3c664fdbff4ccecb2f44c44ff641dd44" }
 "pallets/subtensor/src/coinbase/reveal_commits.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/coinbase/reveal_commits.rs", sha256 = "33098bed261a1ad7c970c7e38c02c7446316c00483e945ef0a86dddb9485f683" }
 "pallets/subtensor/src/coinbase/run_coinbase.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/coinbase/run_coinbase.rs", sha256 = "60dbf8a8866962c96ced8bbad08893323a289f31bc12f0367ab26adefba9ac1f" }
@@ -246,7 +246,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/bittensor/cli/stake_exit.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/stake_exit.py", sha256 = "a0f7accbca4d43054c3be0b219d37c000253dd1ea22b588be581465bf0b94238" }
 "sdk/python/bittensor/cli/stake_picker.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/stake_picker.py", sha256 = "1df0e8809c1132aa952fcfdf556387d2b5801a078af7c6bf2f4ab4405ce19fb4" }
 "sdk/python/bittensor/cli/tx.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/tx.py", sha256 = "8fed2519961670549de882637a3e4486e14858ab9b68e66a605bcad9530827a7" }
-"sdk/python/bittensor/cli/upgrade_helpers.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/upgrade_helpers.py", sha256 = "c79abc3c08021e1e436ee8f60fab9d0a92b5e0141c9765abfbdc2ef15262ccda" }
+"sdk/python/bittensor/cli/upgrade_helpers.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/upgrade_helpers.py", sha256 = "d2eca7310f321191dac519a87e7d1c3b4bc6ba8717d383b3c35ef0c72b86893f" }
 "sdk/python/bittensor/client.py" = { to = "vendor/upstream/src/sdk/python/bittensor/client.py", sha256 = "99e2645ddf45f2f9600413df0e165fb2da0cd3d389918e9ba9d95655e9c42e28" }
 "sdk/python/bittensor/config.py" = { to = "vendor/upstream/src/sdk/python/bittensor/config.py", sha256 = "4487adac344720e9aff68f4712655b0553055491f0b711c3ffa4cbac08ca26e2" }
 "sdk/python/bittensor/emission_weights.py" = { to = "vendor/upstream/src/sdk/python/bittensor/emission_weights.py", sha256 = "5751eb5c31f9af4ff3d929c84654002e6d60224f473dfd8388d91f200c8e01d3" }
