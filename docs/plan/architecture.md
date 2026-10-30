@@ -170,7 +170,7 @@ B/C/D echoing `CommitRevealWeightsVersion`, A's inheritance of the core's epoch 
 | 8 | Policy refusals are classified exactly as `rpc.py` classifies them, from extracted constants, with headers from the handshake response | §3.2 |
 | 9 | V15 metadata always; V14 only through Python's missing-method or absent-V15 fallback; a V14 runtime is degraded (no signing; runtime APIs only through the ported frozen legacy table) | §3.4 |
 | 10 | Generated descriptors are name-based; storage keys always come from the live entry via the core; shape hashes only verify | §3.7 |
-| 11 | Exact shape hashes for calls and the positional metagraph view; projection hashes (declared fields only) for by-name models; the outer `RuntimeCall`/`RuntimeEvent`/`RuntimeError` enums are opaque; fail-closed per call | §3.7 |
+| 11 | Exact shape hashes for calls and the positional metagraph view; projection hashes (declared fields only) for by-name models; the outer `RuntimeCall`/`RuntimeEvent`/`RuntimeError` enums are opaque; fail-closed per call. Weight calls (D-088) and validator run-path storage (D-089) fall back to by-name resolution checked by structural class | §3.7 |
 | 12 | One encoder (`Runtime::compose_call`); no codec-derive encode path | §3.8 |
 | 13 | Coalesced reads: heterogeneous keys in one `state_queryStorageAt` at one pinned hash, chunked at 256 keys | §3.6 |
 | 14 | Nonces follow Python (clear on any failure, re-ask the pool-aware `account_nextIndex`), enforced by an RAII `NonceLease`; one `NonceManager` per `Client`, shared by every clone, executor and service; reconciliation is layered on top, never a reservation | §3.9 |
@@ -1780,6 +1780,18 @@ refuses per field with `ComposeError::ResolvedIncompatible`: an added, removed o
 narrowed or signed integer, an array or a nested call. `check_resolved` runs the same checks without values. The
 validator's weight scheduler uses this path when a weight call's compiled shape fails (§9.3). A call therefore stays
 fail-closed per call only when it is really incompatible after name-resolved checking.
+
+Typed storage reads have the matching by-name path (D-089). `ResolvedStorage` names an entry, declares a `ReadClass`
+for each key and for the value (`Uint(bits)` of any live width or compact, `Bool`, `Account`, `Bytes`, `Seq`,
+`Record` of `ReadField`s with accepted names, `Variants`) and whether absence is meaningful (`ReadPresence`). Its plan
+encodes keys with the live types, hashers and prefix and decodes values strictly into `ReadDatum`s: every byte is
+consumed, each integer must fit its live type and the class width, a named struct is matched by declared names and
+never by position, undeclared struct fields and added variants are skipped through the core decoder. A signed integer,
+an `Option`, a struct where a scalar was read, a removed or un-aliased renamed field, a changed tuple arity or key
+count, a removed declared variant, or an `Optional` entry that became `Default` refuses per entry with
+`ReadResolveError`. `ViewExt::fetch_resolved` coalesces such reads into one storage request with a result per read.
+The exact gate in `ViewExt::fetch` is unchanged; the validator run path routes its own reads through the by-name path
+when their compiled shape fails (§9.3).
 
 ### 3.8 Typed call builders and `CallBytes`
 
@@ -4309,6 +4321,12 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
      the best head (`PY/intents/weights.py:283-306` → `PY/_substrate.py:417-418` →
      `PY/_transport/interface.py:218-226`). Pinning at the finalized head would make every round 4 × (best −
      finalized) rounds later than Python's, 8-12 rounds at finney's measured lag of 2-3 blocks.
+   - **After a runtime change (D-089).** The preflight, the scheduler's mechanism and owner reads, the reveal
+     watcher's queue, schedule, permit and drand reads, durable recovery's epoch index and the Aura slot duration keep
+     their compiled reads while the exact shape matches. Otherwise they are read by name (§3.7) into the same values,
+     still as one `state_queryStorageAt` for the preflight, and only an entry whose meaning cannot be recovered
+     refuses, naming the entry and field. `Uids` must stay `Optional` on both routes. `validator --check-connection`
+     reports an entry read by name as a warning.
    - **Refusals**, reserved for outcomes the chain would certainly reject or silently drop:
      - not registered;
      - `SubnetEpochConsensus == Null` and `ValidatorPermit[netuid][uid] == false`: a certain rejection at the pool

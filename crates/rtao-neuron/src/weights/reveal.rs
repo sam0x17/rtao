@@ -416,12 +416,14 @@ impl RevealWatcher {
         // The commit's inclusion block may so far exist only on a separate
         // submission endpoint; read it where it exists.
         let snapshot = client.at_receipt(hash).await?;
-        let (first, second) = snapshot
-            .fetch((
+        let (first, second) = super::reads::fetch(
+            &snapshot,
+            (
                 st::TIMELOCKED_WEIGHT_COMMITS.at((index, predicted_epoch)),
                 st::TIMELOCKED_WEIGHT_COMMITS.at((index, next_epoch)),
-            ))
-            .await?;
+            ),
+        )
+        .await?;
         let matches = |entry: &(AccountId, u64, Vec<u8>, u64)| {
             entry.0 == hotkey
                 && entry.1 == inclusion
@@ -436,10 +438,11 @@ impl RevealWatcher {
             // Delayed inclusion can span more than one epoch. Read the actual
             // inclusion index and probe it rather than guessing or abandoning
             // an already accepted commitment.
-            let current = snapshot.storage(&st::SUBNET_EPOCH_INDEX, (netuid,)).await?;
-            let queue = snapshot
-                .storage(&st::TIMELOCKED_WEIGHT_COMMITS, (index, current))
-                .await?;
+            let current =
+                super::reads::storage(&snapshot, &st::SUBNET_EPOCH_INDEX, (netuid,)).await?;
+            let queue =
+                super::reads::storage(&snapshot, &st::TIMELOCKED_WEIGHT_COMMITS, (index, current))
+                    .await?;
             anyhow::ensure!(
                 queue.iter().any(matches),
                 "included commit is absent from predicted and actual inclusion epoch queues"
@@ -602,9 +605,9 @@ impl RevealWatcher {
             let index = NetUidStorageIndex::new(pending.netuid, pending.mechanism)?;
             // Runtime reveal processing selects the queue using its current
             // period, not a period frozen when our process prepared the commit.
-            let period = parent
-                .storage(&st::REVEAL_PERIOD_EPOCHS, (pending.netuid,))
-                .await?;
+            let period =
+                super::reads::storage(&parent, &st::REVEAL_PERIOD_EPOCHS, (pending.netuid,))
+                    .await?;
             pending.reveal_epoch = pending
                 .commit_epoch
                 .checked_add(period)
@@ -622,12 +625,12 @@ impl RevealWatcher {
                         && reveal_matches(&event.attributes, index, pending.hotkey)
                 })
             {
-                let queue = parent
-                    .storage(
-                        &st::TIMELOCKED_WEIGHT_COMMITS,
-                        (index, pending.commit_epoch),
-                    )
-                    .await?;
+                let queue = super::reads::storage(
+                    &parent,
+                    &st::TIMELOCKED_WEIGHT_COMMITS,
+                    (index, pending.commit_epoch),
+                )
+                .await?;
                 let candidates = queue
                     .iter()
                     .filter(|entry| entry.0 == pending.hotkey)
@@ -647,9 +650,9 @@ impl RevealWatcher {
             }
             if epoch < pending.reveal_epoch {
                 if !pending.warned_permit && epoch > pending.commit_epoch {
-                    let permits = snapshot
-                        .storage(&st::VALIDATOR_PERMIT, (pending.netuid,))
-                        .await?;
+                    let permits =
+                        super::reads::storage(&snapshot, &st::VALIDATOR_PERMIT, (pending.netuid,))
+                            .await?;
                     if permits.get(usize::from(pending.uid.0)) != Some(&true) {
                         tracing::warn!(
                             mechanism = pending.mechanism.0,
@@ -666,12 +669,12 @@ impl RevealWatcher {
                 if pending.ambiguous_reveal {
                     continue;
                 }
-                let queue = snapshot
-                    .storage(
-                        &st::TIMELOCKED_WEIGHT_COMMITS,
-                        (index, pending.commit_epoch),
-                    )
-                    .await?;
+                let queue = super::reads::storage(
+                    &snapshot,
+                    &st::TIMELOCKED_WEIGHT_COMMITS,
+                    (index, pending.commit_epoch),
+                )
+                .await?;
                 if queue.iter().any(|entry| {
                     entry.0 == pending.hotkey
                         && entry.1 == pending.inclusion_block
@@ -691,9 +694,12 @@ impl RevealWatcher {
                 pending.last_round = if let Some(round) = stored_round {
                     round
                 } else {
-                    let round = snapshot
-                        .storage(&rtao_runtime::storage::drand::LAST_STORED_ROUND, ())
-                        .await?;
+                    let round = super::reads::storage(
+                        &snapshot,
+                        &rtao_runtime::storage::drand::LAST_STORED_ROUND,
+                        (),
+                    )
+                    .await?;
                     stored_round = Some(round);
                     round
                 };
@@ -702,9 +708,12 @@ impl RevealWatcher {
                 // The parent is the last block inside the reveal window. Its
                 // drand state stays valid even if this block ingested the round
                 // too late, or an earlier watcher RPC temporarily failed.
-                pending.last_round = parent
-                    .storage(&rtao_runtime::storage::drand::LAST_STORED_ROUND, ())
-                    .await?;
+                pending.last_round = super::reads::storage(
+                    &parent,
+                    &rtao_runtime::storage::drand::LAST_STORED_ROUND,
+                    (),
+                )
+                .await?;
                 let reason = pending.first_check.unwrap_or_else(|| {
                     if pending.last_round < pending.round {
                         RevealMissReason::DrandRound
@@ -791,9 +800,7 @@ async fn reveal_identity(
     parent: &Snapshot,
 ) -> anyhow::Result<(rtao_primitives::H256, u16)> {
     let code = super::runtime_code_hash(client, parent.block().hash).await?;
-    let tag = parent
-        .storage(&st::COMMIT_REVEAL_WEIGHTS_VERSION, ())
-        .await?;
+    let tag = super::reads::storage(parent, &st::COMMIT_REVEAL_WEIGHTS_VERSION, ()).await?;
     Ok((code, tag))
 }
 
@@ -802,15 +809,17 @@ async fn reveal_processing_epoch(
     netuid: NetUid,
     block: u64,
 ) -> anyhow::Result<u64> {
-    let (tempo, last, pending, index, counter) = parent
-        .fetch((
+    let (tempo, last, pending, index, counter) = super::reads::fetch(
+        parent,
+        (
             st::TEMPO.at((netuid,)),
             st::LAST_EPOCH_BLOCK.at((netuid,)),
             st::PENDING_EPOCH_AT.at((netuid,)),
             st::SUBNET_EPOCH_INDEX.at((netuid,)),
             st::BLOCKS_SINCE_LAST_STEP.at((netuid,)),
-        ))
-        .await?;
+        ),
+    )
+    .await?;
     let state = rtao_core::timelock::epoch_schedule::EpochScheduleState {
         tempo,
         last_epoch_block: last,
@@ -825,17 +834,20 @@ async fn first_check(
     snapshot: &Snapshot,
     pending: &Pending,
 ) -> anyhow::Result<Option<RevealMissReason>> {
-    let (uid, permits, threshold, version, population, min, owner, consensus) = snapshot
-        .fetch((
-            st::UIDS.at((pending.netuid, pending.hotkey)),
-            st::VALIDATOR_PERMIT.at((pending.netuid,)),
-            st::STAKE_THRESHOLD.at(()),
-            st::WEIGHTS_VERSION_KEY.at((pending.netuid,)),
-            st::SUBNETWORK_N.at((pending.netuid,)),
-            st::MIN_ALLOWED_WEIGHTS.at((pending.netuid,)),
-            st::SUBNET_OWNER_HOTKEY.at((pending.netuid,)),
-            st::SUBNET_EPOCH_CONSENSUS.at((pending.netuid,)),
-        ))
+    let (uid, permits, threshold, version, population, min, owner, consensus) =
+        super::reads::fetch(
+            snapshot,
+            (
+                st::UIDS.at((pending.netuid, pending.hotkey)),
+                st::VALIDATOR_PERMIT.at((pending.netuid,)),
+                st::STAKE_THRESHOLD.at(()),
+                st::WEIGHTS_VERSION_KEY.at((pending.netuid,)),
+                st::SUBNETWORK_N.at((pending.netuid,)),
+                st::MIN_ALLOWED_WEIGHTS.at((pending.netuid,)),
+                st::SUBNET_OWNER_HOTKEY.at((pending.netuid,)),
+                st::SUBNET_EPOCH_CONSENSUS.at((pending.netuid,)),
+            ),
+        )
         .await?;
     let Some(uid) = uid else {
         return Ok(Some(RevealMissReason::NotRegistered));
@@ -915,7 +927,7 @@ fn reveal_matches(attributes: &Value, index: NetUidStorageIndex, hotkey: Account
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::expect_used)]
+    #![allow(clippy::expect_used, clippy::panic)]
     use super::*;
     use crate::weights::tests::{HOTKEY, fixture, header, seed_at, split_fixture};
     use rtao_primitives::IntoCoreValue;
@@ -967,22 +979,17 @@ mod tests {
         };
         chain.mutate_state(|state| -> anyhow::Result<()> {
             state.advance(30);
-            seed_at(
-                state,
-                110,
-                "SubtensorModule",
-                "TimelockedWeightCommits",
-                (NetUidStorageIndex(1), 6u64),
-                vec![(HOTKEY, 110u64, commit.ciphertext.clone(), 500u64)],
-            )?;
-            seed_at(
-                state,
-                119,
-                "SubtensorModule",
-                "TimelockedWeightCommits",
-                (NetUidStorageIndex(1), 6u64),
-                vec![(HOTKEY, 110u64, commit.ciphertext.clone(), 500u64)],
-            )?;
+            for block in [110, 119] {
+                let queue = commit_queue(state, &[(HOTKEY, 110, commit.ciphertext.clone(), 500)])?;
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "TimelockedWeightCommits",
+                    (NetUidStorageIndex(1), 6u64),
+                    queue,
+                )?;
+            }
             for block in [110, 119, 120] {
                 seed_at(
                     state,
@@ -1065,6 +1072,184 @@ mod tests {
             )
             .await?;
         Ok((watcher, metrics))
+    }
+
+    /// A `TimelockedWeightCommits` queue value for the live entry type: a
+    /// list of tuples, or of records keyed by the live field names when the
+    /// entry is a named struct.
+    pub(super) fn commit_queue(
+        state: &rtao_testkit::FakeState,
+        entries: &[(AccountId, u64, Vec<u8>, u64)],
+    ) -> anyhow::Result<Value> {
+        use scale_info::TypeDef;
+        let info = state
+            .runtime
+            .storage_entry("SubtensorModule", "TimelockedWeightCommits")
+            .ok_or_else(|| anyhow::anyhow!("missing commit queue"))?;
+        let mut id = info.value_type;
+        let element = loop {
+            match &state
+                .runtime
+                .resolve(id)
+                .map_err(rtao_core::CoreError::from)?
+                .type_def
+            {
+                TypeDef::Composite(composite) if composite.fields.len() == 1 => {
+                    id = composite.fields[0].ty.id;
+                }
+                TypeDef::Sequence(sequence) => break sequence.type_param.id,
+                _ => anyhow::bail!("commit queue is not a sequence"),
+            }
+        };
+        let names = match &state
+            .runtime
+            .resolve(element)
+            .map_err(rtao_core::CoreError::from)?
+            .type_def
+        {
+            TypeDef::Composite(composite) if composite.fields.iter().all(|f| f.name.is_some()) => {
+                Some(
+                    composite
+                        .fields
+                        .iter()
+                        .filter_map(|field| field.name.clone())
+                        .collect::<Vec<_>>(),
+                )
+            }
+            _ => None,
+        };
+        Ok(Value::List(
+            entries
+                .iter()
+                .map(|(who, block, commit, round)| match &names {
+                    None => (*who, *block, commit.clone(), *round).into_core_value(),
+                    Some(names) => Value::record(
+                        names
+                            .iter()
+                            .map(|name| {
+                                let value = match name.as_str() {
+                                    "who" | "account" | "hotkey" => who.into_core_value(),
+                                    "commit_block" => block.into_core_value(),
+                                    "commit" | "serialized_compressed_commit" => {
+                                        Value::Bytes(commit.clone())
+                                    }
+                                    "reveal_round" | "round_number" => round.into_core_value(),
+                                    _ => Value::Int(0),
+                                };
+                                (name.clone(), value)
+                            })
+                            .collect(),
+                    ),
+                })
+                .collect(),
+        ))
+    }
+
+    /// A commit queue entry that became a named struct with reordered,
+    /// aliased and added fields still locates the commitment and matches its
+    /// reveal (D-089).
+    #[tokio::test]
+    async fn a_reordered_commit_struct_still_records_and_matches_its_reveal() -> anyhow::Result<()>
+    {
+        let (chain, client) =
+            crate::weights::tests::fixture_with(crate::weights::read_tests::reordered_commits)
+                .await?;
+        let runtime = client.at(BlockRef::Best).await?.block().runtime.clone();
+        assert!(
+            !runtime
+                .surface_report()
+                .shape_matches("storage:SubtensorModule.TimelockedWeightCommits")
+        );
+        let (mut watcher, metrics) = record_slipped(&chain, &client, |_, hash| async move {
+            Ok(crate::weights::submit::WeightSubmission {
+                block_hash: hash,
+                block_number: 110,
+            })
+        })
+        .await?;
+        assert_eq!(watcher.pending(), 1);
+        assert_eq!(watcher.pending[0].commit_epoch, 6);
+        assert_eq!(watcher.pending[0].reveal_epoch, 7);
+        chain.mutate_state(|state| {
+            let hash = state.block_hash(120).expect("reveal hash");
+            state
+                .seed_events(hash, success_event())
+                .expect("seed reveal");
+            let parent = state.block_hash(119).expect("parent hash");
+            state.seed_at(parent, b":code".to_vec(), Some(b"reveal code".to_vec()));
+        });
+        watcher
+            .observe(&client, &header(&chain, 120)?, &metrics)
+            .await?;
+        assert_eq!(watcher.pending(), 0);
+        let result = watcher.outcomes().front().expect("outcome");
+        assert_eq!(result.reveal_epoch, 7);
+        assert!(result.missed.is_none());
+        client.close().await;
+        Ok(())
+    }
+
+    /// A commit queue entry that lost a field refuses by name, and the
+    /// accepted commitment stays unlocated for a later attempt instead of
+    /// being abandoned.
+    #[tokio::test]
+    async fn a_commit_queue_missing_a_field_refuses_and_keeps_the_commitment() -> anyhow::Result<()>
+    {
+        use crate::weights::read_tests::{add_type, commit_element, commit_fields};
+        let (chain, client) = crate::weights::tests::fixture_with(|meta| {
+            let [who, block, commit, _] = commit_fields(meta);
+            let tuple = add_type(
+                meta,
+                &[],
+                scale_info::TypeDef::Tuple(scale_info::TypeDefTuple {
+                    fields: vec![who.into(), block.into(), commit.into()],
+                }),
+            );
+            commit_element(meta, tuple);
+        })
+        .await?;
+        let best = client.at(BlockRef::Best).await?;
+        let state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+        chain.mutate_state(|state| state.advance(30));
+        let report = crate::weights::submit::WeightSubmission {
+            block_hash: header(&chain, 110)?.hash,
+            block_number: 110,
+        };
+        let metrics = Metrics::default();
+        let mut watcher = RevealWatcher::default();
+        let error = watcher
+            .record(
+                &client,
+                NetUid(1),
+                MechId(0),
+                HOTKEY,
+                (vec![Uid(1)], vec![65535]),
+                0,
+                state,
+                PreparedWeightCommit {
+                    ciphertext: vec![4, 5, 6],
+                    reveal_round: 500,
+                },
+                &report,
+                &metrics,
+            )
+            .await
+            .expect_err("a three-field commit has no reveal round");
+        let Some(rtao_client::ClientError::ReadResolveIncompatible(refusal)) =
+            error.downcast_ref::<rtao_client::ClientError>()
+        else {
+            panic!("expected a name-resolved refusal, got {error:#}");
+        };
+        assert_eq!(refusal.item, "TimelockedWeightCommits");
+        assert!(
+            refusal.detail.contains("tuple of 3 fields, expected 4"),
+            "{refusal}"
+        );
+        assert!(watcher.pending.is_empty());
+        assert_eq!(watcher.unlocated.len(), 1);
+        assert_eq!(watcher.pending(), 1, "the commitment is still tracked");
+        client.close().await;
+        Ok(())
     }
 
     /// With a separate submission endpoint, the commit's inclusion block may

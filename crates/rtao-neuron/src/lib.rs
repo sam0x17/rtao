@@ -19,6 +19,8 @@ mod prune;
 #[cfg(feature = "miner")]
 mod publisher;
 #[cfg(any(feature = "validator", feature = "miner"))]
+mod reads;
+#[cfg(any(feature = "validator", feature = "miner"))]
 mod runtime;
 #[cfg(any(feature = "validator", feature = "miner"))]
 mod shutdown;

@@ -4,19 +4,21 @@
 
 mod compose;
 mod durable;
+#[cfg(test)]
+mod read_tests;
 mod reveal;
 mod submit;
 #[cfg(test)]
 mod tests;
 
-use crate::{Clock, ClockGuard, NeuronCx, StateCell, Validator};
+use crate::{Clock, ClockGuard, NeuronCx, StateCell, Validator, reads};
 use blake2::{Blake2b, Digest, digest::consts::U32};
 pub use compose::{
     COMMIT_WEIGHT_CALLS, SET_WEIGHT_CALLS, WEIGHT_PALLET, WeightCall, WeightCallEncoder,
 };
 use futures::StreamExt;
 pub use reveal::{EpochNotice, PendingReveal, RevealMissReason, RevealOutcome, RevealWatcher};
-use rtao_client::{BlockHeader, BlockRef, Client, Finality, ReadPlan, Snapshot, ViewExt};
+use rtao_client::{BlockHeader, BlockRef, Client, Finality, Snapshot};
 use rtao_core::{DynValue, codec::Value, timelock::epoch_schedule::EpochScheduleState};
 use rtao_intents::weights::{
     CommitSizeLimit, ConformState, TimelockCommitRequest, TimelockCommitter, conform,
@@ -332,6 +334,9 @@ pub const PREFLIGHT_STORAGE: [rtao_runtime::StorageSurface; 17] = [
 /// tracking and the drand round used by the reveal watcher. Together with
 /// [`PREFLIGHT_STORAGE`] this covers every typed storage read whose failure
 /// stops the run loop; the chain-clock timestamp read only warns and retries.
+/// When an entry's compiled shape no longer matches, these reads and the
+/// preflight's resolve it by name against live metadata and decode the same
+/// values, or refuse that entry alone when its meaning changed (D-089).
 pub const RUN_PATH_STORAGE: [rtao_runtime::StorageSurface; 6] = [
     st::MECHANISM_COUNT_CURRENT.surface(),
     st::ACTIVITY_CUTOFF_FACTOR_MILLI.surface(),
@@ -376,8 +381,10 @@ impl ValidatorSurface {
     /// - a weight call's shape changed and name-resolved composition refuses
     ///   it too (the readiness flag); a call only composed by name is a
     ///   warning (D-088);
-    /// - validator-read storage or constants are absent or changed shape,
-    ///   since their typed reads refuse;
+    /// - validator-read storage or constants are absent, or changed shape in
+    ///   a way the name-resolved read refuses too; a read that resolves by
+    ///   name is a warning (D-089), and an entry whose absence is meaningful
+    ///   fails when it is no longer `Optional`;
     /// - the selective metagraph API is absent, its inputs changed, its API
     ///   version is below two, or metadata is degraded;
     /// - breaking signing drift (V15 metadata level, extrinsic version,
@@ -461,9 +468,60 @@ impl ValidatorSurface {
                     .map(|constant| format!("constant:{}.{}", constant.pallet, constant.name)),
             )
             .collect::<Vec<_>>();
-        for id in &typed {
-            if !report.shape_matches(id) {
-                failed.insert(fail(&mut surface, id.clone(), details(id)));
+        // Storage and constants the scheduler reads by name when their
+        // compiled shape changed (D-089).
+        let resolved = |surface: &mut Self, id: &str, how: &str| {
+            surface.warnings.push(rtao_runtime::SurfaceChange {
+                descriptor: id.to_owned(),
+                kind: if id.starts_with("constant:") {
+                    SurfaceKind::Constant
+                } else {
+                    SurfaceKind::Storage
+                },
+                class: SurfaceClass::Behavioural,
+                detail: format!(
+                    "{how} resolves by name against live metadata; {}",
+                    details(id)
+                ),
+            });
+        };
+        for storage in PREFLIGHT_STORAGE.iter().chain(&RUN_PATH_STORAGE) {
+            let id = format!("storage:{}.{}", storage.pallet, storage.name);
+            match reads::route(runtime, storage) {
+                Ok(reads::Route::Compiled) => {}
+                Ok(reads::Route::Resolved) => {
+                    resolved(&mut surface, &id, "storage read");
+                    composed.insert(id);
+                }
+                Err(error) => {
+                    let detail = if report.shape_matches(&id) {
+                        error.to_string()
+                    } else {
+                        format!("{}; {error}", details(&id))
+                    };
+                    failed.insert(fail(&mut surface, id, detail));
+                }
+            }
+        }
+        for constant in &RUN_PATH_CONSTANTS {
+            let id = format!("constant:{}.{}", constant.pallet, constant.name);
+            if report.shape_matches(&id) {
+                continue;
+            }
+            match rtao_runtime::check_constant(
+                runtime,
+                constant.pallet,
+                constant.name,
+                &reads::SLOT_DURATION,
+            ) {
+                Ok(()) => {
+                    resolved(&mut surface, &id, "constant read");
+                    composed.insert(id);
+                }
+                Err(error) => {
+                    let detail = format!("{}; name-resolved read refused: {error}", details(&id));
+                    failed.insert(fail(&mut surface, id, detail));
+                }
             }
         }
         used.extend(typed);
@@ -582,6 +640,32 @@ pub struct WeightPreflight {
 }
 
 impl WeightPreflight {
+    /// The [`PREFLIGHT_STORAGE`] reads for one mechanism and hotkey.
+    fn reads(
+        netuid: NetUid,
+        mech: MechId,
+        hotkey: AccountId,
+    ) -> anyhow::Result<Vec<reads::DynRead>> {
+        use reads::KeyDatum;
+        let index = NetUidStorageIndex::new(netuid, mech)?;
+        Ok(PREFLIGHT_STORAGE
+            .into_iter()
+            .enumerate()
+            .map(|(position, surface)| {
+                let (keys, data) = match position {
+                    0 => (
+                        vec![netuid.into_core_value(), hotkey.into_core_value()],
+                        vec![netuid.key_datum(), hotkey.key_datum()],
+                    ),
+                    1 => (vec![index.into_core_value()], vec![index.key_datum()]),
+                    4 => (Vec::new(), Vec::new()),
+                    _ => (vec![netuid.into_core_value()], vec![netuid.key_datum()]),
+                };
+                (surface, keys, data)
+            })
+            .collect())
+    }
+
     /// Fetch all seventeen fields using one `state_queryStorageAt` at `snapshot`.
     pub async fn fetch(
         snapshot: &Snapshot,
@@ -589,19 +673,8 @@ impl WeightPreflight {
         mech: MechId,
         hotkey: AccountId,
     ) -> anyhow::Result<Self> {
-        let index = NetUidStorageIndex::new(netuid, mech)?;
-        let net = vec![netuid.into_core_value()];
-        let mut plan = ReadPlan::new();
-        for (position, surface) in PREFLIGHT_STORAGE.into_iter().enumerate() {
-            let keys = match position {
-                0 => vec![netuid.into_core_value(), hotkey.into_core_value()],
-                1 => vec![index.into_core_value()],
-                4 => Vec::new(),
-                _ => net.clone(),
-            };
-            plan.push(surface, keys);
-        }
-        let values = snapshot.fetch(plan).await?;
+        let plan = Self::reads(netuid, mech, hotkey)?;
+        let values = reads::fetch_dyn(snapshot, plan).await?;
         anyhow::ensure!(
             values.len() == 17,
             "weight preflight omitted storage fields"
@@ -1176,14 +1249,16 @@ impl WeightScheduler {
         }
         let snapshot = cx.client.at(BlockRef::Best).await?;
         let hotkey = cx.hotkey.hotkey_address()?;
-        let auxiliary = snapshot
-            .fetch((
+        let auxiliary = reads::fetch(
+            &snapshot,
+            (
                 st::MECHANISM_COUNT_CURRENT.at((cx.netuid,)),
                 st::ACTIVITY_CUTOFF_FACTOR_MILLI.at((cx.netuid,)),
                 st::STAKE_THRESHOLD.at(()),
                 st::SUBNET_OWNER_HOTKEY.at((cx.netuid,)),
-            ))
-            .await?;
+            ),
+        )
+        .await?;
         let mechanisms = auxiliary.0.0;
         anyhow::ensure!(
             (1..=16).contains(&mechanisms),
@@ -1530,12 +1605,14 @@ impl WeightScheduler {
                     let Some(cr_tag) = self.follow_cr_tag(&cx.metrics, mech, &state) else {
                         return Ok(());
                     };
-                    let (count, current_owner) = fresh
-                        .fetch((
+                    let (count, current_owner) = reads::fetch(
+                        &fresh,
+                        (
                             st::MECHANISM_COUNT_CURRENT.at((cx.netuid,)),
                             st::SUBNET_OWNER_HOTKEY.at((cx.netuid,)),
-                        ))
-                        .await?;
+                        ),
+                    )
+                    .await?;
                     anyhow::ensure!(
                         mech.0 < count.0 && count.0 <= 16,
                         "mechanism no longer exists after the rejected commitment"
@@ -1898,9 +1975,7 @@ async fn snapshot_slot_duration(
     block: &rtao_client::PinnedBlock,
 ) -> anyhow::Result<f64> {
     let snapshot = Snapshot::new(client.clone(), block.clone());
-    let millis = snapshot
-        .constant(&rtao_runtime::constants::aura::SLOT_DURATION)
-        .await?;
+    let millis = reads::slot_duration(&snapshot).await?;
     anyhow::ensure!(millis > 0, "Aura slot duration is zero");
     Ok(millis as f64 / 1000.0)
 }

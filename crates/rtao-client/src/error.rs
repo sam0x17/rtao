@@ -61,6 +61,9 @@ pub enum ClientError {
     Signing(rtao_signer::SignerError),
     /// Spec-stamped call composition or runtime validation failed.
     Compose(rtao_runtime::ComposeError),
+    /// A name-resolved storage or constant read does not fit its structural
+    /// class under the live runtime (D-089).
+    ReadResolveIncompatible(rtao_runtime::ReadResolveError),
 }
 
 impl ClientError {
@@ -81,7 +84,8 @@ impl ClientError {
             Self::Decode { .. }
             | Self::Core(_)
             | Self::Signing(_)
-            | Self::SurfaceChanged { .. } => ErrorCode::Internal,
+            | Self::SurfaceChanged { .. }
+            | Self::ReadResolveIncompatible(_) => ErrorCode::Internal,
         }
     }
     /// Gateway metadata that callers use to honor retry delays.
@@ -142,6 +146,9 @@ impl fmt::Display for ClientError {
             Self::Core(error) => error.fmt(f),
             Self::Signing(error) => error.fmt(f),
             Self::Compose(error) => error.fmt(f),
+            Self::ReadResolveIncompatible(error) => {
+                write!(f, "name-resolved read refused: {error}")
+            }
         }
     }
 }
@@ -153,6 +160,7 @@ impl std::error::Error for ClientError {
             Self::Decode { source, .. } | Self::Core(source) => Some(source),
             Self::Signing(error) => Some(error),
             Self::Compose(error) => Some(error),
+            Self::ReadResolveIncompatible(error) => Some(error),
             _ => None,
         }
     }
@@ -173,6 +181,12 @@ impl From<CoreError> for ClientError {
 impl From<rtao_runtime::ComposeError> for ClientError {
     fn from(error: rtao_runtime::ComposeError) -> Self {
         Self::Compose(error)
+    }
+}
+
+impl From<rtao_runtime::ReadResolveError> for ClientError {
+    fn from(error: rtao_runtime::ReadResolveError) -> Self {
+        Self::ReadResolveIncompatible(error)
     }
 }
 

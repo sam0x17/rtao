@@ -439,13 +439,13 @@ pub(crate) async fn initialize_with_http_factory(
         let account = hotkey.hotkey_address()?;
         let shutdown = CancellationToken::new();
         let initial = client.at(BlockRef::Finalized).await?;
-        if initial
-            .storage(
-                &rtao_runtime::storage::subtensor_module::UIDS,
-                (config.netuid, account),
-            )
-            .await?
-            .is_none()
+        if crate::reads::storage(
+            &initial,
+            &rtao_runtime::storage::subtensor_module::UIDS,
+            (config.netuid, account),
+        )
+        .await?
+        .is_none()
         {
             anyhow::ensure!(
                 config.wait_for_registration,
@@ -518,13 +518,13 @@ async fn wait_registered(
         let mut heads = client.blocks(Finality::Finalized)?;
         loop {
             let snapshot = client.at(BlockRef::Finalized).await?;
-            if snapshot
-                .storage(
-                    &rtao_runtime::storage::subtensor_module::UIDS,
-                    (netuid, hotkey),
-                )
-                .await?
-                .is_some()
+            if crate::reads::storage(
+                &snapshot,
+                &rtao_runtime::storage::subtensor_module::UIDS,
+                (netuid, hotkey),
+            )
+            .await?
+            .is_some()
             {
                 return Ok(());
             }
@@ -622,13 +622,15 @@ async fn epoch_at(
 ) -> anyhow::Result<(EpochStatus, bool, u32)> {
     use rtao_runtime::storage::subtensor_module::{LAST_EPOCH_BLOCK, SUBNET_EPOCH_INDEX, TEMPO};
     let snapshot = client.at(block).await?;
-    let (index, last_epoch_block, tempo) = snapshot
-        .fetch((
+    let (index, last_epoch_block, tempo) = crate::reads::fetch(
+        &snapshot,
+        (
             SUBNET_EPOCH_INDEX.at((netuid,)),
             LAST_EPOCH_BLOCK.at((netuid,)),
             TEMPO.at((netuid,)),
-        ))
-        .await?;
+        ),
+    )
+    .await?;
     let report = snapshot.block().runtime.surface_report();
     let verified = if kind == "miner" {
         report.shape_matches("call:SubtensorModule.serve_axon")

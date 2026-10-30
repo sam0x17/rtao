@@ -9,6 +9,7 @@ mod handle;
 /// Handwritten by-name runtime return models.
 pub mod models;
 mod resolved;
+mod resolved_read;
 /// Exact and projected structural metadata hashes.
 pub mod shape;
 mod surface;
@@ -30,6 +31,10 @@ pub use handle::{
 pub use resolved::{
     ArgClass, ArgValue, InspectedCall, InspectedField, ResolvedArg, check_resolved,
     compose_resolved, inspect_call,
+};
+pub use resolved_read::{
+    ReadClass, ReadDatum, ReadField, ReadPresence, ReadResolveError, ResolvedStorage,
+    ResolvedStoragePlan, check_constant, read_constant,
 };
 pub use shape::{
     OuterEnums, Projection, ProjectionField, ProjectionFields, ProjectionVariant, ShapeError,

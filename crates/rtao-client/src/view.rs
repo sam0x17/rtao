@@ -949,6 +949,23 @@ impl Fetch for PresencePlan {
     }
 }
 
+/// One storage read resolved by name and structural class (D-089).
+///
+/// Fetched with [`ViewExt::fetch_resolved`] when a compiled descriptor's
+/// exact shape no longer matches the live runtime but the value it reads is
+/// still recoverable.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResolvedRead {
+    /// Entry, key and value classes.
+    pub storage: rtao_runtime::ResolvedStorage,
+    /// Unhashed key values, in metadata order.
+    pub keys: Vec<rtao_runtime::ReadDatum>,
+}
+
+/// Per-read results of [`ViewExt::fetch_resolved`], in request order.
+/// `Ok(None)` is an absent [`rtao_runtime::ReadPresence::Optional`] entry.
+pub type ResolvedValues = Vec<Result<Option<rtao_runtime::ReadDatum>, ClientError>>;
+
 /// Decode one present storage value fetched through a [`PresencePlan`].
 pub fn decode_present<K: KeyArgs, V: FromStorage>(
     runtime: &RuntimeHandle,
@@ -1134,6 +1151,70 @@ pub trait ViewExt: View {
                     })?
             } else {
                 plan.decode(&runtime, &values)
+            }
+        }
+    }
+    /// Coalesce name-resolved storage reads at one hash (D-089).
+    ///
+    /// Unlike [`ViewExt::fetch`], no exact shape check applies: each entry is
+    /// resolved by name against the pinned runtime, its key and value types
+    /// must fit their [`rtao_runtime::ReadClass`], keys use the live types,
+    /// hashers and prefix, and values decode strictly into
+    /// [`rtao_runtime::ReadDatum`]s. Every read that resolves shares one
+    /// coalesced storage request. A read that does not fit fails alone with
+    /// [`ClientError::ReadResolveIncompatible`]; the outer error covers only
+    /// pinning and transport.
+    fn fetch_resolved(
+        &self,
+        reads: Vec<ResolvedRead>,
+    ) -> impl Future<Output = Result<ResolvedValues, ClientError>> + Send {
+        async move {
+            let snapshot = View::pin(self).await?;
+            let runtime = snapshot.block.runtime.clone();
+            let mut planned = Vec::with_capacity(reads.len());
+            let mut keys = Vec::with_capacity(reads.len());
+            for read in &reads {
+                let item = read
+                    .storage
+                    .plan(&runtime)
+                    .and_then(|plan| plan.key(&read.keys).map(|key| (plan, key)));
+                planned.push(match item {
+                    Ok((plan, key)) => {
+                        keys.push(key);
+                        Ok((plan, keys.len() - 1))
+                    }
+                    Err(error) => Err(ClientError::from(error)),
+                });
+            }
+            let values = if keys.is_empty() {
+                Vec::new()
+            } else {
+                View::storage_raw_many(&snapshot, &keys).await?
+            };
+            if values.len() != keys.len() {
+                return Err(ClientError::Protocol(
+                    "coalesced storage result length differs from its plan".into(),
+                ));
+            }
+            let offload = values.iter().flatten().map(Bytes::len).sum::<usize>() > 64 * 1024;
+            let decode = move || {
+                planned
+                    .into_iter()
+                    .map(|item| {
+                        let (plan, index) = item?;
+                        let raw = values.get(index).ok_or_else(|| {
+                            ClientError::Protocol("coalesced storage result was omitted".into())
+                        })?;
+                        plan.decode(raw.as_deref()).map_err(ClientError::from)
+                    })
+                    .collect::<ResolvedValues>()
+            };
+            if offload {
+                rtao_core::offload(decode).await.map_err(|error| {
+                    ClientError::Protocol(format!("storage decoder task failed: {error}"))
+                })
+            } else {
+                Ok(decode())
             }
         }
     }

@@ -1,7 +1,6 @@
 //! Weight-specific projection over the generic operation journal.
 use super::reveal::RevealPreparation;
 use super::{RevealWatcher, Slot, WeightPreflight, WeightScheduler, WeightsInput};
-use rtao_client::ViewExt;
 use rtao_client::journal::{
     JournalBinding, JournalOwner, OperationIntent, OperationJournal, RecoveryStatus, SemanticGuard,
 };
@@ -309,9 +308,8 @@ impl WeightScheduler {
             snapshot.block().number == inclusion.block_number,
             "inclusion height mismatch"
         );
-        let epoch = snapshot
-            .storage(&super::st::SUBNET_EPOCH_INDEX, (d.netuid,))
-            .await?;
+        let epoch =
+            super::reads::storage(&snapshot, &super::st::SUBNET_EPOCH_INDEX, (d.netuid,)).await?;
         let slot = self.slots.entry(mech).or_default();
         // Preparation can precede inclusion by several epochs. Retain the
         // observed inclusion, so restart cannot reopen that cadence slot.

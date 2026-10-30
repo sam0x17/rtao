@@ -111,6 +111,15 @@ continues with the composers installed now.
 naming the composer the scheduler will use, the encoder first when one is
 installed. It fails only when no composer can produce the call.
 
+Storage the validator reads behaves the same way after a runtime change. An
+entry whose shape changed but whose values are still recoverable (a widened
+integer, a newtype, `BoundedVec`, a tuple that became a struct, reordered or
+added fields) is read by name against the live metadata into the same values,
+and the preflight is still one storage request. An entry whose meaning
+changed fails only the reads that need it, with an error naming the entry and
+field. `--check-connection` reports the first kind as a warning and the
+second as a failure.
+
 The default timelock clock is the system clock. The minimum timestamp offset
 across twenty best heads filters propagation delays. The framework warns above
 two seconds of absolute skew and refuses system-clock commits above twelve
@@ -143,8 +152,9 @@ runtime metadata the validator run loop uses (its weight calls and the
 validator-read storage, constants and selective metagraph API), then closes
 before loading a wallet. It fails only where the run loop would fail or report
 itself not ready. Other drift, such as a changed metagraph projection that the
-dynamic decode absorbs or a breaking change in an unrelated call, pallet or
-module error, is logged as a warning. It supports
+dynamic decode absorbs, a storage entry or constant the validator reads by
+name after its shape changed, or a breaking change in an unrelated call,
+pallet or module error, is logged as a warning. It supports
 `--network finney --chain-endpoint wss://your-node.example` and the ordinary TLS
 root configuration. It is useful for verifying container certificates before
 providing the hotkey mount.

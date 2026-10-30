@@ -76,7 +76,7 @@ pub use submit::{
 };
 pub use view::{
     BlockRef, DynView, Fetch, FromStorage, HeadPolicy, IntoCoreValues, KeyArgs, PinnedBlock,
-    PresencePlan, ReadKind, ReadObserver, ReadPlan, ReadSpec, ReadTouch, Snapshot, View, ViewExt,
-    decode_present,
+    PresencePlan, ReadKind, ReadObserver, ReadPlan, ReadSpec, ReadTouch, ResolvedRead,
+    ResolvedValues, Snapshot, View, ViewExt, decode_present,
 };
 pub use waits::{EpochEvent, WaitError};

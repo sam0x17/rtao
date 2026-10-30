@@ -3,13 +3,24 @@
 
 #![allow(clippy::expect_used)]
 use super::*;
-use rtao_client::{ClientConfig, Network};
+use rtao_client::{ClientConfig, Network, ViewExt};
 use rtao_testkit::rpc::RpcClient;
 use rtao_testkit::{FakeChain, FakeState};
 
 pub(super) const HOTKEY: AccountId = AccountId([7; 32]);
 pub(super) async fn fixture() -> anyhow::Result<(FakeChain, Client)> {
-    let chain = FakeChain::from_state(fixture_state()?);
+    fixture_with(|_| {}).await
+}
+
+/// [`fixture`] serving metadata changed by `edit`, seeded afterwards so
+/// every value is encoded with the changed types.
+pub(super) async fn fixture_with(
+    edit: impl FnOnce(&mut frame_metadata::v15::RuntimeMetadataV15),
+) -> anyhow::Result<(FakeChain, Client)> {
+    let mut state = FakeState::try_default()?;
+    state.patch_metadata(edit)?;
+    seed_fixture(&mut state)?;
+    let chain = FakeChain::from_state(state);
     let client = Client::from_rpc(RpcClient::new(chain.clone()), fixture_config()?).await?;
     Ok((chain, client))
 }
@@ -36,6 +47,11 @@ fn fixture_config() -> anyhow::Result<ClientConfig> {
 
 pub(super) fn fixture_state() -> anyhow::Result<FakeState> {
     let mut state = FakeState::try_default()?;
+    seed_fixture(&mut state)?;
+    Ok(state)
+}
+
+fn seed_fixture(state: &mut FakeState) -> anyhow::Result<()> {
     state.set_finalized(97)?;
     state.seed_typed("SubtensorModule", "Uids", (NetUid(1), HOTKEY), 0u16)?;
     state.seed(
@@ -67,7 +83,7 @@ pub(super) fn fixture_state() -> anyhow::Result<FakeState> {
     state.seed(&st::PENDING_EPOCH_AT, (NetUid(1),), 0u64)?;
     state.seed(&st::SUBNET_EPOCH_INDEX, (NetUid(1),), 5u64)?;
     state.seed(&st::BLOCKS_SINCE_LAST_STEP, (NetUid(1),), 0u64)?;
-    Ok(state)
+    Ok(())
 }
 
 pub(super) fn seed_at<K: IntoCoreValue, V: IntoCoreValue>(
@@ -1094,6 +1110,220 @@ mod validator_surface {
         let surface = ValidatorSurface::check_with_encoder(&runtime, true);
         assert!(surface.is_compatible(), "{:#?}", surface.incompatible);
         assert!(warned(&surface, id));
+    }
+
+    fn add_type(core: &mut Runtime, path: &[&str], type_def: TypeDef<PortableForm>) -> u32 {
+        let id = u32::try_from(core.types.types.len()).expect("type id");
+        core.types.types.push(scale_info::PortableType {
+            id,
+            ty: scale_info::Type {
+                path: scale_info::Path {
+                    segments: path.iter().map(|segment| (*segment).to_owned()).collect(),
+                },
+                type_params: vec![],
+                type_def,
+                docs: vec![],
+            },
+        });
+        id
+    }
+
+    fn named(name: &str, ty: u32) -> scale_info::Field<PortableForm> {
+        scale_info::Field {
+            name: Some(name.into()),
+            ty: ty.into(),
+            type_name: None,
+            docs: vec![],
+        }
+    }
+
+    fn storage<'a>(core: &'a mut Runtime, name: &str) -> &'a mut rtao_core::runtime::StorageInfo {
+        core.pallets
+            .iter_mut()
+            .find(|pallet| pallet.name == "SubtensorModule")
+            .and_then(|pallet| pallet.storage.iter_mut().find(|entry| entry.name == name))
+            .expect("storage entry")
+    }
+
+    /// One metadata change applied to the pinned runtime.
+    type Edit = fn(&mut Runtime);
+
+    fn widened_tempo(core: &mut Runtime) {
+        let wide = add_type(
+            core,
+            &[],
+            TypeDef::Primitive(scale_info::TypeDefPrimitive::U32),
+        );
+        let tempo = storage(core, "Tempo");
+        tempo.value_type = wide;
+        tempo.default_bytes.resize(4, 0);
+    }
+
+    fn bounded_last_update(core: &mut Runtime) {
+        let inner = storage(core, "LastUpdate").value_type;
+        let bounded = add_type(
+            core,
+            &["bounded_collections", "BoundedVec"],
+            TypeDef::Composite(scale_info::TypeDefComposite {
+                fields: vec![scale_info::Field {
+                    name: None,
+                    ty: inner.into(),
+                    type_name: None,
+                    docs: vec![],
+                }],
+            }),
+        );
+        storage(core, "LastUpdate").value_type = bounded;
+    }
+
+    /// The commit queue element as a named struct; `block` names the
+    /// commit block field.
+    fn commit_struct(core: &mut Runtime, block: &str) {
+        let queue = storage(core, "TimelockedWeightCommits").value_type;
+        let TypeDef::Sequence(sequence) = &core.resolve(queue).expect("queue").type_def else {
+            unreachable!("the commit queue is a sequence")
+        };
+        let TypeDef::Tuple(tuple) = &core
+            .resolve(sequence.type_param.id)
+            .expect("commit")
+            .type_def
+        else {
+            unreachable!("a commit is a tuple")
+        };
+        let [who, at, commit, round] = [0, 1, 2, 3].map(|index| tuple.fields[index].id);
+        let element = add_type(
+            core,
+            &["pallet_subtensor", "TimelockedCommit"],
+            TypeDef::Composite(scale_info::TypeDefComposite {
+                fields: vec![
+                    named(block, at),
+                    named("who", who),
+                    named("reveal_round", round),
+                    named("commit", commit),
+                ],
+            }),
+        );
+        let queue = add_type(
+            core,
+            &[],
+            TypeDef::Sequence(scale_info::TypeDefSequence {
+                type_param: element.into(),
+            }),
+        );
+        storage(core, "TimelockedWeightCommits").value_type = queue;
+    }
+
+    fn slot_duration_u32(core: &mut Runtime) {
+        let narrow = add_type(
+            core,
+            &[],
+            TypeDef::Primitive(scale_info::TypeDefPrimitive::U32),
+        );
+        let constant = core
+            .pallets
+            .iter_mut()
+            .find(|pallet| pallet.name == "Aura")
+            .and_then(|pallet| {
+                pallet
+                    .constants
+                    .iter_mut()
+                    .find(|constant| constant.name == "SlotDuration")
+            })
+            .expect("SlotDuration");
+        constant.ty = narrow;
+        constant.value = 12_000u32.to_le_bytes().to_vec();
+    }
+
+    /// Storage and constant shape changes the scheduler reads by name are
+    /// warnings, as at run time (D-089).
+    #[test]
+    fn storage_and_constant_changes_read_by_name_are_warnings() {
+        let cases: [(&str, Edit); 4] = [
+            ("storage:SubtensorModule.Tempo", widened_tempo),
+            ("storage:SubtensorModule.LastUpdate", bounded_last_update),
+            ("storage:SubtensorModule.TimelockedWeightCommits", |core| {
+                commit_struct(core, "commit_block")
+            }),
+            ("constant:Aura.SlotDuration", slot_duration_u32),
+        ];
+        for (id, edit) in cases {
+            let mut core = pinned();
+            edit(&mut core);
+            let runtime = handle(core);
+            assert!(!runtime.surface_report().shape_matches(id), "{id}");
+            let surface = ValidatorSurface::check(&runtime);
+            assert!(surface.is_compatible(), "{id}: {:#?}", surface.incompatible);
+            let warnings = surface
+                .warnings
+                .iter()
+                .filter(|change| change.descriptor == id)
+                .collect::<Vec<_>>();
+            assert_eq!(warnings.len(), 1, "{id}: {warnings:#?}");
+            assert!(
+                warnings[0].detail.contains("resolves by name"),
+                "{}",
+                warnings[0].detail
+            );
+            assert_eq!(warnings[0].class, rtao_runtime::SurfaceClass::Behavioural);
+        }
+    }
+
+    /// Changes whose meaning a by-name read cannot recover still fail.
+    #[test]
+    fn storage_changes_without_a_recoverable_meaning_fail_the_check() {
+        let cases: [(&str, Edit, &str); 4] = [
+            (
+                "storage:SubtensorModule.TimelockedWeightCommits",
+                |core| commit_struct(core, "included_at"),
+                "`commit_block` is absent",
+            ),
+            (
+                "storage:SubtensorModule.Tempo",
+                |core| {
+                    let tempo = storage(core, "Tempo");
+                    tempo.key_types.push(tempo.key_types[0]);
+                    tempo.hashers.push("Identity".into());
+                },
+                "2 keys, expected 1",
+            ),
+            (
+                "storage:SubtensorModule.ValidatorPermit",
+                |core| {
+                    let signed = add_type(
+                        core,
+                        &[],
+                        TypeDef::Primitive(scale_info::TypeDefPrimitive::I8),
+                    );
+                    let list = add_type(
+                        core,
+                        &[],
+                        TypeDef::Sequence(scale_info::TypeDefSequence {
+                            type_param: signed.into(),
+                        }),
+                    );
+                    storage(core, "ValidatorPermit").value_type = list;
+                },
+                "element is i8",
+            ),
+            (
+                "storage:SubtensorModule.Uids",
+                |core| storage(core, "Uids").modifier = "Default".into(),
+                "no longer Optional",
+            ),
+        ];
+        for (id, edit, reason) in cases {
+            let mut core = pinned();
+            edit(&mut core);
+            let surface = ValidatorSurface::check(&handle(core));
+            assert!(fails_on(&surface, id), "{id}: {:#?}", surface.incompatible);
+            let line = surface
+                .incompatible
+                .iter()
+                .find(|line| line.starts_with(&format!("{id}:")))
+                .expect("failure line");
+            assert!(line.contains("name-resolved read refused"), "{line}");
+            assert!(line.contains(reason), "{line}");
+        }
     }
 
     #[test]

@@ -79,6 +79,22 @@ version key is also an application contract: configure
 `--weights-version-key` only for a scoring implementation that supports that
 version. Raising the number alone does not upgrade the implementation.
 
+The validator's storage reads follow the same rule. The weight preflight,
+the scheduler's mechanism and owner reads, the reveal watcher, durable
+recovery and the Aura slot duration use their compiled typed reads while
+the entry's shape matches. When it no longer does, the entry is read by name
+against the live metadata and decoded into the same values if its meaning is
+still recoverable: a widened or compact integer, a single-field newtype,
+`BoundedVec` or `VecDeque` in place of `Vec`, a tuple that became a struct,
+reordered or added struct fields, or an added enum variant. A warning is
+logged once per runtime and entry. An entry whose meaning changed, such as a
+removed or renamed field, a signed integer, an `Option`, a changed key count
+or a value too large for the type rtao reads, refuses with an error that
+names the entry and field. Only the reads that need that entry fail; the
+reads are retried on each finalized head, so the validator resumes once rtao
+is updated. The hotkey's `Uids` entry must stay optional, since a default
+there would read an unregistered hotkey as UID 0.
+
 Commit-reveal commits carry a version tag that root sets in
 `CommitRevealWeightsVersion`. The chain only checks that the tag matches; the
 runtime code decides which payload a reveal can decode. rtao encodes the
