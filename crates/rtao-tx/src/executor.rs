@@ -195,6 +195,8 @@ pub struct ShieldOptions {
     pub max_fee: Option<Balance<Tao>>,
     /// Re-seals after a carrier whose decrypted inner was proven never included.
     pub dropped_inner_retries: u32,
+    /// Re-seals after a carrier proven to have lost its nonce, never included.
+    pub nonce_conflict_retries: u32,
 }
 impl Default for ShieldOptions {
     fn default() -> Self {
@@ -206,6 +208,7 @@ impl Default for ShieldOptions {
             },
             max_fee: None,
             dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
+            nonce_conflict_retries: rtao_client::SHIELD_NONCE_CONFLICT_RETRIES,
         }
     }
 }
@@ -782,6 +785,7 @@ impl Executor {
                 max_fee,
                 finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
                 dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
+                nonce_conflict_retries: rtao_client::SHIELD_NONCE_CONFLICT_RETRIES,
                 submit,
             };
             match Box::pin(self.client.prepare_journal_shield(&prepare)).await {
@@ -845,6 +849,7 @@ impl Executor {
                         max_fee,
                         finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
                         dropped_inner_retries: rtao_client::SHIELD_DROPPED_INNER_RETRIES,
+                        nonce_conflict_retries: rtao_client::SHIELD_NONCE_CONFLICT_RETRIES,
                         submit,
                     },
                 ))
@@ -925,6 +930,7 @@ impl Executor {
                 max_fee: active_policy.as_ref().and_then(|p| p.max_fee),
                 finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
                 dropped_inner_retries: opts.dropped_inner_retries,
+                nonce_conflict_retries: opts.nonce_conflict_retries,
                 submit,
             };
             match Box::pin(self.client.prepare_journal_shield(&prepare)).await {
@@ -1006,6 +1012,7 @@ impl Executor {
                 max_fee: active_policy.as_ref().and_then(|p| p.max_fee),
                 finality_wait: rtao_client::SHIELD_FINALITY_WAIT,
                 dropped_inner_retries: opts.dropped_inner_retries,
+                nonce_conflict_retries: opts.nonce_conflict_retries,
                 submit,
             };
             let result = Box::pin(self.client.submit_shielded(

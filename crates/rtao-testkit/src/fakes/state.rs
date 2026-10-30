@@ -159,6 +159,12 @@ pub enum SubmitScript {
     FinalityTimeout(String),
     /// Emit an exact sequence, including retraction and reinclusion paths.
     Statuses(Vec<Value>),
+    /// Accept the extrinsic into the ready pool and leave it pending.
+    ///
+    /// It counts toward `account_nextIndex`, is listed by
+    /// `author_pendingExtrinsics` and stays unincluded until
+    /// [`FakeState::include_pool`]. A watch reports only `ready`.
+    Pooled,
 }
 
 type Handler = Box<dyn FnMut(&mut FakeState, &RpcRequest) -> Reply + Send>;
@@ -179,6 +185,8 @@ pub struct FakeState {
     pub requests: Vec<RpcRequest>,
     /// Complete SCALE extrinsics submitted through either author method.
     pub submissions: Vec<Vec<u8>>,
+    /// Ready-pool extrinsics accepted but not yet included, in pool order.
+    pub pool: Vec<Vec<u8>>,
     /// Current best block number.
     pub block: u64,
     /// Current finalized block number.
@@ -261,6 +269,7 @@ impl FakeState {
             runtime,
             requests: Vec::new(),
             submissions: Vec::new(),
+            pool: Vec::new(),
             block: 100,
             finalized: 100,
             genesis_hash: zero_hash(),
@@ -346,6 +355,44 @@ impl FakeState {
     /// Set the next nonce returned for an SS58 account.
     pub fn set_nonce(&mut self, address: impl Into<String>, nonce: u64) {
         self.nonces.insert(address.into(), nonce);
+    }
+
+    /// Include every pooled extrinsic in one new best block, in pool order.
+    ///
+    /// Each decodable signed extrinsic consumes its account nonce. Returns the
+    /// new block hash.
+    pub fn include_pool(&mut self) -> Option<String> {
+        let pooled = std::mem::take(&mut self.pool);
+        self.advance(1);
+        let hash = self.block_hash(self.block)?;
+        for bytes in pooled {
+            self.consume_nonce(&bytes);
+            if let Some(block) = self.blocks.get_mut(&hash) {
+                block.extrinsics.push(bytes);
+            }
+        }
+        Some(hash)
+    }
+
+    /// Node-style pool-aware next index: the stored account nonce extended by
+    /// this account's unbroken run of pooled extrinsics.
+    fn pool_next_index(&self, address: &str) -> u64 {
+        let mut next = self.nonces.get(address).copied().unwrap_or(0);
+        let pooled = self
+            .pool
+            .iter()
+            .filter_map(|bytes| {
+                let extrinsic = self.runtime.decode_extrinsic(bytes, true).ok()?;
+                (extrinsic.field("address").and_then(ValueExt::as_str) == Some(address))
+                    .then(|| extrinsic.field("nonce").and_then(ValueExt::as_u128))
+                    .flatten()
+                    .and_then(|nonce| u64::try_from(nonce).ok())
+            })
+            .collect::<BTreeSet<_>>();
+        while pooled.contains(&next) {
+            next = next.saturating_add(1);
+        }
+        next
     }
 
     /// Seed complete raw storage bytes. `None` explicitly overrides defaults with a miss.
@@ -813,7 +860,7 @@ impl FakeState {
                 json!({"ss58Format": self.runtime.ss58_format, "tokenDecimals": 9, "tokenSymbol": "TAO"})
             }
             "rpc_methods" => {
-                json!({"version": 1, "methods": ["system_chain", "system_name", "system_version", "system_properties", "system_health", "rpc_methods", "chain_getHead", "chain_getBlockHash", "chain_getHeader", "chain_getBlock", "chain_getFinalizedHead", "state_getMetadata", "state_getRuntimeVersion", "state_getStorage", "state_getStorageAt", "state_getStorageHash", "state_queryStorageAt", "state_getKeysPaged", "state_getKeys", "state_call", "chain_subscribeNewHeads", "chain_subscribeAllHeads", "chain_subscribeFinalizedHeads", "state_subscribeRuntimeVersion", "state_subscribeStorage", "chain_unsubscribeNewHeads", "chain_unsubscribeAllHeads", "chain_unsubscribeFinalizedHeads", "state_unsubscribeRuntimeVersion", "state_unsubscribeStorage", "author_submitExtrinsic", "author_submitAndWatchExtrinsic", "author_unwatchExtrinsic", "system_accountNextIndex", "account_nextIndex", "payment_queryInfo"]})
+                json!({"version": 1, "methods": ["system_chain", "system_name", "system_version", "system_properties", "system_health", "rpc_methods", "chain_getHead", "chain_getBlockHash", "chain_getHeader", "chain_getBlock", "chain_getFinalizedHead", "state_getMetadata", "state_getRuntimeVersion", "state_getStorage", "state_getStorageAt", "state_getStorageHash", "state_queryStorageAt", "state_getKeysPaged", "state_getKeys", "state_call", "chain_subscribeNewHeads", "chain_subscribeAllHeads", "chain_subscribeFinalizedHeads", "state_subscribeRuntimeVersion", "state_subscribeStorage", "chain_unsubscribeNewHeads", "chain_unsubscribeAllHeads", "chain_unsubscribeFinalizedHeads", "state_unsubscribeRuntimeVersion", "state_unsubscribeStorage", "author_submitExtrinsic", "author_submitAndWatchExtrinsic", "author_unwatchExtrinsic", "author_pendingExtrinsics", "system_accountNextIndex", "account_nextIndex", "payment_queryInfo"]})
             }
             "system_health" => json!({"peers": 0, "isSyncing": false, "shouldHavePeers": false}),
             "chain_getBlockHash" => {
@@ -920,8 +967,14 @@ impl FakeState {
             "state_call" => self.state_call(params)?,
             "system_accountNextIndex" | "account_nextIndex" => {
                 let address = str_param(params.first(), "address")?;
-                json!(self.nonces.get(address).copied().unwrap_or(0))
+                json!(self.pool_next_index(address))
             }
+            "author_pendingExtrinsics" => Value::Array(
+                self.pool
+                    .iter()
+                    .map(|bytes| json!(hex_bytes(bytes)))
+                    .collect(),
+            ),
             "payment_queryInfo" => {
                 json!({"weight": self.weight, "class": "normal", "partialFee": self.fee.to_string()})
             }
@@ -1001,6 +1054,18 @@ impl FakeState {
         });
         let events = match script {
             SubmitScript::InBlockThenFinalized { events } => events,
+            SubmitScript::Pooled => {
+                self.pool.push(bytes);
+                if !watch {
+                    return Ok(Reply::result(json!(hash)));
+                }
+                self.next_subscription = self.next_subscription.saturating_add(1);
+                return Ok(Reply::subscription(
+                    self.next_subscription.to_string(),
+                    vec![json!("ready")],
+                    false,
+                ));
+            }
             script => {
                 let statuses = match script {
                     SubmitScript::Invalid(_) => vec![json!("invalid")],
@@ -1009,7 +1074,7 @@ impl FakeState {
                     SubmitScript::Retracted(hash) => vec![json!({"retracted": hash})],
                     SubmitScript::FinalityTimeout(hash) => vec![json!({"finalityTimeout": hash})],
                     SubmitScript::Statuses(statuses) => statuses,
-                    SubmitScript::InBlockThenFinalized { .. } => Vec::new(),
+                    SubmitScript::InBlockThenFinalized { .. } | SubmitScript::Pooled => Vec::new(),
                 };
                 // Retraction scripts can include the same extrinsic in distinct
                 // fork blocks. Make every reported inclusion independently

@@ -403,11 +403,14 @@ async fn without_a_submit_endpoint_requests_are_unchanged() {
     client.close().await;
 }
 
-/// Recorded from the client before submit endpoints were added.
+/// Recorded from the client before submit endpoints were added, then updated
+/// once when each fresh nonce began reading `author_pendingExtrinsics` for
+/// pending shield carriers (D-084). A fee probe's nonce does not.
 const DEFAULT_METHODS: &[&str] = &[
     "state_getRuntimeVersion",
     "account_nextIndex",
     "state_call:TransactionPaymentApi_query_info",
+    "author_pendingExtrinsics",
     "account_nextIndex",
     "state_getRuntimeVersion",
     "chain_getFinalizedHead",
@@ -445,6 +448,7 @@ const DEFAULT_METHODS: &[&str] = &[
     "chain_getHeader",
     "author_submitExtrinsic",
     "state_getRuntimeVersion",
+    "author_pendingExtrinsics",
     "account_nextIndex",
     "state_getRuntimeVersion",
     "chain_getFinalizedHead",
@@ -460,7 +464,7 @@ const DEFAULT_METHODS: &[&str] = &[
     "chain_getHeader",
     "author_submitExtrinsic",
 ];
-const DEFAULT_DIGEST: &str = "e592e43c23836c3d9a37a27ff78cb227a7d96a360b3cfed7fd9cbdd07183d298";
+const DEFAULT_DIGEST: &str = "22742f155892dc830f9c2604080295ebeaa3560dcad5f0d74a96c17f0381a091";
 
 /// An encoded 1184-byte ML-KEM-768 encapsulation key accepted by the core.
 fn shield_key(fill: u8) -> Vec<u8> {
@@ -519,8 +523,10 @@ async fn without_a_submit_endpoint_shield_requests_are_unchanged() {
 /// Recorded from the client before shield reads followed the submit endpoint,
 /// then updated once when NextKey became an unpinned read: each of the two
 /// `chain_getHeader` and `state_queryStorageAt(key, best)` pairs became one
-/// `state_getStorage(key)`. Every other request is unchanged.
-const SHIELD_DIGEST: &str = "477f8d0746e803fe1a3b7131a68295f5a933c43c8aea2e499f2756caa593b9ce";
+/// `state_getStorage(key)`, and once when a fresh nonce began reading
+/// `author_pendingExtrinsics` for pending shield carriers (D-084). Every other
+/// request is unchanged.
+const SHIELD_DIGEST: &str = "66729509b333da11ca8282c21f1bb3056950b864a88cf17695bbac6e2f315ae9";
 
 /// A read endpoint behind the submitting node, with its own NextKey.
 async fn shield_split(

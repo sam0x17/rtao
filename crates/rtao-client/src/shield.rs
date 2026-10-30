@@ -2,8 +2,8 @@
 //! Paired-nonce MEV shield submission and bounded inner-receipt resolution.
 
 use crate::{
-    BlockRef, CallBytes, Client, ClientError, ExtrinsicReport, Mortality, Period, SubmitFailure,
-    SubmitOptions, ViewExt, Wait,
+    BlockRef, CallBytes, Client, ClientError, ExtrinsicReport, Mortality, Period, PoolRejection,
+    SubmitFailure, SubmitOptions, ViewExt, Wait,
     submit::{
         OperationLimit, SubmissionAttempt, SubmissionLimits, submission_attempt_error, unknown_fate,
     },
@@ -12,7 +12,10 @@ use rtao_core::CoreError;
 use rtao_primitives::{AccountId, Balance, CryptoType, H256, Tao};
 use rtao_signer::{SignPurpose, Signer};
 use serde_json::json;
-use std::time::Duration;
+use std::{
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 /// The only mortal periods accepted by the runtime's shield mortality check.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -113,6 +116,15 @@ pub struct ShieldOptions {
     /// The inner is proven absent through its finalized era expiry, so it never
     /// executed; each retry costs one more carrier fee.
     pub dropped_inner_retries: u32,
+    /// Re-seals after a carrier lost its nonce to another transaction.
+    ///
+    /// A retry needs proof that the carrier was never included: the author
+    /// refused it as stale or outbid, or the pool marked it invalid or usurped
+    /// while the account nonce moved past it and finalized history then passed
+    /// its era without it. Each retry waits one block, doubling to eight, and
+    /// re-seals with a fresh key, anchor and nonce pair within this
+    /// invocation's deadlines. Journaled submissions never retry this way.
+    pub nonce_conflict_retries: u32,
     /// Shared deadlines, reconciliation and metadata-signing display settings.
     ///
     /// Its mortality, nonce and wait are replaced by the shield's paired nonces,
@@ -127,6 +139,7 @@ impl Default for ShieldOptions {
             max_fee: None,
             finality_wait: SHIELD_FINALITY_WAIT,
             dropped_inner_retries: SHIELD_DROPPED_INNER_RETRIES,
+            nonce_conflict_retries: SHIELD_NONCE_CONFLICT_RETRIES,
             submit: SubmitOptions::default(),
         }
     }
@@ -134,6 +147,35 @@ impl Default for ShieldOptions {
 
 /// Default re-seals after a carrier whose decrypted inner was proven never included.
 pub const SHIELD_DROPPED_INNER_RETRIES: u32 = 3;
+/// Default re-seals after a carrier proven to have lost its nonce, never included.
+pub const SHIELD_NONCE_CONFLICT_RETRIES: u32 = 10;
+
+/// How a carrier failure may show that its nonce was taken.
+#[derive(Clone, Copy)]
+enum NonceConflict {
+    /// The author refused the bytes, so they never entered any pool.
+    Refused,
+    /// The pool accepted and then discarded the carrier, which may have been
+    /// gossiped; absence must be proven before re-sealing.
+    Pooled,
+}
+
+fn nonce_conflict(error: &SubmitFailure, refused: bool) -> Option<NonceConflict> {
+    let SubmitFailure::Pool(rejection) = error else {
+        return None;
+    };
+    match rejection {
+        PoolRejection::Stale | PoolRejection::PriorityTooLow if refused => {
+            Some(NonceConflict::Refused)
+        }
+        PoolRejection::Watch(_)
+            if !refused && matches!(rejection.name(), Some("Invalid" | "Usurped")) =>
+        {
+            Some(NonceConflict::Pooled)
+        }
+        _ => None,
+    }
+}
 
 const DROPPED_INNER: &str =
     "the MEV shield accepted the encrypted submission, but the decrypted extrinsic (";
@@ -154,6 +196,15 @@ fn inner_proven_dropped(report: &ExtrinsicReport) -> bool {
 pub const SHIELD_FINALITY_WAIT: Duration = Duration::from_secs(60);
 /// Interval between finality-lag checks while waiting for an era anchor.
 const SHIELD_FINALITY_POLL: Duration = Duration::from_millis(100);
+
+enum CarrierConflict {
+    /// Proven never included; a fresh pair may be sealed.
+    Reseal,
+    /// Found in finalized history after all.
+    Included(Box<ExtrinsicReport>),
+    /// No proof; the original failure stands.
+    Unproven,
+}
 
 struct ShieldReceiptWindow {
     finalized_anchor: u64,
@@ -206,11 +257,14 @@ impl Client {
     ///
     /// The carrier uses nonce n and the inner n+1. Both share one finalized era
     /// anchor. Shielded carriers are never retried after rejection or unknown
-    /// fate. When the carrier was included but the decrypted inner is proven
-    /// absent through its finalized era expiry, the call never executed, so it
-    /// is re-sealed with a fresh key and nonce pair, up to
-    /// [`ShieldOptions::dropped_inner_retries`] more times. On fast development chains
-    /// the per-block key rotation leaves a carrier well under a second to land.
+    /// fate, except after proven non-inclusion of a carrier that lost its
+    /// nonce to another transaction, up to
+    /// [`ShieldOptions::nonce_conflict_retries`] times. When the carrier was
+    /// included but the decrypted inner is proven absent through its finalized
+    /// era expiry, the call never executed, so it is re-sealed with a fresh key
+    /// and nonce pair, up to [`ShieldOptions::dropped_inner_retries`] more
+    /// times. On fast development chains the per-block key rotation leaves a
+    /// carrier well under a second to land.
     pub async fn submit_shielded(
         &self,
         call: CallBytes,
@@ -255,10 +309,46 @@ impl Client {
             }
         }
         let mut retries = opts.dropped_inner_retries;
+        let mut conflicts = 0;
         loop {
-            // Keep the signing/recovery state machine out of every caller's
-            // future frame. This remains one owned, cancellable operation.
-            let report = Box::pin(self.submit_shielded_once(call.clone(), signer, opts)).await?;
+            let limits = SubmissionLimits::new(&opts.submit)?;
+            let report = loop {
+                let proven = AtomicBool::new(false);
+                let watch = (conflicts < opts.nonce_conflict_retries).then_some(&proven);
+                // Keep the signing/recovery state machine out of every caller's
+                // future frame. This remains one owned, cancellable operation.
+                match Box::pin(self.submit_shielded_attempt(
+                    call.clone(),
+                    signer,
+                    opts,
+                    limits,
+                    watch,
+                ))
+                .await
+                {
+                    Ok(report) => break report,
+                    Err(error) if proven.load(Ordering::Acquire) => {
+                        let delay =
+                            crate::nonce::block_backoff(self.block_time().await?, conflicts);
+                        conflicts += 1;
+                        tracing::warn!(
+                            %error,
+                            attempt = conflicts,
+                            ?delay,
+                            "shield carrier lost its nonce to another transaction and was \
+                             proven never included; re-sealing with a fresh nonce pair"
+                        );
+                        limits
+                            .full
+                            .run(self, async {
+                                tokio::time::sleep(delay).await;
+                                Ok::<(), ClientError>(())
+                            })
+                            .await?;
+                    }
+                    Err(error) => return Err(error),
+                }
+            };
             if retries == 0 || !inner_proven_dropped(&report) {
                 return Ok(report);
             }
@@ -396,7 +486,8 @@ impl Client {
             // Bound the parent future and debug-build polling stack across this
             // large signing/RPC state machine. This does not spawn or detach it.
             let result =
-                Box::pin(self.submit_shielded_attempt(call.clone(), signer, &scoped, limits)).await;
+                Box::pin(self.submit_shielded_attempt(call.clone(), signer, &scoped, limits, None))
+                    .await;
             let Err(error @ SubmitFailure::PendingShield { .. }) = result else {
                 return result;
             };
@@ -457,6 +548,7 @@ impl Client {
         }))
     }
 
+    #[cfg(test)]
     async fn submit_shielded_once(
         &self,
         call: CallBytes,
@@ -468,16 +560,22 @@ impl Client {
             signer,
             opts,
             SubmissionLimits::new(&opts.submit)?,
+            None,
         ))
         .await
     }
+    /// One sealed pair. With `conflict`, a carrier failure that is proven to
+    /// have lost its nonce and never been included sets it before returning.
     async fn submit_shielded_attempt(
         &self,
         call: CallBytes,
         signer: &dyn Signer,
         opts: &ShieldOptions,
         limits: SubmissionLimits,
+        conflict: Option<&AtomicBool>,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
+        // Durable submissions stay fail-closed with their own recovery.
+        let conflict = conflict.filter(|_| opts.submit.journal.is_none());
         let mut submit = opts.submit.clone();
         submit.mortality = Mortality::Mortal(Period::new(opts.period.get()));
         // Resolve the carrier on inclusion; finality is verified for the inner
@@ -880,6 +978,21 @@ impl Client {
                         limits.full.check(self)?;
                         self.reconcile(hash, unsigned.submission_head(), unsigned.expiry())
                             .await?
+                    } else if let Some(proven) = conflict
+                        && let Some(kind) = nonce_conflict(&error, attempted_hash.was_refused())
+                    {
+                        limits.full.check(self)?;
+                        match self
+                            .prove_carrier_conflict(kind, account, hash, &unsigned)
+                            .await?
+                        {
+                            CarrierConflict::Reseal => {
+                                proven.store(true, Ordering::Release);
+                                return Err(error);
+                            }
+                            CarrierConflict::Included(report) => *report,
+                            CarrierConflict::Unproven => return Err(error),
+                        }
                     } else {
                         return Err(error);
                     }
@@ -981,6 +1094,53 @@ impl Client {
             // Even Closed/Policy/pool rejection or a finalized failed CARRIER
             // leaves the authorized inner explicitly unresolved, never failed.
             _ => Err(pending(crate::journal::RecoveryReason::InnerUnresolved)),
+        }
+    }
+
+    /// Decide whether a failed carrier lost its nonce and was never included.
+    ///
+    /// An author refusal never entered a pool. A carrier the pool accepted and
+    /// then discarded counts only when the account nonce has moved past it,
+    /// so another transaction holds that nonce, and finalized history then
+    /// passes its era without it. Reconciliation can instead find it included,
+    /// and its inner is then resolved like any included carrier.
+    async fn prove_carrier_conflict(
+        &self,
+        kind: NonceConflict,
+        account: AccountId,
+        hash: H256,
+        unsigned: &crate::UnsignedExtrinsic,
+    ) -> Result<CarrierConflict, SubmitFailure> {
+        if matches!(kind, NonceConflict::Refused) {
+            return Ok(CarrierConflict::Reseal);
+        }
+        match self.nonces().fresh(&account).await {
+            Ok(next) if next > unsigned.nonce() => {}
+            Ok(_) => return Ok(CarrierConflict::Unproven),
+            Err(error) => {
+                self.ensure_open()?;
+                tracing::warn!(
+                    %error,
+                    "cannot read the account nonce after a discarded shield carrier; not re-sealing"
+                );
+                return Ok(CarrierConflict::Unproven);
+            }
+        }
+        match self
+            .reconcile(hash, unsigned.submission_head(), unsigned.expiry())
+            .await
+        {
+            Ok(report) => Ok(CarrierConflict::Included(Box::new(report))),
+            Err(SubmitFailure::Expired { .. }) => Ok(CarrierConflict::Reseal),
+            Err(error) => {
+                tracing::warn!(
+                    %error,
+                    carrier = %crate::hash_hex(hash),
+                    "cannot prove that the discarded shield carrier was never included; \
+                     not re-sealing"
+                );
+                Ok(CarrierConflict::Unproven)
+            }
         }
     }
 

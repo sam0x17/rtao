@@ -2,7 +2,11 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/interface.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Connection initialization and connection-scoped state.
 
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Weak},
+    time::Duration,
+};
 
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -136,7 +140,7 @@ impl Default for ClientConfig {
     }
 }
 
-struct ClientInner {
+pub(crate) struct ClientInner {
     rpc: RpcClient,
     session: Option<Session>,
     config: ClientConfig,
@@ -273,6 +277,14 @@ impl std::fmt::Debug for Client {
 }
 
 impl Client {
+    /// A user-facing handle while some other one still holds the connection.
+    pub(crate) fn upgrade(inner: &Weak<ClientInner>, alive: &Weak<DropGuard>) -> Option<Self> {
+        Some(Self {
+            inner: inner.upgrade()?,
+            _alive: alive.upgrade()?,
+        })
+    }
+
     /// Connect a supervised WebSocket session and verify the chain preconditions.
     ///
     /// A configured [`ClientConfig::submit`] endpoint connects on first use.
@@ -474,14 +486,18 @@ impl Client {
             })
         });
         let alive = Arc::new(cancelled.clone().drop_guard());
-        let inner = Arc::new(ClientInner {
+        let weak_alive = Arc::downgrade(&alive);
+        let inner = Arc::new_cyclic(|weak| ClientInner {
             rpc: rpc.clone(),
             session,
             config,
             genesis,
             signing_disabled,
             cache,
-            nonces: NonceManager::with_route(rpc, submit.clone()),
+            // Fresh nonces wait for this account's pending shield carriers,
+            // whose inner nonce the node's account_nextIndex cannot see.
+            nonces: NonceManager::with_route(rpc, submit.clone())
+                .with_carrier_wait(Self::carrier_wait(weak.clone(), weak_alive)),
             cancelled,
             heads,
             token_symbols: tokio::sync::RwLock::new(std::collections::BTreeMap::new()),

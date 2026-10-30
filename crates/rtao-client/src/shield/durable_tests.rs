@@ -302,6 +302,44 @@ async fn paired_native_carrier_only_and_closed_validity_stays_typed_pending_with
     );
     f.client.close().await;
 }
+#[tokio::test]
+async fn paired_native_stale_carrier_refusal_stays_pending_without_conflict_reseal() {
+    let f = Fixture::new(false).await;
+    f.node.mutate_state(|state| {
+        state.set_handler("author_submitAndWatchExtrinsic", |_, _| {
+            rtao_testkit::Reply::error(
+                1010,
+                "Invalid Transaction",
+                Some(json!("Transaction is outdated")),
+            )
+        });
+    });
+    let options = f.options();
+    let proven = std::sync::atomic::AtomicBool::new(false);
+    let result = f
+        .client
+        .submit_shielded_attempt(
+            f.call().await,
+            &f.signer,
+            &options,
+            SubmissionLimits::new(&options.submit).unwrap(),
+            Some(&proven),
+        )
+        .await;
+    // A durable pair is never re-sealed on a nonce conflict: it stays
+    // pending for journal recovery.
+    assert!(matches!(result, Err(SubmitFailure::PendingShield { .. })));
+    assert!(!proven.load(Ordering::SeqCst));
+    assert_eq!(
+        f.node
+            .requests()
+            .iter()
+            .filter(|r| r.method == "author_submitAndWatchExtrinsic")
+            .count(),
+        1
+    );
+    f.client.close().await;
+}
 struct CountingSigner {
     inner: KeypairSigner,
     prepares: AtomicU64,

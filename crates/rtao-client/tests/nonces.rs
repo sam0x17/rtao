@@ -8,7 +8,7 @@ use std::sync::{
 
 use rtao_client::NonceManager;
 use rtao_primitives::AccountId;
-use rtao_testkit::{FakeChain, FakeState, Reply};
+use rtao_testkit::{FakeChain, FakeState, Reply, SubmitScript};
 use serde_json::{json, value::RawValue};
 use subxt_rpcs::{
     RpcClient, RpcClientT,
@@ -206,4 +206,205 @@ async fn an_account_waiting_for_its_first_rpc_does_not_block_other_accounts() {
     let lease = task.await.unwrap().unwrap();
     assert_eq!(lease.value(), 13);
     lease.settle();
+}
+
+// A fresh nonce waits for this account's pending shield carriers, whose inner
+// nonce account_nextIndex cannot see (D-084).
+
+fn shield_state(slot_millis: u64) -> FakeState {
+    let mut state = FakeState::default();
+    state
+        .seed_constant("Aura", "SlotDuration", json!(slot_millis))
+        .unwrap();
+    // An encoded 1184-byte ML-KEM-768 encapsulation key accepted by the core.
+    state
+        .seed_typed("MevShield", "NextKey", (), vec![0u8; 1184])
+        .unwrap();
+    state
+}
+
+async fn client_over(fake: &FakeChain) -> rtao_client::Client {
+    let mut config = rtao_client::ClientConfig::new(
+        rtao_client::Network::resolve_with("local", |_| None).unwrap(),
+    )
+    .unwrap();
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    rtao_client::Client::from_rpc(RpcClient::new(fake.clone()), config)
+        .await
+        .unwrap()
+}
+
+fn key(seed: u8) -> rtao_signer::KeypairSigner {
+    rtao_signer::KeypairSigner::from_seed(&[seed; 32], rtao_signer::CryptoType::Ed25519).unwrap()
+}
+
+async fn remark(client: &rtao_client::Client) -> rtao_client::CallBytes {
+    rtao_runtime::calls::system::remark(vec![1])
+        .compose(&client.refresh_runtime().await.unwrap())
+        .unwrap()
+}
+
+/// Leave one shield carrier from `signer` pending in the fake's ready pool.
+async fn pool_carrier(
+    client: &rtao_client::Client,
+    fake: &FakeChain,
+    signer: &rtao_signer::KeypairSigner,
+) {
+    fake.mutate_state(|state| state.queue_submit(SubmitScript::Pooled));
+    let opts = rtao_client::ShieldOptions {
+        wait: rtao_client::Wait::Pool,
+        ..Default::default()
+    };
+    client
+        .submit_shielded(remark(client).await, signer, &opts)
+        .await
+        .unwrap();
+}
+
+fn pool_reads(fake: &FakeChain) -> usize {
+    fake.requests()
+        .iter()
+        .filter(|request| request.method == "author_pendingExtrinsics")
+        .count()
+}
+
+#[tokio::test]
+async fn cleared_cache_after_a_pending_carrier_never_returns_its_inner_nonce() {
+    use rtao_signer::Signer;
+    let fake = FakeChain::from_state(shield_state(1));
+    let client = client_over(&fake).await;
+    let signer = key(7);
+    let who = signer.account();
+    fake.mutate_state(|state| state.set_nonce(who.to_string(), 7));
+    pool_carrier(&client, &fake, &signer).await;
+    // The node counts the pooled carrier at 7 and cannot see its inner at 8.
+    let reported: u64 = client
+        .request("account_nextIndex", json!([who.to_string()]))
+        .await
+        .unwrap();
+    assert_eq!(reported, 8);
+    // An unsettled lease clears what this client knew about the pair.
+    drop(client.nonces().lease(&who).await.unwrap());
+    assert_eq!(client.nonces().cached(&who.to_string()).await, None);
+    let reads = Arc::new(AtomicUsize::new(0));
+    let counter = reads.clone();
+    let address = who.to_string();
+    fake.mutate_state(|state| {
+        state.set_handler("author_pendingExtrinsics", move |state, request| {
+            // The pair lands while the second pool read is being made.
+            if counter.fetch_add(1, Ordering::SeqCst) == 1 {
+                state.include_pool();
+                state.set_nonce(address.clone(), 9);
+            }
+            state.dispatch(request)
+        });
+    });
+    let lease = client.nonces().lease(&who).await.unwrap();
+    assert_eq!(lease.value(), 9);
+    lease.settle();
+    assert_eq!(reads.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn pool_probe_ignores_other_accounts_plain_transactions_and_undecodable_entries() {
+    use rtao_signer::Signer;
+    let fake = FakeChain::from_state(shield_state(1));
+    let client = client_over(&fake).await;
+    let signer = key(7);
+    let who = signer.account();
+    // Another account's carrier and this account's ordinary pending call.
+    pool_carrier(&client, &fake, &key(5)).await;
+    fake.mutate_state(|state| state.queue_submit(SubmitScript::Pooled));
+    client
+        .submit(
+            remark(&client).await,
+            &signer,
+            &rtao_client::SubmitOptions {
+                wait: rtao_client::Wait::Pool,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    fake.mutate_state(|state| {
+        state.pool.push(vec![0xde, 0xad]);
+        // Carries this account's key but is not an extrinsic.
+        let mut garbage = vec![0x84, 0, 0, 0];
+        garbage.extend_from_slice(&who.0);
+        state.pool.push(garbage);
+    });
+    let other = client_over(&fake).await;
+    let before = pool_reads(&fake);
+    let lease = other.nonces().lease(&who).await.unwrap();
+    // The plain call at 0 is already counted by account_nextIndex.
+    assert_eq!(lease.value(), 1);
+    lease.settle();
+    assert_eq!(pool_reads(&fake) - before, 1);
+}
+
+#[tokio::test]
+async fn missing_pool_method_falls_back_and_is_not_asked_again() {
+    let fake = FakeChain::from_state(shield_state(1));
+    fake.mutate_state(|state| {
+        state.set_handler("author_pendingExtrinsics", |_, _| {
+            Reply::error(-32601, "Method not found", None)
+        });
+        state.set_nonce(AccountId([3; 32]).to_string(), 4);
+    });
+    let client = client_over(&fake).await;
+    let who = AccountId([3; 32]);
+    drop(client.nonces().lease(&who).await.unwrap());
+    let lease = client.nonces().lease(&who).await.unwrap();
+    assert_eq!(lease.value(), 4);
+    lease.settle();
+    assert_eq!(pool_reads(&fake), 1);
+}
+
+#[tokio::test]
+async fn policy_refused_pool_read_falls_back_without_error() {
+    let fake = FakeChain::from_state(shield_state(1));
+    fake.mutate_state(|state| {
+        state.set_handler("author_pendingExtrinsics", |_, _| {
+            Reply::error(
+                -32005,
+                "method blocked",
+                Some(json!({"policy": "deny-author"})),
+            )
+        });
+        state.set_nonce(AccountId([4; 32]).to_string(), 6);
+    });
+    let client = client_over(&fake).await;
+    let who = AccountId([4; 32]);
+    assert_eq!(client.nonces().fresh(&who).await.unwrap(), 6);
+    assert_eq!(client.nonces().fresh(&who).await.unwrap(), 6);
+    // A policy refusal may be temporary, so it is asked again.
+    assert_eq!(pool_reads(&fake), 2);
+}
+
+#[tokio::test(start_paused = true)]
+async fn pending_carrier_wait_backs_off_and_stops_after_ten_pool_reads() {
+    use rtao_signer::Signer;
+    let fake = FakeChain::from_state(shield_state(1_000));
+    let client = client_over(&fake).await;
+    let signer = key(7);
+    let who = signer.account();
+    pool_carrier(&client, &fake, &signer).await;
+    let other = client_over(&fake).await;
+    let before = pool_reads(&fake);
+    let started = tokio::time::Instant::now();
+    let lease = other.nonces().lease(&who).await.unwrap();
+    // The carrier never leaves the pool: after the bounded wait the node's
+    // answer is used as reported, with no error.
+    assert_eq!(lease.value(), 1);
+    lease.settle();
+    assert_eq!(
+        pool_reads(&fake) - before,
+        usize::try_from(rtao_client::SHIELD_CARRIER_POLLS).unwrap()
+    );
+    // One block doubling to eight: 1 + 2 + 4 + 8 * 6 blocks of one second.
+    let waited = started.elapsed();
+    assert!(waited >= std::time::Duration::from_secs(55), "{waited:?}");
+    assert!(waited < std::time::Duration::from_secs(56), "{waited:?}");
 }

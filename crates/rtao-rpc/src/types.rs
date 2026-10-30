@@ -44,6 +44,8 @@ pub enum ReadMethod {
     AccountNextIndex,
     /// Standard account nonce method.
     SystemAccountNextIndex,
+    /// List the node's ready transaction pool.
+    AuthorPendingExtrinsics,
     /// Read chain properties.
     SystemProperties,
     /// Read chain name.
@@ -72,6 +74,7 @@ impl ReadMethod {
             Self::ChainGetBlock => "chain_getBlock",
             Self::AccountNextIndex => "account_nextIndex",
             Self::SystemAccountNextIndex => "system_accountNextIndex",
+            Self::AuthorPendingExtrinsics => "author_pendingExtrinsics",
             Self::SystemProperties => "system_properties",
             Self::SystemChain => "system_chain",
             Self::SystemHealth => "system_health",
@@ -98,6 +101,7 @@ impl FromStr for ReadMethod {
             ReadMethod::ChainGetBlock,
             ReadMethod::AccountNextIndex,
             ReadMethod::SystemAccountNextIndex,
+            ReadMethod::AuthorPendingExtrinsics,
             ReadMethod::SystemProperties,
             ReadMethod::SystemChain,
             ReadMethod::SystemHealth,

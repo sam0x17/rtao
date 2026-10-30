@@ -427,17 +427,233 @@ async fn absent_next_key_is_retried_twice_one_block_apart_then_refused() {
 
 #[tokio::test]
 async fn carrier_rejection_never_retries_and_drops_both_leases() {
+    // Without the conflict retry, or with it but no sign that another
+    // transaction took the carrier's nonce, an invalid carrier stands.
+    for retries in [0, rtao_client::SHIELD_NONCE_CONFLICT_RETRIES] {
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| state.queue_submit(SubmitScript::Invalid("Stale".into())));
+        let opts = ShieldOptions {
+            nonce_conflict_retries: retries,
+            ..Default::default()
+        };
+        let result = client
+            .submit_shielded(call(&client, 1).await, &signer, &opts)
+            .await;
+        assert!(matches!(result, Err(SubmitFailure::Pool(_))));
+        assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            None
+        );
+    }
+}
+
+async fn second_client(fake: &FakeChain) -> Client {
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None).unwrap()).unwrap();
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    Client::from_rpc(RpcClient::new(fake.clone()), config)
+        .await
+        .unwrap()
+}
+
+fn decoded_nonce(fake: &FakeChain, bytes: &[u8]) -> u64 {
+    let state = fake.state();
+    let state = state.lock().unwrap();
+    let decoded = state.runtime.decode_extrinsic(bytes, true).unwrap();
+    u64::try_from(decoded.field("nonce").and_then(ValueExt::as_u128).unwrap()).unwrap()
+}
+
+/// Land the pending pair while a second client is reading the pool.
+fn land_pool_on_second_read(fake: &FakeChain, address: String, next: u64) {
+    let reads = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    fake.mutate_state(|state| {
+        state.set_handler("author_pendingExtrinsics", move |state, request| {
+            if reads.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 1 {
+                state.include_pool();
+                state.set_nonce(address.clone(), next);
+            }
+            state.dispatch(request)
+        });
+    });
+}
+
+#[tokio::test]
+async fn second_client_waits_for_a_pending_carrier_instead_of_taking_its_inner_nonce() {
+    for shielded in [true, false] {
+        let (client, fake, signer) = fixture().await;
+        let address = signer.account().to_string();
+        fake.mutate_state(|state| {
+            state.set_nonce(address.clone(), 7);
+            state.queue_submit(SubmitScript::Pooled);
+        });
+        // A first process leaves its carrier at 7 pending; its inner holds 8.
+        client
+            .submit_shielded(call(&client, 1).await, &signer, &pool())
+            .await
+            .unwrap();
+        let reported: u64 = client
+            .request("account_nextIndex", json!([address]))
+            .await
+            .unwrap();
+        assert_eq!(reported, 8);
+        land_pool_on_second_read(&fake, address.clone(), 9);
+        let other = second_client(&fake).await;
+        if shielded {
+            other
+                .submit_shielded(call(&other, 2).await, &signer, &pool())
+                .await
+                .unwrap();
+            let signed = signer.signed.lock().unwrap().clone();
+            assert_eq!(signed.len(), 4);
+            assert_eq!(signed[2].purpose, SignPurpose::ShieldInner);
+            assert_eq!(signed[2].json["nonce"], json!("0x0000000a"));
+            assert_eq!(signed[3].json["nonce"], json!("0x00000009"));
+        } else {
+            other
+                .submit(
+                    call(&other, 2).await,
+                    &signer,
+                    &SubmitOptions {
+                        wait: Wait::Pool,
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap();
+        }
+        let submissions = fake.state().lock().unwrap().submissions.clone();
+        assert_eq!(submissions.len(), 2);
+        assert_eq!(decoded_nonce(&fake, &submissions[1]), 9);
+    }
+}
+
+/// Finalized history advances whenever it is read once `armed` is set, and
+/// requested heights above the best head are produced.
+fn advance_history(fake: &FakeChain, armed: Arc<std::sync::atomic::AtomicBool>) {
+    fake.mutate_state(|state| {
+        state.set_handler("chain_getFinalizedHead", move |state, request| {
+            if armed.load(std::sync::atomic::Ordering::SeqCst) {
+                state.advance(1);
+            }
+            state.dispatch(request)
+        });
+        state.set_handler("chain_getBlockHash", move |state, request| {
+            if !state.submissions.is_empty()
+                && let Some(height) = request.params[0].as_u64()
+                && height > state.block
+            {
+                state.advance(height - state.block);
+            }
+            state.dispatch(request)
+        });
+    });
+}
+
+// Paused: reconciliation without a head tracker waits a block time between
+// finalized reads.
+#[tokio::test(start_paused = true)]
+async fn invalid_carrier_whose_nonce_was_taken_is_resealed_once_after_proven_expiry() {
     let (client, fake, signer) = fixture().await;
-    fake.mutate_state(|state| state.queue_submit(SubmitScript::Invalid("Stale".into())));
-    let result = client
-        .submit_shielded(call(&client, 1).await, &signer, &ShieldOptions::default())
-        .await;
-    assert!(matches!(result, Err(SubmitFailure::Pool(_))));
-    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
-    assert_eq!(
-        client.nonces().cached(&signer.account().to_string()).await,
-        None
+    let address = signer.account().to_string();
+    let armed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    advance_history(&fake, armed.clone());
+    let flag = armed.clone();
+    fake.mutate_state(|state| {
+        state.queue_submit(SubmitScript::Invalid("Stale".into()));
+        state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
+            let reply = state.dispatch(request);
+            if !flag.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                // Another process's pair took nonces 0 and 1.
+                state.set_nonce(address.clone(), 2);
+            }
+            reply
+        });
+    });
+    let opts = ShieldOptions {
+        dropped_inner_retries: 0,
+        ..Default::default()
+    };
+    let report = client
+        .submit_shielded(call(&client, 1).await, &signer, &opts)
+        .await
+        .unwrap();
+    // The re-sealed carrier was included; its inner never appears here.
+    assert!(!report.success);
+    assert!(
+        report
+            .message
+            .contains("not included before its era expired")
     );
+    let submissions = fake.state().lock().unwrap().submissions.clone();
+    assert_eq!(submissions.len(), 2);
+    assert_eq!(decoded_nonce(&fake, &submissions[0]), 0);
+    assert_eq!(decoded_nonce(&fake, &submissions[1]), 2);
+    let signed = signer.signed.lock().unwrap().clone();
+    assert_eq!(signed.len(), 4);
+    assert_eq!(signed[2].json["nonce"], json!("0x00000003"));
+    assert_ne!(signed[0].json["blockHash"], signed[2].json["blockHash"]);
+}
+
+#[tokio::test]
+async fn invalid_carrier_found_in_finalized_history_resolves_its_inner_without_resealing() {
+    let (client, fake, signer) = fixture().await;
+    let inner_call = call(&client, 3).await;
+    let (inner_bytes, inner_hash) = signed_inner(&client, &signer, inner_call.clone(), 1).await;
+    install_inner(&fake, inner_bytes, 101, false);
+    fake.mutate_state(|state| {
+        state.set_handler("author_submitAndWatchExtrinsic", |state, request| {
+            // The carrier lands, yet this node's watch reports it invalid.
+            let _ = state.dispatch(request);
+            Reply::subscription("watch", vec![json!("invalid")], false)
+        });
+    });
+    let report = client
+        .submit_shielded(inner_call, &signer, &ShieldOptions::default())
+        .await
+        .unwrap();
+    assert_eq!(report.hash, inner_hash);
+    assert!(report.success);
+    assert_eq!(report.block_number, Some(101));
+    assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+}
+
+#[tokio::test]
+async fn stale_carrier_refusals_reseal_at_most_the_conflict_retry_limit() {
+    for retries in [0, rtao_client::SHIELD_NONCE_CONFLICT_RETRIES] {
+        let (client, fake, signer) = fixture().await;
+        fake.mutate_state(|state| {
+            state.set_handler("author_submitAndWatchExtrinsic", |_, _| {
+                Reply::error(
+                    1010,
+                    "Invalid Transaction",
+                    Some(json!("Transaction is outdated")),
+                )
+            });
+        });
+        let opts = ShieldOptions {
+            nonce_conflict_retries: retries,
+            ..Default::default()
+        };
+        let result = client
+            .submit_shielded(call(&client, 1).await, &signer, &opts)
+            .await;
+        assert!(matches!(
+            result,
+            Err(SubmitFailure::Pool(rtao_client::PoolRejection::Stale))
+        ));
+        let sent = fake
+            .requests()
+            .iter()
+            .filter(|request| request.method == "author_submitAndWatchExtrinsic")
+            .count();
+        assert_eq!(sent, usize::try_from(retries).unwrap() + 1);
+        assert_eq!(
+            signer.signed.lock().unwrap().len(),
+            2 * (usize::try_from(retries).unwrap() + 1)
+        );
+    }
 }
 
 #[tokio::test]

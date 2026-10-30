@@ -54,13 +54,11 @@ async fn prepared(
         .await?)
 }
 
+/// No author write: a fresh nonce's read-only pool probe is not one.
 fn no_author(fake: &FakeChain) {
-    assert!(
-        !fake
-            .requests()
-            .iter()
-            .any(|request| request.method.starts_with("author_"))
-    );
+    assert!(!fake.requests().iter().any(|request| {
+        request.method.starts_with("author_") && request.method != "author_pendingExtrinsics"
+    }));
 }
 
 #[tokio::test]

@@ -45,6 +45,19 @@ carrier uses nonce `n`, the inner uses `n + 1`, and the next cached lease is
 `n + 2`. Both signatures share a finalized era anchor. Do not allocate or
 override those paired nonces yourself.
 
+Only the client that sealed the pair knows the inner's nonce. The node's
+`account_nextIndex` counts the pending carrier but cannot see the encrypted
+inner, so it answers `n + 1`. A transaction signed with that answer, from
+another process or after a cache clear, is accepted and then invalidated when
+the pair lands. Before using a fresh `account_nextIndex`, the client therefore
+reads the same endpoint's ready pool (`author_pendingExtrinsics`). While it
+holds a `MevShield.submit_encrypted` carrier from the signing account, the
+client waits one block, doubling to eight, for at most
+`SHIELD_CARRIER_POLLS` (10) reads. A carrier leaves the pool within its era,
+either included with its inner or expired. If the pool cannot be read, or the
+carrier is still pending after the last read, the client logs a warning and
+uses the reported nonce. Fee estimates do not wait.
+
 The client calls `Signer::prepare_shielded` before selecting that anchor or
 reserving either nonce. Vault connects its page and requests camera startup
 through this hook; software signers need no setup. Best and finalized heights
@@ -90,7 +103,17 @@ before expiry is reported as failure. Retain the carrier and inner hashes;
 executor results expose shield metadata including `inner_extrinsic_hash`.
 
 Shield carrier rejection or unknown fate never causes automatic
-retransmission. Reconciliation examines history rather than sending another
+retransmission, with one bounded exception. A carrier that lost its nonce to
+another transaction is re-sealed with a fresh key, anchor and nonce pair once
+it is proven never included, up to `nonce_conflict_retries` times (default 10),
+waiting one block doubling to eight between attempts. The proof is either an
+author refusal as stale or outbid, so the carrier never entered a pool, or a
+pool report of `invalid` or `usurped` while the account's next nonce has moved
+past the carrier, followed by finalized history passing the carrier's era
+without it. If reconciliation finds the carrier included after all, its inner
+is resolved instead and nothing is resent. Journaled submissions stay
+pending for recovery. Set `nonce_conflict_retries` to zero to disable the
+retry. Reconciliation examines history rather than sending another
 carrier. Keep an unresolved hash until its fate is known before deciding
 whether to prepare a new transaction. The executor can rebuild after a
 pre-broadcast runtime mismatch, and its separate owner rate-limit rule can

@@ -1085,6 +1085,28 @@ upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a38
 upstream_report = "Existing implementation and named regression bodies were source-reviewed; current hosted compilation and execution remain pending. No new upstream filing."
 
 [[divergences]]
+id = "D-084"
+upstream_symbol = "executor._submit_encrypted_call nonce source and carrier retries"
+python_behavior = "Takes a fresh nonce from `account_nextIndex`, which counts a pending carrier but not its encrypted inner, and never retries a rejected carrier (`PY/executor.py:1037-1052`)"
+rtao_behavior = "Before a fresh `account_nextIndex`, waits at most 10 ready-pool reads, one block doubling to eight, while the account has a `MevShield.submit_encrypted` carrier pending on the submission endpoint; an unreadable pool or exhausted polls fall back with a warning. A carrier proven never included after losing its nonce (author `Stale`/`PriorityTooLow`, or pool `invalid`/`usurped` with the next index past it and finalized expiry) is re-sealed with a fresh pair up to `nonce_conflict_retries` (default 10) times; a reconciled inclusion resolves its inner; journaled pairs are never re-sealed this way."
+rationale = "While carrier n is pending the node answers n+1, the inner's nonce, so a second process or a cleared cache signs a transaction that the landing pair invalidates. Waiting never skips to n+2, which would strand later nonces if the inner were dropped. A retry requires proven non-inclusion, never a blind resubmission."
+decision = "D-084; operator report of back-to-back shielded submissions failing with Invalid"
+status = "active"
+class = "improved"
+milestone = "M8"
+pinning_tests = [
+  "rtao_client::shield::second_client_waits_for_a_pending_carrier_instead_of_taking_its_inner_nonce",
+  "rtao_client::shield::invalid_carrier_whose_nonce_was_taken_is_resealed_once_after_proven_expiry",
+  "rtao_client::shield::invalid_carrier_found_in_finalized_history_resolves_its_inner_without_resealing",
+  "rtao_client::shield::stale_carrier_refusals_reseal_at_most_the_conflict_retry_limit",
+  "rtao_client::nonces::cleared_cache_after_a_pending_carrier_never_returns_its_inner_nonce",
+  "rtao_client::nonces::pending_carrier_wait_backs_off_and_stops_after_ten_pool_reads",
+  "rtao_client::shield::durable_tests::paired_native_stale_carrier_refusal_stays_pending_without_conflict_reseal",
+]
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/executor.py#L1037-L1052"
+upstream_report = "Generic native improvement with FakeChain coverage; focused local checks pass, hosted validation pending. No new upstream filing."
+
+[[divergences]]
 id = "D-027"
 upstream_symbol = "sync.SyncClient` namespaces"
 python_behavior = "13 attributes, `collateral` absent (`PY/sync.py:186-241`)"

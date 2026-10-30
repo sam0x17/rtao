@@ -2681,6 +2681,20 @@
         ]
       },
       {
+        "id": "D-084",
+        "oracle": "unverified",
+        "rtao": "active",
+        "tests": [
+          "rtao_client::shield::second_client_waits_for_a_pending_carrier_instead_of_taking_its_inner_nonce",
+          "rtao_client::shield::invalid_carrier_whose_nonce_was_taken_is_resealed_once_after_proven_expiry",
+          "rtao_client::shield::invalid_carrier_found_in_finalized_history_resolves_its_inner_without_resealing",
+          "rtao_client::shield::stale_carrier_refusals_reseal_at_most_the_conflict_retry_limit",
+          "rtao_client::nonces::cleared_cache_after_a_pending_carrier_never_returns_its_inner_nonce",
+          "rtao_client::nonces::pending_carrier_wait_backs_off_and_stops_after_ten_pool_reads",
+          "rtao_client::shield::durable_tests::paired_native_stale_carrier_refusal_stays_pending_without_conflict_reseal"
+        ]
+      },
+      {
         "id": "D-027",
         "oracle": "unverified",
         "rtao": "active",

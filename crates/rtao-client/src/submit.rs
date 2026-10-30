@@ -487,6 +487,10 @@ impl SubmissionAttempt {
     pub(crate) fn was_retracted(&self) -> bool {
         self.retracted.load(Ordering::Acquire)
     }
+    /// Whether the author explicitly refused the bytes, so they never pooled.
+    pub(crate) fn was_refused(&self) -> bool {
+        self.refused.load(Ordering::Acquire)
+    }
 }
 impl From<ClientError> for SubmitFailure {
     fn from(error: ClientError) -> Self {
@@ -513,7 +517,7 @@ impl Client {
         self.ensure_signing().await?;
         let runtime = self.refresh_runtime().await?;
         call.ensure_runtime(&runtime).map_err(ClientError::from)?;
-        let nonce = self.nonces().fresh(&account).await?;
+        let nonce = self.nonces().reported(&account).await?;
         let probe = rtao_core::ops::fee::probe(
             runtime.core(),
             call.as_bytes(),

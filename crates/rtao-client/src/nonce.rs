@@ -3,14 +3,35 @@
 
 use std::{
     collections::BTreeMap,
-    sync::{Arc, Mutex as SyncMutex, MutexGuard, Weak},
+    sync::{
+        Arc, Mutex as SyncMutex, MutexGuard, Weak,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
 };
 
+use futures::future::BoxFuture;
+use rtao_core::value_ext::ValueExt;
 use rtao_primitives::AccountId;
 use subxt_rpcs::RpcClient;
 use tokio::sync::Mutex;
 
 use crate::ClientError;
+
+/// Ready-pool reads made while this account has a pending MEV-shield carrier,
+/// before a fresh nonce is taken from `account_nextIndex` regardless.
+pub const SHIELD_CARRIER_POLLS: u32 = 10;
+
+/// Wait before retry `attempt` (from zero): one block, doubling to eight.
+pub(crate) fn block_backoff(block: Duration, attempt: u32) -> Duration {
+    block.saturating_mul(1 << attempt.min(3))
+}
+
+/// Waits while the submission endpoint's ready pool holds an MEV-shield
+/// carrier from the account. Fails only when the client has closed or its
+/// submission endpoint cannot be opened, which the nonce read needs too.
+pub(crate) type CarrierWait =
+    Arc<dyn Fn(AccountId) -> BoxFuture<'static, Result<(), ClientError>> + Send + Sync>;
 
 /// Per-account next-index cache for pipelined submissions.
 ///
@@ -21,6 +42,8 @@ pub struct NonceManager {
     rpc: RpcClient,
     /// Separate submission endpoint that answers nonce queries, when set.
     route: Option<Arc<crate::client::SubmitRoute>>,
+    /// Shield-aware wait run before every fresh `account_nextIndex` read.
+    carriers: Option<CarrierWait>,
     accounts: Arc<SyncMutex<BTreeMap<String, Arc<AccountNonce>>>>,
 }
 
@@ -129,8 +152,15 @@ impl NonceManager {
         Self {
             rpc,
             route,
+            carriers: None,
             accounts: Arc::new(SyncMutex::new(BTreeMap::new())),
         }
+    }
+
+    /// Wait for the account's pending shield carriers before each fresh read.
+    pub(crate) fn with_carrier_wait(mut self, wait: CarrierWait) -> Self {
+        self.carriers = Some(wait);
+        self
     }
 
     fn cell(&self, address: &str) -> Arc<AccountNonce> {
@@ -212,6 +242,12 @@ impl NonceManager {
         self.query(&who.to_ss58(42)).await
     }
 
+    /// The node's `account_nextIndex` as reported, without waiting for pending
+    /// shield carriers. For fee probes, where the nonce does not matter.
+    pub(crate) async fn reported(&self, who: &AccountId) -> Result<u64, ClientError> {
+        self.next_index(&who.to_ss58(42)).await
+    }
+
     /// Pin an explicit nonce synchronously as the account's latest allocation.
     pub fn pin(&self, who: &AccountId, nonce: u64) {
         self.pin_address(&who.to_ss58(42), nonce);
@@ -260,6 +296,18 @@ impl NonceManager {
     }
 
     async fn query(&self, address: &str) -> Result<u64, ClientError> {
+        // A pending shield carrier at n holds n+1 for its encrypted inner,
+        // which the pool cannot see: account_nextIndex would answer n+1 and a
+        // transaction signed with it is invalidated when the pair lands.
+        if let Some(wait) = &self.carriers
+            && let Ok(who) = address.parse::<AccountId>()
+        {
+            wait(who).await?;
+        }
+        self.next_index(address).await
+    }
+
+    async fn next_index(&self, address: &str) -> Result<u64, ClientError> {
         let params = serde_json::json!([address]);
         // The pool-aware nonce comes from the node that receives submissions.
         let value = match &self.route {
@@ -297,4 +345,186 @@ impl NonceManager {
     pub async fn cached(&self, address: &str) -> Option<u64> {
         lock(&self.cell(address).state).latest
     }
+}
+
+impl crate::Client {
+    /// Shield-aware wait used by this client's nonce manager.
+    pub(crate) fn carrier_wait(
+        inner: Weak<crate::client::ClientInner>,
+        alive: Weak<tokio_util::sync::DropGuard>,
+    ) -> CarrierWait {
+        let unavailable = Arc::new(AtomicBool::new(false));
+        Arc::new(move |who| {
+            let (inner, alive, unavailable) = (inner.clone(), alive.clone(), unavailable.clone());
+            Box::pin(async move {
+                let Some(client) = crate::Client::upgrade(&inner, &alive) else {
+                    return Err(rtao_rpc::RpcError::Closed.into());
+                };
+                client.wait_for_pending_carriers(who, &unavailable).await
+            })
+        })
+    }
+
+    /// Wait while the submission endpoint's ready pool holds a shield carrier
+    /// signed by `who`, polling at most [`SHIELD_CARRIER_POLLS`] times.
+    ///
+    /// The wait never skips past the inner's nonce: a carrier whose inner is
+    /// dropped would leave that nonce unused, and every later transaction
+    /// would wait in the future queue. The carrier leaves the pool within its
+    /// era of at most eight blocks, included with its inner or expired. When
+    /// the pool cannot be read or the polls run out this returns, and the
+    /// caller uses `account_nextIndex` as reported.
+    async fn wait_for_pending_carriers(
+        &self,
+        who: AccountId,
+        unavailable: &AtomicBool,
+    ) -> Result<(), ClientError> {
+        if unavailable.load(Ordering::Acquire) {
+            return Ok(());
+        }
+        let chain = self.submit_client().await?;
+        let mut block = None;
+        for poll in 0..SHIELD_CARRIER_POLLS {
+            let carriers = match chain.pending_carrier_nonces(who).await {
+                Ok(carriers) => carriers,
+                Err(error) => {
+                    self.ensure_open()?;
+                    if matches!(
+                        &error,
+                        ClientError::Rpc(rtao_rpc::RpcError::JsonRpc { code: -32601, .. })
+                    ) {
+                        unavailable.store(true, Ordering::Release);
+                    }
+                    tracing::warn!(
+                        %error,
+                        "cannot read the transaction pool for pending MEV-shield carriers; \
+                         using account_nextIndex, which cannot see a pending carrier's inner nonce"
+                    );
+                    return Ok(());
+                }
+            };
+            if carriers.is_empty() {
+                return Ok(());
+            }
+            if poll + 1 == SHIELD_CARRIER_POLLS {
+                tracing::warn!(
+                    ?carriers,
+                    polls = SHIELD_CARRIER_POLLS,
+                    "MEV-shield carriers from this account are still pending; using \
+                     account_nextIndex, which cannot see their inner nonces"
+                );
+                return Ok(());
+            }
+            let interval = match block {
+                Some(interval) => interval,
+                None => match crate::ViewExt::block_time(&chain).await {
+                    Ok(interval) => *block.insert(interval),
+                    Err(error) => {
+                        self.ensure_open()?;
+                        tracing::warn!(
+                            %error,
+                            ?carriers,
+                            "cannot read the block time to wait for pending MEV-shield \
+                             carriers; using account_nextIndex, which cannot see their inner nonces"
+                        );
+                        return Ok(());
+                    }
+                },
+            };
+            let delay = block_backoff(interval, poll);
+            tracing::info!(
+                ?carriers,
+                ?delay,
+                "waiting for this account's pending MEV-shield carriers before reading its next nonce"
+            );
+            tokio::select! {
+                biased;
+                () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+                () = tokio::time::sleep(delay) => {}
+            }
+        }
+        Ok(())
+    }
+
+    /// Nonces of `who`'s `MevShield.submit_encrypted` carriers in this
+    /// endpoint's ready pool, matched by name through the head runtime.
+    ///
+    /// Entries that do not decode are skipped; they are not this account's
+    /// carriers as far as the current runtime can tell.
+    async fn pending_carrier_nonces(
+        &self,
+        who: AccountId,
+    ) -> Result<Vec<Option<u64>>, ClientError> {
+        let pending = self
+            .read_request(
+                rtao_rpc::ReadMethod::AuthorPendingExtrinsics,
+                serde_json::json!([]),
+            )
+            .await?;
+        let entries = pending.as_array().ok_or_else(|| {
+            ClientError::Protocol("author_pendingExtrinsics did not return an array".into())
+        })?;
+        // Any signed encoding of this account carries its 32-byte key, so
+        // only those entries are decoded.
+        let candidates = entries
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .filter_map(|text| hex::decode(text.strip_prefix("0x").unwrap_or(text)).ok())
+            .filter(|bytes| bytes.windows(32).any(|window| window == who.0))
+            .collect::<Vec<_>>();
+        if candidates.is_empty() {
+            return Ok(Vec::new());
+        }
+        let runtime = self.runtime_for(None).await?;
+        let large = candidates.iter().map(Vec::len).sum::<usize>() > 64 * 1024;
+        let decode = move || {
+            candidates
+                .iter()
+                .filter_map(|bytes| carrier_nonce(runtime.core(), who, bytes))
+                .collect::<Vec<_>>()
+        };
+        if large {
+            crate::offload(decode).await.map_err(|error| {
+                ClientError::Protocol(format!("pool decoder task failed: {error}"))
+            })
+        } else {
+            Ok(decode())
+        }
+    }
+}
+
+/// The nonce of a signed `MevShield.submit_encrypted` from `who`, if `bytes`
+/// is one under this runtime.
+fn carrier_nonce(
+    runtime: &rtao_core::runtime::Runtime,
+    who: AccountId,
+    bytes: &[u8],
+) -> Option<Option<u64>> {
+    let decoded = runtime.decode_extrinsic(bytes, true).ok()?;
+    let address = decoded.field("address")?;
+    let signer = address
+        .as_str()
+        .and_then(|text| text.parse::<AccountId>().ok())
+        .or_else(|| {
+            address
+                .value_bytes()
+                .and_then(|bytes| bytes.try_into().ok())
+                .map(AccountId)
+        });
+    if signer != Some(who) {
+        return None;
+    }
+    let call = decoded.field("call")?;
+    if call.field("call_module").and_then(ValueExt::as_str) != Some("MevShield")
+        || call.field("call_function").and_then(ValueExt::as_str) != Some("submit_encrypted")
+    {
+        return None;
+    }
+    // A carrier without a readable nonce field still holds an inner nonce.
+    Some(
+        decoded
+            .field("nonce")
+            .and_then(ValueExt::as_u128)
+            .and_then(|nonce| u64::try_from(nonce).ok()),
+    )
 }
