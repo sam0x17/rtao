@@ -464,18 +464,19 @@ async fn finalized_scheduler_callback_preserves_queued_work_across_pause_restart
     Ok(())
 }
 
-/// A changed `CommitRevealWeightsVersion` under unproven runtime code pauses
-/// timelocked commits without errors or signing, every finalized head, until a
-/// reveal under the live code proves it decodes the native payload. The commit
-/// then carries the chain's tag (D-086).
-#[tokio::test]
-async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow::Result<()> {
+/// A validator context over a head-tracking lab whose stored
+/// `CommitRevealWeightsVersion` is `tag`. The lab answers every `:code` read
+/// with `H256([42; 32])`.
+async fn cr_lab(
+    name: &str,
+    tag: u16,
+) -> anyhow::Result<(JournalLab, crate::NeuronCx, rtao_primitives::AccountId)> {
     use crate::{EpochClock, EpochStatus, NeuronCx};
     use rtao_metagraph::{MetagraphSync, Preset, SyncPolicy};
     use rtao_runtime::SelectiveMetagraphIndex;
     use rtao_wallet::{RegenerateFrom, SecretString, Wallet, WriteOptions};
     let root = std::path::PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").expect("scratch"))
-        .join(format!("scheduler-cr-version-{}", std::process::id()));
+        .join(format!("scheduler-cr-{name}-{}", std::process::id()));
     let wallet = Wallet::new("synthetic", "validator", root.join("wallet"))?;
     let account = wallet
         .regenerate_hotkey(
@@ -486,7 +487,7 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
         .await?;
     let mut state = super::super::tests::fixture_state()?;
     state.set_finalized(state.block)?;
-    state.seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), 5u16)?;
+    state.seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), tag)?;
     state.seed_typed("SubtensorModule", "Uids", (NetUid(1), account), 0u16)?;
     state.seed(
         &super::super::st::MECHANISM_COUNT_CURRENT,
@@ -499,10 +500,9 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
         rtao_primitives::AccountId([9; 32]).into(),
     )?;
     state.seed_runtime("SubnetInfoRuntimeApi","get_selective_mechagraph",json!({"netuid":1,"block":100,"tempo":10,"last_step":100,"blocks_since_last_step":0,"num_uids":3,"hotkeys":[account.to_string(),rtao_primitives::AccountId([8;32]).to_string(),rtao_primitives::AccountId([9;32]).to_string()]}))?;
-    let mut lab =
-        JournalLab::with_head_tracking(state, root.join("journal.json"), CryptoType::Ed25519)
-            .await
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    let lab = JournalLab::with_head_tracking(state, root.join("journal.json"), CryptoType::Ed25519)
+        .await
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let shutdown = tokio_util::sync::CancellationToken::new();
     let (metagraph, _) = MetagraphSync::spawn(
         lab.client.clone(),
@@ -527,6 +527,137 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
         metrics: Metrics::default(),
         state_dir: root.join("state"),
     };
+    Ok((lab, cx, account))
+}
+
+/// Finalize one more lab block and return its header.
+fn advance(lab: &JournalLab) -> anyhow::Result<BlockHeader> {
+    let raw = lab
+        .node
+        .mutate_state(|s| -> anyhow::Result<_> {
+            s.advance(1);
+            s.set_finalized(s.block)?;
+            Ok(s.block_hash(s.block).and_then(|h| s.header(&h)))
+        })?
+        .expect("finalized head");
+    Ok(BlockHeader::from_json(raw)?)
+}
+
+async fn close_cr_lab(scheduler: WeightScheduler, mut lab: JournalLab, cx: crate::NeuronCx) {
+    drop(scheduler);
+    cx.metagraph.shutdown().await;
+    cx.shutdown.cancel();
+    drop(cx);
+    lab.close().await;
+}
+
+/// `(pallet index, error index)` of a SubtensorModule error.
+fn module_error(name: &str) -> (u8, u8) {
+    let error = rtao_runtime::errors::MODULE_ERRORS
+        .iter()
+        .find(|error| error.pallet == "SubtensorModule" && error.name == name)
+        .expect("known module error");
+    (error.pallet_index, error.error_index)
+}
+
+/// `(ciphertext, reveal_round, commit_reveal_version)` of a timelocked commit.
+type CommitTail = (Vec<u8>, u64, u16);
+
+/// The [`CommitTail`] closing a signed
+/// `commit_timelocked_mechanism_weights(netuid 1, mecid 0, ..)` extrinsic.
+fn timelocked_tail(bytes: &[u8]) -> CommitTail {
+    let n = bytes.len();
+    let tag = u16::from_le_bytes(bytes[n - 2..].try_into().unwrap());
+    let round = u64::from_le_bytes(bytes[n - 10..n - 2].try_into().unwrap());
+    let body = &bytes[..n - 10];
+    let compact = |len: usize| -> Vec<u8> {
+        if len < 1 << 6 {
+            vec![(len as u8) << 2]
+        } else if len < 1 << 14 {
+            (((len as u16) << 2) | 1).to_le_bytes().to_vec()
+        } else {
+            (((len as u32) << 2) | 2).to_le_bytes().to_vec()
+        }
+    };
+    for len in (1..body.len()).rev() {
+        let prefix = compact(len);
+        let Some(start) = body.len().checked_sub(len + prefix.len()) else {
+            continue;
+        };
+        if body[start..start + prefix.len()] == prefix[..] && body[..start].ends_with(&[1, 0, 0]) {
+            return (body[body.len() - len..].to_vec(), round, tag);
+        }
+    }
+    panic!("not a timelocked mechanism commit")
+}
+
+/// Route plain signed author requests to the built-in pool and record each
+/// one's commit tail. Every included commit is placed in the native queue so
+/// the reveal watcher can locate it; `on_submit` sees the submission ordinal.
+fn plain_author(
+    lab: &JournalLab,
+    account: rtao_primitives::AccountId,
+    mut on_submit: impl FnMut(&mut rtao_testkit::FakeState, usize) + Send + 'static,
+) -> Arc<std::sync::Mutex<Vec<CommitTail>>> {
+    let tails = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = tails.clone();
+    lab.node.mutate_state(|state| {
+        state.set_handler("author_submitAndWatchExtrinsic", move |state, request| {
+            let ordinal = seen.lock().unwrap().len();
+            on_submit(state, ordinal);
+            let reply = state.dispatch(request);
+            let tail = timelocked_tail(state.submissions.last().expect("submission"));
+            let number = state.block;
+            super::super::tests::seed_at(
+                state,
+                number,
+                "SubtensorModule",
+                "TimelockedWeightCommits",
+                (NetUidStorageIndex(1), 5u64),
+                vec![(account, number, tail.0.clone(), tail.1)],
+            )
+            .expect("native queue model");
+            seen.lock().unwrap().push(tail);
+            reply
+        })
+    });
+    tails
+}
+
+/// Feed finalized heads until the cadence slot opens and the scheduler
+/// authors, at most one epoch of heads.
+async fn until_authored(
+    scheduler: &mut WeightScheduler,
+    lab: &JournalLab,
+    cx: &crate::NeuronCx,
+) -> anyhow::Result<()> {
+    for _ in 0..12 {
+        let head = advance(lab)?;
+        Box::pin(scheduler.on_finalized(cx, &head, scored)).await?;
+        if lab.authors() > 0 {
+            return Ok(());
+        }
+    }
+    anyhow::bail!(
+        "no attempt was due: {:?}",
+        scheduler.last_attempt(MechId(0))
+    )
+}
+
+fn scored(_: MechId) -> super::super::WeightsProposal {
+    super::super::WeightsProposal::Set(WeightsInput::Parallel {
+        uids: vec![Uid(1)],
+        weights: vec![1.0],
+    })
+}
+
+/// A changed `CommitRevealWeightsVersion` under unproven runtime code pauses
+/// timelocked commits without errors or signing, every finalized head, until a
+/// reveal under the live code proves it decodes the native payload. The commit
+/// then carries the chain's tag (D-086).
+#[tokio::test]
+async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow::Result<()> {
+    let (lab, cx, account) = cr_lab("version", 5).await?;
     let mut scheduler = WeightScheduler::new(
         WeightPolicy::default(),
         Arc::new(ChainClock::new(1_800_000_000_000)),
@@ -540,17 +671,6 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
     )?
     .with_shield_protocol(lab.protocol.clone())
     .with_shielded_submission(ShieldPeriod::P4);
-    let advance = |lab: &JournalLab| -> anyhow::Result<BlockHeader> {
-        let raw = lab
-            .node
-            .mutate_state(|s| -> anyhow::Result<_> {
-                s.advance(1);
-                s.set_finalized(s.block)?;
-                Ok(s.block_hash(s.block).and_then(|h| s.header(&h)))
-            })?
-            .expect("finalized head");
-        Ok(BlockHeader::from_json(raw)?)
-    };
     // The lab answers every `:code` read with this synthetic identity.
     let code = H256([42; 32]);
     for _ in 0..3 {
@@ -599,8 +719,9 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
         super::super::WeightOpportunity::Paused
     );
 
-    // An earlier commitment revealed under the live code: follow the tag.
-    scheduler.reveals.remember_revealed_code(code);
+    // An earlier commitment revealed under the live code while 5 was stored:
+    // follow the tag.
+    scheduler.reveals.remember_revealed_code(code, 5);
     let signed = Arc::new(std::sync::Mutex::new(None::<(Vec<u8>, u64)>));
     let captured = signed.clone();
     lab.after_inclusion(move |state, record, number| {
@@ -620,13 +741,7 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
         .expect("native queue model");
     });
     let head = advance(&lab)?;
-    Box::pin(scheduler.on_finalized(&cx, &head, |_| {
-        super::super::WeightsProposal::Set(WeightsInput::Parallel {
-            uids: vec![Uid(1)],
-            weights: vec![1.0],
-        })
-    }))
-    .await?;
+    Box::pin(scheduler.on_finalized(&cx, &head, scored)).await?;
     assert_eq!(lab.authors(), 1, "{:?}", scheduler.last_attempt(MechId(0)));
     assert!(matches!(
         scheduler.last_attempt(MechId(0)).unwrap().outcome,
@@ -649,10 +764,190 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
         rendered.contains("rtao_weights_submitted_total 1"),
         "{rendered}"
     );
-    drop(scheduler);
-    cx.metagraph.shutdown().await;
-    cx.shutdown.cancel();
-    drop(cx);
-    lab.close().await;
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// Root changes `CommitRevealWeightsVersion` between preflight and inclusion:
+/// the chain rejects the commit fee-free at dispatch. Without a journal
+/// binding the scheduler waits, re-reads the preflight and re-selects the tag
+/// from fresh state, at most [`super::super::CR_VERSION_RETRIES`] times. It
+/// re-signs with the new tag only when the code is proven for it, and
+/// otherwise pauses without an error (D-086).
+#[tokio::test]
+async fn dispatch_rejected_cr_version_reselects_the_tag_from_fresh_state() -> anyhow::Result<()> {
+    let (cr_pallet, cr_error) = module_error("IncorrectCommitRevealVersion");
+    let rejection = json!({"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Module":{"index":cr_pallet,"error":[cr_error,0,0,0]}},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"No"}},"topics":[]});
+    let code = H256([42; 32]);
+    for proven in [true, false] {
+        let (lab, cx, account) = cr_lab(&format!("dispatch-{proven}"), 4).await?;
+        let mut scheduler = WeightScheduler::new(
+            WeightPolicy::default(),
+            Arc::new(ChainClock::new(1_800_000_000_000)),
+            ClockGuard::default(),
+        )?;
+        if proven {
+            scheduler.reveals.remember_revealed_code(code, 5);
+        }
+        let rejection = rejection.clone();
+        let tails = plain_author(&lab, account, move |state, ordinal| {
+            if ordinal == 0 {
+                // Root stored 5 after the preflight read 4.
+                state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+                    events: json!([rejection.clone()]),
+                });
+                state
+                    .seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), 5u16)
+                    .expect("stored tag");
+            }
+        });
+        until_authored(&mut scheduler, &lab, &cx).await?;
+        let tails = tails.lock().unwrap().clone();
+        let rendered = cx.metrics.render();
+        assert!(
+            !rendered.contains("rtao_weights_errors_total"),
+            "{rendered}"
+        );
+        assert_eq!(tails[0].2, 4, "the first commit carries the preflight tag");
+        assert!(!scheduler.slots[&MechId(0)].uncertain);
+        if proven {
+            assert_eq!(lab.authors(), 2, "exactly one retry");
+            assert_eq!(tails[1].2, 5, "the retry carries the newly selected tag");
+            assert_ne!(tails[1].0, tails[0].0, "the retry is a fresh commitment");
+            assert!(matches!(
+                scheduler.last_attempt(MechId(0)).unwrap().outcome,
+                super::super::WeightAttemptOutcome::Submitted { .. }
+            ));
+            assert!(
+                rendered.contains("rtao_weights_cr_version_recomputed_total 1"),
+                "{rendered}"
+            );
+            assert!(
+                rendered.contains("rtao_weights_submitted_total 1"),
+                "{rendered}"
+            );
+            assert_eq!(scheduler.reveals.pending(), 1);
+        } else {
+            assert_eq!(lab.authors(), 1, "unproven fresh state never re-signs");
+            let Some(super::super::WeightAttemptOutcome::Refused(refusal)) = scheduler
+                .last_attempt(MechId(0))
+                .map(|attempt| attempt.outcome.clone())
+            else {
+                panic!("expected a pause: {:?}", scheduler.last_attempt(MechId(0)))
+            };
+            assert_eq!(refusal.name, "IncorrectCommitRevealVersion");
+            assert!(
+                rendered.contains("rtao_weights_cr_version_paused{mech=\"0\"} 1"),
+                "{rendered}"
+            );
+            assert!(
+                !rendered.contains("rtao_weights_cr_version_recomputed_total"),
+                "{rendered}"
+            );
+            assert_eq!(scheduler.reveals.pending(), 0);
+        }
+        close_cr_lab(scheduler, lab, cx).await;
+    }
+    Ok(())
+}
+
+/// Rejections that fresh state cannot explain stop after
+/// [`super::super::CR_VERSION_RETRIES`] re-selections, each after a backoff.
+#[tokio::test]
+async fn persistent_cr_version_rejections_stop_after_the_retry_bound() -> anyhow::Result<()> {
+    let (cr_pallet, cr_error) = module_error("IncorrectCommitRevealVersion");
+    let rejection = json!({"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"Module":{"index":cr_pallet,"error":[cr_error,0,0,0]}},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"No"}},"topics":[]});
+    let (lab, cx, account) = cr_lab("dispatch-bound", 4).await?;
+    let mut scheduler = WeightScheduler::new(
+        WeightPolicy::default(),
+        Arc::new(ChainClock::new(1_800_000_000_000)),
+        ClockGuard::default(),
+    )?;
+    let tails = plain_author(&lab, account, move |state, _| {
+        state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
+            events: json!([rejection.clone()]),
+        });
+    });
+    until_authored(&mut scheduler, &lab, &cx).await?;
+    let retries = usize::try_from(super::super::CR_VERSION_RETRIES)?;
+    assert_eq!(lab.authors(), 1 + retries);
+    assert!(tails.lock().unwrap().iter().all(|tail| tail.2 == 4));
+    let rendered = cx.metrics.render();
+    assert!(
+        rendered.contains(&format!(
+            "rtao_weights_cr_version_recomputed_total {retries}"
+        )),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("rtao_weights_errors_total 1"),
+        "{rendered}"
+    );
+    let Some(super::super::WeightAttemptOutcome::Failed(error)) = scheduler
+        .last_attempt(MechId(0))
+        .map(|attempt| attempt.outcome.clone())
+    else {
+        panic!(
+            "expected a failure: {:?}",
+            scheduler.last_attempt(MechId(0))
+        )
+    };
+    assert!(error.contains("Incorrect commit-reveal version"), "{error}");
+    assert!(!scheduler.slots[&MechId(0)].uncertain);
+    assert_eq!(scheduler.reveals.pending(), 0);
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// A journal-bound commit rejected for its tag is never re-signed in the same
+/// attempt: the slot stays uncertain until durable recovery excludes the
+/// signed bytes, and no tag is re-selected.
+#[tokio::test]
+async fn journal_bound_cr_version_rejection_goes_uncertain_without_resigning() -> anyhow::Result<()>
+{
+    let (cr_pallet, cr_error) = module_error("IncorrectCommitRevealVersion");
+    let (lab, cx, account) = cr_lab("dispatch-journal", 4).await?;
+    let mut scheduler = WeightScheduler::new(
+        WeightPolicy::default(),
+        Arc::new(ChainClock::new(1_800_000_000_000)),
+        ClockGuard::default(),
+    )?
+    .with_journal(
+        lab.journal().unwrap().clone(),
+        lab.client.genesis(),
+        NetUid(1),
+        account,
+    )?
+    .with_shield_protocol(lab.protocol.clone())
+    .with_shielded_submission(ShieldPeriod::P4);
+    scheduler.reveals.remember_revealed_code(H256([42; 32]), 5);
+    lab.script([Inner::Fail(cr_pallet, cr_error)]);
+    lab.after_inclusion(|state, _record, _number| {
+        state
+            .seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), 5u16)
+            .expect("stored tag");
+    });
+    until_authored(&mut scheduler, &lab, &cx).await?;
+    assert_eq!(lab.authors(), 1, "{:?}", scheduler.last_attempt(MechId(0)));
+    let outcome = format!("{:?}", scheduler.last_attempt(MechId(0)).unwrap().outcome);
+    assert!(
+        outcome.contains("Incorrect commit-reveal version"),
+        "{outcome}"
+    );
+    assert!(scheduler.slots[&MechId(0)].uncertain);
+    // Later heads never re-sign the uncertain slot's bytes in this attempt.
+    let head = advance(&lab)?;
+    Box::pin(scheduler.on_finalized(&cx, &head, scored)).await?;
+    assert_eq!(lab.authors(), 1);
+    let rendered = cx.metrics.render();
+    assert!(
+        !rendered.contains("rtao_weights_cr_version_recomputed_total"),
+        "{rendered}"
+    );
+    assert!(
+        !rendered.contains("rtao_weights_submitted_total"),
+        "{rendered}"
+    );
+    close_cr_lab(scheduler, lab, cx).await;
     Ok(())
 }

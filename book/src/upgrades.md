@@ -73,9 +73,13 @@ Commit-reveal commits carry a version tag that root sets in
 runtime code decides which payload a reveal can decode. rtao encodes the
 version 4 payload. When the stored tag changes, the scheduler follows it
 without a rebuild if the live runtime code is a reviewed pinned runtime or has
-already revealed one of the validator's own commitments. Otherwise timelocked
-commits pause for that mechanism, with one warning, until the tag returns to 4
-or the code is proven; other duties keep running. A runtime pin must review
+already revealed one of the validator's own commitments while that same tag
+was stored. Otherwise timelocked commits pause for that mechanism, with one
+warning, until the tag returns to 4 or the code is proven; other duties keep
+running. A commitment carrying a followed tag that then misses its reveal for
+no visible reason pauses that tag under that code again. If the chain rejects
+a commit's tag at dispatch, the scheduler re-reads the tag and retries, at
+most 10 times with a growing wait. A runtime pin must review
 the reveal path and add the new code hash to `REVIEWED_CR_RUNTIME_CODE` when
 the payload format is unchanged; a test keeps the newest pin in that list.
 Follow the [validator guide](validator.md) for reveal observations,

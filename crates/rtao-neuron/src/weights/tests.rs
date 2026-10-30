@@ -209,7 +209,7 @@ fn seed_code(chain: &FakeChain, code: &[u8]) -> rtao_primitives::H256 {
     rtao_primitives::H256(Blake2b::<U32>::digest(code).into())
 }
 
-fn fresh_scheduler() -> anyhow::Result<WeightScheduler> {
+pub(super) fn fresh_scheduler() -> anyhow::Result<WeightScheduler> {
     WeightScheduler::new(
         WeightPolicy::default(),
         Arc::new(crate::ChainClock::new(1_000_000)),
@@ -263,8 +263,14 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
         WeightOpportunity::Paused
     );
 
-    // A reveal of this validator's own commitment under the same code proves it.
-    scheduler.reveals.remember_revealed_code(code);
+    // Evidence collected while another tag was stored proves nothing for 5:
+    // unreviewed code may decode by the stored version.
+    scheduler.reveals.remember_revealed_code(code, 4);
+    scheduler.reveals.remember_revealed_code(code, 6);
+    assert!(scheduler.commit_reveal_tag(&state).is_err());
+    // A reveal of this validator's own commitment under the same code while
+    // 5 was stored proves it.
+    scheduler.reveals.remember_revealed_code(code, 5);
     assert_eq!(scheduler.commit_reveal_tag(&state)?, 5);
     assert_ne!(
         scheduler.next_action(MechId(0), HOTKEY, &state)?,

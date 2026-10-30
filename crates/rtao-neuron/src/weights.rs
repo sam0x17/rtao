@@ -58,6 +58,16 @@ pub const REVIEWED_CR_RUNTIME_CODE: [(u32, &str); 2] = [
     ),
 ];
 
+/// Re-selections of the commit tag after fee-free `IncorrectCommitRevealVersion`
+/// dispatch rejections within one attempt. Each waits one block, doubling to
+/// eight, then re-reads the preflight (D-086).
+pub const CR_VERSION_RETRIES: u32 = 10;
+
+/// Wait before retry `attempt` (from zero): one block, doubling to eight.
+fn block_backoff(block_time: f64, attempt: u32) -> std::time::Duration {
+    std::time::Duration::from_secs_f64(block_time).saturating_mul(1 << attempt.min(3))
+}
+
 /// Spec version of a reviewed runtime whose `:code` hash is `code`.
 pub fn reviewed_cr_runtime(code: rtao_primitives::H256) -> Option<u32> {
     let code = format!("0x{}", hex::encode(code.0));
@@ -600,12 +610,14 @@ impl WeightPreflight {
     pub fn check(&self, version_key: u64) -> anyhow::Result<Uid> {
         let uid = self.check_except_cr(version_key)?;
         if self.commit_reveal && self.commit_reveal_version != NATIVE_CR_PAYLOAD_VERSION {
-            return Err(self.cr_refusal().into());
+            return Err(self.cr_refusal(false).into());
         }
         Ok(uid)
     }
     /// Refusal for a stored commit-reveal tag this build does not follow here.
-    fn cr_refusal(&self) -> WeightRefusal {
+    /// `refuted` reports that a commitment tagged with it under the live code
+    /// missed its reveal with no other explanation.
+    fn cr_refusal(&self, refuted: bool) -> WeightRefusal {
         let code = self.runtime_code.map_or_else(
             || "unread".to_owned(),
             |code| format!("0x{}", hex::encode(code.0)),
@@ -615,10 +627,17 @@ impl WeightPreflight {
         WeightRefusal {
             code: rtao_catalog::ErrorCode::InvalidArgument,
             name: "IncorrectCommitRevealVersion",
-            remediation: format!(
-                "the chain requires commit-reveal version {}; this rtao build encodes the version {NATIVE_CR_PAYLOAD_VERSION} payload and has not seen runtime code {code} reveal it (metadata default {default}); timelocked commits pause for this mechanism while other duties continue; they resume once the chain returns to version {NATIVE_CR_PAYLOAD_VERSION} or an outstanding commitment reveals under this code; otherwise upgrade rtao to a build that reviewed this runtime",
-                self.commit_reveal_version
-            ),
+            remediation: if refuted {
+                format!(
+                    "the chain requires commit-reveal version {tag}; this rtao build encodes the version {NATIVE_CR_PAYLOAD_VERSION} payload, and a commitment this validator tagged {tag} under runtime code {code} missed its reveal with no drand, epoch or chain-check explanation (metadata default {default}); timelocked commits pause for this mechanism while other duties continue; they resume once the chain returns to version {NATIVE_CR_PAYLOAD_VERSION} or an outstanding commitment reveals under this code and version; otherwise upgrade rtao to a build that supports this runtime's payload",
+                    tag = self.commit_reveal_version
+                )
+            } else {
+                format!(
+                    "the chain requires commit-reveal version {tag}; this rtao build encodes the version {NATIVE_CR_PAYLOAD_VERSION} payload and has not seen runtime code {code} reveal it while version {tag} was stored (metadata default {default}); timelocked commits pause for this mechanism while other duties continue; they resume once the chain returns to version {NATIVE_CR_PAYLOAD_VERSION} or an outstanding commitment reveals under this code and version; otherwise upgrade rtao to a build that reviewed this runtime",
+                    tag = self.commit_reveal_version
+                )
+            },
         }
     }
     /// Registration, Null permit and weight version-key checks, without the
@@ -816,20 +835,25 @@ impl WeightScheduler {
     /// the runtime code alone decides which payload a reveal decodes (D-086).
     /// The stored tag is followed when it is [`NATIVE_CR_PAYLOAD_VERSION`], or
     /// when the live `:code` is listed in [`REVIEWED_CR_RUNTIME_CODE`] or one of
-    /// this validator's commitments revealed under it. Otherwise the refusal
-    /// explains why timelocked commits pause; the scheduler retries every block.
+    /// this validator's commitments revealed under it while the same tag was
+    /// stored. A later unexplained miss of a commitment tagged with it under
+    /// that code refutes either reason. Otherwise the refusal explains why
+    /// timelocked commits pause; the scheduler retries every block.
     pub fn commit_reveal_tag(&self, state: &WeightPreflight) -> Result<u16, WeightRefusal> {
-        if !state.commit_reveal || state.commit_reveal_version == NATIVE_CR_PAYLOAD_VERSION {
+        let tag = state.commit_reveal_version;
+        if !state.commit_reveal || tag == NATIVE_CR_PAYLOAD_VERSION {
             return Ok(NATIVE_CR_PAYLOAD_VERSION);
         }
-        match state.runtime_code {
-            Some(code)
-                if reviewed_cr_runtime(code).is_some()
-                    || self.reveals.reveals_native_payload(code) =>
-            {
-                Ok(state.commit_reveal_version)
-            }
-            _ => Err(state.cr_refusal()),
+        let Some(code) = state.runtime_code else {
+            return Err(state.cr_refusal(false));
+        };
+        if self.reveals.native_reveal_refuted(code, tag) {
+            return Err(state.cr_refusal(true));
+        }
+        if reviewed_cr_runtime(code).is_some() || self.reveals.reveals_native_payload(code, tag) {
+            Ok(tag)
+        } else {
+            Err(state.cr_refusal(false))
         }
     }
 
@@ -1233,118 +1257,158 @@ impl WeightScheduler {
                     && (submit::invalid_reveal_round(&error)
                         || submit::incorrect_cr_version(&error)) =>
             {
-                let recomputed = if submit::incorrect_cr_version(&error) {
-                    "rtao_weights_cr_version_recomputed_total"
-                } else {
-                    "rtao_weights_reveal_round_recomputed_total"
-                };
                 if binding.is_some() {
                     // Even a rejection cannot prove the same signed bytes were never
                     // accepted elsewhere. Durable recovery must exclude them first.
                     self.slots.entry(mech).or_default().uncertain = true;
                     return Err(error);
                 }
-                let fresh = cx.client.at(BlockRef::Best).await?;
-                let state = WeightPreflight::fetch(&fresh, cx.netuid, mech, hotkey).await?;
-                let uid = state.check_except_cr(version_key)?;
-                // Root can change the tag between preflight and inclusion. The
-                // rejection is fee-free; re-select the tag from fresh state.
-                let Some(cr_tag) = self.follow_cr_tag(&cx.metrics, mech, &state) else {
-                    return Ok(());
-                };
-                let (count, current_owner) = fresh
-                    .fetch((
-                        st::MECHANISM_COUNT_CURRENT.at((cx.netuid,)),
-                        st::SUBNET_OWNER_HOTKEY.at((cx.netuid,)),
-                    ))
-                    .await?;
-                anyhow::ensure!(
-                    mech.0 < count.0 && count.0 <= 16,
-                    "mechanism no longer exists after the rejected commitment"
-                );
-                let graph = cx.metagraph.load();
-                let row = prepare_row(input, &state, uid, cx.netuid, &graph)?;
-                if hold_previous(&row, uid, *current_owner.raw(), &graph) {
-                    if let Some(attempt) = self.attempts.get_mut(&mech) {
-                        attempt.outcome = WeightAttemptOutcome::HoldPrevious;
-                    }
-                    return Ok(());
-                }
-                let block_time = snapshot_slot_duration(&cx.client, &state.at).await?;
-                commit = if state.commit_reveal {
-                    self.clock_guard.check(self.clock.as_ref())?;
-                    Some(
-                        TimelockCommitter::new(if state.null_consensus {
-                            CommitSizeLimit::Null {
-                                mechanisms: u16::from(count.0),
-                            }
-                        } else {
-                            CommitSizeLimit::Yuma
-                        })?
-                        .commit_at(TimelockCommitRequest {
-                            now: self.clock.now_unix(),
-                            hotkey,
-                            row: row.clone(),
-                            version_key,
-                            state: state.schedule.clone(),
-                            reveal_period_epochs: state.reveal_period,
-                            block_time,
-                        })
-                        .await?,
-                    )
-                } else {
-                    None
-                };
-                self.slots.entry(mech).or_default().last_attempt_epoch =
-                    Some(state.schedule.subnet_epoch_index);
-                self.slots.entry(mech).or_default().last_attempt_block = Some(state.at.number);
-                cx.metrics.increment(recomputed);
-                let retry = submit::execute(
-                    cx,
-                    mech,
-                    row.clone(),
-                    version_key,
-                    commit.as_ref().map(|commit| (commit, cr_tag)),
-                    block_time,
-                    submit::SubmissionOptions {
-                        journal: None,
-                        shield_period: self.shield_period,
-                    },
-                )
-                .await;
-                let report = match retry {
-                    Ok(report) => report,
-                    Err(error) => {
-                        self.slots.entry(mech).or_default().uncertain = submit::uncertain(&error);
-                        return Err(error);
-                    }
-                };
-                if let Some(attempt) = self.attempts.get_mut(&mech) {
-                    attempt.outcome = WeightAttemptOutcome::Submitted {
-                        block_hash: report.block_hash,
-                        block_number: report.block_number,
+                let mut error = error;
+                let mut cr_retries = 0;
+                let mut round_retried = false;
+                let mut block_time = block_time;
+                loop {
+                    let recomputed = if submit::incorrect_cr_version(&error) {
+                        // Root changed the tag between preflight and inclusion,
+                        // or the best head has not caught up with it yet. The
+                        // rejection is fee-free; wait, then re-select the tag
+                        // from fresh state.
+                        if cr_retries == CR_VERSION_RETRIES {
+                            return Err(error);
+                        }
+                        let delay = block_backoff(block_time, cr_retries);
+                        cr_retries += 1;
+                        tracing::warn!(
+                            mechanism = mech.0,
+                            attempt = cr_retries,
+                            ?delay,
+                            %error,
+                            "the chain rejected the commit-reveal version tag; re-reading it"
+                        );
+                        tokio::select! {
+                            biased;
+                            () = cx.shutdown.cancelled() => return Err(error),
+                            () = tokio::time::sleep(delay) => {}
+                        }
+                        "rtao_weights_cr_version_recomputed_total"
+                    } else {
+                        if round_retried {
+                            return Err(error);
+                        }
+                        round_retried = true;
+                        "rtao_weights_reveal_round_recomputed_total"
                     };
-                }
-                log_submitted(mech, report.block_number, commit.is_some());
-                if let Some(commit) = commit {
-                    self.reveals
-                        .record(
-                            &cx.client,
-                            cx.netuid,
-                            mech,
-                            hotkey,
-                            row,
-                            version_key,
-                            state,
-                            commit,
-                            &report,
-                            &cx.metrics,
-                        )
+                    let fresh = cx.client.at(BlockRef::Best).await?;
+                    let state = WeightPreflight::fetch(&fresh, cx.netuid, mech, hotkey).await?;
+                    let uid = state.check_except_cr(version_key)?;
+                    // Fresh state decides the tag, or pauses on unproven code.
+                    let Some(cr_tag) = self.follow_cr_tag(&cx.metrics, mech, &state) else {
+                        return Ok(());
+                    };
+                    let (count, current_owner) = fresh
+                        .fetch((
+                            st::MECHANISM_COUNT_CURRENT.at((cx.netuid,)),
+                            st::SUBNET_OWNER_HOTKEY.at((cx.netuid,)),
+                        ))
                         .await?;
+                    anyhow::ensure!(
+                        mech.0 < count.0 && count.0 <= 16,
+                        "mechanism no longer exists after the rejected commitment"
+                    );
+                    let graph = cx.metagraph.load();
+                    let row = prepare_row(input.clone(), &state, uid, cx.netuid, &graph)?;
+                    if hold_previous(&row, uid, *current_owner.raw(), &graph) {
+                        if let Some(attempt) = self.attempts.get_mut(&mech) {
+                            attempt.outcome = WeightAttemptOutcome::HoldPrevious;
+                        }
+                        return Ok(());
+                    }
+                    block_time = snapshot_slot_duration(&cx.client, &state.at).await?;
+                    commit = if state.commit_reveal {
+                        self.clock_guard.check(self.clock.as_ref())?;
+                        Some(
+                            TimelockCommitter::new(if state.null_consensus {
+                                CommitSizeLimit::Null {
+                                    mechanisms: u16::from(count.0),
+                                }
+                            } else {
+                                CommitSizeLimit::Yuma
+                            })?
+                            .commit_at(TimelockCommitRequest {
+                                now: self.clock.now_unix(),
+                                hotkey,
+                                row: row.clone(),
+                                version_key,
+                                state: state.schedule.clone(),
+                                reveal_period_epochs: state.reveal_period,
+                                block_time,
+                            })
+                            .await?,
+                        )
+                    } else {
+                        None
+                    };
+                    self.slots.entry(mech).or_default().last_attempt_epoch =
+                        Some(state.schedule.subnet_epoch_index);
+                    self.slots.entry(mech).or_default().last_attempt_block = Some(state.at.number);
+                    cx.metrics.increment(recomputed);
+                    let retry = submit::execute(
+                        cx,
+                        mech,
+                        row.clone(),
+                        version_key,
+                        commit.as_ref().map(|commit| (commit, cr_tag)),
+                        block_time,
+                        submit::SubmissionOptions {
+                            journal: None,
+                            shield_period: self.shield_period,
+                        },
+                    )
+                    .await;
+                    let report = match retry {
+                        Ok(report) => report,
+                        Err(next)
+                            if commit.is_some()
+                                && (submit::invalid_reveal_round(&next)
+                                    || submit::incorrect_cr_version(&next)) =>
+                        {
+                            error = next;
+                            continue;
+                        }
+                        Err(error) => {
+                            self.slots.entry(mech).or_default().uncertain =
+                                submit::uncertain(&error);
+                            return Err(error);
+                        }
+                    };
+                    if let Some(attempt) = self.attempts.get_mut(&mech) {
+                        attempt.outcome = WeightAttemptOutcome::Submitted {
+                            block_hash: report.block_hash,
+                            block_number: report.block_number,
+                        };
+                    }
+                    log_submitted(mech, report.block_number, commit.is_some());
+                    if let Some(commit) = commit {
+                        self.reveals
+                            .record(
+                                &cx.client,
+                                cx.netuid,
+                                mech,
+                                hotkey,
+                                row,
+                                version_key,
+                                state,
+                                commit,
+                                &report,
+                                &cx.metrics,
+                            )
+                            .await?;
+                    }
+                    cx.metrics.increment("rtao_weights_submitted_total");
+                    cx.metrics
+                        .update_readiness(|ready| ready.last_weight_succeeded = true);
+                    return Ok(());
                 }
-                cx.metrics
-                    .update_readiness(|ready| ready.last_weight_succeeded = true);
-                return Ok(());
             }
             Err(error) => {
                 self.slots.entry(mech).or_default().uncertain =

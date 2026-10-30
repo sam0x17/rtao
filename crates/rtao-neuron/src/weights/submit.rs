@@ -180,7 +180,8 @@ pub(super) fn invalid_reveal_round(error: &anyhow::Error) -> bool {
         || error.downcast_ref::<rtao_tx::TxError>().is_some_and(|error| matches!(error, rtao_tx::TxError::Chain(chain) if chain.name.as_deref() == Some("InvalidRevealRound")))
 }
 /// Root changed `CommitRevealWeightsVersion` after preflight. The dispatch is
-/// fee-free and certain, so the scheduler may re-select the tag once.
+/// fee-free and certain, so the scheduler may re-select the tag from fresh
+/// state, at most [`super::CR_VERSION_RETRIES`] times.
 pub(super) fn incorrect_cr_version(error: &anyhow::Error) -> bool {
     error.downcast_ref::<SubmissionError>().is_some_and(|error| matches!(error, SubmissionError::IncorrectCommitRevealVersion(_)))
         || error.downcast_ref::<rtao_tx::TxError>().is_some_and(|error| matches!(error, rtao_tx::TxError::Chain(chain) if chain.name.as_deref() == Some("IncorrectCommitRevealVersion")))

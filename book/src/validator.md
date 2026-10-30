@@ -52,7 +52,9 @@ The commit is tagged with the chain's `CommitRevealWeightsVersion`. A tag
 other than 4 is followed only under runtime code known to reveal that payload;
 otherwise `last_attempt` reports an `IncorrectCommitRevealVersion` refusal,
 `rtao_weights_cr_version_paused{mech="N"}` is 1 and commits wait while the
-rest of the validator keeps running.
+rest of the validator keeps running. An unexplained missed reveal of a commit
+with a followed tag counts `rtao_weights_cr_version_refuted_total` and pauses
+that tag again.
 The weights version key defaults to zero. After upgrading the subnet binary,
 set `--weights-version-key` to the version that release supports. The scheduler
 refuses keys below the chain requirement and never follows that requirement

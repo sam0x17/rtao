@@ -37,6 +37,9 @@ fn lock<T>(value: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 pub enum Inner {
     /// Include the retained exact inner and report this dispatch status.
     Include(bool),
+    /// Include the retained exact inner, failing with this module error
+    /// (pallet index, error index).
+    Fail(u8, u8),
     /// Leave the inner unresolved, without advancing finality through expiry.
     Pending,
     /// Finalize the whole validity window without the inner.
@@ -234,7 +237,8 @@ type InclusionHook = Box<dyn FnMut(&mut FakeState, &OperationRecord, u64) + Send
 struct Control {
     journal: Weak<OperationJournal>,
     scripts: VecDeque<Inner>,
-    bodies: BTreeMap<String, (Vec<u8>, bool)>,
+    /// Inner bytes and dispatch error by inclusion hash; `None` succeeded.
+    bodies: BTreeMap<String, (Vec<u8>, Option<Value>)>,
     hook: Option<InclusionHook>,
     author_hook: Option<InclusionHook>,
     code: H256,
@@ -391,14 +395,16 @@ impl JournalLab {
                     hook(state, record, number);
                 }
                 match script {
-                    Inner::Include(_) | Inner::LostAcknowledgment => {
-                        let success = if let Inner::Include(success) = script {
-                            success
-                        } else {
-                            true
+                    Inner::Include(_) | Inner::Fail(..) | Inner::LostAcknowledgment => {
+                        let failure = match script {
+                            Inner::Include(false) => Some(json!({"BadOrigin": null})),
+                            Inner::Fail(index, error) => {
+                                Some(json!({"Module": {"index": index, "error": [error, 0, 0, 0]}}))
+                            }
+                            _ => None,
                         };
                         if let Some(hash) = state.block_hash(number) {
-                            control.bodies.insert(hash, (inner.bytes.clone(), success));
+                            control.bodies.insert(hash, (inner.bytes.clone(), failure));
                         }
                         state.set_nonce(
                             record.intent.account.to_string(),
@@ -432,11 +438,11 @@ impl JournalLab {
             if lock(&observing).history_unavailable {return Reply::error(-32001,"synthetic finalized body unavailable",None);}
             let mut reply=state.dispatch(request);
             let inclusion=request.params[0].as_str().and_then(|hash|lock(&observing).bodies.get(hash).cloned());
-            if let (Some((inner,success)),Some(Ok(raw)))=(inclusion,&mut reply.outcome)
+            if let (Some((inner,failure)),Some(Ok(raw)))=(inclusion,&mut reply.outcome)
                 && let Some(list)=raw.pointer_mut("/block/extrinsics").and_then(Value::as_array_mut) {
                 let index=list.len();list.push(json!(format!("0x{}",hex::encode(inner))));
-                let events=(0..=index).map(|i|if i==index && !success {
-                    json!({"phase":"ApplyExtrinsic","extrinsic_idx":i,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":{"BadOrigin":null},"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
+                let events=(0..=index).map(|i|if let Some(error)=failure.as_ref().filter(|_|i==index) {
+                    json!({"phase":"ApplyExtrinsic","extrinsic_idx":i,"module_id":"System","event_id":"ExtrinsicFailed","attributes":{"dispatch_error":error,"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})
                 }else{json!({"phase":"ApplyExtrinsic","extrinsic_idx":i,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]})}).collect::<Vec<_>>();
                 if let Some(hash)=request.params[0].as_str() {let _=state.seed_events(hash,json!(events));}
             }

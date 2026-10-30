@@ -4327,8 +4327,19 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
      not 4, the preflight adds one `state_getStorageHash(:code)` read at its block. The scheduler tags the commit with
      the stored value when that code hash is a reviewed pinned runtime (`REVIEWED_CR_RUNTIME_CODE`, checked against
      `docs/compat/*-provenance.json` and the vendored reveal source) or when the reveal watcher saw one of this
-     validator's own commitments reveal under it. That evidence is the parent block's `:code` hash for a success
-     event bound to the exact parent-queue ciphertext. Identical code decodes identically, whatever the tag.
+     validator's own commitments reveal under it while the same tag was stored. That evidence is the parent block's
+     `:code` hash and stored `CommitRevealWeightsVersion` for a success event bound to the exact parent-queue
+     ciphertext. Only the reviewed code is known not to read the tag; unreviewed code may decode by the stored
+     version, and root bumps the tag with a separate call, usually after the code upgrade, so a reveal under the old
+     tag proves nothing for the new one. The proof for a new tag is a commitment made before the bump that reveals
+     after it. The native tag needs no evidence, so none is retained for it.
+   - **An unexplained miss refutes following.** Each commitment tagged with a followed non-native version records
+     that tag and its code (in the pending entry and, only then, in the journal material, so native material keeps
+     its bytes). When its reveal epoch ends with `RevealMissReason::Unknown` (no drand, epoch or chain-check
+     explanation), the watcher stores a refutation for that code and tag, counts
+     `rtao_weights_cr_version_refuted_total`, and the scheduler pauses again, even under a reviewed runtime. The
+     latest outcome for a code and tag wins, so a later proven reveal under that tag resumes it; refutations are
+     evicted last from the 16 retained entries.
    - **Otherwise it pauses early, without failing**: the outcome is `Refused(ChainError { name:
      "IncorrectCommitRevealVersion" })` naming the stored version, the native format, the live code hash and the
      metadata default, and saying to upgrade rtao if nothing else resolves it. It is logged once while it lasts, sets
@@ -4336,9 +4347,11 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
      `last_weight_succeeded`, but it is not a scheduler error; `next_action` returns `Paused`. Other mechanisms, the
      metagraph, the axon and reveal observation continue, and the next head resumes once the tag returns to 4 or the
      code is proven. The public `WeightPreflight::check` stays strict.
-   - A root bump between preflight and inclusion is a fee-free `IncorrectCommitRevealVersion`: the scheduler re-reads
-     the preflight and re-selects the tag once, as for `InvalidRevealRound`, unless a journal binding requires
-     reconciliation first.
+   - A root bump between preflight and inclusion is a fee-free `IncorrectCommitRevealVersion`: the scheduler waits
+     one block, doubling to eight, then re-reads the preflight and re-selects the tag from that fresh state, at most
+     `CR_VERSION_RETRIES` (10) times per attempt; each retry counts `rtao_weights_cr_version_recomputed_total`, and
+     unproven fresh state pauses instead of re-signing. `InvalidRevealRound` still recomputes once. A journal-bound
+     attempt is never re-signed: its slot goes uncertain until durable recovery excludes the signed bytes.
    - B, C and D echo the storage value blindly instead. After a root bump that ships new runtime code, that would tag
      a v4-format payload with the new version and turn a loud dispatch error into a possible silent reveal loss. That
      is rejected. Reveal still runs under the code live at reveal time, so a code change after a commit can drop it at

@@ -2718,6 +2718,11 @@
           "rtao_neuron::weights::durable::public_tests::changed_cr_version_pauses_quietly_then_follows_proven_code",
           "rtao_neuron::weights::reveal::tests::inclusion_slip_follows_actual_epoch_and_never_counts_a_miss",
           "rtao_neuron::weights::reveal::tests::revealed_code_evidence_is_bounded_and_checkpoint_compatible",
+          "rtao_neuron::weights::reveal::tests::reveal_evidence_under_the_native_tag_never_follows_a_later_tag",
+          "rtao_neuron::weights::reveal::tests::unexplained_miss_of_a_followed_tag_pauses_timelocked_commits",
+          "rtao_neuron::weights::durable::public_tests::dispatch_rejected_cr_version_reselects_the_tag_from_fresh_state",
+          "rtao_neuron::weights::durable::public_tests::persistent_cr_version_rejections_stop_after_the_retry_bound",
+          "rtao_neuron::weights::durable::public_tests::journal_bound_cr_version_rejection_goes_uncertain_without_resigning",
           "rtao_neuron::weights::submit::tests::timelocked_commit_carries_the_selected_tag"
         ]
       },

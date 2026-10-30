@@ -129,6 +129,9 @@ struct Pending {
     notices: Vec<EpochNotice>,
     warned_permit: bool,
     ambiguous_reveal: bool,
+    /// Non-native tag this commitment carried, with the code it followed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    followed_cr: Option<FollowedCr>,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -145,7 +148,17 @@ struct Unlocated {
     report: super::submit::WeightSubmission,
 }
 
-/// Runtime code that revealed one of this validator's commitments (D-086).
+/// A non-native `CommitRevealWeightsVersion` a commitment was tagged with,
+/// and the runtime code under which the scheduler followed it (D-086).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct FollowedCr {
+    tag: u16,
+    code: rtao_primitives::H256,
+}
+
+/// What one of this validator's reveals showed about one runtime code under
+/// one stored commit-reveal tag (D-086).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RevealedCode {
@@ -153,6 +166,19 @@ struct RevealedCode {
     payload_version: u16,
     /// `:code` storage hash at the reveal block's parent.
     code: rtao_primitives::H256,
+    /// `CommitRevealWeightsVersion` stored at that parent. Evidence written
+    /// before the tag was recorded has none and proves no tag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    stored_tag: Option<u16>,
+    /// A commitment tagged `stored_tag` under `code` missed its reveal with
+    /// no drand, epoch or chain-check explanation. This refutes following
+    /// that tag under that code, even for a reviewed runtime.
+    #[serde(default, skip_serializing_if = "is_false")]
+    missed: bool,
+}
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 /// Most runtime code identities retained as reveal evidence.
@@ -172,27 +198,60 @@ pub struct RevealWatcher {
 }
 impl RevealWatcher {
     /// Whether runtime code `code` revealed one of this validator's commitments
-    /// in the [`super::NATIVE_CR_PAYLOAD_VERSION`] payload.
+    /// in the [`super::NATIVE_CR_PAYLOAD_VERSION`] payload while
+    /// `CommitRevealWeightsVersion` stored `tag`, with no later refuting miss.
     ///
     /// The evidence is a success event bound to the exact ciphertext in the
-    /// parent queue, under the parent block's `:code`. Identical code decodes
-    /// identically, whatever `CommitRevealWeightsVersion` stores.
-    pub fn reveals_native_payload(&self, code: rtao_primitives::H256) -> bool {
-        self.revealed_code.iter().any(|known| {
-            known.code == code && known.payload_version == super::NATIVE_CR_PAYLOAD_VERSION
+    /// parent queue, under the parent block's `:code` and stored tag. Unreviewed
+    /// code may decode differently by stored tag, so evidence under one tag
+    /// never proves another.
+    pub fn reveals_native_payload(&self, code: rtao_primitives::H256, tag: u16) -> bool {
+        self.evidence(code, tag).is_some_and(|known| !known.missed)
+    }
+    /// Whether a commitment tagged `tag` under runtime code `code` last missed
+    /// its reveal with no other explanation. The scheduler then pauses that
+    /// tag under that code until a later reveal proves it again.
+    pub fn native_reveal_refuted(&self, code: rtao_primitives::H256, tag: u16) -> bool {
+        self.evidence(code, tag).is_some_and(|known| known.missed)
+    }
+    fn evidence(&self, code: rtao_primitives::H256, tag: u16) -> Option<&RevealedCode> {
+        self.revealed_code.iter().find(|known| {
+            known.code == code
+                && known.stored_tag == Some(tag)
+                && known.payload_version == super::NATIVE_CR_PAYLOAD_VERSION
         })
     }
-    /// Retain evidence that `code` revealed the native payload.
-    pub(super) fn remember_revealed_code(&mut self, code: rtao_primitives::H256) {
-        let known = RevealedCode {
+    /// Retain evidence that `code` revealed the native payload under `tag`.
+    pub(super) fn remember_revealed_code(&mut self, code: rtao_primitives::H256, tag: u16) {
+        self.remember_reveal(code, tag, false);
+    }
+    /// Retain that a commitment tagged `tag` under `code` missed its reveal.
+    pub(super) fn remember_missed_reveal(&mut self, code: rtao_primitives::H256, tag: u16) {
+        self.remember_reveal(code, tag, true);
+    }
+    /// The latest outcome for a code and tag replaces the earlier one.
+    fn remember_reveal(&mut self, code: rtao_primitives::H256, tag: u16, missed: bool) {
+        self.revealed_code.retain(|known| {
+            !(known.code == code
+                && known.stored_tag == Some(tag)
+                && known.payload_version == super::NATIVE_CR_PAYLOAD_VERSION)
+        });
+        if self.revealed_code.len() >= REVEALED_CODE_LIMIT {
+            // Refutations outlive positive evidence: dropping one would
+            // resume a tag whose reveals were seen failing.
+            let oldest = self
+                .revealed_code
+                .iter()
+                .position(|known| !known.missed)
+                .unwrap_or(0);
+            self.revealed_code.remove(oldest);
+        }
+        self.revealed_code.push_back(RevealedCode {
             payload_version: super::NATIVE_CR_PAYLOAD_VERSION,
             code,
-        };
-        self.revealed_code.retain(|entry| *entry != known);
-        if self.revealed_code.len() == REVEALED_CODE_LIMIT {
-            self.revealed_code.pop_front();
-        }
-        self.revealed_code.push_back(known);
+            stored_tag: Some(tag),
+            missed,
+        });
     }
     /// Inspect pending native obligations without exposing ciphertext or keys.
     pub fn outstanding(&self) -> Vec<PendingReveal> {
@@ -415,6 +474,7 @@ impl RevealWatcher {
             notices: Vec::new(),
             warned_permit: false,
             ambiguous_reveal: false,
+            followed_cr: state.followed_cr,
         });
         // Reconciliation may discover an inclusion older than the head that
         // triggered submission. Replay finalized history from that inclusion
@@ -662,10 +722,14 @@ impl RevealWatcher {
             }
         }
         if completed.iter().any(|(_, _, missed)| missed.is_none()) {
-            // The reveal ran under the parent's code. Evidence is optional:
-            // a failed identity read only delays following a changed tag.
-            match super::runtime_code_hash(client, parent.block().hash).await {
-                Ok(code) => self.remember_revealed_code(code),
+            // The reveal ran under the parent's code and stored tag. Evidence
+            // is optional: a failed read only delays following a changed tag.
+            // The native tag needs no evidence, so nothing is retained for it.
+            match reveal_identity(client, &parent).await {
+                Ok((code, tag)) if tag != super::NATIVE_CR_PAYLOAD_VERSION => {
+                    self.remember_revealed_code(code, tag);
+                }
+                Ok(_) => {}
                 Err(error) => tracing::debug!(%error, "reveal code identity unavailable"),
             }
         }
@@ -682,6 +746,20 @@ impl RevealWatcher {
                     ));
                     metrics.update_readiness(|ready| ready.last_weight_succeeded = false);
                     tracing::warn!(mechanism = mechanism.0, reason = reason.label(), round = pending.round, predicted_first_block = pending.predicted_first_block, last_stored_round = pending.last_round, epoch_notices = ?pending.notices, "weight reveal epoch ended without a success event");
+                    if reason == RevealMissReason::Unknown
+                        && let Some(followed) = pending.followed_cr
+                    {
+                        // Nothing else explains the miss of a commitment
+                        // tagged with a followed version: stop following it.
+                        self.remember_missed_reveal(followed.code, followed.tag);
+                        metrics.increment("rtao_weights_cr_version_refuted_total");
+                        tracing::warn!(
+                            mechanism = mechanism.0,
+                            commit_reveal_version = followed.tag,
+                            runtime_code = ?followed.code,
+                            "a commitment tagged with a followed commit-reveal version missed its reveal; timelocked commits pause under this code and version"
+                        );
+                    }
                 } else {
                     metrics.increment("rtao_weights_revealed_total");
                 }
@@ -704,6 +782,19 @@ impl RevealWatcher {
         self.last_observed_block = Some(head.number);
         Ok(())
     }
+}
+
+/// `:code` hash and stored `CommitRevealWeightsVersion` at `parent`, the
+/// state a reveal in its child ran under.
+async fn reveal_identity(
+    client: &Client,
+    parent: &Snapshot,
+) -> anyhow::Result<(rtao_primitives::H256, u16)> {
+    let code = super::runtime_code_hash(client, parent.block().hash).await?;
+    let tag = parent
+        .storage(&st::COMMIT_REVEAL_WEIGHTS_VERSION, ())
+        .await?;
+    Ok((code, tag))
 }
 
 async fn reveal_processing_epoch(
@@ -853,8 +944,23 @@ mod tests {
         F: FnOnce(Client, rtao_primitives::H256) -> Fut,
         Fut: std::future::Future<Output = anyhow::Result<crate::weights::submit::WeightSubmission>>,
     {
+        record_slipped_as(chain, client, |_| {}, locate).await
+    }
+
+    /// [`record_slipped`] with the preflight adjusted before recording.
+    async fn record_slipped_as<F, Fut>(
+        chain: &rtao_testkit::FakeChain,
+        client: &Client,
+        adjust: impl FnOnce(&mut WeightPreflight),
+        locate: F,
+    ) -> anyhow::Result<(RevealWatcher, Metrics)>
+    where
+        F: FnOnce(Client, rtao_primitives::H256) -> Fut,
+        Fut: std::future::Future<Output = anyhow::Result<crate::weights::submit::WeightSubmission>>,
+    {
         let best = client.at(BlockRef::Best).await?;
-        let state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+        let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+        adjust(&mut state);
         let commit = PreparedWeightCommit {
             ciphertext: vec![4, 5, 6],
             reveal_round: 500,
@@ -986,6 +1092,36 @@ mod tests {
         client.close().await;
         Ok(())
     }
+    /// A commit tagged `tag` after following it under runtime code `code`.
+    async fn slipped_followed(
+        tag: u16,
+        code: rtao_primitives::H256,
+    ) -> anyhow::Result<(rtao_testkit::FakeChain, Client, RevealWatcher, Metrics)> {
+        let (chain, client) = fixture().await?;
+        let (watcher, metrics) = record_slipped_as(
+            &chain,
+            &client,
+            |state| {
+                state.commit_reveal_version = tag;
+                state.runtime_code = Some(code);
+            },
+            |_, hash| async move {
+                Ok(crate::weights::submit::WeightSubmission {
+                    block_hash: hash,
+                    block_number: 110,
+                })
+            },
+        )
+        .await?;
+        Ok((chain, client, watcher, metrics))
+    }
+
+    fn code_hash(code: &[u8]) -> rtao_primitives::H256 {
+        rtao_primitives::H256(
+            <blake2::Blake2b<blake2::digest::consts::U32> as blake2::Digest>::digest(code).into(),
+        )
+    }
+
     fn success_event() -> serde_json::Value {
         serde_json::json!([{"phase":"Initialization","event":{"SubtensorModule":{"TimelockedWeightsRevealed":[1,HOTKEY.to_string()]}},"topics":[]}])
     }
@@ -1021,21 +1157,29 @@ mod tests {
             state
                 .seed_events(hash, success_event())
                 .expect("seed actual reveal");
-            // The reveal block executes under its parent's `:code`.
+            // The reveal block executes under its parent's `:code` and tag.
             let parent = state.block_hash(119).expect("parent hash");
             state.seed_at(parent, b":code".to_vec(), Some(b"reveal code".to_vec()));
+            seed_at(
+                state,
+                119,
+                "SubtensorModule",
+                "CommitRevealWeightsVersion",
+                (),
+                5u16,
+            )
+            .expect("seed stored tag");
         });
         watcher
             .observe(&client, &header(&chain, 120)?, &metrics)
             .await?;
         assert_eq!(watcher.pending(), 0);
-        let code = rtao_primitives::H256(
-            <blake2::Blake2b<blake2::digest::consts::U32> as blake2::Digest>::digest(
-                b"reveal code",
-            )
-            .into(),
+        let code = code_hash(b"reveal code");
+        assert!(watcher.reveals_native_payload(code, 5));
+        assert!(
+            !watcher.reveals_native_payload(code, 6),
+            "evidence under one stored tag proves no other"
         );
-        assert!(watcher.reveals_native_payload(code));
         assert_eq!(watcher.revealed_code.len(), 1);
         let result = watcher.outcomes().front().expect("outcome");
         assert_eq!(result.commit_epoch, 6);
@@ -1235,6 +1379,153 @@ mod tests {
         Ok(())
     }
 
+    /// A reveal that succeeded while the native tag was stored proves nothing
+    /// about the same code once root stores another tag: unreviewed code may
+    /// decode by the stored version.
+    #[tokio::test]
+    async fn reveal_evidence_under_the_native_tag_never_follows_a_later_tag() -> anyhow::Result<()>
+    {
+        let (chain, client, mut watcher, metrics) = slipped().await?;
+        chain.mutate_state(|state| {
+            let hash = state.block_hash(120).expect("actual reveal hash");
+            state
+                .seed_events(hash, success_event())
+                .expect("seed actual reveal");
+            let parent = state.block_hash(119).expect("parent hash");
+            state.seed_at(parent, b":code".to_vec(), Some(b"code X".to_vec()));
+        });
+        watcher
+            .observe(&client, &header(&chain, 120)?, &metrics)
+            .await?;
+        assert_eq!(watcher.pending(), 0);
+        assert!(
+            watcher
+                .outcomes()
+                .front()
+                .expect("outcome")
+                .missed
+                .is_none()
+        );
+        assert!(
+            watcher.revealed_code.is_empty(),
+            "the native tag needs and retains no evidence"
+        );
+        let code = code_hash(b"code X");
+        assert!(!watcher.reveals_native_payload(code, 5));
+
+        // Root then stores 5 under the same unreviewed code: the scheduler pauses.
+        let mut scheduler = crate::weights::tests::fresh_scheduler()?;
+        scheduler.reveals = watcher;
+        let best = client.at(BlockRef::Best).await?;
+        let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+        state.commit_reveal_version = 5;
+        state.runtime_code = Some(code);
+        assert!(scheduler.commit_reveal_tag(&state).is_err());
+        assert_eq!(
+            scheduler.next_action(MechId(0), HOTKEY, &state)?,
+            crate::weights::WeightOpportunity::Paused
+        );
+        client.close().await;
+        Ok(())
+    }
+
+    /// An unexplained miss of a commitment tagged with a followed version
+    /// refutes following it under that code: the scheduler pauses again. A
+    /// miss with another explanation, or of a native-tag commitment, does not.
+    #[tokio::test]
+    async fn unexplained_miss_of_a_followed_tag_pauses_timelocked_commits() -> anyhow::Result<()> {
+        let code = code_hash(b"code X");
+        let unexplained = |chain: &rtao_testkit::FakeChain| {
+            // Drand reached the round inside the window; no other reason applies.
+            chain.mutate_state(|state| seed_at(state, 129, "Drand", "LastStoredRound", (), 501u64))
+        };
+        let (chain, client, mut watcher, metrics) = slipped_followed(5, code).await?;
+        unexplained(&chain)?;
+        let mut scheduler = crate::weights::tests::fresh_scheduler()?;
+        let best = client.at(BlockRef::Best).await?;
+        let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+        state.commit_reveal_version = 5;
+        state.runtime_code = Some(code);
+        // The scheduler had followed tag 5 under this code from evidence.
+        watcher.remember_revealed_code(code, 5);
+        scheduler.reveals = watcher;
+        assert_eq!(scheduler.commit_reveal_tag(&state)?, 5);
+        for block in [120, 130] {
+            scheduler
+                .reveals
+                .observe(&client, &header(&chain, block)?, &metrics)
+                .await?;
+        }
+        assert_eq!(
+            scheduler.reveals.outcomes().front().expect("miss").missed,
+            Some(RevealMissReason::Unknown)
+        );
+        assert!(scheduler.reveals.native_reveal_refuted(code, 5));
+        assert!(!scheduler.reveals.reveals_native_payload(code, 5));
+        assert!(
+            metrics
+                .render()
+                .contains("rtao_weights_cr_version_refuted_total 1")
+        );
+        let refusal = scheduler
+            .commit_reveal_tag(&state)
+            .expect_err("a refuted tag pauses");
+        assert_eq!(refusal.name, "IncorrectCommitRevealVersion");
+        assert!(
+            refusal.remediation.contains("missed its reveal"),
+            "{refusal}"
+        );
+        assert_eq!(
+            scheduler.next_action(MechId(0), HOTKEY, &state)?,
+            crate::weights::WeightOpportunity::Paused
+        );
+        // Even a reviewed runtime stops being followed after such a miss.
+        let reviewed = crate::weights::REVIEWED_CR_RUNTIME_CODE[1].1;
+        let mut bytes = [0u8; 32];
+        hex::decode_to_slice(&reviewed[2..], &mut bytes)?;
+        let reviewed = rtao_primitives::H256(bytes);
+        state.runtime_code = Some(reviewed);
+        assert_eq!(scheduler.commit_reveal_tag(&state)?, 5);
+        scheduler.reveals.remember_missed_reveal(reviewed, 5);
+        assert!(scheduler.commit_reveal_tag(&state).is_err());
+        client.close().await;
+
+        // A drand-explained miss of a followed commitment refutes nothing.
+        let (chain, client, mut watcher, metrics) = slipped_followed(5, code).await?;
+        for block in [120, 130] {
+            watcher
+                .observe(&client, &header(&chain, block)?, &metrics)
+                .await?;
+        }
+        assert_eq!(
+            watcher.outcomes().front().expect("miss").missed,
+            Some(RevealMissReason::DrandRound)
+        );
+        assert!(watcher.revealed_code.is_empty());
+        client.close().await;
+
+        // An unexplained miss of a native-tag commitment refutes nothing.
+        let (chain, client, mut watcher, metrics) = slipped().await?;
+        unexplained(&chain)?;
+        for block in [120, 130] {
+            watcher
+                .observe(&client, &header(&chain, block)?, &metrics)
+                .await?;
+        }
+        assert_eq!(
+            watcher.outcomes().front().expect("miss").missed,
+            Some(RevealMissReason::Unknown)
+        );
+        assert!(watcher.revealed_code.is_empty());
+        assert!(
+            !metrics
+                .render()
+                .contains("rtao_weights_cr_version_refuted_total")
+        );
+        client.close().await;
+        Ok(())
+    }
+
     #[test]
     fn revealed_code_evidence_is_bounded_and_checkpoint_compatible() -> anyhow::Result<()> {
         // Checkpoints written before D-086 carry no evidence field.
@@ -1248,15 +1539,15 @@ mod tests {
             "empty evidence is omitted"
         );
         for byte in 0..=u8::try_from(REVEALED_CODE_LIMIT)? {
-            watcher.remember_revealed_code(rtao_primitives::H256([byte; 32]));
+            watcher.remember_revealed_code(rtao_primitives::H256([byte; 32]), 5);
         }
         // Fresh evidence for known code moves it behind older entries.
-        watcher.remember_revealed_code(rtao_primitives::H256([1; 32]));
-        watcher.remember_revealed_code(rtao_primitives::H256([17; 32]));
+        watcher.remember_revealed_code(rtao_primitives::H256([1; 32]), 5);
+        watcher.remember_revealed_code(rtao_primitives::H256([17; 32]), 5);
         assert_eq!(watcher.revealed_code.len(), REVEALED_CODE_LIMIT);
         for (byte, retained) in [(0, false), (1, true), (2, false), (3, true), (17, true)] {
             assert_eq!(
-                watcher.reveals_native_payload(rtao_primitives::H256([byte; 32])),
+                watcher.reveals_native_payload(rtao_primitives::H256([byte; 32]), 5),
                 retained,
                 "code {byte}"
             );
@@ -1268,8 +1559,36 @@ mod tests {
         other.revealed_code.push_back(RevealedCode {
             payload_version: 9,
             code: rtao_primitives::H256([3; 32]),
+            stored_tag: Some(5),
+            missed: false,
         });
-        assert!(!other.reveals_native_payload(rtao_primitives::H256([3; 32])));
+        assert!(!other.reveals_native_payload(rtao_primitives::H256([3; 32]), 5));
+        // Evidence recorded without its stored tag proves no tag.
+        let legacy: RevealWatcher = serde_json::from_value(serde_json::json!({
+            "pending": [], "unlocated": [], "outcomes": [], "last_observed_block": 7,
+            "revealed_code": [{"payload_version": 4, "code": rtao_primitives::H256([3; 32])}],
+        }))?;
+        assert!(!legacy.reveals_native_payload(rtao_primitives::H256([3; 32]), 5));
+        assert!(!legacy.native_reveal_refuted(rtao_primitives::H256([3; 32]), 5));
+
+        // The latest outcome for a code and tag wins; refutations survive
+        // eviction while positive evidence remains to evict.
+        let mut watcher = RevealWatcher::default();
+        let refuted = rtao_primitives::H256([200; 32]);
+        watcher.remember_revealed_code(refuted, 5);
+        watcher.remember_missed_reveal(refuted, 5);
+        assert!(watcher.native_reveal_refuted(refuted, 5));
+        assert!(!watcher.reveals_native_payload(refuted, 5));
+        for byte in 0..=u8::try_from(REVEALED_CODE_LIMIT)? {
+            watcher.remember_revealed_code(rtao_primitives::H256([byte; 32]), 5);
+        }
+        assert_eq!(watcher.revealed_code.len(), REVEALED_CODE_LIMIT);
+        assert!(watcher.native_reveal_refuted(refuted, 5));
+        let restored: RevealWatcher = serde_json::from_value(serde_json::to_value(&watcher)?)?;
+        assert!(restored.native_reveal_refuted(refuted, 5));
+        watcher.remember_revealed_code(refuted, 5);
+        assert!(watcher.reveals_native_payload(refuted, 5));
+        assert!(!watcher.native_reveal_refuted(refuted, 5));
         Ok(())
     }
 
@@ -1546,6 +1865,10 @@ pub(super) struct RevealPreparation {
     uid: Option<Uid>,
     reveal_period: u64,
     schedule_fields: (u16, u64, u64, u64, u64, u64),
+    /// Present only for a commit tagged with a followed non-native version,
+    /// so native journal material keeps its bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    followed_cr: Option<FollowedCr>,
 }
 impl From<&WeightPreflight> for RevealPreparation {
     fn from(state: &WeightPreflight) -> Self {
@@ -1562,6 +1885,16 @@ impl From<&WeightPreflight> for RevealPreparation {
                 s.blocks_since_last_step,
                 s.current_block,
             ),
+            // The scheduler dispatches a non-native tag only after following
+            // it under this preflight's code (D-086).
+            followed_cr: (state.commit_reveal
+                && state.commit_reveal_version != super::NATIVE_CR_PAYLOAD_VERSION)
+                .then_some(state.runtime_code)
+                .flatten()
+                .map(|code| FollowedCr {
+                    tag: state.commit_reveal_version,
+                    code,
+                }),
         }
     }
 }
