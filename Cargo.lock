@@ -5936,6 +5936,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtao-arena"
+version = "0.1.0"
+
+[[package]]
 name = "rtao-btauth"
 version = "0.1.0"
 dependencies = [

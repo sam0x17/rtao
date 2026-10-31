@@ -19,6 +19,11 @@ transports for client behavior tests. Live nodes, testnets, Docker services,
 Python oracles, soaks, fuzz campaigns and release rehearsals are not part of
 ordinary contribution checks.
 
+The workspace forbids `unsafe` code; the one exception is `rtao-arena`, whose
+allocator manages raw memory, so it sets `unsafe_code = "deny"` at crate level,
+allows unsafe code only in the modules that need it and documents every unsafe
+block with a `SAFETY` comment (enforced by `clippy::undocumented_unsafe_blocks`).
+
 After dependency or feature manifests change, use the workflow's manual
 `refresh_compat=true` mode to regenerate the existing compatibility graph
 reports in hosted CI. Download and review its small source artifact, commit

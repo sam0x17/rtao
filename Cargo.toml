@@ -23,6 +23,7 @@ panic = "deny"
 
 [workspace.dependencies]
 rtao = { path = "crates/rtao", default-features = false }
+rtao-arena = { path = "crates/rtao-arena", default-features = false }
 rtao-core-ext = { path = "crates/rtao-core-ext", default-features = false }
 rtao-core = { path = "crates/rtao-core", default-features = false }
 rtao-primitives = { path = "crates/rtao-primitives", default-features = false }
