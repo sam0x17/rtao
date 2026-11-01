@@ -132,7 +132,8 @@ fn alignment_matrix() {
     let stats = heap.stats();
     assert_eq!(
         (stats.small.live, stats.large.live, stats.free_blocks),
-        (0, 0, 0)
+        (0, 0, 1),
+        "everything coalesced back into one free block"
     );
 }
 
@@ -196,58 +197,69 @@ fn floors_bound_each_side() {
     assert!(heap.high_water() <= region);
 }
 
+/// The address of the region's first page: where a fresh heap puts its first
+/// small object.
+fn first_page(heap: &FixedHeap) -> usize {
+    let p = alloc(heap, 16, 1, Lifetime::Short);
+    free(heap, p, 16, 1);
+    p.addr()
+}
+
 #[test]
-fn long_takes_the_lowest_fit_and_short_the_highest() {
+fn long_takes_the_largest_run_and_short_the_best_fit() {
     let heap = heap(16 * MIB, 0, 0);
+    let lo = first_page(heap);
+    // A hole of four 64 KiB blocks below a block at the top, and the rest of
+    // the region below the hole's lower neighbour.
     let top = alloc(heap, 64 << 10, 16, Lifetime::Short);
-    let s: Vec<_> = (0..3)
+    let hole: Vec<_> = (0..4)
         .map(|_| alloc(heap, 64 << 10, 16, Lifetime::Short))
         .collect();
-    let pin = alloc(heap, 4096, 16, Lifetime::Long);
-    assert!(s.iter().all(|&p| p < top && p > pin));
-    for &p in &s {
+    let below = alloc(heap, 64 << 10, 16, Lifetime::Short);
+    assert!(hole.iter().all(|&p| p < top && p > below));
+    for &p in &hole {
         free(heap, p, 64 << 10, 16);
     }
-    // One free block between the pin and `top`.
-    assert_eq!(heap.stats().free_blocks, 1);
-    let hole_lo = pin.addr() + 4096;
+    assert_eq!(heap.stats().free_blocks, 2);
     let hole_hi = top.addr() - BLOCK_HEADER;
 
-    // Short: the highest address of the hole.
+    // Short: the best fit (the hole), at its top.
     let short = alloc(heap, 8192, 16, Lifetime::Short);
     assert_eq!(short.addr() + 8192, hole_hi);
-    // Long, with gap available: below everything.
-    let long_gap = alloc(heap, 8192, 16, Lifetime::Long);
-    assert!(long_gap < pin);
-    free(heap, long_gap, 8192, 16);
-
-    // Long with the gap closed (the small floor up to the pool): the hole's
-    // lowest address.
-    let stats = heap.stats();
-    heap.configure(rtao_arena::Config::new(
-        stats.region - stats.large.capacity,
-        0,
-    ))
-    .unwrap();
-    let hole_left = hole_hi - 8192 - BLOCK_HEADER - hole_lo;
-    assert_eq!(
-        heap.free_large(),
-        hole_left - BLOCK_HEADER,
-        "no gap left for the pool"
-    );
+    // Long: the largest free run, at its top, against `below`.
     let long = alloc(heap, 8192, 16, Lifetime::Long);
-    assert_eq!(long.addr(), hole_lo + BLOCK_HEADER);
-    assert!(long < short);
-    for (p, size) in [(short, 8192), (long, 8192), (pin, 4096), (top, 64 << 10)] {
-        free(heap, p, size, 16);
+    assert_eq!(long.addr() + 8192, below.addr() - BLOCK_HEADER);
+
+    // With the run below `long` beneath the small floor, only the hole is
+    // left for large blocks: Long takes its top, against `short`.
+    heap.configure(rtao_arena::Config::new(long.addr() - BLOCK_HEADER - lo, 0))
+        .unwrap();
+    let hole_left = hole_hi - 8192 - BLOCK_HEADER - (below.addr() + (64 << 10));
+    assert_eq!(heap.free_large(), hole_left - BLOCK_HEADER);
+    let long2 = alloc(heap, 8192, 16, Lifetime::Long);
+    assert_eq!(long2.addr() + 8192, short.addr() - BLOCK_HEADER);
+    for p in [short, long, long2, below, top] {
+        free(
+            heap,
+            p,
+            if p == top || p == below {
+                64 << 10
+            } else {
+                8192
+            },
+            16,
+        );
     }
-    assert_eq!(heap.stats().large.live, 0);
+    let stats = heap.stats();
+    assert_eq!((stats.large.live, stats.free_blocks), (0, 1));
 }
 
 #[test]
 fn freeing_everything_coalesces_back_to_one_region() {
     let heap = heap(16 * MIB, MIB, 0);
     let mut rng = Rng(7);
+    // A long block first: the top of the region.
+    let pin = alloc(heap, 4096, 16, Lifetime::Long);
     let mut live = Vec::new();
     for _ in 0..80 {
         let size = rng.range(2049, 200_000);
@@ -261,9 +273,8 @@ fn freeing_everything_coalesces_back_to_one_region() {
             live.push((p, size));
         }
     }
-    // Keep a long block at the bottom and free the rest in random order.
-    let pin = alloc(heap, 4096, 16, Lifetime::Long);
-    assert!(live.iter().all(|&(p, _)| p > pin));
+    // Keep the pin and free the rest in random order.
+    assert!(live.iter().all(|&(p, _)| p < pin));
     while !live.is_empty() {
         let (p, size) = live.swap_remove(rng.range(0, live.len() - 1));
         free(heap, p, size, 16);
@@ -271,11 +282,11 @@ fn freeing_everything_coalesces_back_to_one_region() {
     let stats = heap.stats();
     assert_eq!(
         stats.free_blocks, 1,
-        "everything above the pin is one block"
+        "everything below the pin is one block"
     );
     free(heap, pin, 4096, 16);
     let stats = heap.stats();
-    assert_eq!((stats.free_blocks, stats.large.live), (0, 0));
+    assert_eq!((stats.free_blocks, stats.large.live), (1, 0));
     assert_eq!(stats.large.capacity, BLOCK_HEADER);
     let largest = fresh_largest(heap, MIB);
     assert_eq!(heap.largest_free_large(), largest);
@@ -443,6 +454,7 @@ fn random_layout(rng: &mut Rng) -> (usize, usize) {
 fn run_random(seed: u64, ops: usize, bytes: usize, small_floor: usize, large_floor: usize) {
     let heap = heap(bytes, small_floor, large_floor);
     let region = heap.stats().region;
+    let fresh_pages = heap.stats().free_pages;
     let mut rng = Rng(seed);
     let mut live: Vec<Live> = Vec::new();
     let mut spans: BTreeMap<usize, usize> = BTreeMap::new();
@@ -524,7 +536,10 @@ fn run_random(seed: u64, ops: usize, bytes: usize, small_floor: usize, large_flo
             let stats = heap.stats();
             assert!(stats.small.capacity <= region - large_floor);
             assert!(stats.large.capacity <= region - small_floor);
-            assert!(stats.small.capacity + stats.large.capacity + stats.gap <= region);
+            assert_eq!(
+                stats.small.capacity + stats.large.capacity + stats.gap,
+                region
+            );
             assert!(stats.high_water <= region);
             let objects: usize = stats.classes.iter().map(|c| c.objects).sum();
             assert!(objects <= live.len());
@@ -536,8 +551,8 @@ fn run_random(seed: u64, ops: usize, bytes: usize, small_floor: usize, large_flo
     }
     let stats = heap.stats();
     assert_eq!((stats.small.live, stats.large.live), (0, 0));
-    assert_eq!((stats.small.capacity, stats.free_pages), (0, 0));
-    assert_eq!((stats.free_blocks, stats.large.capacity), (0, BLOCK_HEADER));
+    assert_eq!((stats.small.capacity, stats.free_pages), (0, fresh_pages));
+    assert_eq!((stats.free_blocks, stats.large.capacity), (1, BLOCK_HEADER));
     assert_eq!(heap.largest_free_large(), fresh_largest(heap, small_floor));
 }
 
@@ -645,10 +660,11 @@ fn doubling_growth_costs_no_more_than_old_plus_new() {
     // stranded above the block.
     let p = double_until(heap, 64, 4 * MIB, 8);
     let s = heap.stats();
-    assert!(
-        s.large.capacity <= 4 * MIB + 4 * BLOCK_HEADER,
-        "the pool holds {} bytes for one 4 MiB block",
-        s.large.capacity
+    assert_eq!(s.large.live, 4 * MIB + BLOCK_HEADER);
+    assert_eq!(
+        heap.largest_free_large(),
+        room - 4 * MIB - BLOCK_HEADER,
+        "the rest of the room stays one free block"
     );
     free(heap, p, 4 * MIB, 8);
     assert_eq!(heap.stats().large.live, 0);
@@ -658,7 +674,10 @@ fn doubling_growth_costs_no_more_than_old_plus_new() {
     // earlier room, and strictly aligned blocks keep their alignment.
     let pinned = alloc(heap, 64 << 10, 8, Lifetime::Short);
     let p = double_until(heap, 8 << 10, 2 * MIB, 4096);
-    assert!(heap.stats().large.capacity <= 2 * MIB + (64 << 10) + 4096 + 4 * BLOCK_HEADER);
+    assert!(
+        heap.largest_free_large() + 2 * MIB + (64 << 10) + 4096 + 4 * BLOCK_HEADER >= room,
+        "earlier sizes are not stranded"
+    );
     free(heap, p, 2 * MIB, 4096);
     free(heap, pinned, 64 << 10, 8);
     assert_eq!(heap.largest_free_large(), room);
@@ -667,6 +686,7 @@ fn doubling_growth_costs_no_more_than_old_plus_new() {
 #[test]
 fn recycled_slab_pages_are_taken_lowest_first() {
     let heap = heap(16 * MIB, 0, 0);
+    let fresh = heap.stats().free_pages;
     let per_page = PAGE_BYTES / 64;
     let pages: Vec<Vec<*mut u8>> = (0..10)
         .map(|_| {
@@ -675,23 +695,35 @@ fn recycled_slab_pages_are_taken_lowest_first() {
                 .collect()
         })
         .collect();
-    assert_eq!(heap.stats().small.capacity, 10 * PAGE_BYTES);
-    // Drain pages 0..=8 in address order; page 9 stays in use.
+    let s = heap.stats();
+    assert_eq!(
+        (s.small.capacity, s.free_pages),
+        (10 * PAGE_BYTES, fresh - 10)
+    );
+    // Drain pages 0..=8 in address order; page 9 stays in use. The drained
+    // pages are free memory at once, one block below page 9.
     for page in &pages[..9] {
         for &p in page {
             free(heap, p, 64, 8);
         }
     }
-    assert_eq!(heap.stats().free_pages, 9);
+    let s = heap.stats();
+    assert_eq!((s.small.capacity, s.free_pages), (PAGE_BYTES, fresh - 1));
+    assert_eq!(s.free_blocks, 2);
     // An object of another class takes the lowest free page ...
     let x = alloc(heap, 128, 8, Lifetime::Short);
     assert_eq!(x, pages[0][0]);
-    // ... so once the top page drains every page above it returns to the gap.
+    // ... and a drained page merges with the free memory around it.
     for &p in &pages[9] {
         free(heap, p, 64, 8);
     }
     let s = heap.stats();
-    assert_eq!((s.small.capacity, s.free_pages), (PAGE_BYTES, 0));
+    assert_eq!((s.small.capacity, s.free_pages), (PAGE_BYTES, fresh - 1));
+    assert_eq!(s.free_blocks, 1);
     free(heap, x, 128, 8);
-    assert_eq!(heap.stats().small.capacity, 0);
+    let s = heap.stats();
+    assert_eq!(
+        (s.small.capacity, s.free_pages, s.free_blocks),
+        (0, fresh, 1)
+    );
 }

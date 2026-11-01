@@ -3,28 +3,37 @@
 //!
 //! [`FixedHeap`] is a [`GlobalAlloc`](core::alloc::GlobalAlloc) over one
 //! region chosen up front. It never asks the host for more memory: when the
-//! region is full, allocation returns null. The region is two-ended:
+//! region is full, allocation returns null. Pages and large blocks are blocks
+//! of one pool over the whole region, and the two sides fill it from its two
+//! ends:
 //!
 //! ```text
-//! region start                                                       region end
-//! | page table | slab pages (≤ 2 KiB, grow up) -->  gap  <-- TLSF pool (> 2 KiB, grow down) |
-//! |<------- small_floor: never claimed by the pool ------>|
-//!                           |<------ large_floor: never claimed by slab pages ------>|
+//! region start                                                        region end
+//! | page table | slab pages (lowest free first) ->  <- large blocks (at the top) |
+//! |            |<--- small_floor: no large block --->|                          |
+//! |            |                   |<------- large_floor: no slab page -------->|
 //! ```
 //!
 //! - **Small side.** Objects up to 2 KiB live in 64 KiB slab pages of 14
-//!   size classes (16 … 2048 bytes), each at its natural alignment. A fully
-//!   free page is reused by any class and returns to the gap when it is the
-//!   topmost page. Small objects never interleave with large blocks.
-//! - **Large side.** Larger (or more strictly aligned) blocks live in one
-//!   two-level segregated fit pool with O(1) good-fit search and immediate
-//!   coalescing. The pool grows down into the gap by exactly what an
-//!   allocation needs, and a free block at its bottom returns to the gap.
-//!   [`Lifetime::Long`] blocks take the lowest fitting address, packing against
-//!   the boundary; [`Lifetime::Short`] blocks (the default) take the highest,
-//!   so transients churn at the top. Alignment up to 64 KiB and beyond works.
+//!   size classes (16 … 2048 bytes), each at its natural alignment. The small
+//!   side takes the lowest free page in the region and gives a page back as
+//!   soon as its last object is freed, wherever the page lies, so its memory
+//!   serves large blocks again at once. Objects never share a page with large
+//!   blocks.
+//! - **Large side.** Larger (or more strictly aligned) blocks come from the
+//!   same two-level segregated fit pool, with O(1) good-fit search and
+//!   immediate coalescing: a freed block or page merges with its free
+//!   neighbours, whatever they held. Blocks are carved from the top of a free
+//!   block, so the large side grows down from the top of the region while the
+//!   small side fills it from the bottom. [`Lifetime::Short`] blocks (the
+//!   default) take the best-fitting free block, so transients reuse holes;
+//!   [`Lifetime::Long`] blocks take a block of the largest size class, packing
+//!   against the large blocks above the largest free run and leaving holes to
+//!   transients. Alignment up to 64 KiB and beyond works.
 //! - **Floors.** [`Config::small_floor`] and [`Config::large_floor`] are the
-//!   only split configuration; the boundary floats between them.
+//!   only split configuration. Each reserves one end of the region for one
+//!   side, so that side can always reach its floor; between them, free memory
+//!   belongs to whichever side asks for it.
 //! - **Scopes.** A [`Scope`] is a capped sub-arena carved from the large side
 //!   in chunks. While it is active ([`Scope::run`], [`Scoped`]) global
 //!   allocations bump-allocate in it; dealloc finds the chunk by address, and

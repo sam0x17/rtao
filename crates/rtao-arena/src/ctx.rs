@@ -20,15 +20,18 @@ use crate::scope::Scope;
 
 /// Lifetime hint for large blocks.
 ///
-/// `Long` blocks take the lowest address that fits, packing against the
-/// boundary with the small side; `Short` blocks (the default) take the highest
-/// address that fits, so transients churn at the top of the region.
+/// Large blocks are carved from the top of a free block. `Short` blocks (the
+/// default) take the best-fitting free block, so transients reuse the holes
+/// earlier ones left; `Long` blocks take a free block of the largest size
+/// class, so they pack against the large blocks above the largest free run
+/// (the large side's boundary with the memory it shares with the small side)
+/// and leave holes to transients.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Lifetime {
-    /// Transient memory: placed at the highest fitting address.
+    /// Transient memory: placed at the top of the best-fitting free block.
     #[default]
     Short,
-    /// Long-lived memory: placed at the lowest fitting address.
+    /// Long-lived memory: placed at the top of the largest free run.
     Long,
 }
 

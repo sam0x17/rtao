@@ -1,18 +1,19 @@
-//! The small side: size-class slab pages that grow up from the bottom.
+//! The small side: size-class slab pages.
 //!
 //! Pages are 64 KiB and 64 KiB-aligned, so an object at `page + i * class`
-//! is aligned to the largest power of two dividing its class. Page metadata
-//! lives in a table at the start of the region, one 16-byte entry per page
-//! the region could ever hold. Free objects keep their in-page free list in
-//! their own first four bytes. A fully free page is marked in a free-page
-//! bitmap (after the table) that any class reuses lowest page first, so live
-//! objects settle low and the top drains; when a free page is the topmost
-//! page it is handed back to the gap, together with any free pages directly
-//! below it.
+//! is aligned to the largest power of two dividing its class. A page is a
+//! block of the pool (`tlsf.rs`): the slab takes the lowest free page
+//! in the region when a class has no page with room, and gives a page back
+//! to the pool as soon as its last object is freed, wherever it lies, where
+//! it coalesces with the free blocks around it. Page metadata lives in a
+//! table at the start of the region, one 16-byte entry per page the region
+//! could ever hold. Free objects keep their in-page free list in their own
+//! first four bytes.
 
 #![allow(unsafe_code)]
 
 use crate::raw::Mem;
+use crate::tlsf::Tlsf;
 
 /// Slab page size.
 pub(crate) const PAGE: usize = 64 * 1024;
@@ -28,16 +29,15 @@ pub(crate) const MAX_SMALL: usize = 2048;
 pub(crate) const ENTRY: usize = 16;
 
 const NONE: u32 = u32::MAX;
-const FREE_PAGE: u32 = u32::MAX;
 
-// Page-table entry layout (four u32 words).
-const E_CLASS: usize = 0; // class index, or FREE_PAGE
+// Page-table entry layout (four u32 words), valid while the page is a slab
+// page.
+const E_CLASS: usize = 0; // class index
 const E_COUNTS: usize = 4; // used (low 16 bits) | carved (high 16 bits)
 const E_FREE: usize = 8; // in-page offset + 1 of the first free object, 0 = none
 const E_LINK: usize = 12; // next page index (partial lists); the prev index lives in the page table's second half
 
 const WORD: usize = size_of::<usize>();
-const WORD_BITS: usize = usize::BITS as usize;
 
 /// Natural alignment of a class: the largest power of two dividing its size.
 #[inline]
@@ -86,23 +86,15 @@ pub(crate) const fn per_page(class: usize) -> usize {
 
 /// The slab side's control structure; page metadata lives in the region.
 pub(crate) struct Slab {
-    /// Address of the page table (entries, then prev links, then the
-    /// free-page bitmap).
+    /// Address of the page table (entries, then prev links).
     table: usize,
-    /// Address of the free-page bitmap (one bit per page, set = free page
-    /// waiting for reuse).
-    bitmap: usize,
-    /// Index of the lowest bitmap word that may have a bit set.
-    bitmap_hint: usize,
     /// Number of table entries (the most pages the region could hold).
     capacity: u32,
     /// Address of page 0.
     pub(crate) lo: usize,
-    /// Pages currently claimed from the gap.
+    /// Pages the slab holds.
     pub(crate) pages: u32,
     partial: [u32; CLASS_COUNT],
-    /// Free pages waiting for reuse (not counting returned pages).
-    pub(crate) free_pages: u32,
     /// Live bytes, counted at class size.
     pub(crate) live_bytes: usize,
     /// Live objects per class.
@@ -115,65 +107,29 @@ impl Slab {
     pub(crate) const fn new() -> Self {
         Self {
             table: 0,
-            bitmap: 0,
-            bitmap_hint: 0,
             capacity: 0,
             lo: 0,
             pages: 0,
             partial: [NONE; CLASS_COUNT],
-            free_pages: 0,
             live_bytes: 0,
             objects: [0; CLASS_COUNT],
             class_pages: [0; CLASS_COUNT],
         }
     }
 
-    /// Offset of the free-page bitmap from the table's start.
-    const fn bitmap_offset(capacity: usize) -> usize {
-        (capacity * (ENTRY + 4)).next_multiple_of(WORD)
-    }
-
-    /// Table bytes needed for `capacity` pages (`table` must be 16-aligned).
+    /// Table bytes needed for `capacity` pages (`table` must be 16-aligned);
+    /// a multiple of the word size.
     pub(crate) const fn table_bytes(capacity: usize) -> usize {
-        Self::bitmap_offset(capacity) + capacity.div_ceil(WORD_BITS) * WORD
+        (capacity * (ENTRY + 4)).next_multiple_of(WORD)
     }
 
     /// Sets up an empty slab side with its table at `table` (16-aligned,
     /// [`Self::table_bytes`] long, inside the region) and page 0 at `lo`.
-    pub(crate) fn init(&mut self, mem: Mem, table: usize, capacity: u32, lo: usize) {
+    pub(crate) fn init(&mut self, table: usize, capacity: u32, lo: usize) {
         *self = Self::new();
         self.table = table;
-        self.bitmap = table + Self::bitmap_offset(capacity as usize);
         self.capacity = capacity;
         self.lo = lo;
-        for word in 0..(capacity as usize).div_ceil(WORD_BITS) {
-            // SAFETY: the bitmap lies inside the table the caller handed over.
-            unsafe { mem.set_word(self.bitmap + word * WORD, 0) };
-        }
-    }
-
-    /// Marks `page` free (`true`) or not in the free-page bitmap.
-    ///
-    /// # Safety
-    /// `page` must be below `capacity`.
-    unsafe fn mark_free(&mut self, mem: Mem, page: u32, free: bool) {
-        let index = page as usize / WORD_BITS;
-        let bit = 1usize << (page as usize % WORD_BITS);
-        let addr = self.bitmap + index * WORD;
-        // SAFETY: the word is inside the bitmap.
-        unsafe {
-            let word = mem.word(addr);
-            mem.set_word(addr, if free { word | bit } else { word & !bit });
-        }
-        if free {
-            self.bitmap_hint = self.bitmap_hint.min(index);
-        }
-    }
-
-    /// End of the claimed pages.
-    #[inline]
-    pub(crate) fn hi(&self) -> usize {
-        self.lo + self.pages as usize * PAGE
     }
 
     #[inline]
@@ -228,13 +184,13 @@ impl Slab {
 
     // ---- allocation -------------------------------------------------------
 
-    /// Allocates one object of `class`, claiming a page below `limit` (the
-    /// highest address the small side may reach) when no page has room.
-    pub(crate) fn alloc(&mut self, mem: Mem, class: usize, limit: usize) -> Option<usize> {
+    /// Allocates one object of `class`, taking the pool's lowest free page
+    /// when no page of the class has room.
+    pub(crate) fn alloc(&mut self, mem: Mem, pool: &mut Tlsf, class: usize) -> Option<usize> {
         let mut page = self.partial[class];
         if page == NONE {
-            page = self.acquire(mem, limit)?;
-            // SAFETY: `page` was just claimed and is on no list.
+            page = ((pool.take_page(mem)? - self.lo) / PAGE) as u32;
+            // SAFETY: `page` was just taken and is on no list.
             unsafe {
                 let entry = self.entry(page);
                 mem.set_u32(entry + E_CLASS, class as u32);
@@ -242,11 +198,12 @@ impl Slab {
                 mem.set_u32(entry + E_FREE, 0);
                 self.push(mem, class, page);
             }
+            self.pages += 1;
             self.class_pages[class] += 1;
         }
         let entry = self.entry(page);
         let base = self.page_addr(page);
-        // SAFETY: `page` is a claimed page of `class` with a free object.
+        // SAFETY: `page` is a slab page of `class` with a free object.
         let addr = unsafe {
             let counts = mem.u32(entry + E_COUNTS);
             let used = counts & 0xffff;
@@ -271,36 +228,6 @@ impl Slab {
         Some(addr)
     }
 
-    /// A free page: the lowest recycled one first, else a fresh one from the
-    /// gap. Taking the lowest keeps live objects low, so pages near the top
-    /// drain and return to the gap.
-    fn acquire(&mut self, mem: Mem, limit: usize) -> Option<u32> {
-        if self.free_pages > 0 {
-            let words = (self.capacity as usize).div_ceil(WORD_BITS);
-            let mut index = self.bitmap_hint;
-            while index < words {
-                // SAFETY: the word is inside the bitmap.
-                let word = unsafe { mem.word(self.bitmap + index * WORD) };
-                if word != 0 {
-                    let page = (index * WORD_BITS + word.trailing_zeros() as usize) as u32;
-                    self.bitmap_hint = index;
-                    // SAFETY: a set bit names a page below `capacity`.
-                    unsafe { self.mark_free(mem, page, false) };
-                    self.free_pages -= 1;
-                    return Some(page);
-                }
-                index += 1;
-            }
-            // Unreachable while `free_pages` counts the set bits.
-            self.bitmap_hint = words;
-        }
-        if self.pages >= self.capacity || self.hi() + PAGE > limit {
-            return None;
-        }
-        self.pages += 1;
-        Some(self.pages - 1)
-    }
-
     /// The class of the object at `addr`.
     ///
     /// # Safety
@@ -312,15 +239,17 @@ impl Slab {
         unsafe { mem.u32(self.entry(page) + E_CLASS) as usize }
     }
 
-    /// Frees the object at `addr`.
+    /// Frees the object at `addr`, giving its page back to the pool when it
+    /// was the page's last object.
     ///
     /// # Safety
     /// `addr` must be a live object of this slab side.
-    pub(crate) unsafe fn free(&mut self, mem: Mem, addr: usize) {
+    pub(crate) unsafe fn free(&mut self, mem: Mem, pool: &mut Tlsf, addr: usize) {
         let page = ((addr - self.lo) / PAGE) as u32;
         let entry = self.entry(page);
         let base = self.page_addr(page);
-        // SAFETY: `addr` is a live object of a claimed page.
+        // SAFETY: `addr` is a live object of a slab page; a page with no live
+        // object left goes back to the pool it came from.
         unsafe {
             let class = mem.u32(entry + E_CLASS) as usize;
             mem.set_u32(addr, mem.u32(entry + E_FREE));
@@ -337,29 +266,8 @@ impl Slab {
             if used == 0 {
                 self.unlink(mem, class, page);
                 self.class_pages[class] -= 1;
-                self.release(mem, page);
-            }
-        }
-    }
-
-    /// Recycles a fully free page, returning it to the gap when topmost.
-    ///
-    /// # Safety
-    /// `page` must be a claimed page with no live object, on no list.
-    unsafe fn release(&mut self, mem: Mem, page: u32) {
-        // SAFETY: `page` and the pages below the top are claimed pages.
-        unsafe {
-            mem.set_u32(self.entry(page) + E_CLASS, FREE_PAGE);
-            if page + 1 != self.pages {
-                self.mark_free(mem, page, true);
-                self.free_pages += 1;
-                return;
-            }
-            self.pages -= 1;
-            while self.pages > 0 && mem.u32(self.entry(self.pages - 1) + E_CLASS) == FREE_PAGE {
-                self.mark_free(mem, self.pages - 1, false);
-                self.free_pages -= 1;
                 self.pages -= 1;
+                pool.free_page(mem, base);
             }
         }
     }

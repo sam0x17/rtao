@@ -1,4 +1,5 @@
-//! [`FixedHeap`]: the two-ended global allocator over one fixed region.
+//! [`FixedHeap`]: the global allocator over one fixed region, its pages and
+//! large blocks drawn from one pool.
 
 #![allow(unsafe_code)]
 
@@ -11,24 +12,29 @@ use crate::ctx::{self, Lifetime};
 use crate::raw::{Mem, align_down, align_up};
 use crate::scope::{ScopeSummary, SummaryTable};
 use crate::slab::{self, CLASS_COUNT, CLASSES, PAGE, Slab};
-use crate::tlsf::{self, HEADER, TAG, Tlsf};
+use crate::tlsf::{self, HEADER, Lines, TAG, Tlsf};
 
 const WORD: usize = size_of::<usize>();
 
 /// The split configuration of a [`FixedHeap`]: the two floors.
 ///
-/// The small side never grows above `region - large_floor` and the large side
-/// never grows below `small_floor`; everything between the floors floats.
+/// The floors are minimum guarantees. No slab page lies in the top
+/// `large_floor` bytes of the region and no large block in the bottom
+/// `small_floor` bytes, so the large side can always reach `large_floor`
+/// contiguous bytes (less two block headers) and the small side every whole
+/// page of `small_floor`. Between the floors neither side owns an address
+/// range: free pages and free large blocks are one pool both sides draw
+/// from.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Config {
-    /// Bytes at the bottom that the large side never claims.
+    /// Bytes at the bottom of the region that the large side never claims.
     pub small_floor: usize,
-    /// Bytes at the top that the small side never claims.
+    /// Bytes at the top of the region that the small side never claims.
     pub large_floor: usize,
 }
 
 impl Config {
-    /// No floors: the boundary floats over the whole region.
+    /// No floors: both sides may use the whole region.
     pub const DEFAULT: Self = Self::new(0, 0);
 
     /// A configuration with the given floors.
@@ -45,7 +51,8 @@ impl Config {
 pub enum InitError {
     /// The heap already manages a region.
     AlreadyInitialized,
-    /// The region cannot hold the page table, one page and the pool header.
+    /// The region cannot hold the page table, one page and the pool's end
+    /// marker.
     TooSmall,
     /// The two floors together exceed the usable region.
     Floors {
@@ -80,10 +87,12 @@ pub struct SideStats {
     pub live: usize,
     /// Highest `live` since creation or [`FixedHeap::reset_peaks`].
     pub peak: usize,
-    /// Bytes this side currently claims from the region.
+    /// Bytes this side currently holds in the region: the small side its
+    /// pages, the large side its blocks and the pool's 16-byte end marker.
     pub capacity: usize,
-    /// The most this side could claim right now (its floor and the other side
-    /// permitting).
+    /// The most this side could hold right now: `capacity` and the free
+    /// memory it could take (the small side whole free pages below the large
+    /// floor, the large side free blocks above the small floor).
     pub limit: usize,
     /// Allocations this side refused.
     pub failed: usize,
@@ -111,14 +120,16 @@ pub struct Stats {
     pub large: SideStats,
     /// Per-class histogram of the small side.
     pub classes: [ClassStats; CLASS_COUNT],
-    /// Free pages kept for reuse below the topmost claimed page.
+    /// Whole free pages the small side could take now (below the large
+    /// floor), wherever they lie.
     pub free_pages: usize,
-    /// Free blocks inside the large pool (the gap not included).
+    /// Free blocks in the region (a fresh heap has one).
     pub free_blocks: usize,
-    /// Unclaimed bytes between the two sides.
+    /// Free bytes in the region, held by neither side (headers of free
+    /// blocks included): `region - small.capacity - large.capacity`.
     pub gap: usize,
-    /// Payload bytes the large side could hand out now, summed over its free
-    /// blocks and the gap (see [`FixedHeap::free_large`]).
+    /// Payload bytes the large side could hand out now, summed over the free
+    /// blocks above the small floor (see [`FixedHeap::free_large`]).
     pub free_large: usize,
     /// The largest single large allocation that would succeed now.
     pub largest_free_large: usize,
@@ -128,7 +139,8 @@ pub struct Stats {
     pub parked_chunks: usize,
     /// Bytes of those chunks.
     pub parked_bytes: usize,
-    /// Highest claimed bytes (both sides) since creation or reset.
+    /// Highest bytes both sides held together (`small.capacity +
+    /// large.capacity`) since creation or reset.
     pub high_water: usize,
 }
 
@@ -139,6 +151,8 @@ pub(crate) struct Inner {
     /// Address of the pool's sentinel header; the region's usable end is
     /// `top + HEADER`.
     top: usize,
+    /// Address of the region's first page.
+    lo: usize,
     config: Config,
     pub(crate) slab: Slab,
     pub(crate) tlsf: Tlsf,
@@ -163,6 +177,7 @@ impl Inner {
             ready: false,
             mem: Mem::none(),
             top: 0,
+            lo: 0,
             config,
             slab: Slab::new(),
             tlsf: Tlsf::new(),
@@ -191,8 +206,11 @@ impl Inner {
         let end = start.checked_add(len).ok_or(InitError::TooSmall)?;
         let table = align_up(start, 16).ok_or(InitError::TooSmall)?;
         let max_pages = len / PAGE;
-        let table_end = table
+        let pool_table = table
             .checked_add(Slab::table_bytes(max_pages))
+            .ok_or(InitError::TooSmall)?;
+        let table_end = pool_table
+            .checked_add(Tlsf::table_bytes(max_pages))
             .ok_or(InitError::TooSmall)?;
         let lo = align_up(table_end, PAGE).ok_or(InitError::TooSmall)?;
         let usable_end = align_down(end, tlsf::GRANULE);
@@ -208,18 +226,20 @@ impl Inner {
         if requested > usable {
             return Err(InitError::Floors { usable, requested });
         }
-        let pages = (usable / PAGE).min(max_pages);
+        let pages = ((top - lo) / PAGE).min(max_pages);
         self.mem = Mem::new(base);
-        self.slab.init(
-            self.mem,
-            table,
-            u32::try_from(pages).unwrap_or(u32::MAX),
-            lo,
-        );
-        // SAFETY: `top` is 16-aligned and `[top, top + HEADER)` lies inside
-        // the caller's region.
-        unsafe { self.tlsf.init(self.mem, top) };
+        self.lo = lo;
         self.top = top;
+        self.slab
+            .init(table, u32::try_from(pages).unwrap_or(u32::MAX), lo);
+        let lines = self.lines(self.config);
+        // SAFETY: the pool's table follows the slab's inside the region and
+        // ends below `lo`; `[lo, top + HEADER)` is the rest of the region,
+        // `top` is 16-aligned and at least a page above `lo`.
+        unsafe {
+            self.tlsf
+                .init(self.mem, pool_table, pages, (lo, top), lines);
+        }
         self.ready = true;
         self.note();
         Ok(())
@@ -230,21 +250,25 @@ impl Inner {
     }
 
     fn usable(&self) -> usize {
-        self.usable_end() - self.slab.lo
+        self.usable_end() - self.lo
     }
 
-    /// The lowest address the large side may claim.
-    pub(crate) fn large_floor_addr(&self) -> usize {
-        self.slab
-            .hi()
-            .max(self.slab.lo.saturating_add(self.config.small_floor))
-    }
-
-    /// The highest address the small side may reach.
-    fn small_limit_addr(&self) -> usize {
-        self.tlsf
-            .lo
-            .min(self.usable_end().saturating_sub(self.config.large_floor))
+    /// The two lines `config` draws: the lowest address a large block may
+    /// start at (16-aligned) and the highest address a page may end at.
+    ///
+    /// The first is the small floor's end, or 16 bytes above it when it lies
+    /// 16 bytes above a page boundary: no large block then leaves less than
+    /// a whole free block above the floor's last page, so the small side can
+    /// always take every whole page of its floor.
+    fn lines(&self, config: Config) -> Lines {
+        let floor = align_up(self.lo.saturating_add(config.small_floor), tlsf::GRANULE)
+            .unwrap_or(usize::MAX);
+        let floor = match floor - align_down(floor, PAGE) {
+            sliver @ 1..tlsf::MIN_BLOCK => floor + (tlsf::MIN_BLOCK - sliver),
+            _ => floor,
+        };
+        let page_limit = self.usable_end().saturating_sub(config.large_floor);
+        Lines { floor, page_limit }
     }
 
     pub(crate) fn note(&mut self) {
@@ -253,18 +277,31 @@ impl Inner {
         self.high_water = self.high_water.max(self.claimed());
     }
 
+    /// Bytes both sides hold: the slab's pages, the large blocks and the
+    /// pool's end marker.
     fn claimed(&self) -> usize {
-        self.slab.pages as usize * PAGE + self.tlsf.extent()
+        self.small_capacity() + self.large_capacity()
     }
 
+    fn small_capacity(&self) -> usize {
+        self.slab.pages as usize * PAGE
+    }
+
+    fn large_capacity(&self) -> usize {
+        self.tlsf.used_bytes + HEADER
+    }
+
+    /// Whether `addr` lies in a slab page.
     #[inline]
     fn in_small(&self, addr: usize) -> bool {
-        addr >= self.slab.lo && addr < self.slab.hi()
+        addr >= self.lo && self.tlsf.is_page(self.mem, align_down(addr, PAGE))
     }
 
+    /// Whether `addr` lies in the pool outside any slab page (a large block
+    /// or a scope chunk, once [`Self::in_small`] said no).
     #[inline]
     fn in_large(&self, addr: usize) -> bool {
-        addr >= self.tlsf.lo && addr < self.tlsf.top
+        addr >= self.lo && addr < self.top
     }
 
     /// The scope chunk of a scope object, or `None` for a plain large block.
@@ -286,8 +323,7 @@ impl Inner {
             return None;
         }
         let addr = if let Some(class) = slab::class_for(layout.size(), layout.align()) {
-            let limit = self.small_limit_addr();
-            let addr = self.slab.alloc(self.mem, class, limit);
+            let addr = self.slab.alloc(self.mem, &mut self.tlsf, class);
             if addr.is_none() {
                 self.small_failed += 1;
             }
@@ -301,8 +337,7 @@ impl Inner {
 
     /// Allocates from the large side regardless of size.
     pub(crate) fn alloc_large(&mut self, size: usize, align: usize, long: bool) -> Option<usize> {
-        let floor = self.large_floor_addr();
-        let addr = self.tlsf.alloc(self.mem, size, align, long, floor);
+        let addr = self.tlsf.alloc(self.mem, size, align, long);
         if addr.is_none() {
             self.large_failed += 1;
         }
@@ -316,7 +351,7 @@ impl Inner {
     pub(crate) unsafe fn free(&mut self, addr: usize, layout: Layout) {
         if self.in_small(addr) {
             // SAFETY: the address is a live slab object.
-            unsafe { self.slab.free(self.mem, addr) };
+            unsafe { self.slab.free(self.mem, &mut self.tlsf, addr) };
         } else if self.in_large(addr) {
             // SAFETY: the address is a live large allocation.
             unsafe {
@@ -331,8 +366,8 @@ impl Inner {
     /// Resizes an allocation on its owner's side; `None` leaves it intact.
     ///
     /// A large block grows in place into a free upper neighbour; failing
-    /// that, the pool's lowest block grows down into the gap (moving its
-    /// bytes); otherwise it moves to a new block.
+    /// that, it grows down into a free lower neighbour (moving its bytes);
+    /// otherwise it moves to a new block.
     ///
     /// # Safety
     /// `addr` must be a live allocation of this heap made with `layout`.
@@ -349,7 +384,7 @@ impl Inner {
             // SAFETY: both are live, distinct allocations of at least `keep` bytes.
             unsafe {
                 self.mem.copy(addr, to, keep);
-                self.slab.free(self.mem, addr);
+                self.slab.free(self.mem, &mut self.tlsf, addr);
             }
             return Some(to);
         }
@@ -367,10 +402,9 @@ impl Inner {
                 self.note();
                 return Some(addr);
             }
-            let floor = self.large_floor_addr();
-            if let Some(to) =
-                self.tlsf
-                    .grow_down(self.mem, addr, new_size, layout.align(), keep, floor)
+            if let Some(to) = self
+                .tlsf
+                .grow_down(self.mem, addr, new_size, layout.align(), keep)
             {
                 self.note();
                 return Some(to);
@@ -385,13 +419,11 @@ impl Inner {
     }
 
     fn free_large(&self) -> usize {
-        let blocks = self.tlsf.free_bytes - self.tlsf.free_blocks * HEADER;
-        blocks + self.tlsf.gap_payload(self.large_floor_addr())
+        self.tlsf.free_payload()
     }
 
     fn largest_free_large(&self) -> usize {
-        let block = self.tlsf.largest_free(self.mem).saturating_sub(HEADER);
-        block.max(self.tlsf.gap_payload(self.large_floor_addr()))
+        self.tlsf.largest_free(self.mem).saturating_sub(HEADER)
     }
 
     fn stats(&self) -> Stats {
@@ -406,34 +438,27 @@ impl Inner {
                 pages: self.slab.class_pages[i] as usize,
             };
         }
-        let small_limit = align_down(
-            self.usable_end()
-                .saturating_sub(self.config.large_floor)
-                .min(self.tlsf.lo)
-                .saturating_sub(self.slab.lo),
-            PAGE,
-        );
-        let large_limit = self.usable_end() - self.large_floor_addr().min(self.tlsf.lo);
+        let (small, large) = (self.small_capacity(), self.large_capacity());
         Stats {
             region: self.usable(),
             small: SideStats {
                 live: self.slab.live_bytes,
                 peak: self.small_peak,
-                capacity: self.slab.pages as usize * PAGE,
-                limit: small_limit,
+                capacity: small,
+                limit: small + self.tlsf.free_pages * PAGE,
                 failed: self.small_failed,
             },
             large: SideStats {
                 live: self.tlsf.used_bytes,
                 peak: self.large_peak,
-                capacity: self.tlsf.extent(),
-                limit: large_limit,
+                capacity: large,
+                limit: large + self.tlsf.filed_bytes,
                 failed: self.large_failed,
             },
             classes,
-            free_pages: self.slab.free_pages as usize,
+            free_pages: self.tlsf.free_pages,
             free_blocks: self.tlsf.free_blocks,
-            gap: self.tlsf.lo.saturating_sub(self.slab.hi()),
+            gap: self.tlsf.free_bytes,
             free_large: self.free_large(),
             largest_free_large: self.largest_free_large(),
             scope_cap_refusals: self.cap_refusals,
@@ -510,13 +535,17 @@ mod lock {
 /// A global allocator over one fixed region that never grows.
 ///
 /// Small layouts (up to 2 KiB at their natural alignment) live in size-class
-/// slab pages growing up from the bottom of the region; larger ones live in a
-/// TLSF pool growing down from the top. The boundary floats between the
-/// [`Config`] floors. Allocation and deallocation are O(1) on both sides (a
-/// large request that neither the good-fit search nor the gap can serve scans
-/// one free list before it fails, which keeps
-/// [`largest_free_large`](Self::largest_free_large) exact); exhaustion returns
-/// null; nothing ever asks the host for more memory.
+/// slab pages, larger ones in large blocks, and both are blocks of one TLSF
+/// pool over the whole region. The small side takes the lowest free page and
+/// gives a page back as soon as it is empty, wherever it lies; large blocks
+/// are carved from the top of free blocks; freed memory coalesces at once,
+/// so either side can use what the other gave back. The [`Config`] floors
+/// reserve one end of the region for each side. Allocation and deallocation
+/// are O(1) on both sides (a large request that the good-fit search cannot
+/// serve scans one free list before it fails, which keeps
+/// [`largest_free_large`](Self::largest_free_large) exact; taking a page
+/// reads a bitmap of one bit per page from the lowest free page up);
+/// exhaustion returns null; nothing ever asks the host for more memory.
 ///
 /// While a [`Scope`](crate::Scope) is active on the calling thread, allocations go to that
 /// scope's chunks instead (see [`Scope::run`](crate::Scope::run) and [`crate::Scoped`]).
@@ -646,6 +675,8 @@ impl FixedHeap {
 
     /// Replaces the floors. Nothing moves: the floors only bound future
     /// growth, so a side already beyond its new limit keeps what it has.
+    /// On an initialized heap this walks the region once (every block) to
+    /// file its free memory under the new floors.
     pub fn configure(&self, config: Config) -> Result<(), InitError> {
         self.with(|inner| {
             if inner.ready {
@@ -654,6 +685,8 @@ impl FixedHeap {
                 if requested > usable {
                     return Err(InitError::Floors { usable, requested });
                 }
+                let lines = inner.lines(config);
+                inner.tlsf.reconfigure(inner.mem, lines);
             }
             inner.config = config;
             Ok(())
@@ -685,7 +718,7 @@ impl FixedHeap {
     /// Whether `ptr` lies inside the heap's region.
     pub fn contains(&self, ptr: *const u8) -> bool {
         let addr = ptr.addr();
-        self.with(|inner| inner.ready && addr >= inner.slab.lo && addr < inner.usable_end())
+        self.with(|inner| inner.ready && addr >= inner.lo && addr < inner.usable_end())
     }
 
     /// Allocates `layout` with an explicit lifetime hint (ignored by the slab
@@ -766,9 +799,9 @@ impl FixedHeap {
         })
     }
 
-    /// Payload bytes the large side could hand out now: its free blocks and
-    /// the gap above the small floor. Several allocations each pay a 16-byte
-    /// header and cannot span free blocks.
+    /// Payload bytes the large side could hand out now: the free blocks above
+    /// the small floor, pages the small side gave back included. Several
+    /// allocations each pay a 16-byte header and cannot span free blocks.
     pub fn free_large(&self) -> usize {
         self.with(|inner| if inner.ready { inner.free_large() } else { 0 })
     }
@@ -801,7 +834,7 @@ impl FixedHeap {
         self.with(|inner| inner.stats())
     }
 
-    /// Highest bytes ever claimed by both sides together (never above the
+    /// Highest bytes both sides ever held together (never above the
     /// region).
     pub fn high_water(&self) -> usize {
         self.with(|inner| inner.high_water)

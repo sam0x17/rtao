@@ -5,11 +5,14 @@ memory must never grow.
 
 `FixedHeap` is a global allocator over one region chosen up front. It never
 asks the host for more memory; when the region is full, allocation returns
-null. Small objects (up to 2 KiB) live in size-class slab pages that grow up
-from the bottom of the region, larger blocks in a TLSF pool that grows down
-from the top, and the boundary floats between two configurable floors.
-Allocation and deallocation are O(1) on both sides, and all per-object
-metadata lives inside the region.
+null. Small objects (up to 2 KiB) live in size-class slab pages and larger
+blocks in a TLSF pool, and pages are blocks of that same pool: the small side
+takes the lowest free page and gives a page back as soon as it is empty,
+wherever it lies, large blocks are carved from the top, and freed memory
+coalesces at once, so neither side strands memory the other needs. Two
+configurable floors reserve one end of the region for each side. Allocation
+and deallocation are O(1) on both sides, and all per-object metadata lives
+inside the region.
 
 `Scope` and `Scoped` provide capped, chunked sub-arenas for transient work:
 while a scope is active its thread's allocations bump-allocate in it, and its
