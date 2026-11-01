@@ -94,14 +94,32 @@ impl Model {
         free(heap, p, 16, 1);
         let lo = p.addr();
         let end = lo + stats.region;
-        Self {
+        let mut model = Self {
             lo,
             end,
-            floor: (lo + small_floor).next_multiple_of(16),
-            page_limit: end - large_floor,
+            floor: lo,
+            page_limit: end,
             objects: vec![0; stats.region / PAGE_BYTES],
             large: BTreeMap::new(),
-        }
+        };
+        model.lines(small_floor, large_floor);
+        model
+    }
+
+    /// Draws the heap's two lines for these floors: the small floor's end
+    /// rounded up to 16 but not above the page limit, and down to its page
+    /// when it lies less than 32 bytes past one.
+    fn lines(&mut self, small_floor: usize, large_floor: usize) {
+        self.page_limit = self.end - large_floor;
+        let floor = (self.lo + small_floor)
+            .next_multiple_of(16)
+            .min(self.page_limit & !15);
+        let sliver = floor % PAGE_BYTES;
+        self.floor = if (1..32).contains(&sliver) {
+            floor - sliver
+        } else {
+            floor
+        };
     }
 
     fn page(&self, addr: usize) -> usize {
@@ -175,6 +193,16 @@ impl Model {
                 end.saturating_sub(start.max(self.floor))
                     .saturating_sub(BLOCK_HEADER)
             })
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// The most one run of the model's free memory holds above the page
+    /// limit, where no page may go.
+    fn largest_above_limit(&self) -> usize {
+        self.runs()
+            .iter()
+            .map(|&(start, end, _)| end.saturating_sub(start.max(self.page_limit)))
             .max()
             .unwrap_or(0)
     }
@@ -292,12 +320,22 @@ impl Run {
     }
 
     /// A large allocation: it must succeed whenever the model's free memory
-    /// has a run that holds it, and the heap's own prediction is exact.
+    /// has a run that holds it, the heap's own prediction is exact, and it
+    /// reaches above the page limit (into memory no page may use) whenever a
+    /// run there holds it with room for the size classes' rounding.
     fn large(&mut self, size: usize, align: usize, hint: Lifetime, what: &str) -> Option<Live> {
         let model = self.model.largest_large();
+        let above = self.model.largest_above_limit();
         let predicted = size <= self.heap.largest_free_large();
         let p = alloc(self.heap, size, align, hint);
         if align <= 16 {
+            let need = round16(size) + BLOCK_HEADER;
+            if above >= need + need / 16 + SLACK {
+                assert!(
+                    p.addr() + round16(size) > self.model.page_limit,
+                    "{what}: {size} B placed below the page limit with {above} B free above it"
+                );
+            }
             assert_eq!(
                 !p.is_null(),
                 predicted,
@@ -494,7 +532,9 @@ fn freed_pages_coalesce_with_free_large_blocks() {
 /// blocks up to 40.5 MB live, a vector doubled from 3.5 to 7 MiB and 5 MB
 /// buffers. While free pages returned to the large side only from the top of
 /// the slab, the large side could never reach below the slab's topmost page
-/// and the doubling failed.
+/// and the doubling failed. The large phase fits above the spike's pages, so
+/// it stays there and leaves the drained pages to the small side; the
+/// doubling and the buffers then take the drained pages.
 #[test]
 fn a_spike_of_small_objects_leaves_its_pages_to_large_blocks() {
     const MB: usize = 1_000_000;
@@ -576,6 +616,12 @@ fn a_spike_of_small_objects_leaves_its_pages_to_large_blocks() {
         run.large(size, 16, Lifetime::Short, "phase").unwrap();
     }
     run.check("the large phase");
+    assert!(
+        run.large
+            .iter()
+            .all(|l| l.ptr.addr() - BLOCK_HEADER >= spike_top),
+        "a block of the large phase among the drained pages"
+    );
     // A vector doubling from 56 KiB through 3.5 MiB to 7 MiB, as `Vec` grows.
     let mut v = run.large(56 << 10, 1, Lifetime::Short, "vector").unwrap();
     let index = run.large.len() - 1;
@@ -600,7 +646,7 @@ fn a_spike_of_small_objects_leaves_its_pages_to_large_blocks() {
          largest free {} B; {} large blocks served, {} refused",
         full.large.live, full.largest_free_large, run.served, run.refused,
     );
-    assert!(buffers >= 2);
+    assert!(buffers >= 1);
     // The large side holds more than the memory above the spike's top page:
     // it reuses pages the small side gave back below it.
     assert!(full.large.live > run.model.end - spike_top);
@@ -625,6 +671,200 @@ fn a_spike_of_small_objects_leaves_its_pages_to_large_blocks() {
         second.small.live, second.small.capacity, second.largest_free_large,
     );
     run.clear();
+}
+
+/// Large blocks take memory no page may use before memory the small side
+/// could use: after the small side filled everything below the page limit
+/// and was drained to one object on every eighth page, large blocks held
+/// through the next spike stay above the limit while it holds them, so the
+/// next spike gets every page back. Placed by best fit, they took the holes
+/// among the drained pages instead, and the next spike fell short by those
+/// pages with the memory above the limit still free.
+#[test]
+fn large_blocks_leave_drained_pages_to_the_next_spike() {
+    for hint in [Lifetime::Short, Lifetime::Long] {
+        for (bytes, large_floor, size) in
+            [(8 * MIB, 4 * MIB, 300_000), (16 * MIB, 6 * MIB, 700_000)]
+        {
+            let what = format!("{hint:?} {size} B blocks on {bytes} B");
+            let mut run = Run::new(bytes, 0, large_floor);
+            while run.small(MAX_SMALL).is_some() {}
+            let first = run.heap.stats().small.capacity;
+            assert!(
+                first + PAGE_BYTES > run.model.page_limit - run.model.lo,
+                "{what}"
+            );
+            let mut kept = BTreeSet::new();
+            let mut i = 0;
+            while i < run.small.len() {
+                let page = (run.small[i].ptr.addr() - run.model.lo) / PAGE_BYTES;
+                if page.is_multiple_of(8) && kept.insert(page) {
+                    i += 1;
+                } else {
+                    run.drop_small(i);
+                }
+            }
+            run.check(&what);
+            for _ in 0..8 {
+                let block = run.large(size, 16, hint, &what).unwrap();
+                assert!(
+                    block.ptr.addr() - BLOCK_HEADER >= run.model.page_limit,
+                    "{what}: a block among the drained pages"
+                );
+            }
+            while run.small(MAX_SMALL).is_some() {}
+            run.check(&what);
+            assert_eq!(run.heap.stats().small.capacity, first, "{what}");
+            run.clear();
+        }
+    }
+}
+
+/// The same with random object sizes, one survivor on a random part of the
+/// pages, a small floor, and random large blocks of either lifetime that
+/// together take up to three quarters of the memory above the limit.
+#[test]
+fn large_blocks_of_random_sizes_leave_drained_pages_to_the_next_spike() {
+    for seed in 1..=4 {
+        let what = format!("seed {seed}");
+        let mut rng = Rng(seed);
+        let large_floor = 5 * MIB;
+        let mut run = Run::new(12 * MIB, MIB, large_floor);
+        while run.small(small_size(&mut rng)).is_some() {}
+        let first = run.heap.stats().small.capacity;
+        let mut kept = BTreeSet::new();
+        let mut i = 0;
+        while i < run.small.len() {
+            let page = (run.small[i].ptr.addr() - run.model.lo) / PAGE_BYTES;
+            if page.is_multiple_of(rng.range(2, 8)) && kept.insert(page) {
+                i += 1;
+            } else {
+                run.drop_small(i);
+            }
+        }
+        run.check(&what);
+        let mut total = 0;
+        loop {
+            let size = large_size(&mut rng, MIB);
+            if total + size + BLOCK_HEADER > large_floor * 3 / 4 {
+                break;
+            }
+            let hint = if rng.chance(30) {
+                Lifetime::Long
+            } else {
+                Lifetime::Short
+            };
+            let block = run.large(size, 16, hint, &what).unwrap();
+            assert!(
+                block.ptr.addr() - BLOCK_HEADER >= run.model.page_limit,
+                "{what}: a block among the drained pages"
+            );
+            total += size + BLOCK_HEADER;
+        }
+        while run.small(small_size(&mut rng)).is_some() {}
+        run.check(&what);
+        assert_eq!(run.heap.stats().small.capacity, first, "{what}");
+        run.clear();
+    }
+}
+
+/// A long-lived block packs against the top: with no floors, it takes free
+/// memory above the slab's topmost page before a larger hole among the
+/// pages, and a hole only once nothing above holds it. Taking the largest
+/// free block, it settled among the pages, where it would split the free
+/// memory once they were given back.
+#[test]
+fn long_lived_blocks_pack_against_the_top_before_holes() {
+    let mut run = Run::new(8 * MIB, 0, 0);
+    run.large(3 * MIB, 16, Lifetime::Long, "top").unwrap();
+    while run.heap.largest_free_large() > 600 << 10 {
+        run.small(MAX_SMALL).unwrap();
+    }
+    let lo = run.model.lo;
+    let spike_top = run
+        .small
+        .iter()
+        .map(|l| (l.ptr.addr() & !(PAGE_BYTES - 1)) + PAGE_BYTES)
+        .max()
+        .unwrap();
+    // A 2 MiB hole in the middle of the pages, larger than the memory left
+    // above them.
+    let hole = lo + 16 * PAGE_BYTES..lo + 48 * PAGE_BYTES;
+    let mut i = 0;
+    while i < run.small.len() {
+        if hole.contains(&run.small[i].ptr.addr()) {
+            run.drop_small(i);
+        } else {
+            i += 1;
+        }
+    }
+    run.check("the hole");
+    assert_eq!(
+        run.heap.largest_free_large(),
+        32 * PAGE_BYTES - BLOCK_HEADER
+    );
+    let above = run
+        .model
+        .runs()
+        .iter()
+        .find(|r| r.0 == spike_top)
+        .map_or(0, |r| r.1 - r.0);
+    assert!(
+        above < 600 << 10 && above > 300_000 + 2 * BLOCK_HEADER,
+        "{above}"
+    );
+    let long = run.large(300_000, 16, Lifetime::Long, "long").unwrap();
+    assert!(
+        long.ptr.addr() > spike_top,
+        "a long-lived block among the pages"
+    );
+    // Nothing above holds a second one: it takes the hole.
+    let second = run.large(300_000, 16, Lifetime::Long, "second").unwrap();
+    assert!(hole.contains(&second.ptr.addr()));
+    run.check("both placed");
+    run.clear();
+}
+
+/// The floors' guarantees hold to the byte when the two floors fill the
+/// region and the small floor ends a few bytes past a page boundary: the
+/// large side reaches `large_floor` less two headers, and the small side
+/// every whole page of `small_floor`. (A line moved 16 bytes up for the
+/// sliver left the large side 16 bytes short.)
+#[test]
+fn floors_that_fill_the_region_keep_both_guarantees_to_the_byte() {
+    let heap = heap(4 * MIB, 0, 0);
+    let region = heap.stats().region;
+    for sliver in [0, 8, 16, 17, 24, 31, 32, 40, 48] {
+        let small_floor = 3 * PAGE_BYTES + sliver;
+        let large_floor = region - small_floor;
+        heap.configure(Config::new(small_floor, large_floor))
+            .unwrap();
+        let largest = heap.largest_free_large();
+        assert!(
+            largest >= large_floor - 2 * BLOCK_HEADER,
+            "sliver {sliver}: the large side reaches {largest} B of its {large_floor} B floor"
+        );
+        let big = alloc(heap, large_floor - 2 * BLOCK_HEADER, 16, Lifetime::Short);
+        assert!(!big.is_null(), "sliver {sliver}");
+        let small: Vec<*mut u8> = (0..)
+            .map(|_| alloc(heap, MAX_SMALL, 8, Lifetime::Short))
+            .take_while(|p| !p.is_null())
+            .collect();
+        assert_eq!(
+            small.len(),
+            3 * PAGE_BYTES / MAX_SMALL,
+            "sliver {sliver}: the small side's whole pages"
+        );
+        for p in small {
+            free(heap, p, MAX_SMALL, 8);
+        }
+        free(heap, big, large_floor - 2 * BLOCK_HEADER, 16);
+        let stats = heap.stats();
+        assert_eq!(
+            (stats.small.live, stats.large.live, stats.free_blocks),
+            (0, 0, 1)
+        );
+    }
 }
 
 /// Phases of small spikes and drains and large spikes and drains, with
@@ -729,6 +969,13 @@ fn mixed_phases_with_floors() {
 }
 
 #[test]
+fn mixed_phases_with_a_large_floor() {
+    for seed in 21..=23 {
+        mixed(seed, 24 * MIB, 0, 8 * MIB, 20);
+    }
+}
+
+#[test]
 fn configure_refiles_free_memory_under_new_floors() {
     let mut run = Run::new(8 * MIB, 0, 0);
     let mut rng = Rng(5);
@@ -751,8 +998,7 @@ fn configure_refiles_free_memory_under_new_floors() {
     run.heap
         .configure(Config::new(small_floor, large_floor))
         .unwrap();
-    run.model.floor = (run.model.lo + small_floor).next_multiple_of(16);
-    run.model.page_limit = run.model.end - large_floor;
+    run.model.lines(small_floor, large_floor);
     run.check("raised");
     let raised = run.heap.stats();
     assert!(raised.free_large < before.free_large);
@@ -770,8 +1016,7 @@ fn configure_refiles_free_memory_under_new_floors() {
         run.drop_small(run.small.len() - 1);
     }
     run.heap.configure(Config::DEFAULT).unwrap();
-    run.model.floor = run.model.lo;
-    run.model.page_limit = run.model.end;
+    run.model.lines(0, 0);
     run.check("lowered");
     run.clear();
 }

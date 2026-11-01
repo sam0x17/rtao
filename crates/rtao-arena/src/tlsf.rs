@@ -25,6 +25,23 @@
 //! page's word names the block; the lowest mark is therefore the lowest free
 //! page in the region. A page is given only with nothing, or a whole free
 //! block of at least [`MIN_BLOCK`] bytes, left on each side of it.
+//!
+//! The large side prefers high addresses, so the two sides do not strand
+//! each other. Free blocks are filed in three sets of lists: those that
+//! reach above the page limit, into memory no page may use; the other open
+//! ones, at or above the slab's topmost page (anywhere while the slab holds
+//! no page); and the holes below it, among the pages. Every large block
+//! takes memory no page may use whenever a block there fits, so it never
+//! takes pages from the small side while that memory is free. Beyond it a
+//! long-lived block packs against the top (the open blocks before the
+//! holes), and any other block takes the best fit of the two (where both
+//! sides may take memory, a block costs the small side about the same pages
+//! wherever it lies, and the best fit keeps the larger runs for larger
+//! blocks). A free block keeps the set it was filed in until it is next
+//! split, merged or refiled. The page limit moves only when every free
+//! block is refiled, but when the slab's topmost page moves the blocks it
+//! passes keep their set: that keeps every operation O(1) and changes only
+//! which fit is preferred, never whether one is found.
 
 #![allow(unsafe_code)]
 
@@ -52,6 +69,9 @@ const PREV_FREE: usize = 2;
 pub(crate) const TAG: usize = 4;
 /// The block was allocated with [`crate::Lifetime::Long`].
 const LONG: usize = 8;
+/// On a free block (where [`LONG`] has no meaning): the block is filed among
+/// the holes.
+const HOLE: usize = 8;
 /// All flag bits.
 pub(crate) const FLAGS: usize = 15;
 
@@ -105,13 +125,125 @@ pub(crate) struct Lines {
     pub(crate) page_limit: usize,
 }
 
-/// The pool's control structure. It lives outside the region and has a fixed
-/// size; the per-page words and the bitmap live in the region's table, and
-/// no per-allocation metadata lives outside the region.
-pub(crate) struct Tlsf {
+/// The set of lists for free blocks that reach above the page limit, into
+/// memory only the large side may use.
+const TOP: usize = 0;
+/// The set of lists for the other free blocks at or above the slab's topmost
+/// page.
+const OPEN: usize = 1;
+/// The set of lists for free blocks below the slab's topmost page, among the
+/// pages.
+const HOLES: usize = 2;
+/// Every set, in the order a long-lived block prefers them.
+const SETS: [usize; 3] = [TOP, OPEN, HOLES];
+
+/// One set of segregated free lists and its two-level bitmap.
+struct Lists {
     fl_bitmap: usize,
     sl_bitmap: [u32; FL_COUNT],
     heads: [[usize; SL_COUNT]; FL_COUNT],
+}
+
+impl Lists {
+    const fn new() -> Self {
+        Self {
+            fl_bitmap: 0,
+            sl_bitmap: [0; FL_COUNT],
+            heads: [[0; SL_COUNT]; FL_COUNT],
+        }
+    }
+
+    /// Pushes `block` on the list for `filed` bytes.
+    ///
+    /// # Safety
+    /// `block` must be a free block of this pool, with room for its links,
+    /// that is on no list; every block on these lists is free.
+    unsafe fn push(&mut self, mem: Mem, block: usize, filed: usize) {
+        let (fl, sl) = mapping_insert(filed);
+        let head = self.heads[fl][sl];
+        // SAFETY: a free block's links live in its payload; `head` is a free
+        // block on this list.
+        unsafe {
+            mem.set_word(block + NEXT_FREE_OFF, head);
+            mem.set_word(block + PREV_FREE_OFF, 0);
+            if head != 0 {
+                mem.set_word(head + PREV_FREE_OFF, block);
+            }
+        }
+        self.heads[fl][sl] = block;
+        self.fl_bitmap |= 1 << fl;
+        self.sl_bitmap[fl] |= 1 << sl;
+    }
+
+    /// Unlinks `block` from the list for `filed` bytes.
+    ///
+    /// # Safety
+    /// `block` must be on the list [`Self::push`] put it on for `filed`.
+    unsafe fn unlink(&mut self, mem: Mem, block: usize, filed: usize) {
+        // SAFETY: `block` and its neighbours on the list are free blocks
+        // whose links are valid.
+        unsafe {
+            let (next, prev) = (
+                mem.word(block + NEXT_FREE_OFF),
+                mem.word(block + PREV_FREE_OFF),
+            );
+            let (fl, sl) = mapping_insert(filed);
+            if next != 0 {
+                mem.set_word(next + PREV_FREE_OFF, prev);
+            }
+            if prev != 0 {
+                mem.set_word(prev + NEXT_FREE_OFF, next);
+            }
+            if self.heads[fl][sl] == block {
+                self.heads[fl][sl] = next;
+                if next == 0 {
+                    self.sl_bitmap[fl] &= !(1 << sl);
+                    if self.sl_bitmap[fl] == 0 {
+                        self.fl_bitmap &= !(1 << fl);
+                    }
+                }
+            }
+        }
+    }
+
+    /// The O(1) good-fit search: the head of the first non-empty list whose
+    /// every block holds at least `need` bytes, and that list's index (lower
+    /// is a better fit).
+    fn good_fit(&self, need: usize) -> Option<(usize, usize)> {
+        let (fl, sl) = mapping_search(need)?;
+        if fl >= FL_COUNT {
+            return None;
+        }
+        let mut sl_map = self.sl_bitmap[fl] & (!0u32).checked_shl(sl as u32).unwrap_or(0);
+        let mut fl = fl;
+        if sl_map == 0 {
+            let fl_map = self.fl_bitmap & (!0usize).checked_shl(fl as u32 + 1).unwrap_or(0);
+            if fl_map == 0 {
+                return None;
+            }
+            fl = fl_map.trailing_zeros() as usize;
+            sl_map = self.sl_bitmap[fl];
+        }
+        let sl = sl_map.trailing_zeros() as usize;
+        Some((self.heads[fl][sl], fl * SL_COUNT + sl))
+    }
+
+    /// The head of the highest non-empty list, if any.
+    fn highest(&self) -> Option<usize> {
+        if self.fl_bitmap == 0 {
+            return None;
+        }
+        let fl = fls(self.fl_bitmap) as usize;
+        Some(self.heads[fl][fls(self.sl_bitmap[fl] as usize) as usize])
+    }
+}
+
+/// The pool's control structure. It lives outside the region and has a fixed
+/// size; the per-page words and the bitmaps live in the region's table, and
+/// no per-allocation metadata lives outside the region.
+pub(crate) struct Tlsf {
+    /// The free lists: [`TOP`], [`OPEN`] and [`HOLES`].
+    lists: [Lists; 3],
     /// Address of the first page, the pool's lowest block.
     pub(crate) lo: usize,
     /// Address of the sentinel header (the pool's top).
@@ -122,6 +254,12 @@ pub(crate) struct Tlsf {
     bitmap: usize,
     /// Index of the lowest bitmap word that may have a bit set.
     bitmap_hint: usize,
+    /// Address of the slab-page bitmap (one bit per page, set while the page
+    /// is a slab page).
+    slab_map: usize,
+    /// End of the slab's topmost page, or `lo` while it holds none: free
+    /// blocks below it are holes.
+    slab_top: usize,
     /// Whole pages between `lo` and `top`.
     pub(crate) pages: usize,
     /// The lowest address a large block may start at (16-aligned).
@@ -148,14 +286,14 @@ pub(crate) struct Tlsf {
 impl Tlsf {
     pub(crate) const fn new() -> Self {
         Self {
-            fl_bitmap: 0,
-            sl_bitmap: [0; FL_COUNT],
-            heads: [[0; SL_COUNT]; FL_COUNT],
+            lists: [Lists::new(), Lists::new(), Lists::new()],
             lo: 0,
             top: 0,
             words: 0,
             bitmap: 0,
             bitmap_hint: 0,
+            slab_map: 0,
+            slab_top: 0,
             pages: 0,
             floor: 0,
             page_limit: 0,
@@ -169,9 +307,10 @@ impl Tlsf {
         }
     }
 
-    /// Table bytes the pool needs for `pages` pages (word-aligned).
+    /// Table bytes the pool needs for `pages` pages (word-aligned): the
+    /// per-page words and two bitmaps.
     pub(crate) const fn table_bytes(pages: usize) -> usize {
-        pages * WORD + pages.div_ceil(WORD_BITS) * WORD
+        pages * WORD + 2 * pages.div_ceil(WORD_BITS) * WORD
     }
 
     /// Sets up a pool that is one free block from `lo` (page-aligned) to the
@@ -197,6 +336,8 @@ impl Tlsf {
         self.top = top;
         self.words = table;
         self.bitmap = table + pages * WORD;
+        self.slab_map = self.bitmap + pages.div_ceil(WORD_BITS) * WORD;
+        self.slab_top = lo;
         self.pages = pages;
         self.floor = lines.floor;
         self.page_limit = lines.page_limit;
@@ -206,7 +347,7 @@ impl Tlsf {
             for page in 0..pages {
                 mem.set_word(self.words + page * WORD, 0);
             }
-            for word in 0..pages.div_ceil(WORD_BITS) {
+            for word in 0..2 * pages.div_ceil(WORD_BITS) {
                 mem.set_word(self.bitmap + word * WORD, 0);
             }
             mem.set_word(top + PREV_OFF, 0);
@@ -388,31 +529,33 @@ impl Tlsf {
 
     // ---- free lists -----------------------------------------------------
 
-    /// Files `block` as free, `size` bytes long.
+    /// Files `block` as free, `size` bytes long, in its set: [`TOP`] if it
+    /// reaches above the page limit, else [`HOLES`] if it lies below the
+    /// slab's topmost page, else [`OPEN`].
     ///
     /// # Safety
     /// `block` must be a free block of `size` bytes, between used blocks (or
     /// the pool's ends), that is on no list.
     unsafe fn insert(&mut self, mem: Mem, block: usize, size: usize) {
-        // SAFETY: a free block's header is in the region; its links live in
-        // its payload; `head` is a free block; a first page lies inside the
-        // block at least `MIN_BLOCK` bytes above its header and links.
+        let set = if block + size > self.page_limit {
+            TOP
+        } else if block < self.slab_top {
+            HOLES
+        } else {
+            OPEN
+        };
+        // SAFETY: a free block's header is in the region; a filed block holds
+        // at least `MIN_BLOCK` bytes, so its links fit in its payload; a first
+        // page lies inside the block at least `MIN_BLOCK` bytes above its
+        // header and links.
         unsafe {
-            Self::set_header(mem, block, size, FREE);
+            let flags = if set == HOLES { FREE | HOLE } else { FREE };
+            Self::set_header(mem, block, size, flags);
             self.free_bytes += size;
             self.free_blocks += 1;
             let filed = self.filed(block, size);
             if filed != 0 {
-                let (fl, sl) = mapping_insert(filed);
-                let head = self.heads[fl][sl];
-                mem.set_word(block + NEXT_FREE_OFF, head);
-                mem.set_word(block + PREV_FREE_OFF, 0);
-                if head != 0 {
-                    mem.set_word(head + PREV_FREE_OFF, block);
-                }
-                self.heads[fl][sl] = block;
-                self.fl_bitmap |= 1 << fl;
-                self.sl_bitmap[fl] |= 1 << sl;
+                self.lists[set].push(mem, block, filed);
                 self.filed_bytes += filed;
                 self.filed_blocks += 1;
             }
@@ -431,31 +574,21 @@ impl Tlsf {
     /// current lines.
     unsafe fn remove(&mut self, mem: Mem, block: usize) {
         // SAFETY: `block` is free, so its header and (if filed) its links are
-        // valid; neighbours on a free list are free blocks.
+        // valid. Its set is [`TOP`] if it reaches above the page limit (the
+        // limit and the block's size are as they were when it was filed),
+        // else the one its `HOLE` flag names.
         unsafe {
             let size = Self::size(mem, block);
             let filed = self.filed(block, size);
             if filed != 0 {
-                let (next, prev) = (
-                    mem.word(block + NEXT_FREE_OFF),
-                    mem.word(block + PREV_FREE_OFF),
-                );
-                let (fl, sl) = mapping_insert(filed);
-                if next != 0 {
-                    mem.set_word(next + PREV_FREE_OFF, prev);
-                }
-                if prev != 0 {
-                    mem.set_word(prev + NEXT_FREE_OFF, next);
-                }
-                if self.heads[fl][sl] == block {
-                    self.heads[fl][sl] = next;
-                    if next == 0 {
-                        self.sl_bitmap[fl] &= !(1 << sl);
-                        if self.sl_bitmap[fl] == 0 {
-                            self.fl_bitmap &= !(1 << fl);
-                        }
-                    }
-                }
+                let set = if block + size > self.page_limit {
+                    TOP
+                } else if Self::flags(mem, block) & HOLE != 0 {
+                    HOLES
+                } else {
+                    OPEN
+                };
+                self.lists[set].unlink(mem, block, filed);
                 self.filed_bytes -= filed;
                 self.filed_blocks -= 1;
             }
@@ -487,6 +620,42 @@ impl Tlsf {
         }
     }
 
+    /// Sets or clears the slab-page bit of the page at `page`.
+    ///
+    /// # Safety
+    /// `page` must be a page of this pool.
+    unsafe fn mark_slab(&mut self, mem: Mem, page: usize, on: bool) {
+        let index = (page - self.lo) / PAGE;
+        let bit = 1usize << (index % WORD_BITS);
+        let addr = self.slab_map + index / WORD_BITS * WORD;
+        // SAFETY: the word is inside the slab-page bitmap.
+        unsafe {
+            let value = mem.word(addr);
+            mem.set_word(addr, if on { value | bit } else { value & !bit });
+        }
+    }
+
+    /// The end of the highest slab page below `page`, or `lo` if there is
+    /// none. It reads the slab-page bitmap downward from `page`, one word
+    /// per 64 pages.
+    fn top_below(&self, mem: Mem, page: usize) -> usize {
+        let index = (page - self.lo) / PAGE;
+        let mut word = index / WORD_BITS;
+        let mut below = (1usize << (index % WORD_BITS)) - 1;
+        loop {
+            // SAFETY: the word is inside the slab-page bitmap.
+            let bits = unsafe { mem.word(self.slab_map + word * WORD) } & below;
+            if bits != 0 {
+                return self.lo + (word * WORD_BITS + fls(bits) as usize + 1) * PAGE;
+            }
+            if word == 0 {
+                return self.lo;
+            }
+            word -= 1;
+            below = !0;
+        }
+    }
+
     /// The lowest marked page: the lowest page any free block could give.
     fn lowest_page(&mut self, mem: Mem) -> Option<usize> {
         let words = self.pages.div_ceil(WORD_BITS);
@@ -502,45 +671,54 @@ impl Tlsf {
         None
     }
 
-    /// The O(1) good-fit search: the head of the first non-empty list whose
-    /// every block holds at least `need` bytes.
-    fn good_fit(&self, need: usize) -> Option<usize> {
-        let (fl, sl) = mapping_search(need)?;
-        if fl >= FL_COUNT {
-            return None;
-        }
-        let mut sl_map = self.sl_bitmap[fl] & (!0u32).checked_shl(sl as u32).unwrap_or(0);
-        let mut fl = fl;
-        if sl_map == 0 {
-            let fl_map = self.fl_bitmap & (!0usize).checked_shl(fl as u32 + 1).unwrap_or(0);
-            if fl_map == 0 {
-                return None;
-            }
-            fl = fl_map.trailing_zeros() as usize;
-            sl_map = self.sl_bitmap[fl];
-        }
-        Some(self.heads[fl][sl_map.trailing_zeros() as usize])
-    }
-
-    /// The head of the highest non-empty list, if it holds `need` bytes: a
-    /// block of the largest size class, found in O(1).
-    fn largest_head(&self, mem: Mem, need: usize) -> Option<usize> {
-        if self.fl_bitmap == 0 {
-            return None;
-        }
-        let fl = fls(self.fl_bitmap) as usize;
-        let block = self.heads[fl][fls(self.sl_bitmap[fl] as usize) as usize];
+    /// The head of the highest non-empty list of `set`, if it holds `need`
+    /// bytes: a block of the set's largest size class, found in O(1).
+    fn largest_head(&self, mem: Mem, set: usize, need: usize) -> Option<usize> {
+        let block = self.lists[set].highest()?;
         // SAFETY: blocks on a free list are free blocks of this pool.
         let size = unsafe { Self::size(mem, block) };
         (self.filed(block, size) >= need).then_some(block)
     }
 
-    /// Scans the list `need` falls in for a block the good-fit search skips
-    /// (one in the same list, at least `need` bytes). Only an allocation that
-    /// would otherwise fail runs it; it keeps [`Self::largest_free`] exact.
-    fn scan(&self, mem: Mem, need: usize) -> Option<usize> {
+    /// The O(1) search for a block of `need` bytes.
+    ///
+    /// A long-lived block takes a block of the largest size class of the
+    /// first set that has one large enough: memory only the large side may
+    /// use, then memory above the slab's topmost page, then the holes among
+    /// the pages. (Where the largest class is too small, no good fit in the
+    /// set exists either.)
+    ///
+    /// Any other block takes the good fit among the blocks that reach above
+    /// the page limit, or failing that the better of the good fits above
+    /// and below the slab's topmost page (the one above on a tie). Where
+    /// both sides may take memory, a large block costs the small side about
+    /// the same pages wherever it lies, so the best fit keeps the larger
+    /// free runs for larger blocks.
+    fn fit(&self, mem: Mem, need: usize, long: bool) -> Option<usize> {
+        if long {
+            return SETS
+                .into_iter()
+                .find_map(|set| self.largest_head(mem, set, need));
+        }
+        if let Some((block, _)) = self.lists[TOP].good_fit(need) {
+            return Some(block);
+        }
+        match (
+            self.lists[OPEN].good_fit(need),
+            self.lists[HOLES].good_fit(need),
+        ) {
+            (Some((open, a)), Some((hole, b))) => Some(if b < a { hole } else { open }),
+            (open, hole) => open.or(hole).map(|(block, _)| block),
+        }
+    }
+
+    /// Scans the list of `set` that `need` falls in for a block the good-fit
+    /// search skips (one in the same list, at least `need` bytes). Only an
+    /// allocation that would otherwise fail runs it; it keeps
+    /// [`Self::largest_free`] exact.
+    fn scan(&self, mem: Mem, set: usize, need: usize) -> Option<usize> {
         let (fl, sl) = mapping_insert(need);
-        let mut block = self.heads[fl][sl];
+        let mut block = self.lists[set].heads[fl][sl];
         while block != 0 {
             // SAFETY: blocks on a free list are free blocks of this pool.
             unsafe {
@@ -556,11 +734,13 @@ impl Tlsf {
     // ---- allocation -----------------------------------------------------
 
     /// Allocates `size` payload bytes aligned to `align` (a power of two) at
-    /// or above the floor. A long-lived block takes the top of a free block
-    /// of the largest size class, so it packs against the blocks above the
-    /// largest free run and leaves holes to transients; any other block
-    /// takes the top of the best-fitting free block. Returns the payload
-    /// address.
+    /// or above the floor, from the top of the free block [`Self::fit`]
+    /// chooses. A block that reaches above the page limit is taken whenever
+    /// one fits, so the large side fills the memory pages may never use
+    /// before any the small side could. A long-lived block then prefers
+    /// memory above the slab's topmost page to the holes among the pages, so
+    /// it packs against the top and never settles among the pages while the
+    /// memory above them can hold it. Returns the payload address.
     pub(crate) fn alloc(
         &mut self,
         mem: Mem,
@@ -576,14 +756,9 @@ impl Tlsf {
             size.checked_add(align + MIN_BLOCK - GRANULE)?
         };
         let need = payload.checked_add(HEADER)?;
-        let block = if long {
-            self.largest_head(mem, need)
-        } else {
-            None
-        };
-        let block = block
-            .or_else(|| self.good_fit(need))
-            .or_else(|| self.scan(mem, need))?;
+        let block = self
+            .fit(mem, need, long)
+            .or_else(|| SETS.into_iter().find_map(|set| self.scan(mem, set, need)))?;
         // SAFETY: a filed free block with room for `size` bytes at `align`
         // above the floor.
         Some(unsafe { self.place(mem, block, size, align, long) })
@@ -854,6 +1029,8 @@ impl Tlsf {
             let block = mem.word(self.word_of(page));
             let end = block + Self::size(mem, block);
             self.remove(mem, block);
+            self.mark_slab(mem, page, true);
+            self.slab_top = self.slab_top.max(page + PAGE);
             let prev = if page > block {
                 self.insert(mem, block, page - block);
                 block
@@ -873,7 +1050,8 @@ impl Tlsf {
     }
 
     /// Gives the slab page at `page` back, coalescing it at once with free
-    /// neighbours.
+    /// neighbours. When it was the slab's topmost page, the next one down
+    /// becomes the topmost.
     ///
     /// # Safety
     /// `page` must be a slab page taken with [`Self::take_page`] that holds
@@ -886,6 +1064,10 @@ impl Tlsf {
             let word = self.word_of(page);
             let prev = mem.word(word) & !PAGE_BLOCK;
             mem.set_word(word, 0);
+            self.mark_slab(mem, page, false);
+            if page + PAGE == self.slab_top {
+                self.slab_top = self.top_below(mem, page);
+            }
             let (mut block, mut size) = (page, PAGE);
             if prev != 0 {
                 self.remove(mem, prev);
@@ -906,18 +1088,15 @@ impl Tlsf {
 
     /// The largest filed size of a free block (headers included), or 0.
     pub(crate) fn largest_free(&self, mem: Mem) -> usize {
-        if self.fl_bitmap == 0 {
-            return 0;
-        }
-        let fl = fls(self.fl_bitmap) as usize;
-        let sl = fls(self.sl_bitmap[fl] as usize) as usize;
         let mut best = 0;
-        let mut block = self.heads[fl][sl];
-        while block != 0 {
-            // SAFETY: blocks on a free list are free blocks of this pool.
-            unsafe {
-                best = best.max(self.filed(block, Self::size(mem, block)));
-                block = mem.word(block + NEXT_FREE_OFF);
+        for set in SETS {
+            let mut block = self.lists[set].highest().unwrap_or(0);
+            while block != 0 {
+                // SAFETY: blocks on a free list are free blocks of this pool.
+                unsafe {
+                    best = best.max(self.filed(block, Self::size(mem, block)));
+                    block = mem.word(block + NEXT_FREE_OFF);
+                }
             }
         }
         best
@@ -978,5 +1157,41 @@ mod tests {
         assert_eq!(pool.pages_of(lo, 4 * PAGE), Some((lo, 2)));
         pool.page_limit = lo + PAGE - 1;
         assert_eq!(pool.pages_of(lo, 4 * PAGE), Some((lo, 0)));
+    }
+
+    #[test]
+    fn top_below_finds_the_next_slab_page_down_across_words() {
+        let pages = 3 * WORD_BITS + 5;
+        let mut map = std::vec![0usize; pages.div_ceil(WORD_BITS)];
+        let mut pool = Tlsf::new();
+        let lo = 16 * PAGE;
+        pool.lo = lo;
+        pool.pages = pages;
+        pool.slab_map = map.as_mut_ptr().addr();
+        let mem = Mem::new(map.as_mut_ptr().cast());
+        let page = |i: usize| lo + i * PAGE;
+        let end = |i: usize| lo + (i + 1) * PAGE;
+        // SAFETY: every page index is below `pages`, so each bit lies in `map`.
+        unsafe {
+            for i in [0, 1, WORD_BITS - 1, 2 * WORD_BITS + 3, pages - 1] {
+                pool.mark_slab(mem, page(i), true);
+            }
+            assert_eq!(pool.top_below(mem, page(pages - 1)), end(2 * WORD_BITS + 3));
+            assert_eq!(
+                pool.top_below(mem, page(2 * WORD_BITS + 3)),
+                end(WORD_BITS - 1)
+            );
+            assert_eq!(pool.top_below(mem, page(2 * WORD_BITS)), end(WORD_BITS - 1));
+            assert_eq!(pool.top_below(mem, page(WORD_BITS)), end(WORD_BITS - 1));
+            assert_eq!(pool.top_below(mem, page(WORD_BITS - 1)), end(1));
+            assert_eq!(pool.top_below(mem, page(1)), end(0));
+            assert_eq!(pool.top_below(mem, page(0)), lo);
+            pool.mark_slab(mem, page(WORD_BITS - 1), false);
+            pool.mark_slab(mem, page(1), false);
+            assert_eq!(pool.top_below(mem, page(2 * WORD_BITS + 3)), end(0));
+            pool.mark_slab(mem, page(0), false);
+            assert_eq!(pool.top_below(mem, page(pages - 1)), end(2 * WORD_BITS + 3));
+            assert_eq!(pool.top_below(mem, page(WORD_BITS)), lo);
+        }
     }
 }

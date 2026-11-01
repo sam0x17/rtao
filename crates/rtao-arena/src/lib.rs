@@ -24,16 +24,23 @@
 //!   same two-level segregated fit pool, with O(1) good-fit search and
 //!   immediate coalescing: a freed block or page merges with its free
 //!   neighbours, whatever they held. Blocks are carved from the top of a free
-//!   block, so the large side grows down from the top of the region while the
-//!   small side fills it from the bottom. [`Lifetime::Short`] blocks (the
-//!   default) take the best-fitting free block, so transients reuse holes;
-//!   [`Lifetime::Long`] blocks take a block of the largest size class, packing
-//!   against the large blocks above the largest free run and leaving holes to
-//!   transients. Alignment up to 64 KiB and beyond works.
+//!   block, from one reaching into the large floor (where no page may go)
+//!   whenever one holds them, so the large side grows down from the top of
+//!   the region while the small side fills it from the bottom, and takes
+//!   memory the small side could use only when memory only it can use
+//!   cannot hold the block. Beyond that, [`Lifetime::Short`] blocks (the
+//!   default) take the best-fitting free block, so transients reuse holes
+//!   and leave the larger free runs to larger blocks; [`Lifetime::Long`]
+//!   blocks take a block of the largest size class above the slab's topmost
+//!   page before any hole among the pages, packing against the large blocks
+//!   above. Alignment up to 64 KiB and beyond works.
 //! - **Floors.** [`Config::small_floor`] and [`Config::large_floor`] are the
 //!   only split configuration. Each reserves one end of the region for one
 //!   side, so that side can always reach its floor; between them, free memory
-//!   belongs to whichever side asks for it.
+//!   belongs to whichever side asks for it. A floor is a minimum, and also
+//!   the other side's ceiling: the small side never holds more pages than
+//!   the region less the large floor. Set each floor to the least its side
+//!   must always reach, not to its peak.
 //! - **Scopes.** A [`Scope`] is a capped sub-arena carved from the large side
 //!   in chunks. While it is active ([`Scope::run`], [`Scoped`]) global
 //!   allocations bump-allocate in it; dealloc finds the chunk by address, and

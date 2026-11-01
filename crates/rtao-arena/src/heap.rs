@@ -19,12 +19,19 @@ const WORD: usize = size_of::<usize>();
 /// The split configuration of a [`FixedHeap`]: the two floors.
 ///
 /// The floors are minimum guarantees. No slab page lies in the top
-/// `large_floor` bytes of the region and no large block in the bottom
-/// `small_floor` bytes, so the large side can always reach `large_floor`
-/// contiguous bytes (less two block headers) and the small side every whole
-/// page of `small_floor`. Between the floors neither side owns an address
-/// range: free pages and free large blocks are one pool both sides draw
-/// from.
+/// `large_floor` bytes of the region, and no large block starts in the
+/// bottom `small_floor` bytes (save in at most their last 31 bytes, past
+/// their last whole page, where no page fits), so the large side can always
+/// reach `large_floor` contiguous bytes (less two block headers) and the
+/// small side every whole page of `small_floor`. Between the floors neither
+/// side owns an address range: free pages and free large blocks are one
+/// pool both sides draw from.
+///
+/// Each floor also caps the other side: the small side can hold at most the
+/// region less `large_floor` in pages, and the large side about the region
+/// less `small_floor`. Set each floor to the least its side must always be
+/// able to reach, not to its expected peak; free memory between the floors
+/// serves whichever side asks for it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Config {
     /// Bytes at the bottom of the region that the large side never claims.
@@ -256,18 +263,23 @@ impl Inner {
     /// The two lines `config` draws: the lowest address a large block may
     /// start at (16-aligned) and the highest address a page may end at.
     ///
-    /// The first is the small floor's end, or 16 bytes above it when it lies
-    /// 16 bytes above a page boundary: no large block then leaves less than
-    /// a whole free block above the floor's last page, so the small side can
-    /// always take every whole page of its floor.
+    /// The first is the small floor's end rounded up to 16 bytes, but never
+    /// above the page limit (the floors may fill the region), and the page
+    /// boundary below that when it lies less than [`tlsf::MIN_BLOCK`] bytes
+    /// above one: a large block starting in such a sliver would leave too
+    /// little above the floor's last whole page for a free block, and the
+    /// small side could not take that page. A sliver could never be a page,
+    /// so the small side keeps every whole page of its floor; the line stays
+    /// at or below the page limit, so the large side keeps all of its floor.
     fn lines(&self, config: Config) -> Lines {
+        let page_limit = self.usable_end().saturating_sub(config.large_floor);
         let floor = align_up(self.lo.saturating_add(config.small_floor), tlsf::GRANULE)
-            .unwrap_or(usize::MAX);
+            .unwrap_or(usize::MAX)
+            .min(align_down(page_limit, tlsf::GRANULE));
         let floor = match floor - align_down(floor, PAGE) {
-            sliver @ 1..tlsf::MIN_BLOCK => floor + (tlsf::MIN_BLOCK - sliver),
+            1..tlsf::MIN_BLOCK => align_down(floor, PAGE),
             _ => floor,
         };
-        let page_limit = self.usable_end().saturating_sub(config.large_floor);
         Lines { floor, page_limit }
     }
 
@@ -538,14 +550,17 @@ mod lock {
 /// slab pages, larger ones in large blocks, and both are blocks of one TLSF
 /// pool over the whole region. The small side takes the lowest free page and
 /// gives a page back as soon as it is empty, wherever it lies; large blocks
-/// are carved from the top of free blocks; freed memory coalesces at once,
-/// so either side can use what the other gave back. The [`Config`] floors
+/// are carved from the top of free blocks, from memory no page may use
+/// whenever a free block there fits, so the pages a spike of small objects
+/// gave back stay free for the next one; freed memory coalesces at once, so
+/// either side can use what the other gave back. The [`Config`] floors
 /// reserve one end of the region for each side. Allocation and deallocation
 /// are O(1) on both sides (a large request that the good-fit search cannot
-/// serve scans one free list before it fails, which keeps
+/// serve scans up to three free lists before it fails, which keeps
 /// [`largest_free_large`](Self::largest_free_large) exact; taking a page
-/// reads a bitmap of one bit per page from the lowest free page up);
-/// exhaustion returns null; nothing ever asks the host for more memory.
+/// reads a bitmap of one bit per page from the lowest free page up, and
+/// giving back the topmost page reads one from that page down); exhaustion
+/// returns null; nothing ever asks the host for more memory.
 ///
 /// While a [`Scope`](crate::Scope) is active on the calling thread, allocations go to that
 /// scope's chunks instead (see [`Scope::run`](crate::Scope::run) and [`crate::Scoped`]).
