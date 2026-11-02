@@ -35,7 +35,13 @@ Scopes are activated per thread. Without `std` they are available only on
 wasm32 without the `atomics` target feature, where there is one thread; on
 other `no_std` targets `Scope::run` and `Scope::scoped` are not compiled.
 
-On wasm32, `FixedHeap::wasm` manages `[__heap_base, memory.size)` and is set
+`FixedHeap::lazy` makes a `static` heap that asks a region function for its
+memory once, at its first use, so a fixed heap can be the global allocator on
+any target: on a native target that first use comes before `main`, and the
+function can map the region itself (an anonymous mapping sized from the
+environment, read without allocating) or hand out a `static` array.
+
+On wasm32, `FixedHeap::wasm` (the lazy heap over the module's memory) manages `[__heap_base, memory.size)` and is set
 up at the first allocation; link the module with equal initial and maximum
 memory so the size is fixed.
 

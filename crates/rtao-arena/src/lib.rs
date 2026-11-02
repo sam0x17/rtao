@@ -49,6 +49,13 @@
 //!   and [`FixedHeap::can_serve`] tell whether a large request would succeed
 //!   before making it; [`FixedHeap::stats`] reports per-side live, peak and
 //!   capacity, the class histogram and failure counts.
+//! - **Lazy regions.** [`FixedHeap::lazy`] makes a `static` heap that asks
+//!   a [`RegionFn`] for its region at its first use (once), so it can be the
+//!   global allocator on any target: on a native target the first
+//!   allocation comes before `main`, and the function can map the region
+//!   itself (sized from the environment, read without allocating) or hand
+//!   out a `static` array. `FixedHeap::wasm` is the wasm32 case, over the
+//!   module's memory.
 //! - **Building blocks.** [`Block`] (an exact-size byte block),
 //!   [`FixedVec`] (a vector that never grows) and [`KeyBuf`] (a stack buffer
 //!   for keys) let callers allocate fallibly and exactly.
@@ -139,7 +146,7 @@ pub use ctx::{
     DeclaredGuard, Lifetime, LifetimeGuard, declared, in_scope, is_declared, lifetime, unscoped,
     with_lifetime,
 };
-pub use heap::{ClassStats, Config, FixedHeap, InitError, SideStats, Stats};
+pub use heap::{ClassStats, Config, FixedHeap, InitError, RegionFn, SideStats, Stats};
 pub use key::KeyBuf;
 #[cfg(any(
     feature = "std",

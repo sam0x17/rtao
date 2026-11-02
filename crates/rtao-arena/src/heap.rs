@@ -154,6 +154,9 @@ pub struct Stats {
 /// The heap's state; accessed only under the heap's lock.
 pub(crate) struct Inner {
     ready: bool,
+    /// A lazy heap has asked its [`RegionFn`] for its region (once, whether
+    /// or not it got one).
+    asked: bool,
     pub(crate) mem: Mem,
     /// Address of the pool's sentinel header; the region's usable end is
     /// `top + HEADER`.
@@ -182,6 +185,7 @@ impl Inner {
     const fn new(config: Config) -> Self {
         Self {
             ready: false,
+            asked: false,
             mem: Mem::none(),
             top: 0,
             lo: 0,
@@ -605,9 +609,14 @@ mod lock {
 pub struct FixedHeap {
     lock: lock::Lock,
     inner: UnsafeCell<Inner>,
-    #[cfg(target_arch = "wasm32")]
-    lazy_wasm: bool,
+    /// Where a lazy heap gets its region at its first use.
+    lazy: Option<RegionFn>,
 }
+
+/// Supplies a lazy heap's region: `Some((base, len))` for the region
+/// `[base, base + len)`, or `None` when there is none to be had (every
+/// allocation then returns null). See [`FixedHeap::lazy`].
+pub type RegionFn = fn() -> Option<(*mut u8, usize)>;
 
 // SAFETY: all access to `inner` happens under `lock` (or, on single-threaded
 // wasm32, on the only thread), and the region it manages is owned by the heap.
@@ -631,8 +640,65 @@ impl FixedHeap {
         Self {
             lock: lock::Lock::new(),
             inner: UnsafeCell::new(Inner::new(config)),
-            #[cfg(target_arch = "wasm32")]
-            lazy_wasm: false,
+            lazy: None,
+        }
+    }
+
+    /// A heap that takes its region from `region` at its first use (the
+    /// first allocation or query), so it can be a `static` global allocator
+    /// on any target: the region is found when the program first allocates,
+    /// before `main` on native targets. `region` is called at most once,
+    /// under the heap's lock; if it returns `None`, or a region the floors
+    /// do not fit, every allocation returns null. A heap handed a region
+    /// first ([`Self::init_static`], [`Self::init`]) never calls it.
+    ///
+    /// Typical sources are a mapping made by the platform's own call (an
+    /// anonymous `mmap`, sized from the environment read without
+    /// allocating), a `static` byte array, or, on wasm32, the module's
+    /// memory (`FixedHeap::wasm`).
+    ///
+    /// ```
+    /// use core::alloc::{GlobalAlloc, Layout};
+    /// use core::cell::UnsafeCell;
+    /// use rtao_arena::{Config, FixedHeap};
+    ///
+    /// #[repr(align(64))]
+    /// struct Region(UnsafeCell<[u8; 4 << 20]>);
+    /// // SAFETY: only the heap below touches the bytes, under its lock.
+    /// unsafe impl Sync for Region {}
+    /// static REGION: Region = Region(UnsafeCell::new([0; 4 << 20]));
+    ///
+    /// fn region() -> Option<(*mut u8, usize)> {
+    ///     Some((REGION.0.get().cast(), 4 << 20))
+    /// }
+    ///
+    /// // SAFETY: `REGION` is used by this heap only, `region` does not
+    /// // allocate, and the heap is a static.
+    /// static HEAP: FixedHeap = unsafe { FixedHeap::lazy(Config::DEFAULT, region) };
+    ///
+    /// let layout = Layout::from_size_align(1000, 8)?;
+    /// // SAFETY: freed below with the same layout.
+    /// let p = unsafe { HEAP.alloc(layout) };
+    /// assert!(!p.is_null() && HEAP.contains(p));
+    /// // SAFETY: `p` came from `HEAP` with `layout`.
+    /// unsafe { HEAP.dealloc(p, layout) };
+    /// # Ok::<(), core::alloc::LayoutError>(())
+    /// ```
+    ///
+    /// # Safety
+    ///
+    /// The region `region` returns must be valid for reads and writes, used
+    /// by nothing else, and outlive the heap's use. `region` must not
+    /// allocate from this heap (it runs under the heap's lock, so that would
+    /// deadlock); on a global allocator, that means not allocating at all.
+    /// The heap must not be moved or dropped while anything it allocated or
+    /// any [`Scope`](crate::Scope) bound to it is live (a `static` satisfies
+    /// both).
+    pub const unsafe fn lazy(config: Config, region: RegionFn) -> Self {
+        Self {
+            lock: lock::Lock::new(),
+            inner: UnsafeCell::new(Inner::new(config)),
+            lazy: Some(region),
         }
     }
 
@@ -651,11 +717,9 @@ impl FixedHeap {
     /// both).
     #[cfg(target_arch = "wasm32")]
     pub const unsafe fn wasm(config: Config) -> Self {
-        Self {
-            lock: lock::Lock::new(),
-            inner: UnsafeCell::new(Inner::new(config)),
-            lazy_wasm: true,
-        }
+        // SAFETY: the caller vouches that the heap owns the memory above
+        // `__heap_base`; `wasm_region` does not allocate.
+        unsafe { Self::lazy(config, wasm_region) }
     }
 
     /// Hands the heap a region it owns for the rest of the program.
@@ -713,19 +777,29 @@ impl FixedHeap {
         self.with(|inner| inner.config)
     }
 
-    /// Runs `f` on the state under the lock, setting up a lazy wasm heap.
+    /// Whether the heap manages a region. A lazy heap ([`Self::lazy`])
+    /// asks for its region first if it has not yet.
+    pub fn is_ready(&self) -> bool {
+        self.with(|inner| inner.ready)
+    }
+
+    /// Runs `f` on the state under the lock, setting up a lazy heap.
     #[inline]
     pub(crate) fn with<R>(&self, f: impl FnOnce(&mut Inner) -> R) -> R {
         let _guard = self.lock.lock();
         // SAFETY: the lock is held for the whole closure and nothing inside
         // the heap re-enters it, so this is the only reference to the state.
         let inner = unsafe { &mut *self.inner.get() };
-        #[cfg(target_arch = "wasm32")]
-        if self.lazy_wasm && !inner.ready {
-            let (base, len) = wasm_region();
-            // SAFETY: `wasm` made the caller vouch that the heap owns the
-            // memory above `__heap_base`.
-            let _ = unsafe { inner.init(base, len) };
+        if !inner.ready
+            && !inner.asked
+            && let Some(region) = self.lazy
+        {
+            inner.asked = true;
+            if let Some((base, len)) = region() {
+                // SAFETY: `lazy` made the caller vouch that the region is the
+                // heap's alone and outlives its use.
+                let _ = unsafe { inner.init(base, len) };
+            }
         }
         f(inner)
     }
@@ -888,7 +962,7 @@ impl FixedHeap {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn wasm_region() -> (*mut u8, usize) {
+fn wasm_region() -> Option<(*mut u8, usize)> {
     unsafe extern "C" {
         static __heap_base: u8;
     }
@@ -898,10 +972,10 @@ fn wasm_region() -> (*mut u8, usize) {
     let end = core::arch::wasm32::memory_size(0)
         .checked_mul(65536)
         .unwrap_or(usize::MAX & !0xffff);
-    (
+    Some((
         ptr::with_exposed_provenance_mut(base),
         end.saturating_sub(base),
-    )
+    ))
 }
 
 // SAFETY: `alloc` returns null or a block of at least `layout.size()` bytes at
