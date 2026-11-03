@@ -673,6 +673,11 @@ async fn rejected_owner_row_commit_reprepares_under_the_same_policy() -> anyhow:
         rendered.contains("rtao_weights_cr_version_recomputed_total 1"),
         "{rendered}"
     );
+    // The propose site and the re-preparation each count the unlocked row.
+    assert!(
+        rendered.contains("rtao_weights_owner_row_total 2"),
+        "{rendered}"
+    );
     close_cr_lab(scheduler, lab, cx).await;
     Ok(())
 }
@@ -759,6 +764,50 @@ async fn durable_callback_operation_journals_its_policy() -> anyhow::Result<()> 
     })
     .await?;
     assert_eq!(lab.authors(), 1, "a completed operation is never re-signed");
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// A new durable callback row the guard holds is not journaled, so the
+/// callback is consulted again at the next head and a later ordinary row is
+/// signed. Journaling the held row would re-propose it without the callback
+/// on every later head and never sign anything on the mechanism.
+#[tokio::test]
+async fn held_callback_row_is_not_journaled() -> anyhow::Result<()> {
+    let (lab, cx, account) = owner_lab("held-callback", |_| Ok(())).await?;
+    queue_model(&lab, account);
+    let mut scheduler = durable(&lab, account)?;
+    let calls = std::sync::atomic::AtomicUsize::new(0);
+    let held_rows = [
+        // Self-only: held even under Submit.
+        (by_uid(&[(0, 1.0)]), OwnerRowPolicy::Submit),
+        // An owner burn row under the default.
+        (burn(), OwnerRowPolicy::Hold),
+    ];
+    let proposals = |_: MechId| {
+        let n = calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        match held_rows.get(n) {
+            Some((input, policy)) => (WeightsProposal::Set(input.clone()), *policy),
+            None => (
+                WeightsProposal::Set(by_uid(&[(1, 1.0)])),
+                OwnerRowPolicy::Hold,
+            ),
+        }
+    };
+    until_authored_with(&mut scheduler, &lab, &cx, proposals).await?;
+    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 3);
+    assert_eq!(lab.authors(), 1);
+    assert!(submitted(&scheduler), "{:?}", outcome(&scheduler));
+    let operations = lab.journal().unwrap().snapshot()?.operations;
+    assert_eq!(operations.len(), 1, "only the signed row is journaled");
+    let record = operations.values().next().unwrap();
+    assert_eq!(
+        record.intent.effects["input"],
+        serde_json::to_value(by_uid(&[(1, 1.0)]))?
+    );
+    assert!(record.intent.effects.get("owner_rows").is_none());
+    let rendered = cx.metrics.render();
+    assert!(rendered.contains("rtao_weights_hold_total 2"), "{rendered}");
     close_cr_lab(scheduler, lab, cx).await;
     Ok(())
 }

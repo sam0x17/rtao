@@ -183,8 +183,10 @@ impl OwnerRowPolicy {
     /// are ignored.
     ///
     /// `own` is this validator's UID, and `is_owner(uid)` reports whether
-    /// `uid` belongs to the subnet owner hotkey. A row with a positive entry
-    /// on any other UID is never held.
+    /// `uid` belongs to the subnet owner hotkey. For `own` it should answer
+    /// from this validator's own hotkey (whether it is the owner hotkey)
+    /// rather than from a possibly stale UID map, as the scheduler does. A
+    /// row with a positive entry on any other UID is never held.
     ///
     /// ```
     /// use rtao_neuron::weights::OwnerRowPolicy;
@@ -1573,14 +1575,31 @@ impl WeightScheduler {
                 return Ok(());
             }
         };
+        let prepared = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph);
         if self.durable.is_some() && pending_work.is_none() {
             let d = self
                 .durable
                 .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("missing journal"))?;
-            let revision = d.journal.snapshot()?.revision;
-            let (id, correlation) =
-                operation.unwrap_or_else(|| (format!("{}:op:{revision}", d.scope), None));
+            let snapshot = d.journal.snapshot()?;
+            let (id, correlation) = operation
+                .unwrap_or_else(|| (format!("{}:op:{}", d.scope, snapshot.revision), None));
+            // A new callback row the guard holds is not journaled: queued work
+            // is re-proposed without the callback, so journaling it would hold
+            // the mechanism on every later head (D-093). Nothing is signed
+            // either way, and the callback decides again at the next head. An
+            // ID the journal already has still goes through `begin`, which
+            // reports a redelivery or an identity conflict.
+            if !snapshot.operations.contains_key(&id)
+                && let Ok(row) = &prepared
+                && row_held(owner_rows, row, uid, hotkey, owner, &graph)
+            {
+                if let Some(attempt) = self.attempts.get_mut(&mech) {
+                    attempt.outcome = WeightAttemptOutcome::HoldPrevious;
+                }
+                cx.metrics.increment("rtao_weights_hold_total");
+                return Ok(());
+            }
             self.enqueue_with_owner_rows(id, correlation, mech, input.clone(), owner_rows)?;
             let Some((_, queued)) = self.pending_work(mech)? else {
                 // The application redelivered a completed logical operation.
@@ -1589,7 +1608,7 @@ impl WeightScheduler {
             // The journaled policy decides, even on the first attempt.
             owner_rows = queued.owner_rows;
         }
-        let row = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph)?;
+        let row = prepared?;
         if row_held(owner_rows, &row, uid, hotkey, owner, &graph) {
             if let Some(attempt) = self.attempts.get_mut(&mech) {
                 attempt.outcome = WeightAttemptOutcome::HoldPrevious;
@@ -1737,11 +1756,27 @@ impl WeightScheduler {
                     );
                     let graph = cx.metagraph.load();
                     let row = prepare_row(input.clone(), &state, uid, cx.netuid, &graph)?;
-                    if row_held(owner_rows, &row, uid, hotkey, *current_owner.raw(), &graph) {
+                    let current_owner = *current_owner.raw();
+                    if row_held(owner_rows, &row, uid, hotkey, current_owner, &graph) {
                         if let Some(attempt) = self.attempts.get_mut(&mech) {
                             attempt.outcome = WeightAttemptOutcome::HoldPrevious;
                         }
+                        cx.metrics.increment("rtao_weights_hold_total");
                         return Ok(());
+                    }
+                    if row_held(
+                        OwnerRowPolicy::Hold,
+                        &row,
+                        uid,
+                        hotkey,
+                        current_owner,
+                        &graph,
+                    ) {
+                        cx.metrics.increment("rtao_weights_owner_row_total");
+                        tracing::info!(
+                            mechanism = mech.0,
+                            "re-preparing an owner-only row under OwnerRowPolicy::Submit"
+                        );
                     }
                     block_time = snapshot_slot_duration(&cx.client, &state.at).await?;
                     commit = if state.commit_reveal {
@@ -2079,10 +2114,12 @@ fn prepare_row(
 /// The self/owner guard under `policy` (D-093) for a prepared row of the
 /// validator `hotkey` at `uid`, with the subnet owner hotkey `owner`.
 ///
-/// A destination is the owner's when the last-good graph maps it to `owner`,
-/// or when it is this validator's preflight UID and this validator is the
-/// owner hotkey, so a stale graph cannot hide an owner validator's own UID.
-/// Under [`OwnerRowPolicy::Hold`] this is the guard earlier releases applied.
+/// This validator's preflight UID is the owner's exactly when its hotkey is
+/// the owner hotkey: the preflight is fresher than the last-good graph, so a
+/// stale graph can neither hide an owner validator's own UID nor make a
+/// non-owner validator's own UID look like the owner's. Any other destination
+/// is the owner's when the last-good graph maps it to `owner`. Under
+/// [`OwnerRowPolicy::Hold`] this is the guard earlier releases applied.
 fn row_held(
     policy: OwnerRowPolicy,
     row: &(Vec<Uid>, Vec<u16>),
@@ -2094,7 +2131,13 @@ fn row_held(
     policy.holds(
         row.0.iter().copied().zip(row.1.iter().copied()),
         uid,
-        |dest| graph.hotkey(dest) == Some(&owner) || (hotkey == owner && dest == uid),
+        |dest| {
+            if dest == uid {
+                hotkey == owner
+            } else {
+                graph.hotkey(dest) == Some(&owner)
+            }
+        },
     )
 }
 async fn snapshot_slot_duration(

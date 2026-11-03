@@ -165,9 +165,13 @@ impl WeightScheduler {
     /// Reusing the same ID, input and policy is idempotent; the same ID with
     /// another policy is refused like changed input.
     ///
-    /// Durable work is queued before the guard runs, so a row the policy
-    /// holds stays pending and blocks the mechanism; check
-    /// [`OwnerRowPolicy::holds`] first when queuing directly.
+    /// Work queued here is journaled before the guard runs, so a row the
+    /// policy holds stays pending and blocks the mechanism, and no scheduler
+    /// API retires it; check [`OwnerRowPolicy::holds`] first when queuing
+    /// directly. (A callback proposal the guard holds is not journaled.) An
+    /// earlier release cannot read effects that carry the policy and then
+    /// refuses every mechanism of the scope, so let `Submit` work finish
+    /// before rolling back.
     pub fn enqueue_with_owner_rows(
         &self,
         id: impl Into<String>,

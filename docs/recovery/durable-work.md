@@ -350,9 +350,15 @@ is omitted for the default hold policy, so default effects keep their earlier
 bytes. Changing the policy for an ID is a changed effect and `begin` refuses
 it. Effects without the key load as hold, and every re-preparation of retained
 work (after restart, pause or a proven-unexecuted attempt) decides from the
-journaled value rather than the application callback. An older build refuses
-retained effects that carry the key, signing nothing, until that work is
-handed off.
+journaled value rather than the application callback. A new callback proposal
+the guard holds is not journaled (an ID already in the journal still goes
+through `begin`), so the callback decides again at the next head; work queued
+directly with `enqueue_with_owner_rows` is journaled first and a held row stays
+pending, with no scheduler API to retire it. Work queued under hold by an
+earlier release keeps holding after an upgrade. An earlier release cannot parse
+effects that carry the key: its scheduler then fails `pending_work` and
+recovery for every mechanism of the scope, signing nothing, and it cannot hand
+that work off. Let `Submit` work finish (handed off) before rolling back.
 
 A prepared row and its ciphertext/round are recorded before submission. If a
 process dies after finalized inclusion but before the scheduler locates the

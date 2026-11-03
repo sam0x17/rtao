@@ -631,6 +631,16 @@ fn owner_row_policy_submit_unlocks_only_owner_only_rows() -> anyhow::Result<()> 
     assert!(!held(Submit, &[0], &[1], HOTKEY, HOTKEY, &stale));
     // A non-owner validator gains nothing from the preflight-UID clause.
     assert!(held(Submit, &[0], &[1], HOTKEY, owner, &stale));
+    // A stale graph that still maps a non-owner validator's preflight UID to
+    // the owner hotkey (the validator took over the owner's UID) does not
+    // make its self-only row an owner row: the preflight decides that UID.
+    let taken = graph_with([owner, AccountId([11; 32]), AccountId([10; 32])])?;
+    for policy in [Hold, Submit] {
+        assert!(held(policy, &[0], &[65535], HOTKEY, owner, &taken));
+        assert!(held(policy, &[0, 2], &[65535, 0], HOTKEY, owner, &taken));
+    }
+    // The owner validator's own row stays the owner row under that graph.
+    assert!(!held(Submit, &[0], &[65535], HOTKEY, HOTKEY, &taken));
     Ok(())
 }
 

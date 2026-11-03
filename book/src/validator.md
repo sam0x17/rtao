@@ -51,8 +51,13 @@ only to the subnet owner hotkey's UID (a burn row), including through a
 timelocked commit and its automatic reveal. A row with positive weight on the
 validator's own UID still holds, unless the validator is the owner hotkey.
 Durable work journals the policy, so a restarted or recovered operation decides
-the same way; check `OwnerRowPolicy::holds` before queuing a row directly,
-because a held queued row stays pending. Every
+the same way. A callback row the guard holds is not journaled; check
+`OwnerRowPolicy::holds` before queuing a row directly, because a held queued
+row stays pending. The row still goes through Python-parity conformance first:
+a non-owner validator's burn row needs an effective `MinAllowedWeights` of 1
+(zeros do not count), and with a stored `MaxWeightsLimit` below 65535 it should
+list only the owner UID, since clipping a row that lists zeros spreads it over
+every listed UID. Every
 mechanism has a separate cadence and rate-limit slot. The scheduler reads its
 preflight at one best head, while finalized heads trigger attempts and anchor
 transaction mortality. Commit-reveal off uses direct mechanism weights;
