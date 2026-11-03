@@ -243,7 +243,7 @@ enum SubmissionError {
     Rejected(String),
 }
 
-/// The default admission window of a weight transaction (D-095).
+/// The default admission window of a weight transaction (D-097).
 ///
 /// See [`super::WeightScheduler::with_submit_deadline`].
 pub const DEFAULT_WEIGHT_SUBMIT_DEADLINE: Duration = Duration::from_secs(30);

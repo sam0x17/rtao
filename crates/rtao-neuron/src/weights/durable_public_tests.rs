@@ -777,7 +777,7 @@ pub(super) fn scored(_: MechId) -> super::super::WeightsProposal {
 }
 
 /// The scheduler's admission window reaches each attempt's executor and is
-/// enforced before anything is signed or authored (D-095).
+/// enforced before anything is signed or authored (D-097).
 #[tokio::test]
 async fn an_exhausted_admission_window_fails_the_attempt_before_signing() -> anyhow::Result<()> {
     let scheduler = || {

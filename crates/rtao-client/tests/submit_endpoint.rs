@@ -406,7 +406,7 @@ async fn without_a_submit_endpoint_requests_are_unchanged() {
 /// Recorded from the client before submit endpoints were added, then updated
 /// once when each fresh nonce began reading `author_pendingExtrinsics` for
 /// pending shield carriers (D-084), and once when preparation and signature
-/// attachment stopped re-reading what they already had (D-095): each reads the
+/// attachment stopped re-reading what they already had (D-097): each reads the
 /// live runtime version once, takes the finalized and best heights from their
 /// headers without a runtime lookup, and finds the era anchor's hash in the
 /// finalized hash cache. Only requests were removed; a fee probe's nonce still
@@ -516,7 +516,7 @@ async fn without_a_submit_endpoint_shield_requests_are_unchanged() {
 /// `state_getStorage(key)`, once when a fresh nonce began reading
 /// `author_pendingExtrinsics` for pending shield carriers (D-084), and once
 /// when the era-headroom heights, preparation and signature attachment
-/// stopped re-reading what they already had (D-095). Every other request is
+/// stopped re-reading what they already had (D-097). Every other request is
 /// unchanged.
 const SHIELD_DIGEST: &str = "03b4d77f0d3b69ca54c098e5f42a2031b7ba10ef80b5673c046e1536acf2326f";
 

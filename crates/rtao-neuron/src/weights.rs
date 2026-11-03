@@ -912,7 +912,7 @@ impl WeightScheduler {
         self.shield_period = Some(period);
         self
     }
-    /// Bound each weight transaction's admission (D-095): signer resolution,
+    /// Bound each weight transaction's admission (D-097): signer resolution,
     /// nonce lease, preparation, signing and the pool's acknowledgment, which
     /// follow planning. The default, [`DEFAULT_WEIGHT_SUBMIT_DEADLINE`] (30 s),
     /// fits an unpaced endpoint or the public preset's burst; admission makes

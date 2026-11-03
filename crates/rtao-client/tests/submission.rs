@@ -378,7 +378,7 @@ impl Signer for MetadataSigner {
 }
 
 /// Preparation and attachment run inside the admission window, where a paced
-/// endpoint spends time on every request (D-095). Each reads the live runtime
+/// endpoint spends time on every request (D-097). Each reads the live runtime
 /// version once and the heights from headers alone; an era anchor at the
 /// finalized height comes from the finalized hash cache, and an older one costs
 /// one `chain_getBlockHash`.
