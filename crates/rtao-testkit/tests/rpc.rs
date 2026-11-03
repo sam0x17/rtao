@@ -351,6 +351,174 @@ async fn handshake_policy_refusal_headers() -> Result {
     Ok(())
 }
 
+fn refusal(status: u16, retry_after: Option<&str>) -> Fault {
+    Fault::HandshakeRefuse {
+        status,
+        headers: retry_after
+            .map(|value| ("Retry-After".to_owned(), value.to_owned()))
+            .into_iter()
+            .collect(),
+        body: "slow down".into(),
+    }
+}
+
+async fn wait_connect_attempts(node: &FakeNode, count: usize) -> Result {
+    timeout(Duration::from_secs(5), async {
+        while node.connect_attempts() < count {
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    })
+    .await?;
+    Ok(())
+}
+
+// A refused reconnect after the session has connected is waited out and
+// dialed again (D-094); Python ends the session on any policy refusal.
+#[tokio::test]
+async fn refused_reconnect_honours_retry_after_and_resends_pending_reads() -> Result {
+    let node = FakeNode::start().await?;
+    echo(&node);
+    let mut cfg = config(&node)?;
+    cfg.retry_forever = true;
+    cfg.max_retries = 1;
+    let session = Session::connect(cfg).await?;
+    let mut events = session.events();
+    let mut states = session.state();
+    node.push_fault(refusal(429, Some("1")));
+    node.push_fault(refusal(429, Some("0")));
+    node.drop_connection()?;
+    wait_connect_attempts(&node, 2).await?;
+    let refused = std::time::Instant::now();
+    let read = {
+        let session = session.clone();
+        tokio::spawn(async move {
+            session
+                .request::<String>(ReadMethod::SystemChain, json!(["after the refusal"]))
+                .await
+        })
+    };
+    assert_eq!(
+        timeout(Duration::from_secs(5), read).await???,
+        "after the refusal"
+    );
+    // The first refusal named one second; the second named none left, which
+    // still waits the 250 ms floor. retry_forever keeps dialing past
+    // max_retries.
+    assert!(refused.elapsed() >= Duration::from_millis(1200));
+    assert_eq!(node.connect_attempts(), 4);
+    let accepted: Vec<_> = node.connections().iter().map(|c| c.accepted).collect();
+    assert_eq!(accepted, [true, false, false, true]);
+    assert!(matches!(
+        &*states.borrow_and_update(),
+        SessionState::Connected { .. }
+    ));
+    let mut refused_events = 0;
+    while let Ok(event) = events.try_recv() {
+        match event {
+            rtao_rpc::SessionEvent::Reconnecting { .. } => refused_events += 1,
+            rtao_rpc::SessionEvent::PolicyRefused(refusal) => {
+                return Err(format!("refusal ended the session: {refusal}").into());
+            }
+            _ => {}
+        }
+    }
+    // One for the lost connection, one for each refused reconnect.
+    assert_eq!(refused_events, 3);
+    session.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn refused_reconnects_without_retry_forever_end_after_max_retries_without_rotating() -> Result
+{
+    let node = FakeNode::start().await?;
+    let fallback = FakeNode::start().await?;
+    node.set_handler("system_chain", |_, _| Reply::silent());
+    let mut cfg = config(&node)?;
+    cfg.pool.urls.push(Url::parse(fallback.url())?);
+    cfg.max_retries = 2;
+    let session = Session::connect(cfg).await?;
+    let mut events = session.events();
+    for _ in 0..3 {
+        node.push_fault(refusal(403, Some("0")));
+    }
+    let read = {
+        let session = session.clone();
+        tokio::spawn(async move {
+            session
+                .request::<Value>(ReadMethod::SystemChain, json!([]))
+                .await
+        })
+    };
+    wait_method_requests(&node, "system_chain", 1).await?;
+    node.drop_connection()?;
+    let error = timeout(Duration::from_secs(5), read)
+        .await??
+        .err()
+        .ok_or("read unexpectedly succeeded")?;
+    let RpcError::Policy(ref terminal) = error else {
+        return Err(format!("unexpected terminal error: {error}").into());
+    };
+    assert_eq!(terminal.status_code, Some(403));
+    assert_eq!(
+        terminal.kind,
+        rtao_rpc::RefusalKind::Handshake { status: 403 }
+    );
+    assert!(matches!(
+        &*session.state().borrow(),
+        SessionState::Failed { error: RpcError::Policy(found) } if found == terminal
+    ));
+    // The initial connection, then the refused reconnect and its two retries.
+    assert_eq!(node.connect_attempts(), 4);
+    assert_eq!(fallback.connect_attempts(), 0);
+    let mut terminal_events = 0;
+    while let Ok(event) = events.try_recv() {
+        if let rtao_rpc::SessionEvent::PolicyRefused(refusal) = event {
+            assert_eq!(&refusal, terminal.as_ref());
+            terminal_events += 1;
+        }
+    }
+    assert_eq!(terminal_events, 1);
+    assert_eq!(
+        session
+            .request::<Value>(ReadMethod::SystemChain, json!([]))
+            .await,
+        Err(error)
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn close_interrupts_a_refused_reconnect_wait() -> Result {
+    let node = FakeNode::start().await?;
+    echo(&node);
+    let session = connect(&node).await?;
+    node.push_fault(refusal(429, Some("600")));
+    node.drop_connection()?;
+    wait_connect_attempts(&node, 2).await?;
+    let read = {
+        let session = session.clone();
+        tokio::spawn(async move {
+            session
+                .request::<Value>(ReadMethod::SystemChain, json!([]))
+                .await
+        })
+    };
+    tokio::task::yield_now().await;
+    assert!(matches!(
+        &*session.state().borrow(),
+        SessionState::Reconnecting { .. }
+    ));
+    timeout(Duration::from_secs(2), session.close()).await?;
+    assert_eq!(*session.state().borrow(), SessionState::Closed);
+    assert_eq!(
+        timeout(Duration::from_secs(2), read).await??,
+        Err(RpcError::Closed)
+    );
+    assert_eq!(node.connect_attempts(), 2);
+    Ok(())
+}
+
 // pyt: sdk/python/tests/unit/test_rpc.py::test_non_policy_websocket_rejection_preserves_status_and_body
 #[tokio::test]
 async fn non_policy_websocket_rejection_preserves_status_and_body() -> Result {

@@ -1300,7 +1300,7 @@ window Python also accepts as fate unknown.
 | subscriptions at the session level | each receives `Err(SubscriptionLost)`, with Python's guidance "verify balances before retrying" (`rpc.py:582-602`); `HeadTracker` resubscribes one layer up (§3.13) |
 | extrinsic watch subscription | terminal `FateUnknown` (never re-subscribed) |
 | connect failure, or `max_retries` consecutive timeouts | rotate endpoint; backoff `min(0.25·n, 5) s`; whole-pool cycles `min(2·cycle, 30) s` with `retry_forever` (`rpc.py:648, 676-678`); give up after `max_retries × endpoints` otherwise (`MaxRetriesExceeded`) |
-| policy refusal (§3.2.3) | **terminal**: never retried, never rotated (rotation would amplify traffic against the gateway) |
+| policy refusal (§3.2.3) | **terminal**: never rotated (rotation would amplify traffic against the gateway). The one retry (D-094): an HTTP 403/429 refusal of a reconnect handshake, after the session has connected, waits its `Retry-After` (250 ms to 10 min) or 1 s doubling to 60 s and dials the same endpoint again; without `retry_forever` it becomes terminal after `max_retries` further refusals. A refused initial connect, JSON-RPC policy errors and 1008 closes stay terminal |
 | `"State already discarded for <hash>"` in `message` or string `data` | `RpcError::StateDiscarded { block }`; the read is retried once on the archive pool (`classify_rpc_error`, `rpc.py:202-209` [V]; `PY/_substrate.py:366-400`) |
 
 #### 3.2.3 Policy refusals, exactly as Python classifies them
@@ -1392,8 +1392,8 @@ The docs tell operators to run their own lite node for production (`UP/docs/guid
 #### 3.2.6 Telemetry
 
 Metrics: `rtao_rpc_requests_total{method,endpoint,outcome}`, `rtao_rpc_request_seconds{method}`,
-`rtao_rpc_reconnects_total{endpoint}`, `rtao_rpc_policy_refusals_total{kind}`, `rtao_rpc_inflight`,
-`rtao_rpc_ratelimit_wait_seconds`.
+`rtao_rpc_reconnects_total{endpoint}`, `rtao_rpc_policy_refusals_total{kind}`, `rtao_rpc_reconnect_refusals_total{status}`,
+`rtao_rpc_inflight`, `rtao_rpc_ratelimit_wait_seconds`.
 
 Logging targets are `rtao::rpc` and `rtao::rpc::raw` (frame dumps, `-vvv` in the CLI), mirroring Python's
 `bittensor.transport` and `bittensor.transport.raw_websocket` loggers (`rpc.py:48-49` [V]).

@@ -1,7 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/errors.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_rpc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Terminal gateway refusals and bounded upstream diagnostics.
+//! Gateway policy refusals and bounded upstream diagnostics.
 
 use std::{
     fmt,
@@ -15,10 +15,12 @@ use unicode_general_category::{GeneralCategory, get_general_category};
 
 use crate::generated::py_rpc;
 
-/// The gateway contract that caused a terminal refusal.
+/// The gateway contract that caused a policy refusal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RefusalKind {
-    /// An HTTP 403 or 429 response during the WebSocket upgrade.
+    /// An HTTP 403 or 429 response during the WebSocket upgrade. It ends the
+    /// session when it refuses the initial connect; a refused reconnect is
+    /// waited out and dialed again (see [`crate::RpcError::Policy`]).
     Handshake {
         /// The upgrade response's HTTP status.
         status: u16,
@@ -32,7 +34,7 @@ pub enum RefusalKind {
     Close1008,
 }
 
-/// A terminal access or traffic-policy refusal, retaining Python's diagnostics.
+/// An access or traffic-policy refusal, retaining Python's diagnostics.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PolicyRefusal {
     /// The contract used to recognize this refusal.
