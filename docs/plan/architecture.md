@@ -4416,7 +4416,8 @@ own rate-limit slot (`LastUpdate[NetUidStorageIndex(netuid, mech)]`, [R] C1 §2.
    and decrypted commit-reveal rows enter that dispatch path. Python's ordinary raw intent conformer drops zeros
    before its positive-count check; framework `RawU16` deliberately preserves the chain-native vector (D-058).
 5. **Hold-previous guard.** A row whose only positive weights are self or owner is not submitted (SN2's guard,
-   [R] G §2.6 item 21).
+   [R] G §2.6 item 21), unless the proposal's `OwnerRowPolicy::Submit` unlocks an owner-only row; rows with
+   positive weight on a non-owner own UID still hold (D-093).
 6. **Path.**
    - Commit-reveal on: `commit_timelocked_mechanism_weights(netuid, mech, ciphertext, reveal_round, 4)` (call 118).
    - Commit-reveal off: `set_mechanism_weights` (119).

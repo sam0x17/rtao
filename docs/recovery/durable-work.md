@@ -344,6 +344,16 @@ input }` or explicitly `enqueue` work on an embedded durable scheduler. Plain
 `Set` proposals receive a journal-generated logical ID. Redelivery of completed
 application IDs does not authorize a second transaction.
 
+Weight effects are `{netuid, mechanism, input, version_key}` plus, for work
+queued under `OwnerRowPolicy::Submit` (D-093), `"owner_rows":"submit"`. The key
+is omitted for the default hold policy, so default effects keep their earlier
+bytes. Changing the policy for an ID is a changed effect and `begin` refuses
+it. Effects without the key load as hold, and every re-preparation of retained
+work (after restart, pause or a proven-unexecuted attempt) decides from the
+journaled value rather than the application callback. An older build refuses
+retained effects that carry the key, signing nothing, until that work is
+handed off.
+
 A prepared row and its ciphertext/round are recorded before submission. If a
 process dies after finalized inclusion but before the scheduler locates the
 native queue, recovery uses the original attempt material and actual historical

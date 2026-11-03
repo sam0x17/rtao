@@ -33,6 +33,10 @@ under its state directory. Embedded schedulers opt in with `with_journal`;
 plain `WeightScheduler::new` stays in memory. `WeightsProposal::Operation`
 supplies stable application IDs, and observation-only `recover_finalized`
 restores unresolved submissions and pending reveal tracking before new work.
+Rows whose positive weight goes only to this validator or the subnet owner are
+held unless the proposal, or work queued with `enqueue_with_owner_rows`, selects
+`OwnerRowPolicy::Submit` for an owner burn row; the journal keeps that choice
+with the operation.
 Missing history and ambiguous native events retain uncertainty. Pause controls
 stop new weight dispatch while automatic native reveals remain observable.
 See `docs/recovery/durable-work.md` for the exact recovery and chain limits.

@@ -43,7 +43,16 @@ signed request API returns a stream for caller-controlled consumption.
 
 Return `WeightsProposal::Set` from the synchronous `weights` callback, or
 `HoldPrevious` to keep the previous row and `Skip(reason)` when scores are not
-ready. A row containing positive weights only for self or owner is held. Every
+ready. A row containing positive weights only for self or owner is held,
+unless the proposal opts in with `OwnerRowPolicy::Submit`
+(`WeightScheduler::on_finalized_with`, `enqueue_with_owner_rows` or
+`Validator::owner_row_policy`). That submits a row whose positive weight goes
+only to the subnet owner hotkey's UID (a burn row), including through a
+timelocked commit and its automatic reveal. A row with positive weight on the
+validator's own UID still holds, unless the validator is the owner hotkey.
+Durable work journals the policy, so a restarted or recovered operation decides
+the same way; check `OwnerRowPolicy::holds` before queuing a row directly,
+because a held queued row stays pending. Every
 mechanism has a separate cadence and rate-limit slot. The scheduler reads its
 preflight at one best head, while finalized heads trigger attempts and anchor
 transaction mortality. Commit-reveal off uses direct mechanism weights;
