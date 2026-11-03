@@ -30,6 +30,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
+pub use submit::DEFAULT_WEIGHT_SUBMIT_DEADLINE;
 
 /// Timelocked payload format this build encodes (D-086).
 ///
@@ -861,6 +862,7 @@ pub struct WeightScheduler {
     shield_protocol: Option<Arc<dyn rtao_client::journal::ShieldProtocolGuard>>,
     shield_period: Option<rtao_client::ShieldPeriod>,
     call_encoder: Option<Arc<dyn WeightCallEncoder>>,
+    submit_deadline: std::time::Duration,
 }
 impl WeightScheduler {
     /// Construct a scheduler with explicit wall time and a best-head skew guard.
@@ -883,6 +885,7 @@ impl WeightScheduler {
             shield_protocol: None,
             shield_period: None,
             call_encoder: None,
+            submit_deadline: DEFAULT_WEIGHT_SUBMIT_DEADLINE,
         })
     }
     /// Install an application weight call encoder (D-088).
@@ -908,6 +911,26 @@ impl WeightScheduler {
     pub fn with_shielded_submission(mut self, period: rtao_client::ShieldPeriod) -> Self {
         self.shield_period = Some(period);
         self
+    }
+    /// Bound each weight transaction's admission (D-095): signer resolution,
+    /// nonce lease, preparation, signing and the pool's acknowledgment, which
+    /// follow planning. The default, [`DEFAULT_WEIGHT_SUBMIT_DEADLINE`] (30 s),
+    /// fits an unpaced endpoint or the public preset's burst; admission makes
+    /// about ten requests, so a client paced to a few requests a minute needs a
+    /// longer window. An attempt that runs out of it fails before anything is
+    /// signed or broadcast. The overall bound is this window plus a whole
+    /// 128-block era, so a longer window never shortens the wait for
+    /// inclusion. A long window also lets a timelocked commit prepared in an
+    /// epoch's last blocks land in the next epoch; the reveal watcher follows
+    /// the epoch it actually landed in and counts
+    /// `rtao_weights_commit_epoch_slip_total`.
+    pub fn with_submit_deadline(mut self, deadline: std::time::Duration) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            !deadline.is_zero(),
+            "the weight submit deadline must be positive"
+        );
+        self.submit_deadline = deadline;
+        Ok(self)
     }
     /// Borrow retained reveal outcomes and outstanding commitment state.
     pub fn reveals(&self) -> &RevealWatcher {
@@ -1547,6 +1570,7 @@ impl WeightScheduler {
             submit::SubmissionOptions {
                 journal: binding.clone(),
                 shield_period: self.shield_period,
+                submit_deadline: self.submit_deadline,
             },
         )
         .await;
@@ -1682,6 +1706,7 @@ impl WeightScheduler {
                         submit::SubmissionOptions {
                             journal: None,
                             shield_period: self.shield_period,
+                            submit_deadline: self.submit_deadline,
                         },
                     )
                     .await;
@@ -2051,6 +2076,7 @@ pub(crate) async fn run_scheduler<V: Validator>(
     if let Some(encoder) = validator.weight_call_encoder() {
         scheduler = scheduler.with_call_encoder(encoder);
     }
+    scheduler = scheduler.with_submit_deadline(validator.weight_submit_deadline())?;
     let mut heads = cx.client.blocks(Finality::Finalized)?;
     loop {
         let head = tokio::select! { biased; () = cx.shutdown.cancelled() => return Ok(()), next = heads.next() => next };

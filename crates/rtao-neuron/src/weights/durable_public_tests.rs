@@ -81,6 +81,7 @@ async fn public_weight_pair_restarts_into_paused_reveal_and_retains_actual_nativ
         let options = super::super::submit::SubmissionOptions {
             journal: Some(binding),
             shield_period: scheduler.shield_period,
+            ..Default::default()
         }
         .execution(0.001);
         let intent =
@@ -308,6 +309,7 @@ async fn public_genesis_shielded_weights_bind_the_native_protocol_by_default() -
     let options = super::super::submit::SubmissionOptions {
         journal: Some(binding),
         shield_period: scheduler.shield_period,
+        ..Default::default()
     }
     .execution(0.001);
     let intent = super::super::submit::PreparedWeights::<super::super::submit::SetCall>::compiled(
@@ -772,6 +774,50 @@ pub(super) fn scored(_: MechId) -> super::super::WeightsProposal {
         uids: vec![Uid(1)],
         weights: vec![1.0],
     })
+}
+
+/// The scheduler's admission window reaches each attempt's executor and is
+/// enforced before anything is signed or authored (D-095).
+#[tokio::test]
+async fn an_exhausted_admission_window_fails_the_attempt_before_signing() -> anyhow::Result<()> {
+    let scheduler = || {
+        WeightScheduler::new(
+            WeightPolicy::default(),
+            Arc::new(ChainClock::new(1_800_000_000_000)),
+            ClockGuard::default(),
+        )
+    };
+    assert!(
+        scheduler()?
+            .with_submit_deadline(std::time::Duration::ZERO)
+            .is_err()
+    );
+    let (lab, cx, _) = cr_lab("admission", 4).await?;
+    let mut scheduler = scheduler()?.with_submit_deadline(std::time::Duration::from_nanos(1))?;
+    let mut outcome = None;
+    for _ in 0..12 {
+        let head = advance(&lab)?;
+        Box::pin(scheduler.on_finalized(&cx, &head, scored)).await?;
+        if let Some(
+            super::super::WeightAttemptOutcome::Unresolved(error)
+            | super::super::WeightAttemptOutcome::Failed(error),
+        ) = scheduler
+            .last_attempt(MechId(0))
+            .map(|attempt| attempt.outcome.clone())
+        {
+            outcome = Some(error);
+            break;
+        }
+    }
+    let error = outcome.expect("an attempt was due within one epoch");
+    assert!(
+        error.contains("timed out without reaching the requested state"),
+        "{error}"
+    );
+    assert_eq!(lab.authors(), 0);
+    assert!(lab.node.state().lock().unwrap().submissions.is_empty());
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
 }
 
 /// A changed `CommitRevealWeightsVersion` under unproven runtime code pauses

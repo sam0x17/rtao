@@ -243,10 +243,26 @@ enum SubmissionError {
     Rejected(String),
 }
 
-#[derive(Default)]
+/// The default admission window of a weight transaction (D-095).
+///
+/// See [`super::WeightScheduler::with_submit_deadline`].
+pub const DEFAULT_WEIGHT_SUBMIT_DEADLINE: Duration = Duration::from_secs(30);
+
 pub(super) struct SubmissionOptions {
     pub journal: Option<rtao_client::journal::JournalBinding>,
     pub shield_period: Option<rtao_client::ShieldPeriod>,
+    /// The admission window: signer resolution, nonce lease, preparation,
+    /// signing and the pool's acknowledgment.
+    pub submit_deadline: Duration,
+}
+impl Default for SubmissionOptions {
+    fn default() -> Self {
+        Self {
+            journal: None,
+            shield_period: None,
+            submit_deadline: DEFAULT_WEIGHT_SUBMIT_DEADLINE,
+        }
+    }
 }
 impl SubmissionOptions {
     pub(super) fn execution(self, block_time: f64) -> ExecuteOptions {
@@ -258,8 +274,13 @@ impl SubmissionOptions {
             wait_for_finalization: true,
             retries: 0,
             reconcile: true,
-            submit_deadline: Some(Duration::from_secs(30)),
-            deadline: Some(Duration::from_secs_f64(128.0 * block_time + 30.0)),
+            submit_deadline: Some(self.submit_deadline),
+            // The admission window plus a whole 128-block era, so a longer
+            // window never shortens the wait for inclusion or the finalized
+            // reconciliation of a transmitted attempt.
+            deadline: Some(
+                Duration::from_secs_f64(128.0 * block_time).saturating_add(self.submit_deadline),
+            ),
             ..Default::default()
         }
     }
@@ -372,6 +393,21 @@ pub(super) fn uncertain(error: &anyhow::Error) -> bool {
 mod tests {
     #![allow(clippy::panic)]
     use super::*;
+    #[test]
+    fn execution_bounds_admission_by_the_window_and_inclusion_by_an_era_after_it() {
+        let default = SubmissionOptions::default().execution(12.0);
+        assert_eq!(default.submit_deadline, Some(Duration::from_secs(30)));
+        assert_eq!(default.deadline, Some(Duration::from_secs(128 * 12 + 30)));
+        let paced = SubmissionOptions {
+            submit_deadline: Duration::from_secs(150),
+            ..Default::default()
+        }
+        .execution(12.0);
+        assert_eq!(paced.submit_deadline, Some(Duration::from_secs(150)));
+        assert_eq!(paced.deadline, Some(Duration::from_secs(128 * 12 + 150)));
+        assert_eq!(paced.period, Some(128));
+        assert!(paced.reconcile && paced.wait_for_finalization);
+    }
     #[test]
     fn only_current_mechanism_calls_are_constructed() {
         let mut intent = WeightCallPlan {

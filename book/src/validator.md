@@ -120,6 +120,18 @@ changed fails only the reads that need it, with an error naming the entry and
 field. `--check-connection` reports the first kind as a warning and the
 second as a failure.
 
+Each weight transaction has an admission window: signer resolution, the
+nonce lease, preparation, signing and the pool's acknowledgment, which come
+after planning. It is 30 seconds by default and about ten requests long. An
+endpoint paced to a few requests a minute needs more; set it with
+`WeightScheduler::with_submit_deadline` or `Validator::weight_submit_deadline`.
+An attempt that runs out of the window fails before anything is signed or
+broadcast. The wait for inclusion is a whole 128-block era after the window,
+so a longer window does not shorten it. A long window also lets a commit
+prepared in an epoch's last blocks land in the next epoch; the reveal watcher
+follows the epoch it landed in and counts
+`rtao_weights_commit_epoch_slip_total`.
+
 The default timelock clock is the system clock. The minimum timestamp offset
 across twenty best heads filters propagation delays. The framework warns above
 two seconds of absolute skew and refuses system-clock commits above twelve
