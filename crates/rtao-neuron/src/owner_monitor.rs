@@ -374,7 +374,11 @@ impl OwnerMonitor {
         after: Option<OwnerEventCursor>,
         cancellation: CancellationToken,
     ) -> Result<OwnerEventStream, OwnerMonitorError> {
-        let headers = self.client.blocks(Finality::Finalized)?;
+        // Owner events need every finalized block, including any the
+        // follower must recover after a gap.
+        let headers = self
+            .client
+            .blocks_with(Finality::Finalized, rtao_client::Backfill::Complete)?;
         Ok(event_stream(self.clone(), headers, after, cancellation))
     }
 }

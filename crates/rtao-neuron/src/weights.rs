@@ -2051,7 +2051,11 @@ pub(crate) async fn run_scheduler<V: Validator>(
     if let Some(encoder) = validator.weight_call_encoder() {
         scheduler = scheduler.with_call_encoder(encoder);
     }
-    let mut heads = cx.client.blocks(Finality::Finalized)?;
+    // The scheduler coalesces to the newest finalized head: the reveal
+    // watcher and recovery follow history from their own cursors (D-096).
+    let mut heads = cx
+        .client
+        .blocks_with(Finality::Finalized, rtao_client::Backfill::Latest)?;
     loop {
         let head = tokio::select! { biased; () = cx.shutdown.cancelled() => return Ok(()), next = heads.next() => next };
         let Some(head) = head else {

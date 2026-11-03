@@ -170,7 +170,9 @@ impl EpochClock {
     pub fn subscribe(&self) -> watch::Receiver<EpochStatus> {
         self.tx.subscribe()
     }
-    /// Publish coherent finalized state, including intermediate gap-recovered heads.
+    /// Publish coherent finalized state. The runtime publishes the newest
+    /// finalized head it reads; heads that arrived while it was busy
+    /// coalesce, as they would for any watch subscriber.
     pub fn observe(&self, status: EpochStatus) {
         self.tx.send_replace(status);
     }

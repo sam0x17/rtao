@@ -515,7 +515,8 @@ async fn wait_registered(
     shutdown: &CancellationToken,
 ) -> anyhow::Result<()> {
     let operation = async {
-        let mut heads = client.blocks(Finality::Finalized)?;
+        // Each pass reads the newest finalized state, so heads coalesce.
+        let mut heads = client.blocks_with(Finality::Finalized, rtao_client::Backfill::Latest)?;
         loop {
             let snapshot = client.at(BlockRef::Finalized).await?;
             if crate::reads::storage(
@@ -655,7 +656,11 @@ pub(crate) async fn finalized_worker(
     kind: &'static str,
     weight_encoder: bool,
 ) -> anyhow::Result<()> {
-    let mut stream = cx.client.blocks(Finality::Finalized)?;
+    // Epoch status is a watch of the newest finalized head, so a busy
+    // worker coalesces instead of recovering each missed height (D-096).
+    let mut stream = cx
+        .client
+        .blocks_with(Finality::Finalized, rtao_client::Backfill::Latest)?;
     loop {
         tokio::select! {
             biased;
