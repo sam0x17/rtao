@@ -691,7 +691,10 @@ impl RevealWatcher {
                     self.read_anchor(snapshot).await?
                 }
             };
-            let next = if stepwise {
+            // A window normally opens at an epoch block, which is read anyway;
+            // one opened between epochs (a shortened reveal period) still has
+            // its first block read, whose snapshot explains a miss.
+            let next = if stepwise || self.opens_unchecked_window(&anchor, cursor + 1) {
                 Some(cursor + 1)
             } else {
                 anchor.next_epoch_block(head.number)
@@ -744,6 +747,20 @@ impl RevealWatcher {
                 self.anchor = Some(next);
             }
         }
+    }
+
+    /// Whether `block`, whose parent holds `anchor`, is inside a pending
+    /// commitment's reveal window that no read block has checked yet.
+    fn opens_unchecked_window(&self, anchor: &Anchor, block: u64) -> bool {
+        self.pending.iter().any(|pending| {
+            !pending.first_checked
+                && !pending.ambiguous_reveal
+                && block >= pending.inclusion_block
+                && anchor.states.get(&pending.netuid).is_some_and(|state| {
+                    state.epoch_at(block)
+                        == pending.commit_epoch.saturating_add(state.reveal_period)
+                })
+        })
     }
 
     /// Advance the cursor over blocks verified to change no pending outcome.
@@ -2374,6 +2391,23 @@ mod tests {
         revealed: Option<u64>,
         adjust: impl FnOnce(&mut rtao_testkit::FakeState) -> anyhow::Result<()>,
     ) -> anyhow::Result<(rtao_testkit::FakeChain, Client, RevealWatcher, Metrics)> {
+        let recorded = record_commit(kept_until, revealed, adjust).await?;
+        assert_eq!(
+            (
+                recorded.2.pending[0].commit_epoch,
+                recorded.2.pending[0].reveal_epoch
+            ),
+            (6, 7)
+        );
+        Ok(recorded)
+    }
+
+    /// [`commit_with`] without its check of the recorded epochs.
+    async fn record_commit(
+        kept_until: u64,
+        revealed: Option<u64>,
+        adjust: impl FnOnce(&mut rtao_testkit::FakeState) -> anyhow::Result<()>,
+    ) -> anyhow::Result<(rtao_testkit::FakeChain, Client, RevealWatcher, Metrics)> {
         let (chain, client) = fixture().await?;
         let commit = PreparedWeightCommit {
             ciphertext: vec![4, 5, 6],
@@ -2434,13 +2468,6 @@ mod tests {
                 &metrics,
             )
             .await?;
-        assert_eq!(
-            (
-                watcher.pending[0].commit_epoch,
-                watcher.pending[0].reveal_epoch
-            ),
-            (6, 7)
-        );
         Ok((chain, client, watcher, metrics))
     }
 
@@ -2652,6 +2679,54 @@ mod tests {
         );
         assert!(watcher.caught_up(118));
         assert!(requests < 40, "{requests} requests");
+        client.close().await;
+        Ok(())
+    }
+
+    /// A reveal period shortened from 2 to 1 epochs at 123 opens the window
+    /// of a commitment from epoch 6 at 124, between epochs. The first window
+    /// block is read in full: its snapshot explains the miss (a raised version
+    /// key there) as reading every block did, rather than the later window
+    /// end giving an unexplained miss that would refute a followed tag.
+    #[tokio::test]
+    async fn reveal_window_opened_between_epochs_checks_its_first_block() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = record_commit(129, None, |state| {
+            for block in 100..=145 {
+                let period = if block < 123 { 2u64 } else { 1 };
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "RevealPeriodEpochs",
+                    (NetUid(1),),
+                    period,
+                )?;
+            }
+            seed_at(
+                state,
+                124,
+                "SubtensorModule",
+                "WeightsVersionKey",
+                (NetUid(1),),
+                2u64,
+            )
+        })
+        .await?;
+        assert_eq!(
+            (
+                watcher.pending[0].commit_epoch,
+                watcher.pending[0].reveal_epoch
+            ),
+            (6, 8)
+        );
+        let requests = observe_requests(&chain, &client, &mut watcher, &metrics, [131]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("missed");
+        assert_eq!(
+            (outcome.reveal_epoch, outcome.observed_block, outcome.missed),
+            (7, 130, Some(RevealMissReason::VersionKey))
+        );
+        assert!(watcher.caught_up(131));
+        assert!(requests < 60, "{requests} requests");
         client.close().await;
         Ok(())
     }
