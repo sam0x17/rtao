@@ -973,6 +973,7 @@ fn policy_update_preserves_pending_uncertainty_and_its_diagnostic() -> anyhow::R
             last_attempt_epoch: Some(4),
             last_attempt_block: Some(100),
             uncertain: true,
+            ..Default::default()
         },
     );
     scheduler.attempts.insert(

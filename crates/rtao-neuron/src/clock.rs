@@ -17,6 +17,17 @@ pub trait Clock: Send + Sync {
     }
     /// Observe a verified best-head timestamp; wall clocks keep their own source.
     fn observe_timestamp(&self, _timestamp_ms: u64) {}
+    /// Observe a verified timestamp of a block this process had already
+    /// learned of at `received`. Elapsed time counts from `received`, so the
+    /// time spent reading the timestamp is not lost.
+    ///
+    /// The default ignores `received` and calls [`Self::observe_timestamp`],
+    /// which counts from the call: the clock then lags by up to that read's
+    /// duration, and never runs ahead.
+    fn observe_timestamp_at(&self, timestamp_ms: u64, received: Instant) {
+        let _ = received;
+        self.observe_timestamp(timestamp_ms);
+    }
 }
 
 /// Host wall clock, guarded against excessive skew before commits.
@@ -35,10 +46,20 @@ impl Clock for SystemClock {
 }
 
 /// Chain timestamp advanced by monotonic elapsed time since its notification.
+///
+/// Who anchors it: `NeuronRuntime`'s clock worker observes every best head.
+/// A `WeightScheduler` driven by the application's own loop anchors
+/// it too: before each timelocked commit it reads `Timestamp.Now` at the
+/// best block its preflight is pinned to and moves the clock forward to that
+/// reading when the clock is unanchored or behind it (D-094). Either way the
+/// reading is a lower bound of chain time, since a block is always learned
+/// after its timestamp.
 #[derive(Clone, Debug)]
 pub struct ChainClock(Arc<Mutex<(f64, Instant)>>);
 impl ChainClock {
-    /// Wait for the runtime's first verified timestamp before preparing a commit.
+    /// A clock with no anchor yet. [`ClockGuard::check`] refuses a commit
+    /// until the clock worker or the weight scheduler observes a verified
+    /// timestamp.
     pub fn unanchored() -> Self {
         Self(Arc::new(Mutex::new((f64::NAN, Instant::now()))))
     }
@@ -51,8 +72,20 @@ impl ChainClock {
     }
     /// Replace the anchor after receiving another best head.
     pub fn observe(&self, timestamp_ms: u64) {
+        self.observe_at(timestamp_ms, Instant::now());
+    }
+    /// Replace the anchor with the timestamp of a block learned at `received`.
+    pub fn observe_at(&self, timestamp_ms: u64, received: Instant) {
         *self.0.lock().unwrap_or_else(|p| p.into_inner()) =
-            (timestamp_ms as f64 / 1000.0, Instant::now());
+            (timestamp_ms as f64 / 1000.0, received);
+    }
+    /// Whether a verified timestamp anchors this clock.
+    pub fn is_anchored(&self) -> bool {
+        self.0
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .0
+            .is_finite()
     }
 }
 impl Clock for ChainClock {
@@ -63,6 +96,57 @@ impl Clock for ChainClock {
     fn observe_timestamp(&self, timestamp_ms: u64) {
         self.observe(timestamp_ms);
     }
+    fn observe_timestamp_at(&self, timestamp_ms: u64, received: Instant) {
+        self.observe_at(timestamp_ms, received);
+    }
+}
+
+/// When a block was pinned: the monotonic instant and the host's Unix time
+/// at that instant, taken right after the pinning read returned.
+#[cfg(feature = "validator")]
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Pinned {
+    pub(crate) instant: Instant,
+    pub(crate) system: f64,
+}
+#[cfg(feature = "validator")]
+impl Pinned {
+    pub(crate) fn now() -> Self {
+        Self {
+            instant: Instant::now(),
+            system: SystemClock.now_unix(),
+        }
+    }
+}
+
+/// Observe a verified timestamp the weight scheduler read itself (D-094).
+///
+/// The clock moves only forward: it is anchored when it has no anchor or
+/// reads earlier than this block's timestamp advanced from `pinned`, so a
+/// clock worker's fresher anchor is kept. Wall clocks keep their own source.
+/// The guard records the offset at the pinning instant; its minimum filter
+/// absorbs the block's age, as it does for propagation delay. Returns
+/// whether the clock took this anchor.
+#[cfg(feature = "validator")]
+pub(crate) fn observe_chain_time(
+    clock: &dyn Clock,
+    guard: &ClockGuard,
+    timestamp_ms: u64,
+    pinned: Pinned,
+) -> bool {
+    if let Err(error) = guard.observe(pinned.system, timestamp_ms) {
+        tracing::warn!(%error, "host clock reading is unusable; skew estimate not updated");
+    }
+    if clock.is_system() {
+        return false;
+    }
+    let observed = timestamp_ms as f64 / 1000.0 + pinned.instant.elapsed().as_secs_f64();
+    let now = clock.now_unix();
+    let behind = !(now.is_finite() && now >= observed);
+    if behind {
+        clock.observe_timestamp_at(timestamp_ms, pinned.instant);
+    }
+    behind
 }
 
 /// Clock health derived from the minimum offset of the last twenty heads.
@@ -205,6 +289,103 @@ mod tests {
         assert!(guard.check(&chain).is_ok());
         assert!((1_000.0..1_001.0).contains(&chain.now_unix()));
     }
+    #[test]
+    fn observe_at_counts_elapsed_time_from_the_pinning_instant() -> anyhow::Result<()> {
+        let chain = ChainClock::unanchored();
+        assert!(!chain.is_anchored());
+        let pinned = Instant::now()
+            .checked_sub(Duration::from_secs(5))
+            .ok_or_else(|| anyhow::anyhow!("monotonic clock too young"))?;
+        chain.observe_timestamp_at(1_000_000, pinned);
+        assert!(chain.is_anchored());
+        assert!((1_005.0..1_006.0).contains(&chain.now_unix()));
+        Ok(())
+    }
+
+    /// A clock that records what it observed through the default method.
+    struct Recorded(Mutex<Vec<u64>>);
+    impl Clock for Recorded {
+        fn now_unix(&self) -> f64 {
+            f64::NAN
+        }
+        fn observe_timestamp(&self, timestamp_ms: u64) {
+            self.0
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .push(timestamp_ms);
+        }
+    }
+
+    #[test]
+    fn default_observe_at_falls_back_to_observe_timestamp() {
+        let clock = Recorded(Mutex::new(Vec::new()));
+        clock.observe_timestamp_at(42, Instant::now());
+        assert_eq!(*clock.0.lock().unwrap_or_else(|p| p.into_inner()), [42]);
+    }
+
+    #[cfg(feature = "validator")]
+    #[test]
+    fn scheduler_observations_only_move_a_chain_clock_forward() -> anyhow::Result<()> {
+        let guard = ClockGuard::default();
+        let chain = ChainClock::unanchored();
+        let pinned = |seconds_ago: u64, system: f64| -> anyhow::Result<Pinned> {
+            Ok(Pinned {
+                instant: Instant::now()
+                    .checked_sub(Duration::from_secs(seconds_ago))
+                    .ok_or_else(|| anyhow::anyhow!("monotonic clock too young"))?,
+                system,
+            })
+        };
+        // An unanchored clock takes the first verified timestamp.
+        assert!(observe_chain_time(
+            &chain,
+            &guard,
+            1_000_000,
+            pinned(2, 1_003.0)?
+        ));
+        assert!((1_002.0..1_003.0).contains(&chain.now_unix()));
+        // The guard records the offset at the pinning instant.
+        let health = guard.health().ok_or_else(|| anyhow::anyhow!("no sample"))?;
+        assert!((health.skew_seconds - 3.0).abs() < 1e-9);
+        // An older block never moves the clock back.
+        assert!(!observe_chain_time(
+            &chain,
+            &guard,
+            990_000,
+            pinned(0, 1_003.0)?
+        ));
+        assert!((1_002.0..1_003.0).contains(&chain.now_unix()));
+        // A block the clock reads earlier than moves it forward.
+        assert!(observe_chain_time(
+            &chain,
+            &guard,
+            1_010_000,
+            pinned(0, 1_010.5)?
+        ));
+        assert!((1_010.0..1_011.0).contains(&chain.now_unix()));
+        // A wall clock keeps its own source; its guard still learns the skew.
+        let system_guard = ClockGuard::default();
+        assert!(!observe_chain_time(
+            &SystemClock,
+            &system_guard,
+            (SystemClock.now_unix() * 1000.0) as u64,
+            Pinned::now()
+        ));
+        system_guard.check(&SystemClock)?;
+        // An unusable host reading only skips the skew sample.
+        let skipped = ClockGuard::default();
+        let fresh = ChainClock::unanchored();
+        assert!(observe_chain_time(
+            &fresh,
+            &skipped,
+            1_000_000,
+            pinned(0, f64::NAN)?
+        ));
+        assert!(skipped.health().is_none());
+        assert!(fresh.is_anchored());
+        Ok(())
+    }
+
     #[tokio::test]
     async fn epoch_watch_retains_last_observation_without_subscribers() -> anyhow::Result<()> {
         let clock = EpochClock::new(EpochStatus::default());

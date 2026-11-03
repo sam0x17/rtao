@@ -373,6 +373,15 @@ missing inclusion state blocks handoff rather than reopening a cadence slot.
 Preflights older than the retained inclusion block cannot become ready, even
 with a zero chain rate limit. Once-per-epoch work requires a strictly newer
 observed epoch; a counter reset requires explicit reconciliation/migration.
+A dispatch that fails before anything was signed returns its cadence slot
+(D-095). That requires both that the attempt's hotkey source was never asked
+for a signature and that the operation holds exactly the signed attempts it
+held before dispatch; the journal records signed bytes before they are sent.
+The released slot, with a retry backoff of one block doubling to 32 while such
+failures repeat, is checkpointed with the other slots, so a restart can still
+use that epoch. The slot stays uncertain until the next recovery round confirms
+`Rebuildable`. Any other failure keeps the reservation, and a process that
+stops during dispatch restarts with the slot reserved.
 The logical operation's explicit version key remains fixed. A policy update cannot
 silently replace that key on pending work. Current surface/version refusals
 pause execution without deleting it.

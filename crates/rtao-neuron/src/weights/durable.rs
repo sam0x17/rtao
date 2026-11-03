@@ -533,6 +533,7 @@ mod tests {
                 last_attempt_block: Some(100),
                 last_attempt_epoch: Some(5),
                 uncertain: true,
+                ..Default::default()
             },
         );
         node.mutate_state(|state| -> anyhow::Result<()> {
@@ -892,6 +893,7 @@ mod tests {
                 last_attempt_epoch: Some(5),
                 last_attempt_block: Some(100),
                 uncertain: true,
+                ..Default::default()
             },
         );
         scheduler.persist(None)?;
@@ -966,6 +968,7 @@ mod tests {
             last_attempt_epoch: Some(5),
             last_attempt_block: Some(100),
             uncertain: false,
+            ..Default::default()
         };
         assert!(!due(
             WeightCadence::RateLimited { margin: 0 },
@@ -1188,3 +1191,11 @@ mod composer_tests;
 #[cfg(test)]
 #[path = "durable_owner_row_tests.rs"]
 mod owner_row_tests;
+
+#[cfg(test)]
+#[path = "durable_clock_tests.rs"]
+mod clock_tests;
+
+#[cfg(test)]
+#[path = "durable_slot_tests.rs"]
+mod slot_tests;
