@@ -791,18 +791,10 @@ impl Client {
             let (finalized, (carrier_lease, inner_lease)) = loop {
                 let waiting = tokio::time::Instant::now();
                 let finalized = loop {
-                    let best = limits
-                        .admission
-                        .run(self, chain.at(BlockRef::Best))
-                        .await?
-                        .block()
-                        .number;
-                    let finalized = limits
-                        .admission
-                        .run(self, self.at(BlockRef::Finalized))
-                        .await?
-                        .block()
-                        .number;
+                    // Both heights come from headers alone; neither block's
+                    // runtime is needed to measure the era headroom.
+                    let best = limits.admission.run(self, chain.best_number()).await?;
+                    let finalized = limits.admission.run(self, self.finalized_number()).await?;
                     let roomy = best.saturating_sub(finalized) <= era_headroom_lag(opts.period);
                     match check_era(opts.period, best, finalized) {
                         Ok(()) if roomy || waiting.elapsed() >= opts.finality_wait => {

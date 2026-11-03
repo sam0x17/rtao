@@ -935,18 +935,26 @@ impl Client {
 
     /// Refuse signing for a wrong network or unreadable signed extensions.
     pub async fn ensure_signing(&self) -> Result<(), ClientError> {
-        self.ensure_open()?;
-        if let Some(reason) = &self.inner.signing_disabled {
-            return Err(ClientError::SigningDisabled {
-                reason: reason.clone(),
-            });
-        }
+        self.ensure_signing_network()?;
         self.runtime_for(None)
             .await?
             .signing_status()
             .map_err(|error| ClientError::SigningDisabled {
                 reason: error.to_string(),
             })
+    }
+
+    /// The connection-level half of [`Self::ensure_signing`]: an open client
+    /// on a network that permits signing. Callers that refresh the head
+    /// runtime anyway check its signing status on the refreshed handle.
+    pub(crate) fn ensure_signing_network(&self) -> Result<(), ClientError> {
+        self.ensure_open()?;
+        if let Some(reason) = &self.inner.signing_disabled {
+            return Err(ClientError::SigningDisabled {
+                reason: reason.clone(),
+            });
+        }
+        Ok(())
     }
 
     /// Cancel background tasks and close this shared connection.
@@ -1024,6 +1032,59 @@ impl Client {
             () = self.closed() => Err(rtao_rpc::RpcError::Closed.into()),
             runtime = self.inner.cache.refresh_head() => runtime,
         }
+    }
+
+    /// [`Self::refresh_runtime`], also returning the live runtime version
+    /// object it was installed from.
+    pub(crate) async fn refresh_runtime_version(
+        &self,
+    ) -> Result<(RuntimeHandle, Value), ClientError> {
+        self.ensure_open()?;
+        self.inner.cache.invalidate_head().await;
+        tokio::select! {
+            biased;
+            () = self.closed() => Err(rtao_rpc::RpcError::Closed.into()),
+            refreshed = self.inner.cache.refresh_head_version() => refreshed,
+        }
+    }
+
+    /// The finalized height, read from its header alone.
+    ///
+    /// Transaction preparation needs only the number, so this skips the
+    /// runtime lookup [`Self::at`] performs. The height also renews the
+    /// finalized horizon of the block-hash cache, so an era anchor at or below
+    /// it is served from that cache or with one `chain_getBlockHash`.
+    pub(crate) async fn finalized_number(&self) -> Result<u64, ClientError> {
+        let hash = parse_hash(&self.request("chain_getFinalizedHead", json!([])).await?)?;
+        let header = self.header_by_hash(hash).await?;
+        let mut cache = tokio::select! {
+            biased;
+            () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+            cache = self.inner.hash_cache.lock() => cache,
+        };
+        let horizon = cache
+            .finalized
+            .map_or(header.number, |(height, _)| height.max(header.number));
+        cache.finalized = Some((horizon, tokio::time::Instant::now()));
+        cache.remember(header.number, hash);
+        Ok(header.number)
+    }
+
+    /// The best height, from the best header alone; a client that reads at one
+    /// block reports its pinned best block, as [`Self::at`] does.
+    pub(crate) async fn best_number(&self) -> Result<u64, ClientError> {
+        if self.reads_at_one_block() {
+            return Ok(self.at(crate::BlockRef::Best).await?.block().number);
+        }
+        let raw: Value = self.request("chain_getHeader", json!([])).await?;
+        Ok(crate::BlockHeader::from_json(raw)
+            .map_err(head_error)?
+            .number)
+    }
+
+    /// The canonical hash at a height, cached once the height is finalized.
+    pub(crate) async fn block_hash(&self, number: u64) -> Result<H256, ClientError> {
+        self.hash_for_number(number).await
     }
 
     pub(crate) fn head_policy(&self) -> crate::HeadPolicy {
@@ -1137,13 +1198,7 @@ impl Client {
         }
         let hash = parse_hash(&value)?;
         if finalized {
-            cache.hashes.insert(number, hash);
-            cache.order.push_back(number);
-            if cache.order.len() > 512
-                && let Some(old) = cache.order.pop_front()
-            {
-                cache.hashes.remove(&old);
-            }
+            cache.remember(number, hash);
         }
         Ok(hash)
     }
@@ -1247,6 +1302,19 @@ struct HashCache {
     finalized: Option<(u64, tokio::time::Instant)>,
     hashes: std::collections::BTreeMap<u64, H256>,
     order: std::collections::VecDeque<u64>,
+}
+impl HashCache {
+    /// Retain a finalized height's hash, keeping the 512 most recent heights.
+    fn remember(&mut self, number: u64, hash: H256) {
+        if self.hashes.insert(number, hash).is_none() {
+            self.order.push_back(number);
+        }
+        if self.order.len() > 512
+            && let Some(old) = self.order.pop_front()
+        {
+            self.hashes.remove(&old);
+        }
+    }
 }
 
 #[cfg(test)]

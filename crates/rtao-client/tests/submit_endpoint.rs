@@ -405,7 +405,12 @@ async fn without_a_submit_endpoint_requests_are_unchanged() {
 
 /// Recorded from the client before submit endpoints were added, then updated
 /// once when each fresh nonce began reading `author_pendingExtrinsics` for
-/// pending shield carriers (D-084). A fee probe's nonce does not.
+/// pending shield carriers (D-084), and once when preparation and signature
+/// attachment stopped re-reading what they already had (D-095): each reads the
+/// live runtime version once, takes the finalized and best heights from their
+/// headers without a runtime lookup, and finds the era anchor's hash in the
+/// finalized hash cache. Only requests were removed; a fee probe's nonce still
+/// does not read the pool.
 const DEFAULT_METHODS: &[&str] = &[
     "state_getRuntimeVersion",
     "account_nextIndex",
@@ -416,12 +421,6 @@ const DEFAULT_METHODS: &[&str] = &[
     "chain_getFinalizedHead",
     "chain_getHeader",
     "chain_getHeader",
-    "chain_getFinalizedHead",
-    "chain_getHeader",
-    "chain_getBlockHash",
-    "chain_getHeader",
-    "state_getRuntimeVersion",
-    "state_getRuntimeVersion",
     "state_getRuntimeVersion",
     "chain_getFinalizedHead",
     "chain_getHeader",
@@ -439,10 +438,6 @@ const DEFAULT_METHODS: &[&str] = &[
     "chain_getFinalizedHead",
     "chain_getHeader",
     "chain_getHeader",
-    "chain_getBlockHash",
-    "chain_getHeader",
-    "state_getRuntimeVersion",
-    "state_getRuntimeVersion",
     "state_getRuntimeVersion",
     "chain_getFinalizedHead",
     "chain_getHeader",
@@ -453,18 +448,13 @@ const DEFAULT_METHODS: &[&str] = &[
     "state_getRuntimeVersion",
     "chain_getFinalizedHead",
     "chain_getHeader",
-    "state_getRuntimeVersion",
     "chain_getHeader",
-    "chain_getBlockHash",
-    "chain_getHeader",
-    "state_getRuntimeVersion",
-    "state_getRuntimeVersion",
     "state_getRuntimeVersion",
     "chain_getFinalizedHead",
     "chain_getHeader",
     "author_submitExtrinsic",
 ];
-const DEFAULT_DIGEST: &str = "22742f155892dc830f9c2604080295ebeaa3560dcad5f0d74a96c17f0381a091";
+const DEFAULT_DIGEST: &str = "c791690a113abc1925ac0b02399b6b7e3d76141791a4df273fd77526e85f161f";
 
 /// An encoded 1184-byte ML-KEM-768 encapsulation key accepted by the core.
 fn shield_key(fill: u8) -> Vec<u8> {
@@ -523,10 +513,12 @@ async fn without_a_submit_endpoint_shield_requests_are_unchanged() {
 /// Recorded from the client before shield reads followed the submit endpoint,
 /// then updated once when NextKey became an unpinned read: each of the two
 /// `chain_getHeader` and `state_queryStorageAt(key, best)` pairs became one
-/// `state_getStorage(key)`, and once when a fresh nonce began reading
-/// `author_pendingExtrinsics` for pending shield carriers (D-084). Every other
-/// request is unchanged.
-const SHIELD_DIGEST: &str = "66729509b333da11ca8282c21f1bb3056950b864a88cf17695bbac6e2f315ae9";
+/// `state_getStorage(key)`, once when a fresh nonce began reading
+/// `author_pendingExtrinsics` for pending shield carriers (D-084), and once
+/// when the era-headroom heights, preparation and signature attachment
+/// stopped re-reading what they already had (D-095). Every other request is
+/// unchanged.
+const SHIELD_DIGEST: &str = "03b4d77f0d3b69ca54c098e5f42a2031b7ba10ef80b5673c046e1536acf2326f";
 
 /// A read endpoint behind the submitting node, with its own NextKey.
 async fn shield_split(
