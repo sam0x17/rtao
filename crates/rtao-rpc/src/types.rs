@@ -214,8 +214,13 @@ pub struct SessionConfig {
     /// Silence with unanswered requests before reconnecting.
     pub silence_timeout: Duration,
     /// Consecutive losses per endpoint before rotation.
+    ///
+    /// Without `retry_forever` this also bounds how many times an endpoint
+    /// that refused a reconnect handshake (HTTP 403 or 429) is dialed again
+    /// before the refusal becomes terminal.
     pub max_retries: u32,
-    /// Continue cycling endpoints indefinitely.
+    /// Continue cycling endpoints indefinitely, and keep dialing an endpoint
+    /// that refuses reconnect handshakes, each time after its bounded wait.
     pub retry_forever: bool,
     /// Per-subscription retained notifications; overflow drops the oldest.
     pub subscription_buffer: usize,
@@ -326,7 +331,16 @@ impl SessionConfig {
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum RpcError {
-    /// A terminal gateway policy refusal.
+    /// A gateway policy refusal, terminal for the session.
+    ///
+    /// The exception is an HTTP 403 or 429 refusal of a reconnect handshake
+    /// after the session has connected: the session stays `Reconnecting`,
+    /// waits the longer of the refusal's `Retry-After` (at most ten minutes)
+    /// and a backoff of one second doubling per consecutive refusal to sixty,
+    /// and dials the same endpoint again.
+    /// Without `retry_forever` that refusal becomes terminal after
+    /// `max_retries` further refusals. A refused initial connect, a JSON-RPC
+    /// policy error and a policy close (1008) stay terminal.
     Policy(Box<PolicyRefusal>),
     /// Historical state was pruned from this endpoint.
     StateDiscarded {
@@ -451,9 +465,10 @@ pub enum SessionEvent {
         /// Sanitized endpoint.
         endpoint: String,
     },
-    /// A connection was lost and will be retried.
+    /// A connection was lost, or a reconnect handshake was refused under the
+    /// endpoint's policy, and will be retried.
     Reconnecting {
-        /// Consecutive failure count.
+        /// Consecutive failure count, or consecutive refused reconnects.
         attempt: u32,
         /// Sanitized endpoint.
         endpoint: String,

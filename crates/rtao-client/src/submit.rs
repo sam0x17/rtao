@@ -1156,20 +1156,26 @@ impl Client {
         finalized_height: Option<u64>,
         fees: (u64, Option<u64>),
     ) -> Result<UnsignedExtrinsic, ClientError> {
-        self.ensure_signing().await?;
-        let runtime = self.refresh_runtime().await?;
+        // Preparation reads only what the transaction needs, since a paced
+        // endpoint spends its admission window on every request: one live
+        // runtime version (its stamp, signing status and spec name), the
+        // finalized and best heights from their headers, and the era anchor's
+        // hash, cached once finalized.
+        self.ensure_signing_network()?;
+        let (runtime, version) = self.refresh_runtime_version().await?;
         call.ensure_runtime(&runtime).map_err(ClientError::from)?;
         runtime
             .signing_status()
             .map_err(|error| ClientError::SigningDisabled {
                 reason: error.to_string(),
             })?;
+        check_live_stamp(&version, &call)?;
         let height = match finalized_height {
             Some(height) => height,
-            None => self.at(BlockRef::Finalized).await?.block().number,
+            None => self.finalized_number().await?,
         };
         if let Mortality::Mortal(period) = opts.mortality {
-            let best = self.at(BlockRef::Best).await?.block().number;
+            let best = self.best_number().await?;
             let lag = best.saturating_sub(height);
             #[cfg(feature = "metrics")]
             metrics::gauge!("rtao_finality_lag_blocks").set(lag as f64);
@@ -1185,7 +1191,7 @@ impl Client {
             Mortality::Immortal => (Value::Str("00".into()), self.genesis(), None),
             Mortality::Mortal(period) => {
                 let birth = rtao_core::extrinsic::era_birth(period.get(), height);
-                let anchor = self.at(BlockRef::Number(birth)).await?.block().hash;
+                let anchor = self.block_hash(birth).await?;
                 let expiry = birth.checked_add(period.get()).ok_or_else(|| {
                     ClientError::Protocol("mortal era expiry overflows block number".into())
                 })?;
@@ -1199,15 +1205,11 @@ impl Client {
                 )
             }
         };
-        let version: serde_json::Value = self
-            .request("state_getRuntimeVersion", json!([null]))
-            .await?;
         let spec_name = version
             .get("specName")
             .and_then(serde_json::Value::as_str)
             .unwrap_or("")
             .to_owned();
-        check_live_stamp(&version, &call)?;
         let (decimals, token_symbol) = signer
             .metadata_constants()
             .unwrap_or_else(|| (opts.metadata_decimals, opts.metadata_symbol.clone()));
@@ -1281,11 +1283,14 @@ impl Client {
         signature: MultiSignature,
     ) -> Result<(Bytes, H256), ClientError> {
         unsigned.verify_signature(signature)?;
-        self.ensure_signing().await?;
-        let runtime = self.refresh_runtime().await?;
-        let version: serde_json::Value = self
-            .request("state_getRuntimeVersion", json!([null]))
-            .await?;
+        // One live runtime version both re-checks signing and the stamps.
+        self.ensure_signing_network()?;
+        let (runtime, version) = self.refresh_runtime_version().await?;
+        runtime
+            .signing_status()
+            .map_err(|error| ClientError::SigningDisabled {
+                reason: error.to_string(),
+            })?;
         check_live_stamp(&version, &unsigned.call)?;
         unsigned
             .call
@@ -1297,7 +1302,7 @@ impl Client {
             });
         }
         if let Some(expiry) = unsigned.expiry
-            && self.at(BlockRef::Finalized).await?.block().number >= expiry
+            && self.finalized_number().await? >= expiry
         {
             return Err(ClientError::SigningDisabled {
                 reason: "prepared transaction's mortal era has expired; prepare and sign again"

@@ -748,6 +748,9 @@ struct Supervisor {
     gauge_reported: std::sync::atomic::AtomicUsize,
     index: usize,
     failures: u32,
+    // Set once the session first reaches `Connected`; a refusal before that
+    // is the caller's connect error, as in Python.
+    established: bool,
     bucket: Bucket,
     shutdown_ack: Option<oneshot::Sender<()>>,
     stopping: bool,
@@ -782,6 +785,7 @@ impl Supervisor {
             gauge_reported: std::sync::atomic::AtomicUsize::new(0),
             index: 0,
             failures: 0,
+            established: false,
             bucket,
             shutdown_ack: None,
             stopping: false,
@@ -834,6 +838,7 @@ impl Supervisor {
                 continue;
             }
             let endpoint = policy::safe_endpoint(self.config.pool.urls[self.index].as_str());
+            self.established = true;
             self.state.send_replace(SessionState::Connected {
                 url: self.config.pool.urls[self.index].clone(),
             });
@@ -860,9 +865,11 @@ impl Supervisor {
     }
     async fn dial(&mut self) -> Result<TransportSocket, RpcError> {
         let mut cycle = 0u32;
+        let mut refusals = 0u32;
         loop {
             let mut last_error = RpcError::Closed;
-            for _ in 0..self.config.pool.urls.len() {
+            let mut tried = 0;
+            while tried < self.config.pool.urls.len() {
                 self.state.send_replace(SessionState::Reconnecting {
                     attempt: self.failures,
                 });
@@ -878,10 +885,28 @@ impl Supervisor {
                 };
                 match result {
                     Ok(socket) => return Ok(OwnedSocket::new(socket)),
+                    Err(RpcError::Policy(refusal))
+                        if self.established
+                            && matches!(refusal.kind, RefusalKind::Handshake { .. }) =>
+                    {
+                        // A refused reconnect waits and dials the same
+                        // endpoint again; rotating would carry the same
+                        // traffic to the gateway's other endpoints.
+                        refusals = refusals.saturating_add(1);
+                        if !self.config.retry_forever && refusals > self.config.max_retries {
+                            return Err(RpcError::Policy(refusal));
+                        }
+                        let wait = refused_reconnect_wait(refusal.retry_after_duration(), refusals);
+                        self.refused_reconnect(&refusal, refusals, wait);
+                        if !self.delay(wait).await {
+                            return Err(RpcError::Closed);
+                        }
+                    }
                     Err(error @ RpcError::Policy(_)) => return Err(error),
                     Err(error) => {
                         last_error = error;
                         self.rotate();
+                        tried += 1;
                     }
                 }
             }
@@ -913,8 +938,27 @@ impl Supervisor {
     fn rotate(&mut self) {
         self.index = (self.index + 1) % self.config.pool.urls.len();
     }
+    fn refused_reconnect(&self, refusal: &PolicyRefusal, refusals: u32, wait: Duration) {
+        let endpoint = policy::safe_endpoint(self.config.pool.urls[self.index].as_str());
+        tracing::warn!(
+            target: "rtao::rpc",
+            endpoint = %endpoint,
+            refusals,
+            retry_in_seconds = wait.as_secs_f64(),
+            refusal = %refusal,
+            "the endpoint refused a reconnect under its policy; dialing it again after the wait"
+        );
+        #[cfg(feature = "metrics")]
+        metrics::counter!("rtao_rpc_reconnect_refusals_total","status"=>refusal.status_code.map(|status| status.to_string()).unwrap_or_default())
+            .increment(1);
+        let _ = self.events.send(SessionEvent::Reconnecting {
+            attempt: refusals,
+            endpoint,
+        });
+    }
     fn record_loss(&mut self, reason: RpcError) -> Result<(), RpcError> {
-        // Refusals received while pacing reconnect setup are terminal too.
+        // JSON-RPC policy errors and policy closes received while pacing
+        // reconnect setup are terminal, as on an established connection.
         if matches!(reason, RpcError::Policy(_)) {
             return Err(reason);
         }
@@ -1621,6 +1665,27 @@ impl Supervisor {
         }
     }
 }
+/// Longest `Retry-After` a refused reconnect honours before dialing again.
+const REFUSED_RECONNECT_MAX_RETRY_AFTER: Duration = Duration::from_secs(600);
+/// First backoff after a refused reconnect; it doubles per consecutive
+/// refusal up to [`REFUSED_RECONNECT_MAX_BACKOFF`].
+const REFUSED_RECONNECT_FIRST_BACKOFF: Duration = Duration::from_secs(1);
+const REFUSED_RECONNECT_MAX_BACKOFF: Duration = Duration::from_secs(60);
+/// The wait before dialing again after the `refusals`th consecutive refused
+/// reconnect: the longer of the refusal's own retry time (at most ten
+/// minutes) and a backoff of one second doubling per refusal to sixty. The
+/// backoff is a floor, so an endpoint that keeps refusing with a short or zero
+/// `Retry-After` is still dialed less and less often.
+fn refused_reconnect_wait(retry_after: Option<Duration>, refusals: u32) -> Duration {
+    let backoff = REFUSED_RECONNECT_FIRST_BACKOFF
+        .saturating_mul(2u32.saturating_pow(refusals.saturating_sub(1).min(16)))
+        .min(REFUSED_RECONNECT_MAX_BACKOFF);
+    retry_after
+        .map_or(Duration::ZERO, |wait| {
+            wait.min(REFUSED_RECONNECT_MAX_RETRY_AFTER)
+        })
+        .max(backoff)
+}
 struct Bucket {
     rate: Option<RateLimit>,
     tokens: f64,
@@ -1808,6 +1873,34 @@ fn tls_config_with_roots(
     .with_no_client_auth();
     tls.alpn_protocols = vec![b"http/1.1".to_vec()];
     Ok(Arc::new(tls))
+}
+#[cfg(test)]
+mod refusal_tests {
+    use super::*;
+
+    #[test]
+    fn refused_reconnects_wait_the_longer_of_a_bounded_retry_after_and_a_doubling_backoff() {
+        let seconds = Duration::from_secs;
+        assert_eq!(refused_reconnect_wait(Some(seconds(90)), 1), seconds(90));
+        assert_eq!(refused_reconnect_wait(Some(seconds(90)), 9), seconds(90));
+        assert_eq!(
+            refused_reconnect_wait(Some(seconds(86_400)), 1),
+            seconds(600)
+        );
+        // A short or zero retry time never shortens the doubling backoff, so
+        // an endpoint that keeps refusing is dialed less and less often.
+        let zero: Vec<_> = (1..=8)
+            .map(|refusals| refused_reconnect_wait(Some(Duration::ZERO), refusals))
+            .collect();
+        assert_eq!(zero, [1, 2, 4, 8, 16, 32, 60, 60].map(seconds).to_vec());
+        assert_eq!(refused_reconnect_wait(Some(seconds(5)), 4), seconds(8));
+        let doubling: Vec<_> = (1..=8)
+            .map(|refusals| refused_reconnect_wait(None, refusals))
+            .collect();
+        assert_eq!(doubling, [1, 2, 4, 8, 16, 32, 60, 60].map(seconds).to_vec());
+        assert_eq!(refused_reconnect_wait(None, u32::MAX), seconds(60));
+        assert_eq!(refused_reconnect_wait(None, 0), seconds(1));
+    }
 }
 #[cfg(test)]
 mod tls_tests {

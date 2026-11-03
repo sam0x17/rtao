@@ -377,6 +377,73 @@ impl Signer for MetadataSigner {
     }
 }
 
+/// Preparation and attachment run inside the admission window, where a paced
+/// endpoint spends time on every request (D-097). Each reads the live runtime
+/// version once and the heights from headers alone; an era anchor at the
+/// finalized height comes from the finalized hash cache, and an older one costs
+/// one `chain_getBlockHash`.
+#[tokio::test]
+async fn preparation_and_attachment_read_each_value_they_need_once() {
+    let (client, fake, signer) = fixture().await;
+    fake.mutate_state(|state| state.finalized = 90);
+    let call = call(&client, vec![1]).await;
+    let methods_since = |start: usize| {
+        fake.requests()[start..]
+            .iter()
+            .map(|request| request.method.clone())
+            .collect::<Vec<_>>()
+    };
+    let heights = [
+        "state_getRuntimeVersion",
+        "chain_getFinalizedHead",
+        "chain_getHeader",
+        "chain_getHeader",
+    ];
+    // A 65536-block era quantizes its phase by 16, so its birth precedes the
+    // finalized height.
+    for (period, birth, anchor) in [(128, 90, None), (65536, 80, Some("chain_getBlockHash"))] {
+        let start = fake.requests().len();
+        let prepared = client
+            .prepare_call(
+                call.clone(),
+                &signer,
+                &SubmitOptions {
+                    mortality: Mortality::Mortal(Period::new(period)),
+                    nonce: NoncePolicy::Explicit(0),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let expected: Vec<_> = heights.iter().copied().chain(anchor).collect();
+        assert_eq!(methods_since(start), expected, "period {period}");
+        assert_eq!(prepared.submission_head(), 90);
+        assert_eq!(
+            prepared.era_block_hash(),
+            client
+                .at(BlockRef::Number(birth))
+                .await
+                .unwrap()
+                .block()
+                .hash
+        );
+        let signature = signer
+            .sign(&prepared.signing_request(rtao_signer::SignPurpose::Extrinsic))
+            .await
+            .unwrap();
+        let start = fake.requests().len();
+        client.attach_signature(&prepared, signature).await.unwrap();
+        assert_eq!(
+            methods_since(start),
+            [
+                "state_getRuntimeVersion",
+                "chain_getFinalizedHead",
+                "chain_getHeader"
+            ]
+        );
+    }
+}
+
 #[tokio::test]
 async fn metadata_verifying_signer_receives_a_proof_consistent_with_the_signed_payload() {
     let (client, fake, signer) = fixture().await;

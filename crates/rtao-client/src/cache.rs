@@ -350,6 +350,15 @@ impl RuntimeCache {
 
     /// Recheck the current runtime version, bypassing the twelve-second head TTL.
     pub async fn refresh_head(&self) -> Result<RuntimeHandle, ClientError> {
+        self.refresh_head_version()
+            .await
+            .map(|(runtime, _version)| runtime)
+    }
+
+    /// [`Self::refresh_head`], also returning the live `state_getRuntimeVersion`
+    /// object the runtime was installed from, so a caller that needs its other
+    /// fields (the spec name) or its stamp does not read it again.
+    pub(crate) async fn refresh_head_version(&self) -> Result<(RuntimeHandle, Value), ClientError> {
         let checked_at = Instant::now();
         let generation = self.next_head_generation().await;
         let info = rpc_request(
@@ -358,7 +367,8 @@ impl RuntimeCache {
             json!([null]),
         )
         .await?;
-        self.install_head(&info, checked_at, generation).await
+        let runtime = self.install_head(&info, checked_at, generation).await?;
+        Ok((runtime, info))
     }
 
     /// Install the head runtime advertised by a runtime-version notification.

@@ -91,6 +91,7 @@ async fn qualified_shield_recovery_exposes_readiness_without_authority() -> anyh
     let mut options = super::super::submit::SubmissionOptions {
         journal: Some(binding.clone()),
         shield_period: Some(ShieldPeriod::P4),
+        ..Default::default()
     }
     .execution(0.001);
     options.deadline = Some(Duration::from_secs(1));
@@ -203,6 +204,7 @@ async fn qualified_shield_recovery_exposes_readiness_without_authority() -> anyh
     let options = super::super::submit::SubmissionOptions {
         journal: Some(binding.clone()),
         shield_period: Some(ShieldPeriod::P4),
+        ..Default::default()
     }
     .execution(0.001);
     let refused = Executor::new(lab.client.clone())
@@ -243,6 +245,7 @@ async fn exhausted_shield_recovery_stays_reconcile_without_renewing_budget() -> 
     let mut options = super::super::submit::SubmissionOptions {
         journal: Some(binding.clone()),
         shield_period: Some(ShieldPeriod::P4),
+        ..Default::default()
     }
     .execution(0.001);
     // One deadline covers every reseal; this fixture spends it on wall time.

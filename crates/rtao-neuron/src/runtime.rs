@@ -165,6 +165,13 @@ pub trait Validator: Send + Sync + 'static {
     ) -> crate::weights::OwnerRowPolicy {
         crate::weights::OwnerRowPolicy::Hold
     }
+
+    /// Admission window for each weight transaction, which must be positive;
+    /// see [`crate::weights::WeightScheduler::with_submit_deadline`]. Raise it
+    /// for an endpoint paced to a few requests a minute.
+    fn weight_submit_deadline(&self) -> std::time::Duration {
+        crate::weights::DEFAULT_WEIGHT_SUBMIT_DEADLINE
+    }
     /// Drop or reset scores after registration identities change.
     fn on_metagraph(&self, _diff: &MetagraphDiff, _state: &mut Self::State) {}
     /// Set scoring cadence, timeout and failure backoff.
