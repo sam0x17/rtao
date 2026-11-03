@@ -1025,13 +1025,9 @@ impl Client {
     }
     /// Recheck the node's head runtime before preparing or attaching a signature.
     pub async fn refresh_runtime(&self) -> Result<RuntimeHandle, ClientError> {
-        self.ensure_open()?;
-        self.inner.cache.invalidate_head().await;
-        tokio::select! {
-            biased;
-            () = self.closed() => Err(rtao_rpc::RpcError::Closed.into()),
-            runtime = self.inner.cache.refresh_head() => runtime,
-        }
+        self.refresh_runtime_version()
+            .await
+            .map(|(runtime, _version)| runtime)
     }
 
     /// [`Self::refresh_runtime`], also returning the live runtime version
