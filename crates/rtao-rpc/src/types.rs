@@ -335,8 +335,9 @@ pub enum RpcError {
     ///
     /// The exception is an HTTP 403 or 429 refusal of a reconnect handshake
     /// after the session has connected: the session stays `Reconnecting`,
-    /// waits the refusal's `Retry-After` (at most ten minutes) or a backoff of
-    /// one second doubling to sixty, and dials the same endpoint again.
+    /// waits the longer of the refusal's `Retry-After` (at most ten minutes)
+    /// and a backoff of one second doubling per consecutive refusal to sixty,
+    /// and dials the same endpoint again.
     /// Without `retry_forever` that refusal becomes terminal after
     /// `max_retries` further refusals. A refused initial connect, a JSON-RPC
     /// policy error and a policy close (1008) stay terminal.

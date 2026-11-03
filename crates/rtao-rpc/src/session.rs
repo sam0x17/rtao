@@ -1665,27 +1665,26 @@ impl Supervisor {
         }
     }
 }
-/// Shortest wait before dialing an endpoint that refused a reconnect.
-const REFUSED_RECONNECT_MIN_WAIT: Duration = Duration::from_millis(250);
 /// Longest `Retry-After` a refused reconnect honours before dialing again.
 const REFUSED_RECONNECT_MAX_RETRY_AFTER: Duration = Duration::from_secs(600);
-/// First wait after a refusal that names no retry time; it doubles per
-/// consecutive refusal up to [`REFUSED_RECONNECT_MAX_BACKOFF`].
+/// First backoff after a refused reconnect; it doubles per consecutive
+/// refusal up to [`REFUSED_RECONNECT_MAX_BACKOFF`].
 const REFUSED_RECONNECT_FIRST_BACKOFF: Duration = Duration::from_secs(1);
 const REFUSED_RECONNECT_MAX_BACKOFF: Duration = Duration::from_secs(60);
 /// The wait before dialing again after the `refusals`th consecutive refused
-/// reconnect: the refusal's own retry time when it names one, otherwise one
-/// second doubling to sixty, both bounded.
+/// reconnect: the longer of the refusal's own retry time (at most ten
+/// minutes) and a backoff of one second doubling per refusal to sixty. The
+/// backoff is a floor, so an endpoint that keeps refusing with a short or zero
+/// `Retry-After` is still dialed less and less often.
 fn refused_reconnect_wait(retry_after: Option<Duration>, refusals: u32) -> Duration {
-    match retry_after {
-        Some(wait) => wait.clamp(
-            REFUSED_RECONNECT_MIN_WAIT,
-            REFUSED_RECONNECT_MAX_RETRY_AFTER,
-        ),
-        None => REFUSED_RECONNECT_FIRST_BACKOFF
-            .saturating_mul(2u32.saturating_pow(refusals.saturating_sub(1).min(16)))
-            .min(REFUSED_RECONNECT_MAX_BACKOFF),
-    }
+    let backoff = REFUSED_RECONNECT_FIRST_BACKOFF
+        .saturating_mul(2u32.saturating_pow(refusals.saturating_sub(1).min(16)))
+        .min(REFUSED_RECONNECT_MAX_BACKOFF);
+    retry_after
+        .map_or(Duration::ZERO, |wait| {
+            wait.min(REFUSED_RECONNECT_MAX_RETRY_AFTER)
+        })
+        .max(backoff)
 }
 struct Bucket {
     rate: Option<RateLimit>,
@@ -1880,18 +1879,21 @@ mod refusal_tests {
     use super::*;
 
     #[test]
-    fn refused_reconnects_honour_bounded_retry_after_or_double_to_a_minute() {
+    fn refused_reconnects_wait_the_longer_of_a_bounded_retry_after_and_a_doubling_backoff() {
         let seconds = Duration::from_secs;
         assert_eq!(refused_reconnect_wait(Some(seconds(90)), 1), seconds(90));
         assert_eq!(refused_reconnect_wait(Some(seconds(90)), 9), seconds(90));
         assert_eq!(
-            refused_reconnect_wait(Some(Duration::ZERO), 1),
-            Duration::from_millis(250)
-        );
-        assert_eq!(
             refused_reconnect_wait(Some(seconds(86_400)), 1),
             seconds(600)
         );
+        // A short or zero retry time never shortens the doubling backoff, so
+        // an endpoint that keeps refusing is dialed less and less often.
+        let zero: Vec<_> = (1..=8)
+            .map(|refusals| refused_reconnect_wait(Some(Duration::ZERO), refusals))
+            .collect();
+        assert_eq!(zero, [1, 2, 4, 8, 16, 32, 60, 60].map(seconds).to_vec());
+        assert_eq!(refused_reconnect_wait(Some(seconds(5)), 4), seconds(8));
         let doubling: Vec<_> = (1..=8)
             .map(|refusals| refused_reconnect_wait(None, refusals))
             .collect();

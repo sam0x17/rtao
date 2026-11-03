@@ -373,7 +373,7 @@ async fn wait_connect_attempts(node: &FakeNode, count: usize) -> Result {
 }
 
 // A refused reconnect after the session has connected is waited out and
-// dialed again (D-094); Python ends the session on any policy refusal.
+// dialed again (D-097); Python ends the session on any policy refusal.
 #[tokio::test]
 async fn refused_reconnect_honours_retry_after_and_resends_pending_reads() -> Result {
     let node = FakeNode::start().await?;
@@ -398,13 +398,13 @@ async fn refused_reconnect_honours_retry_after_and_resends_pending_reads() -> Re
         })
     };
     assert_eq!(
-        timeout(Duration::from_secs(5), read).await???,
+        timeout(Duration::from_secs(10), read).await???,
         "after the refusal"
     );
     // The first refusal named one second; the second named none left, which
-    // still waits the 250 ms floor. retry_forever keeps dialing past
-    // max_retries.
-    assert!(refused.elapsed() >= Duration::from_millis(1200));
+    // still waits the doubled two-second backoff. retry_forever keeps dialing
+    // past max_retries.
+    assert!(refused.elapsed() >= Duration::from_millis(2900));
     assert_eq!(node.connect_attempts(), 4);
     let accepted: Vec<_> = node.connections().iter().map(|c| c.accepted).collect();
     assert_eq!(accepted, [true, false, false, true]);
@@ -452,7 +452,8 @@ async fn refused_reconnects_without_retry_forever_end_after_max_retries_without_
     };
     wait_method_requests(&node, "system_chain", 1).await?;
     node.drop_connection()?;
-    let error = timeout(Duration::from_secs(5), read)
+    // Each refusal names no wait left; the backoff still waits 1 s, then 2 s.
+    let error = timeout(Duration::from_secs(10), read)
         .await??
         .err()
         .ok_or("read unexpectedly succeeded")?;
