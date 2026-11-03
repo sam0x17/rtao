@@ -1223,6 +1223,15 @@ impl WeightScheduler {
     }
 
     /// Observe a finalized head, then prepare due proposals at one fresh best head.
+    ///
+    /// An application may drive this from its own loop, without
+    /// `NeuronRuntime`. Before each timelocked commit the scheduler reads
+    /// `Timestamp.Now` at the best block the commit's preflight is pinned to
+    /// and observes it on its clock and [`ClockGuard`] (D-094): a
+    /// [`crate::ChainClock::unanchored`] clock is anchored from it, and a
+    /// [`crate::SystemClock`] gets its skew estimate. The clock only moves
+    /// forward, so a fresher anchor, such as the runtime's clock worker
+    /// keeps, is never replaced by an older block's timestamp.
     pub async fn on_finalized(
         &mut self,
         cx: &NeuronCx,
@@ -1248,6 +1257,7 @@ impl WeightScheduler {
             return Ok(());
         }
         let snapshot = cx.client.at(BlockRef::Best).await?;
+        let pinned = crate::clock::Pinned::now();
         let hotkey = cx.hotkey.hotkey_address()?;
         let auxiliary = reads::fetch(
             &snapshot,
@@ -1280,6 +1290,7 @@ impl WeightScheduler {
                 mechanisms,
                 mech,
                 preflight,
+                pinned,
                 &mut proposals,
             ))
             .await
@@ -1322,6 +1333,7 @@ impl WeightScheduler {
         mechanisms: u8,
         mech: MechId,
         preflight: WeightPreflight,
+        pinned: crate::clock::Pinned,
         proposals: &mut impl FnMut(MechId) -> WeightsProposal,
     ) -> anyhow::Result<()> {
         if self.slots.get(&mech).is_some_and(|slot| slot.uncertain) {
@@ -1489,6 +1501,7 @@ impl WeightScheduler {
         let block_time = snapshot_slot_duration(&cx.client, &preflight.at).await?;
         let mut commit = None;
         if preflight.commit_reveal {
+            self.anchor_clock(cx, &preflight.at, pinned).await;
             self.clock_guard.check(self.clock.as_ref())?;
             let committer = TimelockCommitter::new(if preflight.null_consensus {
                 CommitSizeLimit::Null {
@@ -1599,6 +1612,7 @@ impl WeightScheduler {
                         "rtao_weights_reveal_round_recomputed_total"
                     };
                     let fresh = cx.client.at(BlockRef::Best).await?;
+                    let fresh_pinned = crate::clock::Pinned::now();
                     let state = WeightPreflight::fetch(&fresh, cx.netuid, mech, hotkey).await?;
                     let uid = state.check_except_cr(version_key)?;
                     // Fresh state decides the tag, or pauses on unproven code.
@@ -1627,6 +1641,7 @@ impl WeightScheduler {
                     }
                     block_time = snapshot_slot_duration(&cx.client, &state.at).await?;
                     commit = if state.commit_reveal {
+                        self.anchor_clock(cx, &state.at, fresh_pinned).await;
                         self.clock_guard.check(self.clock.as_ref())?;
                         Some(
                             TimelockCommitter::new(if state.null_consensus {
@@ -1766,6 +1781,42 @@ impl WeightScheduler {
         cx.metrics
             .update_readiness(|ready| ready.last_weight_succeeded = true);
         Ok(())
+    }
+}
+
+impl WeightScheduler {
+    /// Anchor the timelock clock, and feed the skew guard, from the chain
+    /// before a timelocked commit (D-094).
+    ///
+    /// Reads `Timestamp.Now` at `at`, the best block the commit's preflight
+    /// is pinned to, through the same verified snapshot read as every
+    /// preflight value, and observes it as of `pinned`, the instant that
+    /// block was pinned. An application that drives
+    /// [`Self::on_finalized`] without `NeuronRuntime`'s clock worker
+    /// therefore needs no anchor of its own. A failed read only warns: an
+    /// anchored clock keeps its anchor, and an unanchored one refuses the
+    /// commit before its cadence slot is reserved.
+    async fn anchor_clock(
+        &self,
+        cx: &NeuronCx,
+        at: &rtao_client::PinnedBlock,
+        pinned: crate::clock::Pinned,
+    ) {
+        let snapshot = Snapshot::new(cx.client.clone(), at.clone());
+        match reads::storage(&snapshot, &rtao_runtime::storage::timestamp::NOW, ()).await {
+            Ok(timestamp) => {
+                crate::clock::observe_chain_time(
+                    self.clock.as_ref(),
+                    &self.clock_guard,
+                    timestamp,
+                    pinned,
+                );
+            }
+            Err(error) => {
+                cx.metrics.increment("rtao_clock_sync_errors_total");
+                tracing::warn!(%error, block = at.number, "chain clock anchor read failed; retaining the last anchor");
+            }
+        }
     }
 }
 

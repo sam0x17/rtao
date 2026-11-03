@@ -998,3 +998,7 @@ mod readiness_tests;
 #[cfg(test)]
 #[path = "durable_composer_tests.rs"]
 mod composer_tests;
+
+#[cfg(test)]
+#[path = "durable_clock_tests.rs"]
+mod clock_tests;

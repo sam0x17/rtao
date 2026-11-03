@@ -27,11 +27,13 @@ comes from `RTAO_STATE_DIR`; `state_schema_version()` defaults to one.
 `StateStore` recovery happens before the test validator's `on_start` callback.
 
 For direct scheduler assertions, construct
-`WeightScheduler::new(policy, Arc::new(SystemClock), guard)`. Seed the guard with
-`guard.observe(SystemClock.now_unix(), best_snapshot.storage(&timestamp::NOW,
-()).await?)`; `best_snapshot` must come from `cx.client.at(BlockRef::Best)`.
-`Clock` and `ViewExt` supply those methods. Alternatively select
-`ChainClock::new(timestamp_ms)` for a verified chain timestamp.
+`WeightScheduler::new(policy, Arc::new(SystemClock), guard)` or select
+`Arc::new(ChainClock::unanchored())`. Before each timelocked commit the
+scheduler reads `Timestamp.Now` at the best block its preflight is pinned to,
+anchors an unanchored or lagging chain clock and records the host offset in the
+guard (D-094), so no clock worker or manual seeding is needed.
+`ChainClock::new(timestamp_ms)` still fixes a verified anchor; the scheduler
+only moves a clock forward.
 
 For each finalized `BlockHeader`, call
 `scheduler.on_finalized(&cx, &header, |mech| proposal(mech)).await`. A proposal
