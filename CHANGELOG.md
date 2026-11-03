@@ -34,6 +34,35 @@
 
 - With the default policy, every existing caller holds exactly as before.
 
+### Validators on a paced endpoint (D-094 to D-097)
+
+An application that drives `WeightScheduler::on_finalized` from its own loop,
+without `NeuronRuntime`, against an endpoint paced to a few requests a minute.
+
+#### rtao-neuron
+
+- The scheduler anchors its own timelock clock (D-094). Before each timelocked commit it reads `Timestamp.Now` at the block the commit's preflight is pinned to and observes it on its clock and `ClockGuard`. A `ChainClock::unanchored()` clock no longer needs the runtime's clock worker, and a `SystemClock` gets its skew sample. The clock only moves forward. A failed read warns and counts `rtao_clock_sync_errors_total`; an unanchored clock still refuses the commit. Cost: one request per timelocked commit, none on other heads.
+- New: `Clock::observe_timestamp_at` (provided; defaults to `observe_timestamp`), `ChainClock::observe_at`, `ChainClock::is_anchored`.
+- A weight dispatch that provably signed nothing, such as an admission timeout, gives its cadence slot back (D-095). The same epoch may commit again after 1 block, then 2, doubling to 32 while such failures repeat. A failure after the hotkey was asked to sign, or with a new signed journal attempt, keeps the slot. Such an attempt reports `WeightAttemptOutcome::Failed`, not `Unresolved`. A journaled release stays uncertain until recovery reports the work rebuildable.
+- The checkpoint's per-mechanism slot may carry `unsigned_retry`. Earlier releases ignore it.
+- `WeightScheduler::with_submit_deadline` and the provided `Validator::weight_submit_deadline` configure each weight transaction's admission window; the default is `DEFAULT_WEIGHT_SUBMIT_DEADLINE` (30 s) (D-097). The overall bound is the window plus a 128-block era. New metric: `rtao_weights_commit_epoch_slip_total`, for a commit that landed in the epoch after the one it was prepared for.
+- `RevealWatcher` reads in full only the blocks that can change a pending reveal outcome (epoch-due blocks, a window's first block, and the first changed block found by bisection) and skips spans whose end state matches its prediction (D-096).
+- The runtime's scheduler and coalescing loops follow the newest finalized head (`Backfill::Latest`); the reveal watcher and recovery follow history from their own cursors.
+
+#### rtao-client and rtao
+
+- `Backfill` (`Complete`, the default; `Bounded(n)`; `Latest`; `#[non_exhaustive]`) and `HeadTracker::blocks_with`, `Client::blocks_with` and the blocking facade's `blocks_with` (D-096). `blocks` is unchanged and equals `Complete`. `Latest` never makes a request for a skipped height.
+- The shared tracker recovers finalized gaps up to `SHARED_FINALIZED_BACKFILL` (16) once for every follower. After a longer gap it publishes the newest head promptly, and each `Complete` follower recovers the gap itself.
+- Preparation and attachment read each value once: the runtime handle and the signing stamp come from one `state_getRuntimeVersion` read (D-097). From the nonce lease to the author call an ordinary submission makes 10 requests instead of 15 or 16.
+
+#### rtao-metagraph
+
+- `MetagraphSync` decides from the finalized height and its cached epoch schedule before making any request, so heads between refreshes cost nothing (D-096). An unpredicted epoch is refreshed at the predicted block or the fallback, whichever comes first.
+
+#### rtao-rpc
+
+- An HTTP 403/429 refusal of a reconnect handshake, after the session has connected, no longer ends the session (D-097). The session stays `Reconnecting`, waits the longer of the refusal's `Retry-After` (at most 10 minutes) and a backoff of 1 s doubling to 60 s per consecutive refusal, and dials again. Without `retry_forever` it becomes terminal after `max_retries` further refusals. A refused initial connect, a JSON-RPC policy error and a policy close (1008) stay terminal. New metric: `rtao_rpc_reconnect_refusals_total`.
+
 ### Also in this release, since the last widely pinned revision
 
 - Validator storage reads fall back to name resolution against live metadata after a runtime change (D-089). Ratio and fixed-point types are refused rather than guessed.
