@@ -148,6 +148,90 @@ pub enum WeightsInput {
     },
 }
 
+/// What the scheduler does with a prepared row whose positive weight goes only
+/// to this validator's UID or to the subnet owner hotkey's UID (D-093).
+///
+/// It is chosen per proposal ([`WeightScheduler::on_finalized_with`],
+/// [`crate::Validator::owner_row_policy`]) or per queued operation
+/// ([`WeightScheduler::enqueue_with_owner_rows`]). A durable scheduler
+/// journals it with the operation, so restart, recovery and re-preparation
+/// decide the same way.
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum OwnerRowPolicy {
+    /// Keep the previous chain row and report
+    /// [`WeightAttemptOutcome::HoldPrevious`]; nothing is signed. Earlier
+    /// releases always applied this guard.
+    #[default]
+    Hold,
+    /// Submit a row whose every positive entry goes to the owner hotkey's UID
+    /// (an owner burn row) through the normal path: a direct row, or a
+    /// timelocked commit and its automatic reveal.
+    ///
+    /// This validator's own UID counts as the owner's only when its hotkey is
+    /// the owner hotkey. These rows still hold: a row with positive weight on
+    /// a non-owner own UID (self-only, or self plus owner), and a row with no
+    /// positive entry.
+    Submit,
+}
+impl OwnerRowPolicy {
+    /// Whether the scheduler keeps the previous chain row instead of
+    /// submitting `row`, given as prepared `(UID, value)` pairs; zero values
+    /// are ignored.
+    ///
+    /// `own` is this validator's UID, and `is_owner(uid)` reports whether
+    /// `uid` belongs to the subnet owner hotkey. A row with a positive entry
+    /// on any other UID is never held.
+    ///
+    /// ```
+    /// use rtao_neuron::weights::OwnerRowPolicy;
+    /// use rtao_primitives::Uid;
+    /// let (own, owner) = (Uid(0), Uid(2));
+    /// let burn = [(Uid(1), 0), (owner, u16::MAX)];
+    /// assert!(OwnerRowPolicy::Hold.holds(burn, own, |uid| uid == owner));
+    /// assert!(!OwnerRowPolicy::Submit.holds(burn, own, |uid| uid == owner));
+    /// // A self-only row keeps holding under either policy.
+    /// assert!(OwnerRowPolicy::Submit.holds([(own, 1)], own, |uid| uid == owner));
+    /// ```
+    pub fn holds(
+        self,
+        row: impl IntoIterator<Item = (Uid, u16)>,
+        own: Uid,
+        mut is_owner: impl FnMut(Uid) -> bool,
+    ) -> bool {
+        let (mut positive, mut own_entry) = (false, false);
+        for (dest, value) in row {
+            if value == 0 {
+                continue;
+            }
+            positive = true;
+            // The owner check comes first: an owner validator's own UID is
+            // the owner's UID.
+            if is_owner(dest) {
+                continue;
+            }
+            if dest == own {
+                own_entry = true;
+                continue;
+            }
+            // Another destination: the guard never applies.
+            return false;
+        }
+        match self {
+            Self::Hold => true,
+            Self::Submit => !positive || own_entry,
+        }
+    }
+
+    /// Serde skip predicate: the default is omitted from journaled effects.
+    const fn is_hold(&self) -> bool {
+        matches!(self, Self::Hold)
+    }
+}
+
 /// Explicit weight version; never follows storage and defeats upgrade policy.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum VersionKey {
@@ -215,7 +299,8 @@ pub enum WeightAttemptOutcome {
         /// Explanation for the next scheduling opportunity.
         remediation: String,
     },
-    /// The application or self/owner guard retained the existing row.
+    /// The application, or the self/owner guard under the proposal's
+    /// [`OwnerRowPolicy`], retained the existing row.
     HoldPrevious,
     /// The application supplied a reason to skip this opportunity.
     Skipped(String),
@@ -1223,11 +1308,34 @@ impl WeightScheduler {
     }
 
     /// Observe a finalized head, then prepare due proposals at one fresh best head.
+    ///
+    /// Every proposal is prepared under [`OwnerRowPolicy::Hold`]; use
+    /// [`Self::on_finalized_with`] to choose the policy per proposal.
     pub async fn on_finalized(
         &mut self,
         cx: &NeuronCx,
         finalized: &BlockHeader,
         mut proposals: impl FnMut(MechId) -> WeightsProposal,
+    ) -> anyhow::Result<()> {
+        self.on_finalized_with(cx, finalized, |mech| {
+            (proposals(mech), OwnerRowPolicy::Hold)
+        })
+        .await
+    }
+
+    /// [`Self::on_finalized`] whose callback also returns the
+    /// [`OwnerRowPolicy`] for its proposal (D-093).
+    ///
+    /// The policy is ignored for [`WeightsProposal::HoldPrevious`] and
+    /// [`WeightsProposal::Skip`]. A durable scheduler journals it with the
+    /// operation the proposal creates. Retained journaled work keeps the policy
+    /// it was queued with: the callback is not consulted while such work is
+    /// pending.
+    pub async fn on_finalized_with(
+        &mut self,
+        cx: &NeuronCx,
+        finalized: &BlockHeader,
+        mut proposals: impl FnMut(MechId) -> (WeightsProposal, OwnerRowPolicy),
     ) -> anyhow::Result<()> {
         if let Some(d) = &self.durable {
             anyhow::ensure!(
@@ -1322,7 +1430,7 @@ impl WeightScheduler {
         mechanisms: u8,
         mech: MechId,
         preflight: WeightPreflight,
-        proposals: &mut impl FnMut(MechId) -> WeightsProposal,
+        proposals: &mut impl FnMut(MechId) -> (WeightsProposal, OwnerRowPolicy),
     ) -> anyhow::Result<()> {
         if self.slots.get(&mech).is_some_and(|slot| slot.uncertain) {
             return Ok(());
@@ -1431,8 +1539,9 @@ impl WeightScheduler {
         if !due(cadence, slot, &preflight, uid) {
             return Ok(());
         }
-        let proposal = match &pending_work {
-            Some((_, work)) => WeightsProposal::Set(work.input.clone()),
+        // Retained work decides from its journaled policy, never the callback.
+        let (proposal, mut owner_rows) = match &pending_work {
+            Some((_, work)) => (WeightsProposal::Set(work.input.clone()), work.owner_rows),
             None => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| proposals(mech)))
                 .map_err(|_| anyhow::anyhow!("validator weights callback panicked"))?,
         };
@@ -1472,19 +1581,28 @@ impl WeightScheduler {
             let revision = d.journal.snapshot()?.revision;
             let (id, correlation) =
                 operation.unwrap_or_else(|| (format!("{}:op:{revision}", d.scope), None));
-            self.enqueue(id, correlation, mech, input.clone())?;
-            if self.pending_work(mech)?.is_none() {
+            self.enqueue_with_owner_rows(id, correlation, mech, input.clone(), owner_rows)?;
+            let Some((_, queued)) = self.pending_work(mech)? else {
                 // The application redelivered a completed logical operation.
                 return Ok(());
-            }
+            };
+            // The journaled policy decides, even on the first attempt.
+            owner_rows = queued.owner_rows;
         }
         let row = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph)?;
-        if hold_previous(&row, uid, owner, &graph) {
+        if row_held(owner_rows, &row, uid, hotkey, owner, &graph) {
             if let Some(attempt) = self.attempts.get_mut(&mech) {
                 attempt.outcome = WeightAttemptOutcome::HoldPrevious;
             }
             cx.metrics.increment("rtao_weights_hold_total");
             return Ok(());
+        }
+        if row_held(OwnerRowPolicy::Hold, &row, uid, hotkey, owner, &graph) {
+            cx.metrics.increment("rtao_weights_owner_row_total");
+            tracing::info!(
+                mechanism = mech.0,
+                "submitting an owner-only row under OwnerRowPolicy::Submit"
+            );
         }
         let block_time = snapshot_slot_duration(&cx.client, &preflight.at).await?;
         let mut commit = None;
@@ -1619,7 +1737,7 @@ impl WeightScheduler {
                     );
                     let graph = cx.metagraph.load();
                     let row = prepare_row(input.clone(), &state, uid, cx.netuid, &graph)?;
-                    if hold_previous(&row, uid, *current_owner.raw(), &graph) {
+                    if row_held(owner_rows, &row, uid, hotkey, *current_owner.raw(), &graph) {
                         if let Some(attempt) = self.attempts.get_mut(&mech) {
                             attempt.outcome = WeightAttemptOutcome::HoldPrevious;
                         }
@@ -1958,17 +2076,26 @@ fn prepare_row(
         false,
     )?)
 }
-fn hold_previous(
+/// The self/owner guard under `policy` (D-093) for a prepared row of the
+/// validator `hotkey` at `uid`, with the subnet owner hotkey `owner`.
+///
+/// A destination is the owner's when the last-good graph maps it to `owner`,
+/// or when it is this validator's preflight UID and this validator is the
+/// owner hotkey, so a stale graph cannot hide an owner validator's own UID.
+/// Under [`OwnerRowPolicy::Hold`] this is the guard earlier releases applied.
+fn row_held(
+    policy: OwnerRowPolicy,
     row: &(Vec<Uid>, Vec<u16>),
     uid: Uid,
+    hotkey: AccountId,
     owner: AccountId,
     graph: &rtao_metagraph::Metagraph,
 ) -> bool {
-    row.0
-        .iter()
-        .zip(&row.1)
-        .filter(|(_, value)| **value > 0)
-        .all(|(dest, _)| *dest == uid || graph.hotkey(*dest) == Some(&owner))
+    policy.holds(
+        row.0.iter().copied().zip(row.1.iter().copied()),
+        uid,
+        |dest| graph.hotkey(dest) == Some(&owner) || (hotkey == owner && dest == uid),
+    )
 }
 async fn snapshot_slot_duration(
     client: &Client,
@@ -2066,8 +2193,13 @@ pub(crate) async fn run_scheduler<V: Validator>(
         };
         let proposal_cx = cx.clone();
         if let Err(error) = scheduler
-            .on_finalized(&cx, &head, |mech| {
-                validator.weights(&proposal_cx, &state.read(), mech)
+            .on_finalized_with(&cx, &head, |mech| {
+                // One state view decides the row and its owner-row policy.
+                let state = state.read();
+                (
+                    validator.weights(&proposal_cx, &state, mech),
+                    validator.owner_row_policy(&proposal_cx, &state, mech),
+                )
             })
             .await
         {

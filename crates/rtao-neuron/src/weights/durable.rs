@@ -1,6 +1,6 @@
 //! Weight-specific projection over the generic operation journal.
 use super::reveal::RevealPreparation;
-use super::{RevealWatcher, Slot, WeightPreflight, WeightScheduler, WeightsInput};
+use super::{OwnerRowPolicy, RevealWatcher, Slot, WeightPreflight, WeightScheduler, WeightsInput};
 use rtao_client::journal::{
     JournalBinding, JournalOwner, OperationIntent, OperationJournal, RecoveryStatus, SemanticGuard,
 };
@@ -31,6 +31,12 @@ pub(super) struct Work {
     pub mechanism: MechId,
     pub input: WeightsInput,
     pub version_key: u64,
+    /// Owner-row policy the work was queued under (D-093). It is part of the
+    /// operation's immutable effects. Omitted for the default
+    /// [`OwnerRowPolicy::Hold`], so default work keeps its exact bytes and
+    /// effects written before the field existed load as `Hold`.
+    #[serde(default, skip_serializing_if = "OwnerRowPolicy::is_hold")]
+    pub owner_rows: OwnerRowPolicy,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -139,12 +145,36 @@ impl WeightScheduler {
     ///
     /// Reusing the same ID and effect is idempotent. A second outstanding operation
     /// for a mechanism is refused; inspect/reconcile the earlier one first.
+    /// The work is prepared under [`OwnerRowPolicy::Hold`]; see
+    /// [`Self::enqueue_with_owner_rows`].
     pub fn enqueue(
         &self,
         id: impl Into<String>,
         correlation_id: Option<String>,
         mechanism: MechId,
         input: WeightsInput,
+    ) -> anyhow::Result<()> {
+        self.enqueue_with_owner_rows(id, correlation_id, mechanism, input, OwnerRowPolicy::Hold)
+    }
+    /// [`Self::enqueue`] with the [`OwnerRowPolicy`] the work is prepared
+    /// under (D-093).
+    ///
+    /// The policy is part of the operation's immutable effects, journaled as
+    /// `owner_rows` and omitted for [`OwnerRowPolicy::Hold`]. Restart,
+    /// recovery and every re-preparation of the operation decide from it.
+    /// Reusing the same ID, input and policy is idempotent; the same ID with
+    /// another policy is refused like changed input.
+    ///
+    /// Durable work is queued before the guard runs, so a row the policy
+    /// holds stays pending and blocks the mechanism; check
+    /// [`OwnerRowPolicy::holds`] first when queuing directly.
+    pub fn enqueue_with_owner_rows(
+        &self,
+        id: impl Into<String>,
+        correlation_id: Option<String>,
+        mechanism: MechId,
+        input: WeightsInput,
+        owner_rows: OwnerRowPolicy,
     ) -> anyhow::Result<()> {
         MechId::new(mechanism.0)?;
         let d = self
@@ -157,6 +187,7 @@ impl WeightScheduler {
             mechanism,
             input,
             version_key: self.policy.version_key.value(),
+            owner_rows,
         };
         let effects = serde_json::to_value(&work)?;
         // JSON encodes nonfinite scores as null. Refuse lossy input before
@@ -592,6 +623,157 @@ mod tests {
         Ok(())
     }
 
+    /// Default work keeps the exact effects of earlier releases; only an
+    /// opted-in policy adds the `owner_rows` key (D-093).
+    #[test]
+    fn owner_rows_encoding_keeps_default_effects_bytes() -> anyhow::Result<()> {
+        let input = WeightsInput::ByUid([(Uid(2), 65535.0)].into_iter().collect());
+        let work = |owner_rows| Work {
+            netuid: NetUid(1),
+            mechanism: MechId(0),
+            input: input.clone(),
+            version_key: 0,
+            owner_rows,
+        };
+        let legacy = serde_json::json!({"netuid":1,"mechanism":0,"input":input,"version_key":0});
+        assert_eq!(serde_json::to_value(work(OwnerRowPolicy::Hold))?, legacy);
+        assert_eq!(
+            serde_json::to_vec(&work(OwnerRowPolicy::Hold))?,
+            serde_json::to_vec(&legacy)?
+        );
+        let decoded: Work = serde_json::from_value(legacy.clone())?;
+        assert_eq!(decoded.owner_rows, OwnerRowPolicy::Hold);
+        let opted = serde_json::to_value(work(OwnerRowPolicy::Submit))?;
+        assert_eq!(opted["owner_rows"], "submit");
+        let decoded: Work = serde_json::from_value(opted.clone())?;
+        assert_eq!(decoded.owner_rows, OwnerRowPolicy::Submit);
+        assert_eq!(decoded.input, input);
+        let mut unknown = opted.clone();
+        unknown["owner_rows"] = "submit_all".into();
+        assert!(serde_json::from_value::<Work>(unknown).is_err());
+        let mut extra = legacy;
+        extra["future_field"] = true.into();
+        assert!(serde_json::from_value::<Work>(extra).is_err());
+        Ok(())
+    }
+
+    /// The policy is part of the operation's identity: an ID queued under one
+    /// policy refuses another, and the journaled value survives reopening.
+    #[test]
+    fn owner_rows_is_immutable_operation_identity() -> anyhow::Result<()> {
+        let root = std::path::PathBuf::from(
+            std::env::var_os("RTAO_TEST_TMPDIR").ok_or_else(|| anyhow::anyhow!("task scratch"))?,
+        )
+        .join(format!("owner-rows-identity-{}", std::process::id()));
+        std::fs::create_dir_all(&root)?;
+        let path = root.join("journal.json");
+        let make = || {
+            WeightScheduler::new(
+                WeightPolicy::default(),
+                Arc::new(ChainClock::new(1_000_000)),
+                ClockGuard::default(),
+            )
+        };
+        let genesis = rtao_primitives::H256([1; 32]);
+        let account = AccountId([2; 32]);
+        let input = WeightsInput::ByUid([(Uid(2), 65535.0)].into_iter().collect());
+        let journal = OperationJournal::open(&path)?;
+        let scheduler = make()?.with_journal(journal.clone(), genesis, NetUid(1), account)?;
+        let scope = scheduler
+            .durable
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("scope"))?
+            .scope
+            .clone();
+        // An operation retained by an earlier release, without the key.
+        journal.begin(OperationIntent {
+            id: "legacy".into(),
+            correlation_id: None,
+            genesis,
+            account,
+            scope: scope.clone(),
+            effects: serde_json::json!({"netuid":1,"mechanism":0,"input":input,"version_key":0}),
+            obligation: false,
+            semantic_policy: None,
+            extensions: Default::default(),
+        })?;
+        let (_, work) = scheduler
+            .pending_work(MechId(0))?
+            .ok_or_else(|| anyhow::anyhow!("legacy work"))?;
+        assert_eq!(work.owner_rows, OwnerRowPolicy::Hold);
+        // An idempotent rejoin may publish a new revision, never new records.
+        let operations = || -> anyhow::Result<serde_json::Value> {
+            Ok(serde_json::to_value(&journal.snapshot()?.operations)?)
+        };
+        let before = operations()?;
+        scheduler.enqueue("legacy", None, MechId(0), input.clone())?;
+        scheduler.enqueue_with_owner_rows(
+            "legacy",
+            None,
+            MechId(0),
+            input.clone(),
+            OwnerRowPolicy::Hold,
+        )?;
+        assert_eq!(operations()?, before, "idempotent rejoin");
+        let bytes = std::fs::read(&path)?;
+        let refused = scheduler.enqueue_with_owner_rows(
+            "legacy",
+            None,
+            MechId(0),
+            input.clone(),
+            OwnerRowPolicy::Submit,
+        );
+        assert!(
+            matches!(
+                refused
+                    .as_ref()
+                    .err()
+                    .and_then(|e| e.downcast_ref::<rtao_client::journal::JournalError>()),
+                Some(rtao_client::journal::JournalError::Identity)
+            ),
+            "{refused:?}"
+        );
+        assert_eq!(std::fs::read(&path)?, bytes, "a refusal writes nothing");
+        // Opted-in work on another mechanism: idempotent only under Submit.
+        let queue = |id: &str, policy| {
+            scheduler.enqueue_with_owner_rows(id, None, MechId(1), input.clone(), policy)
+        };
+        queue("burn", OwnerRowPolicy::Submit)?;
+        let queued = operations()?;
+        queue("burn", OwnerRowPolicy::Submit)?;
+        assert_eq!(operations()?, queued);
+        let bytes = std::fs::read(&path)?;
+        assert!(queue("burn", OwnerRowPolicy::Hold).is_err());
+        assert!(
+            scheduler
+                .enqueue("burn", None, MechId(1), input.clone())
+                .is_err()
+        );
+        assert_eq!(std::fs::read(&path)?, bytes);
+        let record = journal.bind("burn")?.record()?;
+        assert_eq!(record.intent.effects["owner_rows"], "submit");
+        // Plain enqueue is the Hold form of the same intent.
+        let snapshot = journal.snapshot()?;
+        let legacy = &snapshot.operations["legacy"].intent;
+        assert!(legacy.effects.get("owner_rows").is_none());
+        drop(scheduler);
+        drop(journal);
+        let journal = OperationJournal::open(&path)?;
+        let restored = make()?.with_journal(journal.clone(), genesis, NetUid(1), account)?;
+        let (_, burn) = restored
+            .pending_work(MechId(1))?
+            .ok_or_else(|| anyhow::anyhow!("lost work"))?;
+        assert_eq!(burn.owner_rows, OwnerRowPolicy::Submit);
+        let (_, legacy) = restored
+            .pending_work(MechId(0))?
+            .ok_or_else(|| anyhow::anyhow!("lost legacy work"))?;
+        assert_eq!(legacy.owner_rows, OwnerRowPolicy::Hold);
+        drop(restored);
+        drop(journal);
+        std::fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
     #[test]
     fn competing_scheduler_and_unsupported_checkpoint_refuse_without_reset() -> anyhow::Result<()> {
         let root = std::path::PathBuf::from(
@@ -998,3 +1180,7 @@ mod readiness_tests;
 #[cfg(test)]
 #[path = "durable_composer_tests.rs"]
 mod composer_tests;
+
+#[cfg(test)]
+#[path = "durable_owner_row_tests.rs"]
+mod owner_row_tests;

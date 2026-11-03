@@ -119,6 +119,52 @@ pub trait Validator: Send + Sync + 'static {
     fn weight_call_encoder(&self) -> Option<Arc<dyn crate::weights::WeightCallEncoder>> {
         None
     }
+    /// Owner-row policy for the proposal [`Self::weights`] just returned for
+    /// `mechanism` (D-093).
+    ///
+    /// It is called with the same state, and only when the scheduler requests
+    /// a new proposal; queued work keeps the policy it was journaled with.
+    /// The default, [`OwnerRowPolicy::Hold`](crate::weights::OwnerRowPolicy::Hold),
+    /// keeps the previous chain row instead of submitting a row whose positive
+    /// weight goes only to this validator or the subnet owner. Return
+    /// [`OwnerRowPolicy::Submit`](crate::weights::OwnerRowPolicy::Submit) only
+    /// when the application intends an owner burn row.
+    ///
+    /// ```no_run
+    /// # use rtao_neuron::{NeuronCx, StateCell, Validator, WeightsProposal, WeightsInput};
+    /// # use rtao_neuron::weights::OwnerRowPolicy;
+    /// # use rtao_primitives::MechId;
+    /// #[derive(Default, serde::Serialize, serde::Deserialize)]
+    /// struct Scores {
+    ///     burning: bool,
+    ///     row: Vec<(rtao_primitives::AccountId, f64)>,
+    /// }
+    /// struct Burner;
+    /// impl Validator for Burner {
+    ///     type State = Scores;
+    ///     async fn step(&self, _: &NeuronCx, _: &StateCell<Scores>) -> anyhow::Result<()> {
+    ///         Ok(())
+    ///     }
+    ///     fn weights(&self, _: &NeuronCx, state: &Scores, _: MechId) -> WeightsProposal {
+    ///         WeightsProposal::Set(WeightsInput::ByHotkey(state.row.clone()))
+    ///     }
+    ///     fn owner_row_policy(&self, _: &NeuronCx, state: &Scores, _: MechId) -> OwnerRowPolicy {
+    ///         if state.burning {
+    ///             OwnerRowPolicy::Submit
+    ///         } else {
+    ///             OwnerRowPolicy::Hold
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    fn owner_row_policy(
+        &self,
+        _cx: &NeuronCx,
+        _state: &Self::State,
+        _mechanism: MechId,
+    ) -> crate::weights::OwnerRowPolicy {
+        crate::weights::OwnerRowPolicy::Hold
+    }
     /// Drop or reset scores after registration identities change.
     fn on_metagraph(&self, _diff: &MetagraphDiff, _state: &mut Self::State) {}
     /// Set scoring cadence, timeout and failure backoff.

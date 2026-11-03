@@ -482,6 +482,11 @@ fn jitter_is_deterministic_and_bounded_even_with_disabled_tempo() {
 }
 
 fn graph() -> anyhow::Result<rtao_metagraph::Metagraph> {
+    graph_with([HOTKEY, AccountId([8; 32]), AccountId([10; 32])])
+}
+
+/// A three-UID last-good graph whose UID `i` is `hotkeys[i]`.
+fn graph_with(hotkeys: [AccountId; 3]) -> anyhow::Result<rtao_metagraph::Metagraph> {
     Ok(rtao_metagraph::Metagraph::from_dynamic(
         NetUid(1),
         Value::record(vec![
@@ -495,15 +500,156 @@ fn graph() -> anyhow::Result<rtao_metagraph::Metagraph> {
             ("owner_coldkey".into(), Value::Bytes(vec![9; 32])),
             (
                 "hotkeys".into(),
-                Value::List(vec![
-                    HOTKEY.into_core_value(),
-                    AccountId([8; 32]).into_core_value(),
-                    AccountId([10; 32]).into_core_value(),
-                ]),
+                Value::List(hotkeys.iter().map(|key| key.into_core_value()).collect()),
             ),
         ]),
         rtao_metagraph::SnapshotInfo::default(),
     )?)
+}
+
+/// The self/owner guard of earlier releases, kept verbatim as the reference
+/// for [`OwnerRowPolicy::Hold`].
+fn previous_guard(
+    row: &(Vec<Uid>, Vec<u16>),
+    uid: Uid,
+    owner: AccountId,
+    graph: &rtao_metagraph::Metagraph,
+) -> bool {
+    row.0
+        .iter()
+        .zip(&row.1)
+        .filter(|(_, value)| **value > 0)
+        .all(|(dest, _)| *dest == uid || graph.hotkey(*dest) == Some(&owner))
+}
+
+/// `Hold` is exactly the earlier guard over every row on three UIDs with
+/// values in {0, 1, 65535}, including all-zero and empty rows, for an owner
+/// at UID 1, at the validator's own UID, and absent from the graph.
+#[test]
+fn owner_row_policy_hold_is_the_previous_guard() -> anyhow::Result<()> {
+    let graph = graph()?;
+    let uids = [Uid(0), Uid(1), Uid(2)];
+    let values = [0u16, 1, 65535];
+    let mut rows = vec![(Vec::new(), Vec::new())];
+    // Every subset of destinations, in order, with every value assignment.
+    for mask in 1u8..8 {
+        let dests: Vec<Uid> = (0..3)
+            .filter(|i| mask & (1 << i) != 0)
+            .map(|i| uids[i])
+            .collect();
+        let mut choice = vec![0usize; dests.len()];
+        loop {
+            rows.push((dests.clone(), choice.iter().map(|&c| values[c]).collect()));
+            let Some(i) = choice.iter().position(|&c| c + 1 < values.len()) else {
+                break;
+            };
+            choice[i] += 1;
+            choice[..i].iter_mut().for_each(|c| *c = 0);
+        }
+    }
+    assert_eq!(rows.len(), 1 + 3 * 3 + 3 * 9 + 27);
+    for owner in [AccountId([8; 32]), HOTKEY, AccountId([99; 32])] {
+        for row in &rows {
+            assert_eq!(
+                row_held(OwnerRowPolicy::Hold, row, Uid(0), HOTKEY, owner, &graph),
+                previous_guard(row, Uid(0), owner, &graph),
+                "{row:?} with owner {owner}"
+            );
+            // Submit can only remove rows from the held set.
+            if row_held(OwnerRowPolicy::Submit, row, Uid(0), HOTKEY, owner, &graph) {
+                assert!(previous_guard(row, Uid(0), owner, &graph), "{row:?}");
+            }
+        }
+    }
+    Ok(())
+}
+
+/// `Submit` unlocks only rows whose every positive entry is the owner's UID.
+#[test]
+fn owner_row_policy_submit_unlocks_only_owner_only_rows() -> anyhow::Result<()> {
+    use OwnerRowPolicy::{Hold, Submit};
+    let graph = graph()?;
+    let owner = AccountId([8; 32]);
+    let held = |policy, uids: &[u16], values: &[u16], hotkey, owner, graph| {
+        row_held(
+            policy,
+            &(uids.iter().copied().map(Uid).collect(), values.to_vec()),
+            Uid(0),
+            hotkey,
+            owner,
+            graph,
+        )
+    };
+    // (uids, values, held under Hold, held under Submit)
+    let cases: [(&[u16], &[u16], bool, bool); 8] = [
+        // Owner-only burn rows.
+        (&[1], &[65535], true, false),
+        (&[0, 1, 2], &[0, 65535, 0], true, false),
+        // Self-only, and self plus owner.
+        (&[0], &[65535], true, true),
+        (&[0, 1], &[1, 1], true, true),
+        // Ordinary rows.
+        (&[1, 2], &[1, 1], false, false),
+        (&[2], &[1], false, false),
+        // No positive entry.
+        (&[1], &[0], true, true),
+        (&[], &[], true, true),
+    ];
+    for (uids, values, hold, submit) in cases {
+        assert_eq!(
+            held(Hold, uids, values, HOTKEY, owner, &graph),
+            hold,
+            "{uids:?}"
+        );
+        assert_eq!(
+            held(Submit, uids, values, HOTKEY, owner, &graph),
+            submit,
+            "{uids:?}"
+        );
+        // The public predicate with a graph closure gives the same answers.
+        let row = uids.iter().copied().map(Uid).zip(values.iter().copied());
+        let is_owner = |uid| graph.hotkey(uid) == Some(&owner);
+        assert_eq!(Hold.holds(row.clone(), Uid(0), is_owner), hold);
+        assert_eq!(Submit.holds(row, Uid(0), is_owner), submit);
+    }
+    // Owner absent from the graph: only self-only rows hold.
+    let absent = AccountId([99; 32]);
+    for policy in [Hold, Submit] {
+        assert!(held(policy, &[0], &[1], HOTKEY, absent, &graph));
+        assert!(!held(policy, &[1], &[1], HOTKEY, absent, &graph));
+    }
+    // This validator is the owner hotkey: its own row is the owner row.
+    assert!(held(Hold, &[0], &[65535], HOTKEY, HOTKEY, &graph));
+    assert!(!held(Submit, &[0], &[65535], HOTKEY, HOTKEY, &graph));
+    for policy in [Hold, Submit] {
+        assert!(!held(policy, &[0, 2], &[1, 1], HOTKEY, HOTKEY, &graph));
+    }
+    // A stale graph whose UID 0 is another hotkey still treats an owner
+    // validator's preflight UID as the owner's.
+    let stale = graph_with([AccountId([11; 32]), owner, AccountId([10; 32])])?;
+    assert!(held(Hold, &[0], &[1], HOTKEY, HOTKEY, &stale));
+    assert!(!held(Submit, &[0], &[1], HOTKEY, HOTKEY, &stale));
+    // A non-owner validator gains nothing from the preflight-UID clause.
+    assert!(held(Submit, &[0], &[1], HOTKEY, owner, &stale));
+    Ok(())
+}
+
+#[test]
+fn owner_row_policy_serde_tokens() -> anyhow::Result<()> {
+    assert_eq!(OwnerRowPolicy::default(), OwnerRowPolicy::Hold);
+    assert_eq!(serde_json::to_value(OwnerRowPolicy::Hold)?, "hold");
+    assert_eq!(serde_json::to_value(OwnerRowPolicy::Submit)?, "submit");
+    assert_eq!(
+        serde_json::from_value::<OwnerRowPolicy>(serde_json::json!("submit"))?,
+        OwnerRowPolicy::Submit
+    );
+    assert_eq!(
+        serde_json::from_value::<OwnerRowPolicy>(serde_json::json!("hold"))?,
+        OwnerRowPolicy::Hold
+    );
+    assert!(serde_json::from_value::<OwnerRowPolicy>(serde_json::json!("submit_all")).is_err());
+    assert!(serde_json::from_value::<OwnerRowPolicy>(serde_json::json!("Submit")).is_err());
+    Ok(())
 }
 
 #[tokio::test]
@@ -568,15 +714,19 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
         )
         .is_err()
     );
-    assert!(hold_previous(
+    assert!(row_held(
+        OwnerRowPolicy::Hold,
         &(vec![Uid(0), Uid(1), Uid(2)], vec![1, 1, 0]),
         Uid(0),
+        HOTKEY,
         AccountId([8; 32]),
         &graph
     ));
-    assert!(!hold_previous(
+    assert!(!row_held(
+        OwnerRowPolicy::Hold,
         &(vec![Uid(0), Uid(1), Uid(2)], vec![1, 1, 1]),
         Uid(0),
+        HOTKEY,
         AccountId([8; 32]),
         &graph
     ));
