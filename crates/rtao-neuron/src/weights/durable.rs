@@ -359,7 +359,8 @@ impl WeightScheduler {
     }
     /// Recover without obtaining a private signer or authorizing any submission.
     /// Observations continue while new submissions are paused. Each call scans
-    /// at most 128 transaction blocks per active operation and 256 reveal blocks.
+    /// at most 128 transaction blocks per active operation and reads at most
+    /// 256 reveal blocks.
     pub async fn recover_finalized(
         &mut self,
         client: &rtao_client::Client,
@@ -379,7 +380,10 @@ impl WeightScheduler {
             "recovery head differs from finalized history"
         );
         let recovery = self.recover_work(client, metrics).await;
-        self.reveals.observe(client, finalized, metrics).await?;
+        // The verified head snapshot spares the watcher resolving it again.
+        self.reveals
+            .observe_at(client, finalized, Some(expected), metrics)
+            .await?;
         self.persist(None)?;
         recovery
     }

@@ -91,6 +91,17 @@ epoch events and the first failing reveal condition. An owner-triggered epoch
 can advance the reveal before a round becomes available; retain the metrics and
 logs when investigating it.
 
+On a paced public endpoint, keep the reads per finalized block small. An
+application that drives `WeightScheduler::on_finalized` from its own loop
+should follow `client.blocks_with(Finality::Finalized, Backfill::Latest)`:
+after a long call it receives the newest finalized head at once, instead of
+after two requests for every height it missed. The reveal watcher follows
+finalized history from its own cursor and reads only the blocks that can change
+a pending commitment's outcome: blocks where an epoch is due and, while a
+reveal window is open, the block where the commitment leaves its queue, plus
+one state read per head. `MetagraphSync` with an epoch or block-count cadence
+makes no request until a refresh is due.
+
 A runtime change to a weight call pauses only the mechanisms that use that
 call, and only when it cannot be composed any other way. A changed call whose
 fields all still fit is composed by name against the live metadata, logged

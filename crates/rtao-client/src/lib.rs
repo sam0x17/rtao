@@ -56,7 +56,8 @@ pub use client::{Client, ClientConfig};
 pub use error::ClientError;
 pub use events::{Event, EventRecord, Events, Phase, RawEvent};
 pub use head::{
-    BlockHeader, BlockStream, Finality, HeadError, HeadEvent, HeadProvider, HeadTracker, Reorg,
+    Backfill, BlockHeader, BlockStream, Finality, HeadError, HeadEvent, HeadProvider, HeadTracker,
+    Reorg,
 };
 pub use network::{Network, NetworkError, canonical_name as canonical_network_name};
 pub use nonce::{NonceLease, NonceManager, SHIELD_CARRIER_POLLS};

@@ -20,6 +20,40 @@ pub enum Finality {
     Finalized,
 }
 
+/// How a [`HeadTracker::blocks_with`] follower treats heights its consumer has
+/// not received yet (D-096).
+///
+/// A consumer that falls behind, or a tracker that reconnects after an outage,
+/// leaves heights unseen. Recovering them costs one `chain_getBlockHash` and
+/// one `chain_getHeader` request per height, which delays the newest head by
+/// minutes on a paced public endpoint.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Backfill {
+    /// Every finalized height exactly once, and every best branch change with
+    /// its replacement headers. Missed heights are recovered by number before
+    /// the newer head is delivered. This is [`HeadTracker::blocks`].
+    #[default]
+    Complete,
+    /// Recover a gap of at most this many missed heights as [`Self::Complete`]
+    /// does. After a longer gap the newest head arrives next with no request:
+    /// its height jumps, and a best follower gets no branch notice for a change
+    /// inside the skipped span. Heads already buffered are still delivered in
+    /// order.
+    Bounded(u32),
+    /// Only the newest head. Heads coalesce while the consumer is busy, a
+    /// finalized follower sees strictly increasing heights and a best follower
+    /// sees each head it polls, and no request is ever made for a skipped
+    /// height. Branch changes are not reported.
+    Latest,
+}
+
+/// Finalized gaps up to this length are recovered once by the shared tracker
+/// worker, so every follower receives them without a request. After a longer
+/// gap (a reconnect after an outage) the worker publishes the newest head
+/// promptly and each [`Backfill::Complete`] follower recovers the gap itself.
+pub const SHARED_FINALIZED_BACKFILL: u64 = 16;
+
 /// A block subscription header, retaining Python's original JSON fields.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BlockHeader {
@@ -265,7 +299,9 @@ fn client_error(error: crate::ClientError) -> HeadError {
 /// Published head changes and terminal worker failures.
 #[derive(Clone, Debug, PartialEq)]
 pub enum HeadEvent {
-    /// A new header, including recovered intermediate heights.
+    /// A new header, including intermediate heights the worker recovered. A
+    /// finalized gap longer than [`SHARED_FINALIZED_BACKFILL`] is published as
+    /// its newest header only.
     Applied(BlockHeader),
     /// Best-chain change, published before its replacement headers.
     Reorg(Arc<Reorg>),
@@ -390,8 +426,22 @@ impl HeadTracker {
     ///
     /// The current head is emitted first. Finalized headers are emitted once
     /// per advancing height. Best followers receive a `HeadError::Reorg` notice
-    /// before replacement-branch headers.
+    /// before replacement-branch headers. This is
+    /// [`Self::blocks_with`] with [`Backfill::Complete`].
     pub fn blocks(&self, finality: Finality) -> BlockStream {
+        self.blocks_with(finality, Backfill::Complete)
+    }
+
+    /// Follow headers with an explicit policy for heights the consumer missed.
+    ///
+    /// The current head is emitted first, and a terminal tracker failure ends
+    /// the stream after one error item whatever the policy. A consumer that
+    /// coalesces to the newest head should use [`Backfill::Latest`]; one that
+    /// must see every finalized height keeps [`Backfill::Complete`].
+    pub fn blocks_with(&self, finality: Finality, backfill: Backfill) -> BlockStream {
+        if backfill == Backfill::Latest {
+            return self.latest(finality);
+        }
         let events = self.events(finality);
         let heads = self.heads(finality);
         let initial = heads.borrow().clone();
@@ -408,6 +458,7 @@ impl HeadTracker {
         let state = Follower {
             provider: self.provider.clone(),
             finality,
+            backfill,
             events,
             heads,
             cancellation: self.cancellation.clone(),
@@ -505,6 +556,65 @@ impl HeadTracker {
         )))
     }
 
+    /// [`Backfill::Latest`]: follow the reconciled head watch, which coalesces
+    /// on its own and never makes a request.
+    fn latest(&self, finality: Finality) -> BlockStream {
+        struct Latest {
+            finality: Finality,
+            heads: watch::Receiver<BlockHeader>,
+            failure: watch::Receiver<Option<HeadError>>,
+            cancellation: CancellationToken,
+            last: Option<BlockHeader>,
+            closed: bool,
+            ended: bool,
+        }
+        let state = Latest {
+            finality,
+            heads: self.heads(finality),
+            failure: match finality {
+                Finality::Best => self.best_failure.clone(),
+                Finality::Finalized => self.finalized_failure.clone(),
+            },
+            cancellation: self.cancellation.clone(),
+            last: None,
+            closed: false,
+            ended: false,
+        };
+        Box::pin(futures::stream::unfold(state, |mut state| async move {
+            loop {
+                if state.ended || state.cancellation.is_cancelled() {
+                    return None;
+                }
+                // The newest head goes first, then a retained failure, as in
+                // `blocks`: a worker publishes its last head before failing.
+                let current = state.heads.borrow_and_update().clone();
+                let advanced = state.last.as_ref().is_none_or(|last| match state.finality {
+                    Finality::Finalized => current.number > last.number,
+                    Finality::Best => current.hash != last.hash,
+                });
+                if advanced {
+                    state.last = Some(current.clone());
+                    return Some((Ok(current), state));
+                }
+                let failure = state.failure.borrow_and_update().clone();
+                if let Some(error) = failure {
+                    state.ended = true;
+                    return Some((Err(error), state));
+                }
+                if state.closed {
+                    return None;
+                }
+                let open = tokio::select! {
+                    biased;
+                    () = state.cancellation.cancelled() => return None,
+                    changed = state.heads.changed() => changed.is_ok(),
+                    changed = state.failure.changed() => changed.is_ok(),
+                };
+                state.closed = !open;
+            }
+        }))
+    }
+
     fn heads(&self, finality: Finality) -> watch::Receiver<BlockHeader> {
         match finality {
             Finality::Best => self.best(),
@@ -523,6 +633,7 @@ impl HeadTracker {
 struct Follower {
     provider: Arc<dyn HeadProvider>,
     finality: Finality,
+    backfill: Backfill,
     events: broadcast::Receiver<HeadEvent>,
     heads: watch::Receiver<BlockHeader>,
     cancellation: CancellationToken,
@@ -539,6 +650,17 @@ impl Follower {
             self.pending.push_back(Ok(next));
             return;
         };
+        if let Backfill::Bounded(limit) = self.backfill {
+            // The tracker worker already verified the newest head against the
+            // one before it, so skipping a long gap needs no request.
+            let missed = next
+                .number
+                .saturating_sub(previous.number.saturating_add(1));
+            if next.number > previous.number && missed > u64::from(limit) {
+                self.pending.push_back(Ok(next));
+                return;
+            }
+        }
         let result = tokio::select! {
             biased;
             () = self.cancellation.cancelled() => {
@@ -594,7 +716,7 @@ async fn follow(
                 let result = tokio::select! {
                     biased;
                     () = cancellation.cancelled() => return,
-                    changes = reconcile(provider.as_ref(), finality, &current, next) => changes,
+                    changes = reconcile_shared(provider.as_ref(), finality, &current, next) => changes,
                 };
                 match result {
                     Ok(changes) => {
@@ -665,6 +787,38 @@ async fn subscribe_recovering(
             result => return result,
         }
     }
+}
+
+/// The tracker worker's reconcile. A finalized gap longer than
+/// [`SHARED_FINALIZED_BACKFILL`] publishes only the newest head, after one
+/// `chain_getBlockHash` confirms the previous head is still canonical at its
+/// height, so the node's newer finalized head descends from it. Followers that
+/// need the skipped heights recover them by their [`Backfill`] policy.
+async fn reconcile_shared(
+    provider: &dyn HeadProvider,
+    finality: Finality,
+    previous: &BlockHeader,
+    next: BlockHeader,
+) -> Result<Changes, HeadError> {
+    let missed = next
+        .number
+        .saturating_sub(previous.number.saturating_add(1));
+    if finality == Finality::Finalized
+        && next.number > previous.number
+        && missed > SHARED_FINALIZED_BACKFILL
+    {
+        if provider.block_hash(previous.number).await? != Some(previous.hash) {
+            return Err(HeadError::FinalityViolation {
+                previous: previous.hash,
+                replacement: next.hash,
+            });
+        }
+        return Ok(Changes {
+            reorg: None,
+            headers: vec![next],
+        });
+    }
+    reconcile(provider, finality, previous, next).await
 }
 
 async fn reconcile(
@@ -922,6 +1076,7 @@ mod tests {
             mpsc::UnboundedSender<Result<BlockHeader, HeadError>>,
         )>,
         height_lookups: Vec<u64>,
+        header_lookups: usize,
         next_subscribe_error: Option<HeadError>,
     }
 
@@ -1018,14 +1173,18 @@ mod tests {
 
         fn header(&self, hash: H256) -> HeadFuture<'_, Option<BlockHeader>> {
             Box::pin(async move {
-                Ok(self
-                    .state
-                    .lock()
-                    .map_err(lock_error)?
-                    .headers
-                    .get(&hash)
-                    .cloned())
+                let mut state = self.state.lock().map_err(lock_error)?;
+                state.header_lookups += 1;
+                Ok(state.headers.get(&hash).cloned())
             })
+        }
+    }
+
+    impl FakeProvider {
+        /// `chain_getBlockHash` plus `chain_getHeader` requests made so far.
+        fn requests(&self) -> Result<usize, HeadError> {
+            let state = self.state.lock().map_err(lock_error)?;
+            Ok(state.height_lookups.len() + state.header_lookups)
         }
     }
 
@@ -1294,6 +1453,187 @@ mod tests {
         ));
         assert!(blocks.next().await.is_none());
         cancellation.cancel();
+        Ok(())
+    }
+
+    /// A consumer blocked while 400 finalized heads arrive one at a time
+    /// overflows the 256-event channel. Measured requests before its next head
+    /// (D-096): the complete follower recovers every missed height first (399
+    /// `chain_getBlockHash` + 399 `chain_getHeader` = 798 requests, then 400
+    /// heads); a bounded follower skips the long gap and a latest follower
+    /// coalesces, both with no request.
+    #[tokio::test]
+    async fn slow_consumer_request_counts_by_backfill_policy() -> Result<(), HeadError> {
+        let (provider, chain) = FakeProvider::with_chain(400)?;
+        let cancellation = CancellationToken::new();
+        let tracker = HeadTracker::start(
+            provider.clone(),
+            chain[0].clone(),
+            chain[0].clone(),
+            cancellation.clone(),
+        )
+        .await?;
+        let mut complete = tracker.blocks(Finality::Finalized);
+        let mut bounded = tracker.blocks_with(Finality::Finalized, Backfill::Bounded(16));
+        let mut latest = tracker.blocks_with(Finality::Finalized, Backfill::Latest);
+        for stream in [&mut complete, &mut bounded, &mut latest] {
+            assert_eq!(next(stream).await??.number, 0);
+        }
+        for header in &chain[1..] {
+            provider.emit(Finality::Finalized, Ok(header.clone()))?;
+        }
+        head_at(tracker.finalized(), chain[400].hash).await?;
+        // Consecutive heads cost the shared worker nothing.
+        assert_eq!(provider.requests()?, 0);
+
+        assert_eq!(next(&mut latest).await??.number, 400);
+        assert_eq!(provider.requests()?, 0, "latest makes no request");
+        assert_eq!(next(&mut bounded).await??.number, 400);
+        assert_eq!(provider.requests()?, 0, "bounded skips the long gap");
+
+        assert_eq!(next(&mut complete).await??.number, 1);
+        assert_eq!(provider.requests()?, 798, "complete recovers 399 heights");
+        for height in 2..=400 {
+            assert_eq!(next(&mut complete).await??.number, height);
+        }
+        // Later heads arrive in order for every policy.
+        let mut parent = chain[400].hash;
+        let mut later = Vec::new();
+        for number in 401..=403 {
+            let header = test_header(number, 0, Some(parent));
+            parent = header.hash;
+            provider.insert(header.clone(), true)?;
+            later.push(header);
+        }
+        for header in &later {
+            provider.emit(Finality::Finalized, Ok(header.clone()))?;
+        }
+        head_at(tracker.finalized(), later[2].hash).await?;
+        for header in &later {
+            assert_eq!(next(&mut complete).await??, *header);
+            assert_eq!(next(&mut bounded).await??, *header);
+        }
+        assert_eq!(next(&mut latest).await??, later[2], "latest coalesces");
+        assert_eq!(provider.requests()?, 798);
+        cancellation.cancel();
+        Ok(())
+    }
+
+    /// After a reconnect that missed 99 finalized heights, the worker confirms
+    /// the previous head with one `chain_getBlockHash` and publishes the newest
+    /// head (before D-096 it first made 198 requests). A complete follower
+    /// still receives every height by recovering the gap itself; a bounded
+    /// follower recovers a gap within its limit and skips a longer one.
+    #[tokio::test]
+    async fn long_finalized_gap_publishes_the_newest_head_after_one_request()
+    -> Result<(), HeadError> {
+        let (provider, chain) = FakeProvider::with_chain(100)?;
+        let cancellation = CancellationToken::new();
+        let tracker = HeadTracker::start(
+            provider.clone(),
+            chain[0].clone(),
+            chain[0].clone(),
+            cancellation.clone(),
+        )
+        .await?;
+        let mut complete = tracker.blocks(Finality::Finalized);
+        let mut wide = tracker.blocks_with(Finality::Finalized, Backfill::Bounded(99));
+        let mut narrow = tracker.blocks_with(Finality::Finalized, Backfill::Bounded(98));
+        let mut latest = tracker.blocks_with(Finality::Finalized, Backfill::Latest);
+        for stream in [&mut complete, &mut wide, &mut narrow, &mut latest] {
+            assert_eq!(next(stream).await??.number, 0);
+        }
+        provider.emit(Finality::Finalized, Ok(chain[100].clone()))?;
+        head_at(tracker.finalized(), chain[100].hash).await?;
+        assert_eq!(
+            provider.state.lock().map_err(lock_error)?.height_lookups,
+            [0]
+        );
+        assert_eq!(provider.requests()?, 1);
+        assert_eq!(next(&mut latest).await??, chain[100]);
+        assert_eq!(next(&mut narrow).await??, chain[100]);
+        assert_eq!(provider.requests()?, 1);
+        for height in 1..=100 {
+            assert_eq!(next(&mut wide).await??.number, height);
+        }
+        assert_eq!(provider.requests()?, 1 + 2 * 99);
+        for height in 1..=100 {
+            assert_eq!(next(&mut complete).await??.number, height);
+        }
+        assert_eq!(provider.requests()?, 1 + 4 * 99);
+        cancellation.cancel();
+
+        // A previous head that is no longer canonical stays a finality violation.
+        let (provider, chain) = FakeProvider::with_chain(40)?;
+        let cancellation = CancellationToken::new();
+        let tracker = HeadTracker::start(
+            provider.clone(),
+            chain[1].clone(),
+            chain[1].clone(),
+            cancellation.clone(),
+        )
+        .await?;
+        let mut latest = tracker.blocks_with(Finality::Finalized, Backfill::Latest);
+        assert_eq!(next(&mut latest).await??, chain[1]);
+        provider.insert(test_header(1, 1, Some(chain[0].hash)), true)?;
+        provider.emit(Finality::Finalized, Ok(chain[40].clone()))?;
+        assert!(matches!(
+            next(&mut latest).await?,
+            Err(HeadError::FinalityViolation { .. })
+        ));
+        assert!(latest.next().await.is_none());
+        assert!(matches!(
+            tracker.failure(Finality::Finalized),
+            Some(HeadError::FinalityViolation { .. })
+        ));
+        cancellation.cancel();
+        Ok(())
+    }
+
+    /// A latest follower coalesces, ends after a retained failure, and
+    /// follows best heads by identity.
+    #[tokio::test]
+    async fn latest_follower_coalesces_reports_failure_and_follows_best_identity()
+    -> Result<(), HeadError> {
+        let (provider, chain) = FakeProvider::with_chain(3)?;
+        let fork2 = test_header(2, 1, Some(chain[1].hash));
+        provider.insert(fork2.clone(), true)?;
+        let cancellation = CancellationToken::new();
+        let tracker = HeadTracker::start(
+            provider.clone(),
+            chain[1].clone(),
+            chain[0].clone(),
+            cancellation.clone(),
+        )
+        .await?;
+        let mut best = tracker.blocks_with(Finality::Best, Backfill::Latest);
+        let mut finalized = tracker.blocks_with(Finality::Finalized, Backfill::Latest);
+        assert_eq!(next(&mut best).await??, chain[1]);
+        assert_eq!(next(&mut finalized).await??, chain[0]);
+        provider.emit(Finality::Best, Ok(fork2.clone()))?;
+        head_at(tracker.best(), fork2.hash).await?;
+        assert_eq!(next(&mut best).await??, fork2);
+        for header in &chain[1..=3] {
+            provider.emit(Finality::Finalized, Ok(header.clone()))?;
+        }
+        head_at(tracker.finalized(), chain[3].hash).await?;
+        provider.emit(Finality::Finalized, Err(RpcError::Closed.into()))?;
+        assert_eq!(next(&mut finalized).await??, chain[3]);
+        assert!(matches!(
+            next(&mut finalized).await?,
+            Err(HeadError::Rpc(RpcError::Closed))
+        ));
+        assert!(finalized.next().await.is_none());
+        // A late latest follower gets the last head, then the failure.
+        let mut late = tracker.blocks_with(Finality::Finalized, Backfill::Latest);
+        assert_eq!(next(&mut late).await??, chain[3]);
+        assert!(matches!(
+            next(&mut late).await?,
+            Err(HeadError::Rpc(RpcError::Closed))
+        ));
+        assert!(late.next().await.is_none());
+        cancellation.cancel();
+        assert!(best.next().await.is_none());
         Ok(())
     }
 

@@ -542,9 +542,41 @@ async fn selective_read_preserves_raw_absences_and_the_requested_mechanism() {
     );
     client.close().await;
 }
+/// Seed one subnet-1 schedule item into the state later blocks copy.
+fn seed_schedule(chain: &FakeChain, item: &str, value: u64) {
+    chain.mutate_state(|state| {
+        state
+            .seed_python("SubtensorModule", item, &[json!(1)], json!(value))
+            .unwrap()
+    });
+}
+
+/// Worker requests (headers, runtime versions, storage and graph calls)
+/// recorded since `start`.
+fn worker_requests(chain: &FakeChain, start: usize) -> usize {
+    chain
+        .requests()
+        .iter()
+        .skip(start)
+        .filter(|request| {
+            matches!(
+                request.method.as_str(),
+                "chain_getHeader"
+                    | "state_getRuntimeVersion"
+                    | "state_queryStorageAt"
+                    | "state_getStorage"
+                    | "state_call"
+            )
+        })
+        .count()
+}
+
 #[tokio::test]
 async fn epoch_advance_refreshes_once_and_block_fallback_refreshes_without_an_epoch_change() {
     let (chain, client) = setup().await;
+    // An epoch ran at 100 with tempo 2, so the next is due at 102.
+    seed_schedule(&chain, "Tempo", 2);
+    epoch(&chain, 100);
     let policy = SyncPolicy {
         cadence: SyncCadence::EveryEpoch { fallback_blocks: 3 },
         ..SyncPolicy::validator()
@@ -560,21 +592,117 @@ async fn epoch_advance_refreshes_once_and_block_fallback_refreshes_without_an_ep
     .unwrap();
     let initial = handle.load();
     assert_eq!(initial.at.number, 100);
+    settle().await;
+    let start = chain.requests().len();
     chain.advance(1).unwrap();
     settle().await;
     assert!(receiver.try_recv().is_err());
     assert!(Arc::ptr_eq(&initial, &handle.load()));
-    epoch(&chain, 101);
+    assert_eq!(
+        worker_requests(&chain, start),
+        0,
+        "a head before the predicted epoch makes no request"
+    );
+    epoch(&chain, 102);
     chain.advance(1).unwrap();
     let refreshed = diff(&mut receiver).await;
     assert_eq!(refreshed.to_block, 102);
+    // The next epoch would be at 104, but a longer tempo set at 103 moves it
+    // past the fallback: 104 reads and finds no epoch, 105 refreshes by the
+    // fallback.
+    seed_schedule(&chain, "Tempo", 360);
+    let start = chain.requests().len();
     chain.advance(1).unwrap();
     settle().await;
     assert!(receiver.try_recv().is_err());
-    chain.advance(2).unwrap();
+    assert_eq!(worker_requests(&chain, start), 0);
+    chain.advance(1).unwrap();
+    settle().await;
+    assert!(receiver.try_recv().is_err());
+    assert_eq!(
+        worker_requests(&chain, start),
+        3,
+        "header, runtime, schedule"
+    );
+    chain.advance(1).unwrap();
     assert_eq!(diff(&mut receiver).await.to_block, 105);
     handle.shutdown().await;
     assert!(handle.health().borrow().stopped);
+    client.close().await;
+}
+
+/// A deferred epoch (not fired at its predicted block) is read again at each
+/// head until it fires, and the refresh follows it.
+#[tokio::test]
+async fn deferred_epoch_is_read_at_each_head_until_it_fires() {
+    let (chain, client) = setup().await;
+    seed_schedule(&chain, "Tempo", 2);
+    epoch(&chain, 100);
+    let (handle, mut receiver) = MetagraphSync::spawn(
+        client.clone(),
+        NetUid(1),
+        MechId(0),
+        SyncPolicy::validator(),
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap();
+    settle().await;
+    // Deferred at 102 to 103, deferred again to 104, then it runs.
+    for (pending, since) in [(103, 2), (104, 3)] {
+        seed_schedule(&chain, "PendingEpochAt", pending);
+        seed_schedule(&chain, "BlocksSinceLastStep", since);
+        if pending == 103 {
+            chain.advance(1).unwrap();
+            settle().await;
+        }
+        let start = chain.requests().len();
+        chain.advance(1).unwrap();
+        settle().await;
+        assert!(receiver.try_recv().is_err());
+        assert_eq!(worker_requests(&chain, start), 3, "pending {pending}");
+    }
+    seed_schedule(&chain, "PendingEpochAt", 0);
+    seed_schedule(&chain, "BlocksSinceLastStep", 0);
+    epoch(&chain, 104);
+    chain.advance(1).unwrap();
+    assert_eq!(diff(&mut receiver).await.to_block, 104);
+    handle.shutdown().await;
+    client.close().await;
+}
+
+/// Block-count and interval cadences make no request between refreshes.
+#[tokio::test]
+async fn block_count_cadence_reads_only_when_due() {
+    let (chain, client) = setup().await;
+    let (handle, mut receiver) = MetagraphSync::spawn(
+        client.clone(),
+        NetUid(1),
+        MechId(0),
+        SyncPolicy {
+            cadence: SyncCadence::EveryBlocks(4),
+            ..SyncPolicy::validator()
+        },
+        CancellationToken::new(),
+    )
+    .await
+    .unwrap();
+    settle().await;
+    let start = chain.requests().len();
+    for _ in 0..3 {
+        chain.advance(1).unwrap();
+        settle().await;
+    }
+    assert!(receiver.try_recv().is_err());
+    assert_eq!(worker_requests(&chain, start), 0);
+    chain.advance(1).unwrap();
+    assert_eq!(diff(&mut receiver).await.to_block, 104);
+    assert_eq!(
+        worker_requests(&chain, start),
+        3,
+        "header, runtime and one graph call"
+    );
+    handle.shutdown().await;
     client.close().await;
 }
 #[tokio::test]
@@ -1107,4 +1235,77 @@ fn selective_fraction_guard_uses_its_actual_option_field_and_allows_unselected_p
     assert_eq!(graph.decode_path(), DecodePath::Dynamic);
     assert_eq!(graph.len(), 2);
     assert!(graph.to_json().unwrap()["raw"]["moving_price"].is_null());
+}
+
+/// Seed a regular epoch schedule (tempo 10, epochs at 95, 105, 115, ...) into
+/// the state every later block copies, as of finalized `block`.
+fn schedule(chain: &FakeChain, block: u64) {
+    let last = block - (block - 5) % 10;
+    chain.mutate_state(|state| {
+        for (item, value) in [
+            ("Tempo", json!(10)),
+            ("LastEpochBlock", json!(last)),
+            ("BlocksSinceLastStep", json!(block - last)),
+            ("PendingEpochAt", json!(0)),
+        ] {
+            state
+                .seed_python("SubtensorModule", item, &[json!(1)], value)
+                .unwrap();
+        }
+    });
+}
+
+/// Requests the client makes while its finalized head advances over
+/// `101..=130`, with `sync` running or not: the worker's own cost is the
+/// difference (D-096).
+async fn requests_over_thirty_heads(sync: Option<SyncPolicy>) -> (usize, Vec<u64>) {
+    let (chain, client) = setup().await;
+    schedule(&chain, 100);
+    let mut running = match sync {
+        Some(policy) => Some(
+            MetagraphSync::spawn(
+                client.clone(),
+                NetUid(1),
+                MechId(0),
+                policy,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap(),
+        ),
+        None => None,
+    };
+    settle().await;
+    let before = chain.requests().len();
+    let mut refreshed = Vec::new();
+    for block in 101..=130 {
+        schedule(&chain, block);
+        chain.advance(1).unwrap();
+        settle().await;
+        if let Some((_, receiver)) = &mut running {
+            while let Ok(diff) = receiver.try_recv() {
+                refreshed.push(diff.to_block);
+            }
+        }
+    }
+    let requests = chain.requests().len() - before;
+    if let Some((handle, _)) = running {
+        handle.shutdown().await;
+    }
+    client.close().await;
+    (requests, refreshed)
+}
+
+/// Measured over 30 finalized heads with tempo 10 and the validator preset.
+/// Before D-096 the worker resolved every head and read its epoch before
+/// deciding (`chain_getHeader`, `state_getRuntimeVersion`,
+/// `state_queryStorageAt`): 93 requests beyond the client's own, including the
+/// three graph calls. It now reads only at the three predicted epoch blocks:
+/// 12 requests, with the same refreshes.
+#[tokio::test]
+async fn validator_cadence_reads_only_at_predicted_epochs() {
+    let (control, _) = requests_over_thirty_heads(None).await;
+    let (with_sync, refreshed) = requests_over_thirty_heads(Some(SyncPolicy::validator())).await;
+    assert_eq!(refreshed, [105, 115, 125]);
+    assert_eq!(with_sync - control, 12);
 }

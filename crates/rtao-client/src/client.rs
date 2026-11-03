@@ -815,14 +815,30 @@ impl Client {
     }
 
     /// Follow advancing headers with reconnect backfill and explicit best reorgs.
+    ///
+    /// Every finalized height arrives exactly once ([`crate::Backfill::Complete`]).
+    /// A consumer that only needs the newest head should use
+    /// [`Self::blocks_with`] with [`crate::Backfill::Latest`]: after it falls
+    /// behind, the complete stream recovers each missed height with two
+    /// requests before delivering the newer head.
     pub fn blocks(
         &self,
         finality: crate::Finality,
     ) -> Result<crate::head::BlockStream, ClientError> {
+        self.blocks_with(finality, crate::Backfill::Complete)
+    }
+
+    /// Follow advancing headers with an explicit policy for missed heights
+    /// (D-096). See [`crate::Backfill`].
+    pub fn blocks_with(
+        &self,
+        finality: crate::Finality,
+        backfill: crate::Backfill,
+    ) -> Result<crate::head::BlockStream, ClientError> {
         self.inner
             .heads
             .as_ref()
-            .map(|heads| heads.blocks(finality))
+            .map(|heads| heads.blocks_with(finality, backfill))
             .ok_or_else(|| ClientError::Protocol("head tracking is disabled".into()))
     }
 

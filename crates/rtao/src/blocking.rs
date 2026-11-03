@@ -595,9 +595,18 @@ impl SyncClient {
 
     /// Follow new headers, blocking only while the iterator requests an item.
     pub fn blocks(&self, finality: Finality) -> Result<Blocks, Error> {
+        self.blocks_with(finality, rtao_client::Backfill::Complete)
+    }
+
+    /// [`Self::blocks`] with an explicit policy for missed heights (D-096).
+    pub fn blocks_with(
+        &self,
+        finality: Finality,
+        backfill: rtao_client::Backfill,
+    ) -> Result<Blocks, Error> {
         let stream = self
             .view
-            .with_view(move |view| async move { view.client().blocks(finality) })?;
+            .with_view(move |view| async move { view.client().blocks_with(finality, backfill) })?;
         Ok(Blocks {
             shared: self.view.shared.clone(),
             stream: Arc::new(tokio::sync::Mutex::new(stream)),

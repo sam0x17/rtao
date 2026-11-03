@@ -8,7 +8,8 @@ use rtao_core::value_ext::ValueExt;
 use rtao_core::{
     codec::Value,
     timelock::epoch_schedule::{
-        current_epoch_pre_run_coinbase, predict_first_reveal_block, simulate_run_coinbase,
+        EpochScheduleState, current_epoch_pre_run_coinbase, predict_first_reveal_block,
+        simulate_run_coinbase,
     },
 };
 use rtao_intents::weights::PreparedWeightCommit;
@@ -16,7 +17,7 @@ use rtao_metagraph::{MetagraphOptions, SubnetsMetagraphExt};
 use rtao_primitives::{AccountId, MechId, NetUid, NetUidStorageIndex, Uid};
 use rtao_reads::Namespaces;
 use rtao_runtime::storage::subtensor_module as st;
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// Chain epoch changes retained beside reveal outcomes for attribution.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -195,6 +196,115 @@ pub struct RevealWatcher {
     /// Absent from checkpoints written before D-086 and while empty.
     #[serde(default, skip_serializing_if = "VecDeque::is_empty")]
     revealed_code: VecDeque<RevealedCode>,
+    /// Verified chain state at the observation cursor, which predicts the
+    /// blocks after it (D-096). Never checkpointed: a restored watcher reads
+    /// it again at its cursor.
+    #[serde(skip)]
+    anchor: Option<Anchor>,
+}
+
+/// Blocks a single [`RevealWatcher::observe`] call may read before it retains
+/// its cursor for the next call.
+const REVEAL_BLOCK_READS: usize = 256;
+
+/// The stored values that decide one subnet's reveal processing, as the
+/// chain holds them at the end of a block: the parent state of the next.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct WatchState {
+    tempo: u16,
+    last_epoch_block: u64,
+    pending_epoch_at: u64,
+    subnet_epoch_index: u64,
+    blocks_since_last_step: u64,
+    reveal_period: u64,
+}
+impl WatchState {
+    fn schedule(self, block: u64) -> EpochScheduleState {
+        EpochScheduleState {
+            tempo: self.tempo,
+            last_epoch_block: self.last_epoch_block,
+            pending_epoch_at: self.pending_epoch_at,
+            subnet_epoch_index: self.subnet_epoch_index,
+            blocks_since_last_step: self.blocks_since_last_step,
+            current_block: block,
+        }
+    }
+    /// The epoch reveal processing uses in `block`, whose parent holds `self`.
+    fn epoch_at(self, block: u64) -> u64 {
+        current_epoch_pre_run_coinbase(&self.schedule(block.saturating_sub(1)), block)
+    }
+    /// Whether an epoch is due in `block`: the only blocks that can carry an
+    /// `EpochDeferred` or `EpochSkipped` event, advance the epoch index, or
+    /// open or close a reveal window.
+    fn epoch_due(self, block: u64) -> bool {
+        self.epoch_at(block) != self.subnet_epoch_index
+            || self.step(block).subnet_epoch_index != self.subnet_epoch_index
+    }
+    /// The state after `block` when its epoch, if due, runs successfully.
+    fn step(self, block: u64) -> Self {
+        let next = simulate_run_coinbase(&self.schedule(block.saturating_sub(1)), block);
+        Self {
+            tempo: next.tempo,
+            last_epoch_block: next.last_epoch_block,
+            pending_epoch_at: next.pending_epoch_at,
+            subnet_epoch_index: next.subnet_epoch_index,
+            blocks_since_last_step: next.blocks_since_last_step,
+            reveal_period: self.reveal_period,
+        }
+    }
+}
+
+/// One commit-epoch queue a pending commitment is followed through.
+type QueueKey = (NetUid, MechId, u64);
+type CommitQueue = Vec<(AccountId, u64, Vec<u8>, u64)>;
+
+/// Verified state at one finalized block: each pending subnet's schedule and
+/// reveal period, and each queue whose change could settle a commitment.
+#[derive(Clone, Debug)]
+struct Anchor {
+    snapshot: Snapshot,
+    states: BTreeMap<NetUid, WatchState>,
+    queues: BTreeMap<QueueKey, CommitQueue>,
+}
+impl Anchor {
+    fn block(&self) -> u64 {
+        self.snapshot.block().number
+    }
+    /// The states at `block` predicted from this anchor, if no owner trigger,
+    /// deferral, skipped epoch or parameter change occurred in between.
+    fn predict(&self, block: u64) -> BTreeMap<NetUid, WatchState> {
+        self.states
+            .iter()
+            .map(|(netuid, state)| {
+                let mut state = *state;
+                for number in self.block().saturating_add(1)..=block {
+                    state = state.step(number);
+                }
+                (*netuid, state)
+            })
+            .collect()
+    }
+    /// Whether `other`, read later, is what this anchor predicts: then no
+    /// block in between could have changed a pending outcome.
+    fn predicts(&self, other: &Self) -> bool {
+        self.predict(other.block()) == other.states && self.queues == other.queues
+    }
+    /// The first block in `(self.block(), last]` that runs an epoch.
+    fn next_epoch_block(&self, last: u64) -> Option<u64> {
+        self.states
+            .values()
+            .filter_map(|state| {
+                let mut state = *state;
+                for number in self.block().saturating_add(1)..=last {
+                    if state.epoch_due(number) {
+                        return Some(number);
+                    }
+                    state = state.step(number);
+                }
+                None
+            })
+            .min()
+    }
 }
 impl RevealWatcher {
     /// Whether runtime code `code` revealed one of this validator's commitments
@@ -490,11 +600,38 @@ impl RevealWatcher {
         Ok(())
     }
 
-    /// Process gap-free finalized heads and attribute outcomes at actual epochs.
+    /// Follow finalized history to `head` and attribute outcomes at actual
+    /// epochs.
+    ///
+    /// Only blocks that can change a pending outcome are read (D-096): each
+    /// block where an epoch is due (the only blocks that can carry an
+    /// `EpochDeferred` or `EpochSkipped` event, or open or close a reveal
+    /// window), and, while a reveal window is open, the block where a
+    /// commitment's queue changes. Every other block is covered by one read
+    /// at the end of the span that confirms the stored schedule, reveal
+    /// period and open queues are what the last verified block predicts. A
+    /// mismatch (an owner-triggered epoch, a deferral, a skipped epoch or a
+    /// parameter change) is located by bisection and that block is read in
+    /// full. An owner trigger that fires exactly at the automatic epoch
+    /// leaves no stored trace and is not reported as an epoch notice; it did
+    /// not shorten any reveal window. A call reads at most 256 blocks and
+    /// otherwise keeps its cursor for the next call.
     pub async fn observe(
         &mut self,
         client: &Client,
         head: &BlockHeader,
+        metrics: &Metrics,
+    ) -> anyhow::Result<()> {
+        self.observe_at(client, head, None, metrics).await
+    }
+
+    /// [`Self::observe`] with the head's snapshot when the caller already
+    /// resolved it.
+    pub(super) async fn observe_at(
+        &mut self,
+        client: &Client,
+        head: &BlockHeader,
+        head_snapshot: Option<Snapshot>,
         metrics: &Metrics,
     ) -> anyhow::Result<()> {
         let mut index = 0;
@@ -521,66 +658,265 @@ impl RevealWatcher {
                 self.unlocated.remove(index);
             }
         }
-        if let Some(previous) = self.last_observed_block
-            && !self.pending.is_empty()
-        {
-            for number in previous.saturating_add(1)..head.number {
-                if number.saturating_sub(previous) > 256 {
-                    // Retain the cursor; another call continues this finite replay.
-                    return Ok(());
+        let mut reads = 0;
+        let mut head_snapshot = head_snapshot.filter(|snapshot| snapshot.block().hash == head.hash);
+        // After a block that broke the prediction, read each block until one
+        // step is predicted again, so a schedule the port cannot predict
+        // costs no more than reading every block.
+        let mut stepwise = false;
+        loop {
+            if self.pending.is_empty() {
+                self.anchor = None;
+                if self
+                    .last_observed_block
+                    .is_none_or(|last| last < head.number)
+                {
+                    self.last_observed_block = Some(head.number);
                 }
-                let snapshot = client.at(BlockRef::Number(number)).await?;
-                let hash = snapshot.block().hash;
-                let raw = client
-                    .request(
-                        "chain_getHeader",
-                        serde_json::json!([format!("0x{}", hex::encode(hash.0))]),
-                    )
+                return Ok(());
+            }
+            let cursor = match self.last_observed_block {
+                Some(cursor) => cursor,
+                None => head.number.saturating_sub(1),
+            };
+            if cursor >= head.number || reads >= REVEAL_BLOCK_READS {
+                // A capped call keeps its cursor; the next continues.
+                return Ok(());
+            }
+            let anchor = match self.anchor.take() {
+                Some(anchor) if anchor.block() == cursor && self.covers(&anchor) => anchor,
+                _ => {
+                    reads += 1;
+                    let snapshot = block_snapshot(client, head, &mut head_snapshot, cursor).await?;
+                    self.read_anchor(snapshot).await?
+                }
+            };
+            // A window normally opens at an epoch block, which is read anyway;
+            // one opened between epochs (a shortened reveal period) still has
+            // its first block read, whose snapshot explains a miss.
+            let next = if stepwise || self.opens_unchecked_window(&anchor, cursor + 1) {
+                Some(cursor + 1)
+            } else {
+                anchor.next_epoch_block(head.number)
+            };
+            // The span before the next epoch block, or to the head, must hold
+            // what the anchor predicts before it is skipped.
+            let end = next.map_or(head.number, |block| block - 1);
+            let observed = if end == cursor {
+                anchor.clone()
+            } else {
+                reads += 1;
+                let snapshot = block_snapshot(client, head, &mut head_snapshot, end).await?;
+                self.read_state(snapshot, anchor.queues.keys()).await?
+            };
+            if !anchor.predicts(&observed) {
+                // Bisect to the first block that differs from the prediction.
+                let mut before = anchor.clone();
+                let mut after = observed;
+                while after.block() - before.block() > 1 {
+                    let middle = before.block() + (after.block() - before.block()) / 2;
+                    reads += 1;
+                    let snapshot = block_snapshot(client, head, &mut head_snapshot, middle).await?;
+                    let probe = self.read_state(snapshot, anchor.queues.keys()).await?;
+                    if anchor.predicts(&probe) {
+                        before = probe;
+                    } else {
+                        after = probe;
+                    }
+                }
+                stepwise = after.block() == anchor.block() + 1;
+                self.skip_to(before.block());
+                self.process_block(client, &after.snapshot, &before, head.number, metrics)
                     .await?;
-                let recovered = BlockHeader::from_json_with_hash(raw, hash)?;
-                self.process_head(client, &recovered, metrics).await?;
-                metrics.increment("rtao_weights_reveal_history_replayed_total");
-                if self.pending.is_empty() {
-                    break;
-                }
+                self.anchor = Some(self.anchor_at(after).await?);
+                continue;
+            }
+            let Some(block) = next else {
+                self.last_observed_block = Some(head.number);
+                self.anchor = Some(observed);
+                return Ok(());
+            };
+            reads += 1;
+            let snapshot = block_snapshot(client, head, &mut head_snapshot, block).await?;
+            self.skip_to(observed.block());
+            self.process_block(client, &snapshot, &observed, head.number, metrics)
+                .await?;
+            if !self.pending.is_empty() {
+                let next = self.read_anchor(snapshot).await?;
+                stepwise &= observed.predict(next.block()) != next.states;
+                self.anchor = Some(next);
             }
         }
-        self.process_head(client, head, metrics).await
     }
 
-    async fn process_head(
+    /// Whether `block`, whose parent holds `anchor`, is inside a pending
+    /// commitment's reveal window that no read block has checked yet.
+    fn opens_unchecked_window(&self, anchor: &Anchor, block: u64) -> bool {
+        self.pending.iter().any(|pending| {
+            !pending.first_checked
+                && !pending.ambiguous_reveal
+                && block >= pending.inclusion_block
+                && anchor.states.get(&pending.netuid).is_some_and(|state| {
+                    state.epoch_at(block)
+                        == pending.commit_epoch.saturating_add(state.reveal_period)
+                })
+        })
+    }
+
+    /// Advance the cursor over blocks verified to change no pending outcome.
+    fn skip_to(&mut self, block: u64) {
+        if self.last_observed_block.is_none_or(|last| last < block) {
+            self.last_observed_block = Some(block);
+        }
+    }
+
+    /// Whether `anchor` holds every pending subnet and every queue the
+    /// pending commitments are followed through after it.
+    fn covers(&self, anchor: &Anchor) -> bool {
+        self.pending
+            .iter()
+            .all(|pending| anchor.states.contains_key(&pending.netuid))
+            && self
+                .span_queues(anchor)
+                .iter()
+                .all(|key| anchor.queues.contains_key(key))
+    }
+
+    /// Queues to verify over the span after `anchor`. When the next block
+    /// runs an epoch the span is empty: that block is read in full.
+    fn span_queues(&self, anchor: &Anchor) -> BTreeSet<QueueKey> {
+        let next = anchor.block().saturating_add(1);
+        if anchor.next_epoch_block(next) == Some(next) {
+            return BTreeSet::new();
+        }
+        self.followed_queues(&anchor.states, next)
+    }
+
+    /// Queues whose change can settle a pending commitment in `block`: its
+    /// reveal window is open or has passed, unless an ambiguous reveal past
+    /// its window can no longer settle.
+    fn followed_queues(
+        &self,
+        states: &BTreeMap<NetUid, WatchState>,
+        block: u64,
+    ) -> BTreeSet<QueueKey> {
+        self.pending
+            .iter()
+            .filter(|pending| block >= pending.inclusion_block)
+            .filter_map(|pending| {
+                let state = states.get(&pending.netuid)?;
+                let reveal = pending.commit_epoch.saturating_add(state.reveal_period);
+                let epoch = state.epoch_at(block);
+                (epoch == reveal || (epoch > reveal && !pending.ambiguous_reveal)).then_some((
+                    pending.netuid,
+                    pending.mechanism,
+                    pending.commit_epoch,
+                ))
+            })
+            .collect()
+    }
+
+    /// Read a new anchor at `snapshot`.
+    async fn read_anchor(&self, snapshot: Snapshot) -> anyhow::Result<Anchor> {
+        let anchor = self.read_state(snapshot, std::iter::empty()).await?;
+        self.anchor_at(anchor).await
+    }
+
+    /// Complete `anchor`'s queues with every queue followed after it.
+    async fn anchor_at(&self, mut anchor: Anchor) -> anyhow::Result<Anchor> {
+        let followed = self.span_queues(&anchor);
+        anchor.queues.retain(|key, _| followed.contains(key));
+        for key in followed {
+            if !anchor.queues.contains_key(&key) {
+                let queue = read_queue(&anchor.snapshot, key).await?;
+                anchor.queues.insert(key, queue);
+            }
+        }
+        Ok(anchor)
+    }
+
+    /// Read each pending subnet's state and the named queues at `snapshot`.
+    async fn read_state<'a>(
+        &self,
+        snapshot: Snapshot,
+        queues: impl Iterator<Item = &'a QueueKey>,
+    ) -> anyhow::Result<Anchor> {
+        let mut states = BTreeMap::new();
+        for netuid in self
+            .pending
+            .iter()
+            .map(|pending| pending.netuid)
+            .collect::<BTreeSet<_>>()
+        {
+            let (tempo, last_epoch_block, pending_epoch_at, subnet_epoch_index, since, period) =
+                super::reads::fetch(
+                    &snapshot,
+                    (
+                        st::TEMPO.at((netuid,)),
+                        st::LAST_EPOCH_BLOCK.at((netuid,)),
+                        st::PENDING_EPOCH_AT.at((netuid,)),
+                        st::SUBNET_EPOCH_INDEX.at((netuid,)),
+                        st::BLOCKS_SINCE_LAST_STEP.at((netuid,)),
+                        st::REVEAL_PERIOD_EPOCHS.at((netuid,)),
+                    ),
+                )
+                .await?;
+            states.insert(
+                netuid,
+                WatchState {
+                    tempo,
+                    last_epoch_block,
+                    pending_epoch_at,
+                    subnet_epoch_index,
+                    blocks_since_last_step: since,
+                    reveal_period: period,
+                },
+            );
+        }
+        let mut read = BTreeMap::new();
+        for key in queues {
+            read.insert(*key, read_queue(&snapshot, *key).await?);
+        }
+        Ok(Anchor {
+            snapshot,
+            states,
+            queues: read,
+        })
+    }
+
+    /// Attribute one finalized block, given its parent's verified state.
+    async fn process_block(
         &mut self,
         client: &Client,
-        head: &BlockHeader,
+        snapshot: &Snapshot,
+        parent: &Anchor,
+        head: u64,
         metrics: &Metrics,
     ) -> anyhow::Result<()> {
-        if self
-            .last_observed_block
-            .is_some_and(|last| head.number <= last)
-        {
+        let number = snapshot.block().number;
+        let hash = snapshot.block().hash;
+        if self.last_observed_block.is_some_and(|last| number <= last) {
             return Ok(());
         }
         if self.pending.is_empty() {
-            self.last_observed_block = Some(head.number);
+            self.last_observed_block = Some(number);
             return Ok(());
         }
-        let snapshot = client.at(BlockRef::Hash(head.hash)).await?;
+        anyhow::ensure!(
+            parent.block().checked_add(1) == Some(number),
+            "reveal parent state is not the block's parent"
+        );
+        if number < head {
+            metrics.increment("rtao_weights_reveal_history_replayed_total");
+        }
         let events = snapshot.events().await?;
         // Reveal processing runs before coinbase. Using the parent schedule
         // captures its lookahead even when coinbase is deferred or skipped.
-        let parent = match head.parent_hash {
-            Some(hash) => client.at(BlockRef::Hash(hash)).await?,
-            None => {
-                client
-                    .at(BlockRef::Number(head.number.saturating_sub(1)))
-                    .await?
-            }
-        };
+        let parent_state = &parent.snapshot;
         let mut completed = Vec::new();
-        let mut observed_epochs = BTreeMap::new();
         let mut stored_round = None;
         for pending in &mut self.pending {
-            if head.number < pending.inclusion_block {
+            if number < pending.inclusion_block {
                 continue;
             }
             for event in events.records() {
@@ -594,31 +930,26 @@ impl RevealWatcher {
                     continue;
                 }
                 let notice = match event.event_id.as_str() {
-                    "EpochDeferred" => EpochNotice::Deferred(head.number),
-                    "EpochSkipped" => EpochNotice::Skipped(head.number),
-                    _ => EpochNotice::Triggered(head.number),
+                    "EpochDeferred" => EpochNotice::Deferred(number),
+                    "EpochSkipped" => EpochNotice::Skipped(number),
+                    _ => EpochNotice::Triggered(number),
                 };
                 if pending.notices.len() < 64 {
                     pending.notices.push(notice);
                 }
             }
             let index = NetUidStorageIndex::new(pending.netuid, pending.mechanism)?;
+            let state = parent
+                .states
+                .get(&pending.netuid)
+                .ok_or_else(|| anyhow::anyhow!("reveal parent state lacks a pending subnet"))?;
             // Runtime reveal processing selects the queue using its current
             // period, not a period frozen when our process prepared the commit.
-            let period =
-                super::reads::storage(&parent, &st::REVEAL_PERIOD_EPOCHS, (pending.netuid,))
-                    .await?;
             pending.reveal_epoch = pending
                 .commit_epoch
-                .checked_add(period)
+                .checked_add(state.reveal_period)
                 .ok_or_else(|| anyhow::anyhow!("reveal epoch overflow"))?;
-            let epoch = if let Some(epoch) = observed_epochs.get(&pending.netuid) {
-                *epoch
-            } else {
-                let epoch = reveal_processing_epoch(&parent, pending.netuid, head.number).await?;
-                observed_epochs.insert(pending.netuid, epoch);
-                epoch
-            };
+            let epoch = state.epoch_at(number);
             if epoch == pending.reveal_epoch
                 && events.records().iter().any(|event| {
                     event.matches("SubtensorModule", "TimelockedWeightsRevealed")
@@ -626,7 +957,7 @@ impl RevealWatcher {
                 })
             {
                 let queue = super::reads::storage(
-                    &parent,
+                    parent_state,
                     &st::TIMELOCKED_WEIGHT_COMMITS,
                     (index, pending.commit_epoch),
                 )
@@ -651,7 +982,7 @@ impl RevealWatcher {
             if epoch < pending.reveal_epoch {
                 if !pending.warned_permit && epoch > pending.commit_epoch {
                     let permits =
-                        super::reads::storage(&snapshot, &st::VALIDATOR_PERMIT, (pending.netuid,))
+                        super::reads::storage(snapshot, &st::VALIDATOR_PERMIT, (pending.netuid,))
                             .await?;
                     if permits.get(usize::from(pending.uid.0)) != Some(&true) {
                         tracing::warn!(
@@ -670,7 +1001,7 @@ impl RevealWatcher {
                     continue;
                 }
                 let queue = super::reads::storage(
-                    &snapshot,
+                    snapshot,
                     &st::TIMELOCKED_WEIGHT_COMMITS,
                     (index, pending.commit_epoch),
                 )
@@ -685,8 +1016,12 @@ impl RevealWatcher {
                 }
             }
             if !pending.first_checked {
-                let hash = *pending.first_reveal_hash.get_or_insert(head.hash);
-                let first_snapshot = client.at(BlockRef::Hash(hash)).await?;
+                let first = *pending.first_reveal_hash.get_or_insert(hash);
+                let first_snapshot = if first == hash {
+                    snapshot.clone()
+                } else {
+                    client.at(BlockRef::Hash(first)).await?
+                };
                 pending.first_check = first_check(&first_snapshot, pending).await?;
                 pending.first_checked = true;
             }
@@ -695,7 +1030,7 @@ impl RevealWatcher {
                     round
                 } else {
                     let round = super::reads::storage(
-                        &snapshot,
+                        snapshot,
                         &rtao_runtime::storage::drand::LAST_STORED_ROUND,
                         (),
                     )
@@ -709,7 +1044,7 @@ impl RevealWatcher {
                 // drand state stays valid even if this block ingested the round
                 // too late, or an earlier watcher RPC temporarily failed.
                 pending.last_round = super::reads::storage(
-                    &parent,
+                    parent_state,
                     &rtao_runtime::storage::drand::LAST_STORED_ROUND,
                     (),
                 )
@@ -734,7 +1069,7 @@ impl RevealWatcher {
             // The reveal ran under the parent's code and stored tag. Evidence
             // is optional: a failed read only delays following a changed tag.
             // The native tag needs no evidence, so nothing is retained for it.
-            match reveal_identity(client, &parent).await {
+            match reveal_identity(client, parent_state).await {
                 Ok((code, tag)) if tag != super::NATIVE_CR_PAYLOAD_VERSION => {
                     self.remember_revealed_code(code, tag);
                 }
@@ -781,16 +1116,42 @@ impl RevealWatcher {
                     reveal_epoch: pending.reveal_epoch,
                     predicted_first_block: pending.predicted_first_block,
                     round: pending.round,
-                    observed_block: head.number,
+                    observed_block: number,
                     missed,
                     native_queue_absent: missed.is_some(),
                     epoch_notices: pending.notices,
                 });
             }
         }
-        self.last_observed_block = Some(head.number);
+        self.last_observed_block = Some(number);
         Ok(())
     }
+}
+
+/// A snapshot at `number`, reusing the head's when it is the head.
+async fn block_snapshot(
+    client: &Client,
+    head: &BlockHeader,
+    head_snapshot: &mut Option<Snapshot>,
+    number: u64,
+) -> anyhow::Result<Snapshot> {
+    if number == head.number {
+        if let Some(snapshot) = head_snapshot.clone() {
+            return Ok(snapshot);
+        }
+        let snapshot = client.at(BlockRef::Hash(head.hash)).await?;
+        *head_snapshot = Some(snapshot.clone());
+        return Ok(snapshot);
+    }
+    Ok(client.at(BlockRef::Number(number)).await?)
+}
+
+async fn read_queue(
+    snapshot: &Snapshot,
+    (netuid, mechanism, epoch): QueueKey,
+) -> anyhow::Result<CommitQueue> {
+    let index = NetUidStorageIndex::new(netuid, mechanism)?;
+    super::reads::storage(snapshot, &st::TIMELOCKED_WEIGHT_COMMITS, (index, epoch)).await
 }
 
 /// `:code` hash and stored `CommitRevealWeightsVersion` at `parent`, the
@@ -804,32 +1165,6 @@ async fn reveal_identity(
     Ok((code, tag))
 }
 
-async fn reveal_processing_epoch(
-    parent: &Snapshot,
-    netuid: NetUid,
-    block: u64,
-) -> anyhow::Result<u64> {
-    let (tempo, last, pending, index, counter) = super::reads::fetch(
-        parent,
-        (
-            st::TEMPO.at((netuid,)),
-            st::LAST_EPOCH_BLOCK.at((netuid,)),
-            st::PENDING_EPOCH_AT.at((netuid,)),
-            st::SUBNET_EPOCH_INDEX.at((netuid,)),
-            st::BLOCKS_SINCE_LAST_STEP.at((netuid,)),
-        ),
-    )
-    .await?;
-    let state = rtao_core::timelock::epoch_schedule::EpochScheduleState {
-        tempo,
-        last_epoch_block: last,
-        pending_epoch_at: pending,
-        subnet_epoch_index: index,
-        blocks_since_last_step: counter,
-        current_block: parent.block().number,
-    };
-    Ok(current_epoch_pre_run_coinbase(&state, block))
-}
 async fn first_check(
     snapshot: &Snapshot,
     pending: &Pending,
@@ -1988,6 +2323,411 @@ mod tests {
         drop(journal);
         client.close().await;
         std::fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    /// Seed the schedule the chain stores at the end of `block`.
+    fn seed_schedule_at(
+        state: &mut rtao_testkit::FakeState,
+        block: u64,
+        (index, last, pending): (u64, u64, u64),
+    ) -> anyhow::Result<()> {
+        for (item, value) in [
+            ("SubnetEpochIndex", index),
+            ("LastEpochBlock", last),
+            ("BlocksSinceLastStep", block - last),
+            ("PendingEpochAt", pending),
+        ] {
+            seed_at(state, block, "SubtensorModule", item, (NetUid(1),), value)?;
+        }
+        Ok(())
+    }
+
+    /// Seed epochs every `tempo` blocks from `first` (index `index` there)
+    /// at each block in `first..=to`.
+    fn seed_epochs(
+        state: &mut rtao_testkit::FakeState,
+        (first, index, tempo): (u64, u64, u64),
+        to: u64,
+    ) -> anyhow::Result<()> {
+        for block in first..=to {
+            let fired = (block - first) / tempo;
+            seed_schedule_at(state, block, (index + fired, first + fired * tempo, 0))?;
+        }
+        Ok(())
+    }
+
+    /// Seed the schedule a chain with tempo 10 stores at the end of each block
+    /// in `from..=to`: an epoch every ten blocks from 100, index 5 at 100.
+    fn seed_regular_schedule(
+        state: &mut rtao_testkit::FakeState,
+        from: u64,
+        to: u64,
+    ) -> anyhow::Result<()> {
+        seed_epochs(state, (100, 5, 10), to)?;
+        let _ = from;
+        Ok(())
+    }
+
+    /// A pre-run `SubtensorModule` event record with named fields.
+    fn subtensor_event(name: &str, fields: serde_json::Value) -> serde_json::Value {
+        serde_json::json!({"phase":"Initialization","event":{"SubtensorModule":{name:fields}},"topics":[]})
+    }
+
+    /// A commitment included at 112 in epoch 6 of a regular chain, with its
+    /// queue entry present through `kept_until` and a success event at
+    /// `revealed`, if any. Returns the recorded watcher.
+    async fn regular_commit(
+        kept_until: u64,
+        revealed: Option<u64>,
+    ) -> anyhow::Result<(rtao_testkit::FakeChain, Client, RevealWatcher, Metrics)> {
+        commit_with(kept_until, revealed, |_| Ok(())).await
+    }
+
+    /// [`regular_commit`] with the chain adjusted by `adjust` before the
+    /// commitment is recorded.
+    async fn commit_with(
+        kept_until: u64,
+        revealed: Option<u64>,
+        adjust: impl FnOnce(&mut rtao_testkit::FakeState) -> anyhow::Result<()>,
+    ) -> anyhow::Result<(rtao_testkit::FakeChain, Client, RevealWatcher, Metrics)> {
+        let recorded = record_commit(kept_until, revealed, adjust).await?;
+        assert_eq!(
+            (
+                recorded.2.pending[0].commit_epoch,
+                recorded.2.pending[0].reveal_epoch
+            ),
+            (6, 7)
+        );
+        Ok(recorded)
+    }
+
+    /// [`commit_with`] without its check of the recorded epochs.
+    async fn record_commit(
+        kept_until: u64,
+        revealed: Option<u64>,
+        adjust: impl FnOnce(&mut rtao_testkit::FakeState) -> anyhow::Result<()>,
+    ) -> anyhow::Result<(rtao_testkit::FakeChain, Client, RevealWatcher, Metrics)> {
+        let (chain, client) = fixture().await?;
+        let commit = PreparedWeightCommit {
+            ciphertext: vec![4, 5, 6],
+            reveal_round: 500,
+        };
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            state.advance(45);
+            seed_regular_schedule(state, 101, 145)?;
+            for block in 112..=kept_until {
+                let queue = commit_queue(state, &[(HOTKEY, 112, commit.ciphertext.clone(), 500)])?;
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "TimelockedWeightCommits",
+                    (NetUidStorageIndex(1), 6u64),
+                    queue,
+                )?;
+            }
+            if let Some(block) = revealed {
+                let hash = state
+                    .block_hash(block)
+                    .ok_or_else(|| anyhow::anyhow!("reveal block"))?;
+                state.seed_events(hash, success_event())?;
+            }
+            for block in 100..=145 {
+                seed_at(state, block, "Drand", "LastStoredRound", (), 501u64)?;
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "SubnetOwnerHotkey",
+                    (NetUid(1),),
+                    HOTKEY,
+                )?;
+            }
+            adjust(state)
+        })?;
+        let prepared = client.at(BlockRef::Number(111)).await?;
+        let state = WeightPreflight::fetch(&prepared, NetUid(1), MechId(0), HOTKEY).await?;
+        let report = crate::weights::submit::WeightSubmission {
+            block_hash: header(&chain, 112)?.hash,
+            block_number: 112,
+        };
+        let metrics = Metrics::default();
+        let mut watcher = RevealWatcher::default();
+        watcher
+            .record(
+                &client,
+                NetUid(1),
+                MechId(0),
+                HOTKEY,
+                (vec![Uid(1)], vec![65535]),
+                0,
+                state,
+                commit,
+                &report,
+                &metrics,
+            )
+            .await?;
+        Ok((chain, client, watcher, metrics))
+    }
+
+    /// Requests `observe` makes for each head in `heads`.
+    async fn observe_requests(
+        chain: &rtao_testkit::FakeChain,
+        client: &Client,
+        watcher: &mut RevealWatcher,
+        metrics: &Metrics,
+        heads: impl IntoIterator<Item = u64>,
+    ) -> anyhow::Result<usize> {
+        let before = chain.requests().len();
+        for head in heads {
+            watcher
+                .observe(client, &header(chain, head)?, metrics)
+                .await?;
+        }
+        Ok(chain.requests().len() - before)
+    }
+
+    /// Requests the watcher makes against a regular chain (tempo 10, a
+    /// commitment included at 112, its reveal window opening at 120), measured
+    /// on this fixture before and after D-096, which reads only the blocks
+    /// that can change the outcome:
+    ///
+    /// | case | before | after |
+    /// |---|---|---|
+    /// | live, one head per call, 112..=120 | 55 | 30 |
+    /// | live, head snapshot already resolved (the scheduler's path) | 47 | 13 |
+    /// | restart, one call replaying to 125 | 82 | 12 |
+    /// | dropped at 120, window ends at 130 (calls at 125, 131) | 182 | 29 |
+    /// | drand lag, revealed at 124 (one call to 126) | 124 | 31 |
+    #[tokio::test]
+    async fn reveal_watcher_request_budget() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = regular_commit(119, Some(120)).await?;
+        let live = observe_requests(&chain, &client, &mut watcher, &metrics, 112..=120).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("revealed");
+        assert_eq!((outcome.observed_block, outcome.missed), (120, None));
+        assert_eq!(live, 30);
+        client.close().await;
+
+        let (chain, client, mut watcher, metrics) = regular_commit(119, Some(120)).await?;
+        let mut supplied = 0;
+        for head in 112..=120 {
+            let header = header(&chain, head)?;
+            let snapshot = client.at(BlockRef::Hash(header.hash)).await?;
+            let before = chain.requests().len();
+            watcher
+                .observe_at(&client, &header, Some(snapshot), &metrics)
+                .await?;
+            supplied += chain.requests().len() - before;
+        }
+        let outcome = watcher.outcomes().back().cloned().expect("revealed");
+        assert_eq!((outcome.observed_block, outcome.missed), (120, None));
+        assert_eq!(supplied, 13);
+        client.close().await;
+
+        let (chain, client, mut watcher, metrics) = regular_commit(119, Some(120)).await?;
+        let replay = observe_requests(&chain, &client, &mut watcher, &metrics, [125]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("revealed");
+        assert_eq!((outcome.observed_block, outcome.missed), (120, None));
+        assert!(watcher.caught_up(125));
+        assert_eq!(replay, 12);
+        client.close().await;
+
+        let (chain, client, mut watcher, metrics) = regular_commit(119, None).await?;
+        let missed = observe_requests(&chain, &client, &mut watcher, &metrics, [125, 131]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("missed");
+        assert_eq!(
+            (outcome.observed_block, outcome.missed),
+            (130, Some(RevealMissReason::Unknown))
+        );
+        assert!(watcher.caught_up(131));
+        assert_eq!(missed, 29);
+        client.close().await;
+
+        let (chain, client, mut watcher, metrics) = regular_commit(123, Some(124)).await?;
+        let lagged = observe_requests(&chain, &client, &mut watcher, &metrics, [126]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("revealed late");
+        assert_eq!((outcome.observed_block, outcome.missed), (124, None));
+        assert_eq!(lagged, 31);
+        client.close().await;
+        Ok(())
+    }
+
+    /// An owner trigger at 115 makes the epoch fire at 118, two blocks early.
+    /// No epoch is due at 115, yet the stored `PendingEpochAt` differs from
+    /// the prediction, so bisection reads that block and keeps its notice:
+    /// the dropped commitment's miss is `EpochTriggered`, not an unexplained
+    /// miss that would refute a followed commit-reveal tag.
+    #[tokio::test]
+    async fn owner_trigger_between_epochs_is_located_and_explains_the_miss() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = commit_with(117, None, |state| {
+            for block in 115..=117 {
+                seed_schedule_at(state, block, (6, 110, 118))?;
+            }
+            seed_epochs(state, (118, 7, 10), 145)?;
+            let hash = state
+                .block_hash(115)
+                .ok_or_else(|| anyhow::anyhow!("trigger block"))?;
+            state.seed_events(
+                hash,
+                serde_json::json!([subtensor_event(
+                    "EpochTriggered",
+                    serde_json::json!({"netuid": 1, "by": HOTKEY.to_string(), "fires_at": 118}),
+                )]),
+            )?;
+            Ok(())
+        })
+        .await?;
+        for head in [113, 116, 119, 124, 129] {
+            watcher
+                .observe(&client, &header(&chain, head)?, &metrics)
+                .await?;
+        }
+        let outcome = watcher.outcomes().back().cloned().expect("missed");
+        assert_eq!(
+            (outcome.reveal_epoch, outcome.observed_block, outcome.missed),
+            (7, 128, Some(RevealMissReason::EpochTriggered))
+        );
+        assert_eq!(outcome.epoch_notices, [EpochNotice::Triggered(115)]);
+        assert!(watcher.caught_up(129));
+        client.close().await;
+        Ok(())
+    }
+
+    /// An epoch deferred from 120 to 121 opens the window at 120 (reveal
+    /// processing looks ahead) and closes it a block later, at 131. The
+    /// deferral notice is kept with the outcome.
+    #[tokio::test]
+    async fn deferred_epoch_keeps_its_notice_and_moves_the_window_end() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = commit_with(119, None, |state| {
+            seed_schedule_at(state, 120, (6, 110, 121))?;
+            seed_epochs(state, (121, 7, 10), 145)?;
+            let hash = state
+                .block_hash(120)
+                .ok_or_else(|| anyhow::anyhow!("deferred block"))?;
+            state.seed_events(
+                hash,
+                serde_json::json!([subtensor_event(
+                    "EpochDeferred",
+                    serde_json::json!({"netuid": 1, "from_block": 120, "to_block": 121}),
+                )]),
+            )?;
+            Ok(())
+        })
+        .await?;
+        for head in [125, 130, 132] {
+            watcher
+                .observe(&client, &header(&chain, head)?, &metrics)
+                .await?;
+        }
+        let outcome = watcher.outcomes().back().cloned().expect("missed");
+        assert_eq!(
+            (outcome.observed_block, outcome.missed),
+            (131, Some(RevealMissReason::Unknown))
+        );
+        assert_eq!(outcome.epoch_notices, [EpochNotice::Deferred(120)]);
+        client.close().await;
+        Ok(())
+    }
+
+    /// A stored counter the ported schedule cannot predict (it never
+    /// advances) breaks every prediction. The watcher then reads each block,
+    /// still observes the reveal at 120, and makes fewer requests than reading
+    /// every block did before D-096 (82 on this fixture).
+    #[tokio::test]
+    async fn unpredictable_schedule_falls_back_to_reading_each_block() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = commit_with(119, Some(120), |state| {
+            for block in 101..=145 {
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "BlocksSinceLastStep",
+                    (NetUid(1),),
+                    0u64,
+                )?;
+            }
+            Ok(())
+        })
+        .await?;
+        let requests = observe_requests(&chain, &client, &mut watcher, &metrics, [125]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("revealed");
+        assert_eq!((outcome.observed_block, outcome.missed), (120, None));
+        assert!(watcher.caught_up(125));
+        assert!(requests < 82, "{requests} requests");
+        client.close().await;
+        Ok(())
+    }
+
+    /// A tempo shortened at 113 leaves no event, but the stored schedule no
+    /// longer matches the prediction: bisection finds 113, and the earlier
+    /// window's reveal is observed at 115.
+    #[tokio::test]
+    async fn changed_tempo_is_bisected_and_the_early_reveal_is_observed() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = commit_with(114, Some(115), |state| {
+            for block in 113..=145 {
+                seed_at(state, block, "SubtensorModule", "Tempo", (NetUid(1),), 5u16)?;
+            }
+            seed_epochs(state, (115, 7, 5), 145)
+        })
+        .await?;
+        let requests = observe_requests(&chain, &client, &mut watcher, &metrics, [118]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("revealed");
+        assert_eq!(
+            (outcome.reveal_epoch, outcome.observed_block, outcome.missed),
+            (7, 115, None)
+        );
+        assert!(watcher.caught_up(118));
+        assert!(requests < 40, "{requests} requests");
+        client.close().await;
+        Ok(())
+    }
+
+    /// A reveal period shortened from 2 to 1 epochs at 123 opens the window
+    /// of a commitment from epoch 6 at 124, between epochs. The first window
+    /// block is read in full: its snapshot explains the miss (a raised version
+    /// key there) as reading every block did, rather than the later window
+    /// end giving an unexplained miss that would refute a followed tag.
+    #[tokio::test]
+    async fn reveal_window_opened_between_epochs_checks_its_first_block() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = record_commit(129, None, |state| {
+            for block in 100..=145 {
+                let period = if block < 123 { 2u64 } else { 1 };
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "RevealPeriodEpochs",
+                    (NetUid(1),),
+                    period,
+                )?;
+            }
+            seed_at(
+                state,
+                124,
+                "SubtensorModule",
+                "WeightsVersionKey",
+                (NetUid(1),),
+                2u64,
+            )
+        })
+        .await?;
+        assert_eq!(
+            (
+                watcher.pending[0].commit_epoch,
+                watcher.pending[0].reveal_epoch
+            ),
+            (6, 8)
+        );
+        let requests = observe_requests(&chain, &client, &mut watcher, &metrics, [131]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("missed");
+        assert_eq!(
+            (outcome.reveal_epoch, outcome.observed_block, outcome.missed),
+            (7, 130, Some(RevealMissReason::VersionKey))
+        );
+        assert!(watcher.caught_up(131));
+        assert!(requests < 60, "{requests} requests");
+        client.close().await;
         Ok(())
     }
 

@@ -3,11 +3,19 @@
 use crate::{Metagraph, MetagraphOptions, SubnetsMetagraphExt};
 use arc_swap::ArcSwap;
 use futures::StreamExt;
-use rtao_client::{BlockRef, Client, ClientError, EventRecord, Finality, Snapshot, ViewExt};
+use rtao_client::{
+    Backfill, BlockRef, Client, ClientError, EventRecord, Finality, Snapshot, ViewExt,
+};
+use rtao_core::timelock::epoch_schedule::{EpochScheduleState, simulate_run_coinbase};
 use rtao_core::{codec::Value, value_ext::ValueExt};
 use rtao_primitives::{AccountId, MechId, NetUid, Uid};
 use rtao_reads::{Namespaces, ReadError};
-use rtao_runtime::{SelectiveMetagraphIndex as Field, storage::subtensor_module::LAST_EPOCH_BLOCK};
+use rtao_runtime::{
+    SelectiveMetagraphIndex as Field,
+    storage::subtensor_module::{
+        BLOCKS_SINCE_LAST_STEP, LAST_EPOCH_BLOCK, PENDING_EPOCH_AT, TEMPO,
+    },
+};
 use std::{
     collections::BTreeSet,
     fmt,
@@ -70,16 +78,31 @@ impl Preset {
     }
 }
 /// When the last-good graph should be refreshed.
+///
+/// The worker decides from the finalized head's height and the epoch schedule
+/// cached at its last read before it makes any request, so a head between
+/// refreshes costs nothing (D-096).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SyncCadence {
     /// Refresh when `LastEpochBlock` advances, with a block-count fallback.
+    ///
+    /// The epoch schedule (`Tempo`, `LastEpochBlock`, `PendingEpochAt`,
+    /// `BlocksSinceLastStep`) is read in one request at startup and at each
+    /// head the worker reads, and predicts the next epoch block. Heads before
+    /// that block and inside the fallback make no request. An epoch the cached
+    /// schedule did not predict (an owner-triggered epoch or a shortened tempo
+    /// set after the read) is refreshed at the predicted block or the fallback,
+    /// whichever comes first; a deferred epoch is read again at each head
+    /// until it fires.
     EveryEpoch {
         /// Maximum finalized blocks between successful refreshes.
         fallback_blocks: u32,
     },
     /// Refresh after this many finalized blocks since the last success.
+    /// Earlier heads make no request.
     EveryBlocks(u32),
     /// Refresh at an elapsed-time interval, using the latest finalized block.
+    /// Finalized heads make no request.
     Interval(Duration),
 }
 /// Synchronization options for one subnet mechanism.
@@ -92,6 +115,10 @@ pub struct SyncPolicy {
     /// Include registered and unregistered commitments at the same block.
     pub commitments: bool,
     /// Coalesce relevant finalized events into a refresh after one second.
+    ///
+    /// This reads the events of every finalized block, so the worker follows
+    /// every finalized height ([`rtao_client::Backfill::Complete`]); without
+    /// it the worker follows only the newest head.
     pub early_on_events: bool,
     /// Consecutive failures before publishing an unhealthy status.
     pub reconnect_after_failures: u32,
@@ -358,7 +385,14 @@ impl MetagraphSync {
         policy.validate()?;
         NetUid::new(netuid.0).map_err(|error| SyncError::InvalidPolicy(error.to_string()))?;
         MechId::new(mechid.0).map_err(|error| SyncError::InvalidPolicy(error.to_string()))?;
-        let blocks = client.blocks(Finality::Finalized)?;
+        // Event scanning must see every finalized block; the cadence alone
+        // needs only the newest head (D-096).
+        let backfill = if policy.early_on_events {
+            Backfill::Complete
+        } else {
+            Backfill::Latest
+        };
+        let blocks = client.blocks_with(Finality::Finalized, backfill)?;
         let cancel = cancel.child_token();
         let (graph, epoch) = tokio::select! {
             biased;
@@ -370,7 +404,10 @@ impl MetagraphSync {
             }=>initial?,
         };
         let initial_error = epoch.as_ref().err().map(ToString::to_string);
-        let epoch = epoch.ok().flatten();
+        let schedule = epoch.ok().flatten();
+        let epoch = schedule.map(|schedule| schedule.last_epoch_block);
+        // Without a schedule the next head reads one.
+        let next_check = schedule.map_or(0, |schedule| schedule.next_epoch_block);
         let initial_failures = u32::from(initial_error.is_some());
         let health = SyncHealth {
             last_success: graph.at.number,
@@ -397,6 +434,7 @@ impl MetagraphSync {
                 health: health_tx,
             },
             epoch,
+            next_check,
         };
         let task = tokio::spawn(worker.run(blocks));
         let alive = Arc::new(Lifetime {
@@ -415,16 +453,65 @@ impl MetagraphSync {
         ))
     }
 }
+/// The epoch state an `EveryEpoch` cadence decides from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct EpochReading {
+    /// `LastEpochBlock` at the read block.
+    last_epoch_block: u64,
+    /// First later block whose epoch the schedule predicts; heads before it
+    /// need no read unless the fallback is due.
+    next_epoch_block: u64,
+}
+
+/// Read the epoch schedule in one request, for an `EveryEpoch` cadence only.
 async fn epoch(
     snapshot: &Snapshot,
     policy: &SyncPolicy,
     netuid: NetUid,
-) -> std::result::Result<Option<u64>, SyncError> {
-    if matches!(policy.cadence, SyncCadence::EveryEpoch { .. }) {
-        Ok(Some(snapshot.storage(&LAST_EPOCH_BLOCK, (netuid,)).await?))
-    } else {
-        Ok(None)
+) -> std::result::Result<Option<EpochReading>, SyncError> {
+    if !matches!(policy.cadence, SyncCadence::EveryEpoch { .. }) {
+        return Ok(None);
     }
+    let (last_epoch_block, tempo, pending_epoch_at, blocks_since_last_step) = snapshot
+        .fetch((
+            LAST_EPOCH_BLOCK.at((netuid,)),
+            TEMPO.at((netuid,)),
+            PENDING_EPOCH_AT.at((netuid,)),
+            BLOCKS_SINCE_LAST_STEP.at((netuid,)),
+        ))
+        .await?;
+    let schedule = EpochScheduleState {
+        last_epoch_block,
+        pending_epoch_at,
+        subnet_epoch_index: 0,
+        tempo,
+        blocks_since_last_step,
+        current_block: snapshot.block().number,
+    };
+    Ok(Some(EpochReading {
+        last_epoch_block,
+        next_epoch_block: next_epoch_block(&schedule),
+    }))
+}
+
+/// First block after `schedule.current_block` at which the pallet's
+/// scheduler runs an epoch, assuming no later owner trigger, tempo change or
+/// deferral. A subnet without epochs never predicts one.
+fn next_epoch_block(schedule: &EpochScheduleState) -> u64 {
+    if schedule.tempo == 0 {
+        return u64::MAX;
+    }
+    let first = schedule.current_block.saturating_add(1);
+    let mut state = schedule.clone();
+    // The bounded counter forces an epoch within `tempo + 1` blocks.
+    for block in first..=first.saturating_add(u64::from(schedule.tempo).saturating_add(1)) {
+        let next = simulate_run_coinbase(&state, block);
+        if next.subnet_epoch_index != state.subnet_epoch_index {
+            return block;
+        }
+        state = next;
+    }
+    first
 }
 async fn fetch(
     snapshot: &Snapshot,
@@ -492,6 +579,9 @@ struct Worker {
     cancel: CancellationToken,
     _exit: StopOnDrop,
     epoch: Option<u64>,
+    /// No cadence read is needed before this finalized height unless the
+    /// fallback or another trigger is due.
+    next_check: u64,
 }
 struct StopOnDrop {
     stopped: CancellationToken,
@@ -545,7 +635,7 @@ fn relevant_event(event: &EventRecord, netuid: NetUid, graph: &Metagraph) -> boo
 }
 
 enum Trigger {
-    Block(BlockRef),
+    Block(BlockRef, u64),
     Interval,
     Event,
 }
@@ -576,7 +666,7 @@ impl Worker {
                 ()=&mut timer,if matches!(self.policy.cadence,SyncCadence::Interval(_))=>Some(Trigger::Interval),
                 ()=&mut event_timer,if event_pending=>Some(Trigger::Event),
                 next=blocks.next()=>match next {
-                    Some(Ok(header))=>Some(Trigger::Block(BlockRef::Hash(header.hash))),
+                    Some(Ok(header))=>Some(Trigger::Block(BlockRef::Hash(header.hash),header.number)),
                     Some(Err(error))=>{self.failure(error);None},
                     None=>{self.failure("finalized block stream ended");break;},
                 },
@@ -586,7 +676,31 @@ impl Worker {
             };
             let interval_due = matches!(trigger, Trigger::Interval);
             let event_due = matches!(trigger, Trigger::Event);
-            let scan_events = matches!(trigger, Trigger::Block(_)) && self.policy.early_on_events;
+            let scan_events = matches!(trigger, Trigger::Block(..)) && self.policy.early_on_events;
+            // Decide the cadence from the head's height and the cached schedule
+            // before any request, so heads between refreshes cost nothing.
+            let read_epoch = match trigger {
+                Trigger::Block(_, number) => {
+                    let graph_at = self.graph.load().at.number;
+                    if number <= graph_at {
+                        // Already covered by a newer refresh.
+                        continue;
+                    }
+                    let elapsed = number - graph_at;
+                    let read = match self.policy.cadence {
+                        SyncCadence::EveryEpoch { fallback_blocks } => {
+                            number >= self.next_check || elapsed >= u64::from(fallback_blocks)
+                        }
+                        SyncCadence::EveryBlocks(blocks) => elapsed >= u64::from(blocks),
+                        SyncCadence::Interval(_) => false,
+                    };
+                    if !read && !scan_events {
+                        continue;
+                    }
+                    read
+                }
+                Trigger::Interval | Trigger::Event => true,
+            };
             if event_due {
                 // Keep the invalidation until publication succeeds, spacing
                 // retries so a failed response cannot create a tight loop.
@@ -595,13 +709,13 @@ impl Worker {
                     .reset(tokio::time::Instant::now() + EVENT_RETRY_DELAY);
             }
             let reference = match trigger {
-                Trigger::Block(reference) => reference,
+                Trigger::Block(reference, _) => reference,
                 Trigger::Interval | Trigger::Event => BlockRef::Finalized,
             };
             let refresh = async {
                 let snapshot = self.client.at(reference).await?;
                 if snapshot.block().number <= self.graph.load().at.number {
-                    return Ok(None);
+                    return Ok((None, None));
                 }
                 if scan_events && snapshot.block().number > last_event_block {
                     last_event_block = snapshot.block().number;
@@ -632,13 +746,19 @@ impl Worker {
                         }
                     }
                 }
-                let observed = match epoch(&snapshot, &self.policy, self.netuid).await {
-                    Ok(epoch) => epoch,
-                    Err(error) => {
-                        self.failure(error);
-                        None
+                let observed = if read_epoch {
+                    match epoch(&snapshot, &self.policy, self.netuid).await {
+                        Ok(epoch) => epoch,
+                        Err(error) => {
+                            self.failure(error);
+                            None
+                        }
                     }
+                } else {
+                    None
                 };
+                let reading = observed;
+                let observed = observed.map(|reading| reading.last_epoch_block);
                 let elapsed = snapshot
                     .block()
                     .number
@@ -655,13 +775,19 @@ impl Worker {
                     SyncCadence::Interval(_) => interval_due,
                 };
                 if !due && !event_due {
-                    return Ok(None);
+                    return Ok((None, reading));
                 }
                 let graph = fetch(&snapshot, self.netuid, self.mechid, &self.policy).await?;
-                Ok::<_, SyncError>(Some((graph, observed)))
+                Ok::<_, SyncError>((Some((graph, observed)), reading))
             };
             let result = tokio::select! {biased;()=self.cancel.cancelled()=>break,()=self.client.closed()=>break,result=refresh=>result};
-            match result {
+            // A failed read or refresh checks again at the next head.
+            match &result {
+                Ok((_, Some(reading))) => self.next_check = reading.next_epoch_block,
+                Ok((_, None)) if !read_epoch => {}
+                Ok((_, None)) | Err(_) => self.next_check = 0,
+            }
+            match result.map(|(refresh, _)| refresh) {
                 Ok(Some((graph, epoch))) => {
                     event_pending = false;
                     let graph = Arc::new(graph);
