@@ -125,6 +125,16 @@ async fn a_failure_before_signing_returns_the_epoch_slot() -> anyhow::Result<()>
         "nothing was signed, so nothing to reconcile"
     );
     assert_eq!(slot.unsigned_retry, Some((failed + 1, 1)));
+    // The reported outcome agrees: a definite failure that retries on its
+    // own, not unresolved work awaiting reconciliation.
+    assert!(
+        matches!(
+            scheduler.last_attempt(MechId(0)).unwrap().outcome,
+            WeightAttemptOutcome::Failed(_)
+        ),
+        "{:?}",
+        scheduler.last_attempt(MechId(0))
+    );
     let snapshot = lab.client.at(BlockRef::Best).await?;
     let state = WeightPreflight::fetch(&snapshot, NetUid(1), MechId(0), account).await?;
     assert_eq!(state.at.number, failed);

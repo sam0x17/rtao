@@ -1311,7 +1311,12 @@ impl WeightScheduler {
             {
                 let outcome = if let Some(refusal) = error.downcast_ref::<WeightRefusal>() {
                     WeightAttemptOutcome::Refused(refusal.clone())
-                } else if submit::uncertain(&error) {
+                } else if submit::uncertain(&error)
+                    // A dispatch that provably signed nothing returned its
+                    // slot without marking it uncertain (D-095). It retries
+                    // on its own, so it reports a failure, not unresolved work.
+                    && self.slots.get(&mech).is_some_and(|slot| slot.uncertain)
+                {
                     WeightAttemptOutcome::Unresolved(error.to_string())
                 } else {
                     WeightAttemptOutcome::Failed(error.to_string())
