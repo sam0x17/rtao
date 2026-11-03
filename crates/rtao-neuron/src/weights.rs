@@ -7,6 +7,7 @@ mod durable;
 #[cfg(test)]
 mod read_tests;
 mod reveal;
+mod slot;
 mod submit;
 #[cfg(test)]
 mod tests;
@@ -813,6 +814,11 @@ struct Slot {
     last_attempt_epoch: Option<u64>,
     last_attempt_block: Option<u64>,
     uncertain: bool,
+    /// After attempts released because they signed nothing (D-095): the
+    /// first block the next attempt may start and how many were released
+    /// in a row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    unsigned_retry: Option<(u64, u32)>,
 }
 
 /// Advisory conditions currently reported for one mechanism. Each warning is
@@ -1232,6 +1238,14 @@ impl WeightScheduler {
     /// [`crate::SystemClock`] gets its skew estimate. The clock only moves
     /// forward, so a fresher anchor, such as the runtime's clock worker
     /// keeps, is never replaced by an older block's timestamp.
+    ///
+    /// A mechanism's cadence slot is reserved before its weights are
+    /// dispatched. A dispatch that fails before anything was signed, such as
+    /// an admission timeout while reads queue on a paced endpoint, gives the
+    /// slot back: the same epoch may still commit, after one block, then two,
+    /// doubling to 32 blocks while such failures repeat. A failure after the
+    /// hotkey was asked to sign, or with a new signed attempt in the journal,
+    /// keeps the slot (D-095).
     pub async fn on_finalized(
         &mut self,
         cx: &NeuronCx,
@@ -1539,11 +1553,6 @@ impl WeightScheduler {
         else {
             return Ok(());
         };
-        // Reserve this cadence slot before await; pool-unknown outcomes must
-        // never cause an unconditional resubmission on the next finalized head.
-        self.slots.entry(mech).or_default().last_attempt_epoch =
-            Some(preflight.schedule.subnet_epoch_index);
-        self.slots.entry(mech).or_default().last_attempt_block = Some(preflight.at.number);
         let binding = self.prepare_binding(
             mech,
             row.clone(),
@@ -1551,7 +1560,18 @@ impl WeightScheduler {
             &preflight,
             composer.contract(),
         )?;
-        self.persist(None)?;
+        let signed_before = slot::journal_attempts(binding.as_ref())?;
+        let reservation = self.reserve_slot(
+            mech,
+            preflight.schedule.subnet_epoch_index,
+            preflight.at.number,
+        );
+        if let Err(error) = self.persist(None) {
+            // Nothing was dispatched, so nothing was signed.
+            self.release_slot(mech, reservation);
+            return Err(error);
+        }
+        let signing = submit::Signing::default();
         let result = submit::execute(
             cx,
             plan,
@@ -1561,6 +1581,7 @@ impl WeightScheduler {
                 journal: binding.clone(),
                 shield_period: self.shield_period,
             },
+            &signing,
         )
         .await;
         let report = match result {
@@ -1685,10 +1706,10 @@ impl WeightScheduler {
                     else {
                         return Ok(());
                     };
-                    self.slots.entry(mech).or_default().last_attempt_epoch =
-                        Some(state.schedule.subnet_epoch_index);
-                    self.slots.entry(mech).or_default().last_attempt_block = Some(state.at.number);
+                    let reservation =
+                        self.reserve_slot(mech, state.schedule.subnet_epoch_index, state.at.number);
                     cx.metrics.increment(recomputed);
+                    let signing = submit::Signing::default();
                     let retry = submit::execute(
                         cx,
                         plan,
@@ -1698,6 +1719,7 @@ impl WeightScheduler {
                             journal: None,
                             shield_period: self.shield_period,
                         },
+                        &signing,
                     )
                     .await;
                     let report = match retry {
@@ -1711,8 +1733,12 @@ impl WeightScheduler {
                             continue;
                         }
                         Err(error) => {
+                            let unsigned = slot::signed_nothing(&signing, None, None);
+                            if unsigned {
+                                self.release_slot(mech, reservation);
+                            }
                             self.slots.entry(mech).or_default().uncertain =
-                                submit::uncertain(&error);
+                                !unsigned && submit::uncertain(&error);
                             return Err(error);
                         }
                     };
@@ -1746,8 +1772,15 @@ impl WeightScheduler {
                 }
             }
             Err(error) => {
+                // A failure that provably signed nothing returns the slot
+                // (D-095). Durable work still reconciles through the journal
+                // before its next dispatch.
+                let unsigned = slot::signed_nothing(&signing, binding.as_ref(), signed_before);
+                if unsigned {
+                    self.release_slot(mech, reservation);
+                }
                 self.slots.entry(mech).or_default().uncertain =
-                    binding.is_some() || submit::uncertain(&error);
+                    binding.is_some() || (!unsigned && submit::uncertain(&error));
                 self.persist(None)?;
                 return Err(error);
             }
@@ -1862,6 +1895,13 @@ fn cadence_opportunity(
     {
         return WeightOpportunity::AwaitBlock {
             not_before_block: inclusion,
+        };
+    }
+    if let Some((retry, _)) = slot.unsigned_retry
+        && state.at.number < retry
+    {
+        return WeightOpportunity::AwaitBlock {
+            not_before_block: retry,
         };
     }
     let last = state

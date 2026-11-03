@@ -135,6 +135,13 @@ moment it pinned that block, and records the same reading in the clock guard
 that a system clock needs. It never moves a clock back, so the worker's
 fresher anchor is kept.
 
+A failed weight dispatch that provably signed nothing, such as an admission
+timeout while reads queue on a paced endpoint, gives its cadence slot back:
+the same epoch can still commit. The next attempt waits one block after the
+first such failure, doubling to 32 blocks while they repeat. A failure after
+the hotkey was asked to sign keeps the slot, and journaled work reconciles
+through its journal before dispatching again.
+
 State saves every five minutes and at shutdown. Each checkpoint records schema,
 package version, subnet, hotkey, finalized block and save time. Writes use fsync
 and atomic replacement, with three generations retained. Identity or schema

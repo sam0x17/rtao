@@ -9,11 +9,108 @@ use rtao_primitives::{H256, MechId, NetUid, Uid};
 use rtao_runtime::{
     Call, CallBytes, CallDescriptor, RuntimeHandle, calls::subtensor_module as calls,
 };
+use rtao_signer::{
+    AccountId, BoxFuture, CryptoType, Hotkey, KeySource, KeyView, MultiSignature, Signer,
+    SignerCaps, SignerError, SigningRequest,
+};
 use rtao_tx::{
     BuildCx, Built, ExecuteOptions, Intent, IntentError, IntentInterface, WeightsSubmitted,
 };
 use serde_json::json;
-use std::{marker::PhantomData, time::Duration};
+use std::{
+    marker::PhantomData,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
+
+/// Whether one dispatch asked its key source for any signature (D-095).
+///
+/// Every signature the executor makes for an attempt, ordinary or shielded,
+/// goes through the signer [`Self::keys`] hands out. The flag is set before
+/// the signer is called, so a signing call that failed, timed out or was
+/// cancelled still counts as signed.
+#[derive(Clone, Default)]
+pub(super) struct Signing(Arc<AtomicBool>);
+impl Signing {
+    /// The key source to execute with.
+    fn keys<'a, K>(&self, keys: &'a K) -> SigningKeys<'a, K> {
+        SigningKeys {
+            keys,
+            signed: self.0.clone(),
+        }
+    }
+    /// Whether any signature may have been made.
+    pub(super) fn signed(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
+
+struct SigningKeys<'a, K> {
+    keys: &'a K,
+    signed: Arc<AtomicBool>,
+}
+impl<K: KeyView> KeyView for SigningKeys<'_, K> {
+    fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+        self.keys.hotkey_address()
+    }
+    fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+        self.keys.hotkey_public_key()
+    }
+    fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+        self.keys.coldkey_address()
+    }
+    fn bare_signer_account(&self) -> Option<AccountId> {
+        self.keys.bare_signer_account()
+    }
+}
+impl<K: KeySource<Hotkey>> KeySource<Hotkey> for SigningKeys<'_, K> {
+    fn address(&self) -> Result<AccountId, SignerError> {
+        self.keys.address()
+    }
+    async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
+        let signer = self.keys.signer().await?;
+        Ok(Arc::new(SigningSigner {
+            signer,
+            signed: self.signed.clone(),
+        }))
+    }
+}
+
+struct SigningSigner {
+    signer: Arc<dyn Signer>,
+    signed: Arc<AtomicBool>,
+}
+impl Signer for SigningSigner {
+    fn account(&self) -> AccountId {
+        self.signer.account()
+    }
+    fn crypto_type(&self) -> CryptoType {
+        self.signer.crypto_type()
+    }
+    fn caps(&self) -> SignerCaps {
+        self.signer.caps()
+    }
+    fn metadata_constants(&self) -> Option<(u8, String)> {
+        self.signer.metadata_constants()
+    }
+    fn prepare_shielded(&self) -> BoxFuture<'_, Result<(), SignerError>> {
+        self.signer.prepare_shielded()
+    }
+    fn sign<'a>(
+        &'a self,
+        request: &'a SigningRequest<'a>,
+    ) -> BoxFuture<'a, Result<MultiSignature, SignerError>> {
+        self.signed.store(true, Ordering::SeqCst);
+        self.signer.sign(request)
+    }
+    fn sign_raw<'a>(&'a self, message: &'a [u8]) -> BoxFuture<'a, Result<[u8; 64], SignerError>> {
+        self.signed.store(true, Ordering::SeqCst);
+        self.signer.sign_raw(message)
+    }
+}
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub(super) struct WeightSubmission {
@@ -266,15 +363,19 @@ impl SubmissionOptions {
 }
 
 /// Submit a composed weight call through the policy-aware executor.
+///
+/// `signing` records whether the hotkey was asked for any signature.
 pub(super) async fn execute(
     cx: &NeuronCx,
     plan: WeightCallPlan,
     composed: Composed,
     block_time: f64,
     options: SubmissionOptions,
+    signing: &Signing,
 ) -> anyhow::Result<WeightSubmission> {
     let options = options.execution(block_time);
     let commit = plan.commit.is_some();
+    let keys = signing.keys(&cx.hotkey);
     let result = match composed {
         Composed::Verified(call) => {
             let intent = PreparedWeights::<Verified> {
@@ -282,7 +383,7 @@ pub(super) async fn execute(
                 call: Some(call),
                 kind: PhantomData,
             };
-            cx.executor.execute(&intent, &cx.hotkey, &options).await?
+            cx.executor.execute(&intent, &keys, &options).await?
         }
         Composed::Compiled if commit => {
             let intent = PreparedWeights::<CommitCall> {
@@ -290,7 +391,7 @@ pub(super) async fn execute(
                 call: None,
                 kind: PhantomData,
             };
-            cx.executor.execute(&intent, &cx.hotkey, &options).await?
+            cx.executor.execute(&intent, &keys, &options).await?
         }
         Composed::Compiled => {
             let intent = PreparedWeights::<SetCall> {
@@ -298,7 +399,7 @@ pub(super) async fn execute(
                 call: None,
                 kind: PhantomData,
             };
-            cx.executor.execute(&intent, &cx.hotkey, &options).await?
+            cx.executor.execute(&intent, &keys, &options).await?
         }
     };
     if let Some(hash) = result.fate_unknown {
