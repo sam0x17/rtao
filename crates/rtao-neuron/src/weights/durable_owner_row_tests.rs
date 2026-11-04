@@ -1064,3 +1064,49 @@ async fn queued_version_below_weights_version_key_is_refused_before_signing() ->
     close_cr_lab(scheduler, lab, cx).await;
     Ok(())
 }
+
+/// `retire_pending` never drops work a signed attempt may have reached the
+/// chain with: an uncertain slot refuses it, and so does an attempt the
+/// journal has not proven unexecuted even once the slot is no longer
+/// uncertain (D-098).
+#[tokio::test]
+async fn retire_pending_refuses_work_with_an_unresolved_signed_attempt() -> anyhow::Result<()> {
+    let (cr_pallet, cr_error) = module_error("IncorrectCommitRevealVersion");
+    let (lab, cx, account) = owner_lab("retire-unresolved", |_| Ok(())).await?;
+    let mut scheduler = durable(&lab, account)?;
+    scheduler.reveals.remember_revealed_code(H256([42; 32]), 5);
+    lab.script([Inner::Fail(cr_pallet, cr_error)]);
+    lab.after_inclusion(|state, _record, _number| {
+        state
+            .seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), 5u16)
+            .expect("stored tag");
+    });
+    let burn_now = |_: MechId| (WeightsProposal::Set(burn()), OwnerRowPolicy::Submit);
+    until_authored_with(&mut scheduler, &lab, &cx, burn_now).await?;
+    assert_eq!(lab.authors(), 1);
+    assert!(scheduler.slots[&MechId(0)].uncertain);
+    let (binding, _) = scheduler.pending_work(MechId(0))?.expect("retained work");
+    let id = binding.id().to_owned();
+    let error = scheduler.retire_pending(MechId(0), &id).unwrap_err();
+    assert!(error.to_string().contains("uncertain"), "{error:#}");
+    // Even with the slot cleared, the journal's attempt decides.
+    scheduler.slots.get_mut(&MechId(0)).unwrap().uncertain = false;
+    let record = binding.record()?;
+    assert!(!record.attempts.is_empty());
+    assert!(
+        record
+            .attempts
+            .iter()
+            .any(|a| a.outcome != rtao_client::journal::AttemptOutcome::ExpiredUnexecuted)
+    );
+    let error = scheduler.retire_pending(MechId(0), &id).unwrap_err();
+    assert!(
+        format!("{error:#}").contains("not proven unexecuted"),
+        "{error:#}"
+    );
+    assert!(scheduler.pending_work(MechId(0))?.is_some());
+    let record = binding.record()?;
+    assert!(!record.extensions.contains_key("scheduler_retired"));
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
