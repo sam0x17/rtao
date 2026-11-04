@@ -784,12 +784,11 @@ async fn clock_worker(
         .best();
     loop {
         let header = best.borrow_and_update().clone();
+        // Read by name when the compiled `Timestamp.Now` shape no longer
+        // matches, as the scheduler's anchor read does (D-111).
         let timestamp = async {
-            cx.client
-                .at(BlockRef::Hash(header.hash))
-                .await?
-                .storage(&rtao_runtime::storage::timestamp::NOW, ())
-                .await
+            let snapshot = cx.client.at(BlockRef::Hash(header.hash)).await?;
+            crate::reads::storage(&snapshot, &rtao_runtime::storage::timestamp::NOW, ()).await
         }
         .await;
         let timestamp = match timestamp {

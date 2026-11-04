@@ -26,10 +26,10 @@ pin. The CLI checks this without connecting to a node:
 rtao doctor --manifest-path Cargo.toml
 ```
 
-That line is the only `[patch]` an application needs. rtao's own workspace
-patches (a `bittensor-core` fork revision for its Ledger emulator tests, and
-`ruint` lowered to Rust 1.89 for the `evm` feature) are not needed
-downstream; the
+That line is the only `[patch]` an application needs to build. rtao's own
+workspace also patches `bittensor-core` to a fork revision that wipes Ed25519
+secret keys from memory, which applications should copy too, and `ruint`
+lowered to Rust 1.89 for the `evm` feature. The
 [workspace README](https://github.com/sam0x17/rtao#downstream-bls-patch)
 lists each one and when to copy it.
 

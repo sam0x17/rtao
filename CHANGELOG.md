@@ -83,7 +83,7 @@ without `NeuronRuntime`, against an endpoint paced to a few requests a minute.
 
 - The scheduler's commit-reveal tag comes from `rtao_core::commit_reveal::select_tag` (D-110). `NATIVE_CR_PAYLOAD_VERSION`, `REVIEWED_CR_RUNTIME_CODE` and `reviewed_cr_runtime` are now the core's values.
 - Changed: a changed `CommitRevealWeightsVersion` under runtime code that is neither reviewed nor proven by a reveal is now followed, not paused. The scheduler warns once and sets `rtao_weights_cr_version_unreviewed{mech}` to 1. An unexplained miss of a commitment that carried the tag under that code still pauses timelocked commits. `WeightScheduler::with_unreviewed_cr_tags(Unreviewed::Pause)` restores the earlier pause. New: `WeightScheduler::commit_reveal_decision`, `RevealWatcher::reveal_evidence`.
-- The chain-clock read of `Timestamp.Now` falls back to a by-name read when its compiled shape no longer matches (D-111).
+- The chain-clock reads of `Timestamp.Now`, the scheduler's anchor read and `NeuronRuntime`'s clock worker, fall back to a by-name read when the compiled shape no longer matches (D-111).
 - `RevealWatcher` verifies each pending commitment's queue across skipped spans before its window opens too, and reads its inclusion block in full (D-112). A reveal period that drops (to 0, say) and returns between two read blocks, and reveals or expires a commitment early, is now seen at the block where it happened. A period change while a commitment is pending counts `rtao_weights_reveal_period_changed_total`, and that commitment's miss never refutes a followed tag. The queue read shares the schedule's storage request; on the request-budget fixture the live path makes 31 requests instead of 30 and a restart replay 16 instead of 12.
 - Bounded `on_finalized` (D-113): `WeightScheduler::with_bounded_dispatch(wait_blocks)` makes a journaled dispatch wait at most the admission window plus `wait_blocks` blocks; an attempt still unresolved stays journaled and uncertain, and the recovery at the start of later calls resolves it, instead of one call scanning inline until the era ends. `WeightScheduler::with_recovery_budget(transaction_blocks, reveal_blocks)` sets the per-call bounds of that recovery (defaults `DEFAULT_RECOVERY_BLOCKS` = 128 and `REVEAL_BLOCK_READS` = 256); both scans resume from their cursors. New: `RevealWatcher::set_read_budget`, `RevealWatcher::read_budget`.
 
@@ -101,7 +101,7 @@ without `NeuronRuntime`, against an endpoint paced to a few requests a minute.
 
 #### Documentation
 
-- The README and the book list rtao's workspace `[patch]` tables and which of them an application needs: only `w3f-bls` (D-115).
+- The README and the book list rtao's workspace `[patch]` tables and when an application copies each: `w3f-bls` is required to build, and the `bittensor-core` fork patch with its companion table is recommended because it carries the Ed25519 erasure repair (D-115).
 
 ### Also in this release, since the last widely pinned revision
 

@@ -42,14 +42,14 @@ rtao doctor --manifest-path Cargo.toml
 
 ### Downstream BLS patch
 
-That `w3f-bls` line is the whole `[patch]` set an application needs. rtao's
-own `Cargo.toml` carries more `[patch]` tables; Cargo never applies a
-dependency's `[patch]`, and none of the others is needed downstream (D-115):
+That `w3f-bls` line is the one `[patch]` an application needs to build.
+rtao's own `Cargo.toml` carries more `[patch]` tables. Cargo never applies a
+dependency's `[patch]`, so an application decides on each of them (D-115):
 
 | rtao workspace patch | Why rtao carries it | Downstream |
 |---|---|---|
 | `[patch.crates-io] w3f-bls` at the core tag | joins the core's vendored BLS with the registry crate `tle` requests | required, as above |
-| `[patch."https://github.com/RaoFoundation/subtensor.git"] bittensor-core` to a fork revision | adds one pending upstream change, a pluggable Ledger APDU transport, so rtao's own Ledger emulator tests run | not needed: no rtao crate's public API uses it, and the core builds from the pinned tag |
+| `[patch."https://github.com/RaoFoundation/subtensor.git"] bittensor-core` to a fork revision | two reviewed changes on the pinned core tag ([`docs/execution/core-patch.md`](docs/execution/core-patch.md)): the Ed25519 erasure repair, which keeps signing keys in a wiping owner ([RaoFoundation/subtensor#3251](https://github.com/RaoFoundation/subtensor/issues/3251), open upstream), and the injectable Ledger APDU transport rtao's emulator tests use ([RaoFoundation/subtensor#3242](https://github.com/RaoFoundation/subtensor/pull/3242)) | recommended. Without it the core builds from the pinned tag, but Ed25519 secret material is not wiped from memory. Copy it with the next row, at the revision in the same rtao revision's `Cargo.toml` |
 | `[patch."https://github.com/sam0x17/subtensor.git"] w3f-bls, subtensor-macros` | keeps the fork's own monorepo dependencies on the pinned tag | only with the previous row; copy both or neither, at the revisions in that rtao revision's `Cargo.toml` |
 | `[patch.crates-io] ruint = { path = "patches/ruint" }` | `ruint` 1.20.1, the release with the RUSTSEC-2026-0220 fix, with only its `rust-version` lowered to rtao's 1.89 minimum and one const loop restored (`patches/ruint/UPSTREAM.json`) | reached only through the `evm` feature (alloy). On Rust 1.90 or newer, lock crates.io `ruint` 1.20.1 or newer (`cargo update -p ruint`); on 1.89, copy `patches/ruint` from the same rtao revision and patch it by path |
 

@@ -2899,6 +2899,31 @@ mod tests {
         Ok(())
     }
 
+    /// A pending entry without a period change checkpoints without the
+    /// `period_changed` key, so earlier releases still read it, and a
+    /// checkpoint written before D-112 restores (D-112). A recorded change
+    /// survives a restore, so the restart cannot turn its miss into a
+    /// refutation.
+    #[tokio::test]
+    async fn period_changed_is_checkpointed_only_when_set() -> anyhow::Result<()> {
+        let (_chain, client, mut watcher, _metrics) = regular_commit(119, Some(120)).await?;
+        let unchanged = serde_json::to_value(&watcher)?;
+        let pending = &unchanged["pending"][0];
+        assert!(pending.is_object(), "{unchanged}");
+        assert!(pending.get("period_changed").is_none(), "{pending}");
+        let restored: RevealWatcher = serde_json::from_value(unchanged.clone())?;
+        assert!(!restored.pending[0].period_changed);
+        assert_eq!(serde_json::to_value(&restored)?, unchanged);
+
+        watcher.pending[0].period_changed = true;
+        let changed = serde_json::to_value(&watcher)?;
+        assert_eq!(changed["pending"][0]["period_changed"], true);
+        let restored: RevealWatcher = serde_json::from_value(changed)?;
+        assert!(restored.pending[0].period_changed);
+        client.close().await;
+        Ok(())
+    }
+
     /// With a reveal period of 2, a commitment from epoch 6 reveals in epoch
     /// 8. The period drops to 0 at 124 and returns at 125, inside epoch 7:
     /// block 125's reveal processing expires every queue before epoch 7,
