@@ -48,6 +48,19 @@ pub(crate) fn render(root: &Path, tag: &str) -> Result<String> {
     output.push_str("Every subnet workspace using this core pin needs this exact downstream BLS patch:\n\n```toml\n[patch.crates-io]\nw3f-bls = { git = \"https://github.com/RaoFoundation/subtensor.git\", tag = \"");
     output.push_str(pin("core", "tag")?);
     output.push_str("\" }\n```\n\nRun `rtao doctor --manifest-path Cargo.toml` to check the pin and patch. Move the patch line when the core tag changes.\n");
+    let curated_path = root.join("docs/releases").join(format!("{tag}.md"));
+    let curated = fs::read_to_string(&curated_path).with_context(|| {
+        format!(
+            "versioned releases need curated notes in {}",
+            curated_path.display()
+        )
+    })?;
+    check_curated(&curated)?;
+    output.push('\n');
+    output.push_str(&curated);
+    if !output.ends_with('\n') {
+        output.push('\n');
+    }
     if let Ok(changelog) = fs::read_to_string(root.join("CHANGELOG.md")) {
         output.push('\n');
         output.push_str(&changelog);
@@ -56,6 +69,26 @@ pub(crate) fn render(root: &Path, tag: &str) -> Result<String> {
         }
     }
     Ok(output)
+}
+
+/// Curated notes map changes to PLAN decisions and state the persisted-format
+/// compatibility range, so a rollback decision can be made from them (D-121).
+pub(crate) fn check_curated(notes: &str) -> Result<()> {
+    for heading in ["## Journal compatibility", "## Changes by decision"] {
+        ensure!(
+            notes.lines().any(|line| line.trim_end() == heading),
+            "curated release notes need a `{heading}` section"
+        );
+    }
+    let decisions = notes
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+        .filter(|word| {
+            word.strip_prefix("D-")
+                .is_some_and(|n| n.len() == 3 && n.bytes().all(|b| b.is_ascii_digit()))
+        })
+        .count();
+    ensure!(decisions > 0, "curated release notes cite no D-number");
+    Ok(())
 }
 
 pub(crate) fn run(args: Vec<String>) -> Result<()> {
@@ -92,5 +125,30 @@ mod tests {
             assert!(tag_version(tag).is_err(), "accepted {tag}");
         }
         assert!(tag_version("rtao-v0.1.0").is_ok());
+    }
+
+    #[test]
+    fn curated_notes_need_decisions_and_journal_range() {
+        let good = "# x\n\n## Changes by decision\n\n- D-120: journal range.\n\n## Journal compatibility\n\nSchemas 1 to 4.\n";
+        assert!(check_curated(good).is_ok());
+        assert!(check_curated(&good.replace("## Journal compatibility", "## Journal")).is_err());
+        assert!(check_curated(&good.replace("## Changes by decision", "## Changes")).is_err());
+        assert!(check_curated(&good.replace("D-120", "D-1200")).is_err());
+    }
+
+    #[test]
+    fn next_release_has_curated_notes() -> Result<()> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root")?;
+        let manifest: DocumentMut = fs::read_to_string(root.join("Cargo.toml"))?.parse()?;
+        let version = manifest["workspace"]["package"]["version"]
+            .as_str()
+            .context("workspace version")?;
+        let tag = format!("rtao-v{version}");
+        // Once released, a tag's notes stay; the next version adds its own.
+        check_curated(&fs::read_to_string(
+            root.join("docs/releases").join(format!("{tag}.md")),
+        )?)
     }
 }
