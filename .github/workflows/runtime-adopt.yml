@@ -2,8 +2,10 @@ name: runtime-adopt
 # Hourly adoption of activated runtimes (AGENTS.md's runtime adoption
 # policy; ci/runtime-adopt.sh). A newer Finney spec is pinned, regenerated
 # and checked in a disposable candidate; a new testnet runtime is indexed.
-# When every stage passes, the commit is pushed to main (a Finney adoption
-# with a changelog entry and a snapshot tag). Otherwise main is unchanged,
+# When every stage passes, the commit leaves the read-only adopt job as a
+# git bundle and a push job that builds nothing pushes it to main (a Finney
+# adoption with a changelog entry and a snapshot tag, atomically); if main
+# moved meanwhile the next run starts again. Otherwise main is unchanged,
 # one issue is opened or refreshed and, when the RUNTIME_ALERT_URL and
 # RUNTIME_ALERT_TOKEN secrets are set, an alert is posted. Upstream branches
 # ahead of every network keep one informational issue for pre-staging.
@@ -69,8 +71,10 @@ jobs:
     if: needs.decide.outputs.action == 'adopt-finney' || needs.decide.outputs.action == 'record-testnet'
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    # Read-only: this job compiles and runs code, so its token cannot push.
+    # The validated commit leaves it as a bundle; the push job builds nothing.
     permissions:
-      contents: write
+      contents: read
     env:
       RTAO_TEMP_ROOT: ${{ runner.temp }}/runtime-adopt
       RTAO_TEST_TMPDIR: ${{ runner.temp }}/runtime-adopt/tests
@@ -80,8 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The publish step pushes main and the snapshot tag with this token.
-          persist-credentials: true
+          persist-credentials: false
           fetch-depth: 0
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
@@ -92,6 +95,10 @@ jobs:
         with:
           cache-on-failure: true
           workspaces: . -> target/runtime-adopt
+      - name: Install the independent metadata diff tool (drift's second opinion)
+        run: |
+          cargo install subxt-cli --version 0.51.1 --locked --root "$RUNNER_TEMP/tools"
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: runtime-adopt-decision
@@ -104,10 +111,10 @@ jobs:
           mkdir -p "$RTAO_TEMP_ROOT" "$RTAO_TEST_TMPDIR" "$EVIDENCE"
           set -o pipefail
           ci/runtime-adopt.sh adopt "$DECISION" "$RTAO_TEMP_ROOT/candidate" "$EVIDENCE" 2>&1 | tee "$EVIDENCE/log.txt"
-      - name: Commit, push and tag
-        env:
-          RTAO_ADOPT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != '') && '1' || '' }}
-        run: ci/runtime-adopt.sh publish "$DECISION" "$RTAO_TEMP_ROOT/candidate" 2>&1 | tee -a "$EVIDENCE/log.txt"
+      - name: Commit the candidate as a bundle
+        run: |
+          set -o pipefail
+          ci/runtime-adopt.sh commit "$DECISION" "$RTAO_TEMP_ROOT/candidate" "$EVIDENCE/adopt.bundle" 2>&1 | tee -a "$EVIDENCE/log.txt"
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -116,9 +123,43 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  notify:
+  push:
     needs: [decide, adopt]
-    if: always() && !(github.event_name == 'workflow_dispatch' && inputs.dry_run)
+    if: needs.adopt.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      superseded: ${{ steps.push.outputs.superseded }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The push step pushes main and the snapshot tag with this token.
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: runtime-adopt-decision
+          path: ${{ runner.temp }}/decision
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: runtime-adopt-evidence
+          path: ${{ runner.temp }}/evidence
+      - name: Push main and the snapshot tag
+        id: push
+        env:
+          RTAO_ADOPT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != '') && '1' || '' }}
+        run: |
+          set -o pipefail
+          ci/runtime-adopt.sh push "$RUNNER_TEMP/decision/decision.json" "$RUNNER_TEMP/evidence/adopt.bundle" | tee "$RUNNER_TEMP/push.txt"
+          if grep -q '^superseded:' "$RUNNER_TEMP/push.txt"; then
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  notify:
+    needs: [decide, adopt, push]
+    if: always() && !(github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -147,6 +188,8 @@ jobs:
           DECIDED: ${{ needs.decide.result }}
           ACTION: ${{ needs.decide.outputs.action }}
           ADOPTED: ${{ needs.adopt.result }}
+          PUSHED: ${{ needs.push.result }}
+          SUPERSEDED: ${{ needs.push.outputs.superseded }}
         run: |
           decision="$RUNNER_TEMP/decision/decision.json"
           if [ "$DECIDED" != success ] || [ ! -f "$decision" ]; then
@@ -158,10 +201,11 @@ jobs:
             ci/runtime-adopt.sh notify "$RUNNER_TEMP/decide-failed.json" failure
             exit 0
           fi
-          case "$ACTION:$ADOPTED" in
+          case "$ACTION:$ADOPTED:$PUSHED" in
             none:*) outcome=none ;;
             blocked:*) outcome=failure ;;
-            *:success) outcome=success ;;
+            *:success:success) outcome=success ;;
             *) outcome=failure ;;
           esac
+          if [ "$SUPERSEDED" = true ]; then outcome=superseded; fi
           ci/runtime-adopt.sh notify "$decision" "$outcome" "$RUNNER_TEMP/evidence"

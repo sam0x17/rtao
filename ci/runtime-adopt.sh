@@ -5,7 +5,8 @@
 #   ci/runtime-adopt.sh observe <observed.json>
 #   ci/runtime-adopt.sh decide <observed.json> <decision.json> [<pins-root>]
 #   ci/runtime-adopt.sh adopt <decision.json> <candidate> <evidence-dir>
-#   ci/runtime-adopt.sh publish <decision.json> <candidate>
+#   ci/runtime-adopt.sh commit <decision.json> <candidate> <bundle>
+#   ci/runtime-adopt.sh push <decision.json> <bundle>
 #   ci/runtime-adopt.sh notify <decision.json> <outcome> [<evidence-dir>]
 #
 # observe reads public chain RPC and the public upstream repository. decide
@@ -211,6 +212,10 @@ decide() {
      | if ($s.release // null) != null and ($s.release.prerelease | not) and ($s.release.draft | not) then
          result("adopt-finney"; "finney"; $f.spec; $f.code; "Finney finalized spec \($f.spec); parity pins \($parity_tag)")
          + {source: "v\($f.spec)"}
+       elif ($s.release // null) != null then
+         # pin refuses a prerelease as a release, and refuses the unreleased
+         # merge while any release (a prerelease included) carries the tag.
+         result("blocked"; "finney"; $f.spec; $f.code; "Finney finalized spec \($f.spec), but upstream's v\($f.spec) is a prerelease or draft: pin accepts only a final release, and no unreleased merge while that release exists")
        elif ($s.main_merge // null) != null then
          result("adopt-finney"; "finney"; $f.spec; $f.code; "Finney finalized spec \($f.spec); parity pins \($parity_tag); upstream has not published v\($f.spec), so the release-\($f.spec) merge on main is pinned")
          + {source: "branch:main@\($s.main_merge)"}
@@ -448,15 +453,22 @@ record_testnet() {
 - Testnet finalized spec $spec (\`:code\` \`$code\`) at block $number; its V15/V16 metadata is indexed under \`vendor/metadata/testnet/\` (drift against the previous testnet row: \`$class\`) and the probe pins are regenerated ([run]($run)). The parity pin is unchanged."
 }
 
-# ── publish ───────────────────────────────────────────────────────────
+# ── commit and push ───────────────────────────────────────────────────
 
-publish() {
-  local decision=${1:?publish <decision.json> <candidate>}
-  local candidate=${2:?publish <decision.json> <candidate>}
-  local action spec network title body message today tag n
+bot() {
+  git -c user.name="${RTAO_ADOPT_NAME:-github-actions[bot]}" \
+    -c user.email="${RTAO_ADOPT_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}" "$@"
+}
+
+# Commit the validated candidate and write it as a git bundle. Runs in the
+# adopt job, whose token cannot write: nothing here pushes.
+commit() {
+  local decision=${1:?commit <decision.json> <candidate> <bundle>}
+  local candidate=${2:?commit <decision.json> <candidate> <bundle>}
+  local bundle=${3:?commit <decision.json> <candidate> <bundle>}
+  local action spec title body
   action=$(jq -r .action "$decision")
   spec=$(jq -r .spec "$decision")
-  network=$(jq -r .network "$decision")
   cd "$candidate"
   case "$action" in
     adopt-finney)
@@ -470,16 +482,36 @@ book/src/upstream-log.md)."
       body="Testnet finalized spec $spec; its metadata is indexed with
 drift --apply and the probe pins regenerated."
       ;;
-    *) die "nothing to publish for action $action" ;;
+    *) die "nothing to commit for action $action" ;;
   esac
   git add -A
-  git -c user.name="${RTAO_ADOPT_NAME:-github-actions[bot]}" \
-    -c user.email="${RTAO_ADOPT_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}" \
-    commit -q -m "$title [skip ci]" -m "$body"
-  # main must not have moved since the checkout; the next run retries.
+  bot commit -q -m "$title [skip ci]" -m "$body"
+  git bundle create -q "$bundle" HEAD~1..HEAD
+  git rev-parse HEAD
+}
+
+# Push a bundle's one commit to main, with a snapshot tag for a Finney
+# adoption. Runs in a job that builds nothing. Exit 0 and print
+# "superseded" when main moved since the candidate was cut: the next
+# scheduled run starts again from the new main; that is not a failure.
+push() {
+  local decision=${1:?push <decision.json> <bundle>}
+  local bundle=${2:?push <decision.json> <bundle>}
+  local action spec network commit parent today tag n
+  action=$(jq -r .action "$decision")
+  spec=$(jq -r .spec "$decision")
+  network=$(jq -r .network "$decision")
+  case "$action" in adopt-finney | record-testnet) ;; *) die "nothing to push for action $action" ;; esac
+  git bundle verify -q "$bundle" >/dev/null 2>&1 || die "the bundle does not apply to this checkout"
+  git fetch -q "$bundle" HEAD
+  commit=$(git rev-parse FETCH_HEAD)
+  [[ "$(git rev-list --count --no-walk=unsorted "$commit^@")" == 1 ]] || die "the bundle's commit is not a single-parent commit"
+  parent=$(git rev-parse "$commit^")
   git fetch -q origin main
-  [[ "$(git rev-parse origin/main)" == "$(git rev-parse HEAD~1)" ]] ||
-    die "main moved during the run; the next scheduled run starts again from the new main"
+  if [[ "$(git rev-parse origin/main)" != "$parent" ]]; then
+    echo "superseded: main moved from $parent during the run; the next scheduled run starts again from the new main"
+    return 0
+  fi
   if [[ "$action" == adopt-finney ]]; then
     today=$(date -u +%Y-%m-%d)
     git fetch -q --tags origin
@@ -489,22 +521,21 @@ drift --apply and the probe pins regenerated."
       n=$((n + 1))
       tag=snapshot-$today.$n
     done
-    git -c user.name="${RTAO_ADOPT_NAME:-github-actions[bot]}" \
-      -c user.email="${RTAO_ADOPT_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}" \
-      tag -a "$tag" -m "Snapshot of main: Finney runtime $spec adopted automatically ($(toml_get upstream.toml parity tag)). Not a versioned release; see CHANGELOG.md (Unreleased)."
+    bot tag -a "$tag" -m "Snapshot of main: Finney runtime $spec adopted automatically ($(git show "$commit:upstream.toml" | toml_get /dev/stdin parity tag)). Not a versioned release; see CHANGELOG.md (Unreleased)." "$commit"
     if [[ "${RTAO_ADOPT_DRY_RUN:-}" == 1 ]]; then
-      echo "dry run: would push $(git rev-parse HEAD) to main and tag $tag"
-      return
+      echo "dry run: would push $commit to main and tag $tag"
+      return 0
     fi
-    git push -q origin "HEAD:refs/heads/main" "refs/tags/$tag"
-    echo "pushed $(git rev-parse HEAD) and $tag"
+    # Atomic: main and the tag land together or not at all.
+    git push -q --atomic origin "$commit:refs/heads/main" "refs/tags/$tag"
+    echo "pushed $commit and $tag"
   else
     if [[ "${RTAO_ADOPT_DRY_RUN:-}" == 1 ]]; then
-      echo "dry run: would push $(git rev-parse HEAD) to main"
-      return
+      echo "dry run: would push $commit to main"
+      return 0
     fi
-    git push -q origin "HEAD:refs/heads/main"
-    echo "pushed $(git rev-parse HEAD) ($network runtime $spec)"
+    git push -q origin "$commit:refs/heads/main"
+    echo "pushed $commit ($network runtime $spec)"
   fi
 }
 
@@ -586,10 +617,22 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
       alert "$id" false "$network runtime $spec adopted" "$run"
       ;;
     none)
-      if [[ -n "$number" ]]; then
+      # An unobserved network proves nothing: keep the issue (and its alert)
+      # open until both networks are seen on indexed runtimes.
+      if [[ "$(jq '.unobserved // [] | length' "$decision")" != 0 ]]; then
+        echo "not closing: $(jq -r '.unobserved | join("; ")' "$decision")"
+      elif [[ -n "$number" ]]; then
+        local open_id
+        open_id=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body |
+          sed -n 's/^<!-- rtao-runtime-adopt id=\([A-Za-z0-9._:-]*\) stage=.*/\1/p' | head -1)
         gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
           --comment "Finney and testnet run indexed runtimes again ([run]($run))." >/dev/null
+        # Resolve the episode the issue opened (a maintainer finished it).
+        alert "${open_id:-none}" false "runtime adoption resolved: Finney and testnet run indexed runtimes" "$run"
       fi
+      ;;
+    superseded)
+      echo "main moved during the run; the next scheduled run retries from the new main"
       ;;
     failure)
       local tail_text=""
@@ -643,7 +686,8 @@ case "$command" in
   observe) observe "$@" ;;
   decide) decide "$@" ;;
   adopt) adopt "$@" ;;
-  publish) publish "$@" ;;
+  commit) commit "$@" ;;
+  push) push "$@" ;;
   notify) notify "$@" ;;
   *)
     sed -n '2,30p' "$0" >&2

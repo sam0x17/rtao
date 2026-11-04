@@ -63,8 +63,8 @@ expect current "$(observation "$spec" "$code" "$testnet_spec" "$testnet_code")" 
   '.action == "none" and .deferred == [] and .upcoming == [] and .unobserved == []'
 expect finney-release "$(observation "$next" "$other" "$testnet_spec" "$testnet_code" "$release")" \
   ".action == \"adopt-finney\" and .source == \"v$next\" and .spec == $next and .id == \"finney-$next-${other:0:10}\""
-expect finney-prerelease-uses-main-merge "$(observation "$next" "$other" "$testnet_spec" "$testnet_code" "$prerelease")" \
-  ".action == \"adopt-finney\" and .source == \"branch:main@$merge\""
+expect finney-prerelease-blocked "$(observation "$next" "$other" "$testnet_spec" "$testnet_code" "$prerelease")" \
+  '.action == "blocked" and .network == "finney" and (.reason | test("prerelease"))'
 expect finney-main-merge "$(observation "$next" "$other" "$testnet_spec" "$testnet_code" "$merge_only")" \
   ".action == \"adopt-finney\" and .source == \"branch:main@$merge\""
 expect finney-without-source "$(observation "$next" "$other" "$testnet_spec" "$testnet_code" "$nothing")" \
