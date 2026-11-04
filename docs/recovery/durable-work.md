@@ -354,8 +354,21 @@ journaled value rather than the application callback. A new callback proposal
 the guard holds is not journaled (an ID already in the journal still goes
 through `begin`), so the callback decides again at the next head; work queued
 directly with `enqueue_with_owner_rows` is journaled first and a held row stays
-pending, with no scheduler API to retire it. Work queued under hold by an
-earlier release keeps holding after an upgrade. An earlier release cannot parse
+pending. The guard decides from the block each attempt is prepared at (this
+validator's UID, `SubnetOwnerHotkey` and the owner hotkey's UID, never the
+last-good metagraph), and held queued work reports `Refused` named
+`OwnerRowHeld` with the operation ID at every head (D-098). Work queued under
+hold by an earlier release keeps holding after an upgrade.
+
+`WeightScheduler::retire_pending(mechanism, id)` retires a pending operation
+that never reached the chain: every signed attempt it has, if any, must be
+`ExpiredUnexecuted` without conflicting evidence, and the mechanism's slot must
+not be uncertain. It suits work that is refused at every head without signing,
+such as `OwnerRowHeld` or `IncorrectWeightVersionKey` (the version key is part
+of the immutable effects, so raising `WeightPolicy::version_key` does not change
+queued work). The record is kept with `"scheduler_retired": true` and the
+handoff marker, so an earlier release skips it as well; its ID stays
+idempotent, and a replacement row needs a new ID. An earlier release cannot parse
 effects that carry the key: its scheduler then fails `pending_work` and
 recovery for every mechanism of the scope, signing nothing, and it cannot hand
 that work off. Let `Submit` work finish (handed off) before rolling back.

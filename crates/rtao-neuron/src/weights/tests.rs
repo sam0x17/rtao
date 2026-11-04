@@ -522,9 +522,30 @@ fn previous_guard(
         .all(|(dest, _)| *dest == uid || graph.hotkey(*dest) == Some(&owner))
 }
 
+/// The guard's view for this validator at UID 0 with `hotkey`, when the
+/// owner hotkey `owner` holds `owner_uid` at the dispatch block.
+fn view(hotkey: AccountId, owner: AccountId, owner_uid: Option<u16>) -> OwnerView {
+    OwnerView {
+        block: 100,
+        uid: Uid(0),
+        own_is_owner: hotkey == owner,
+        owner_uid: owner_uid.map(Uid),
+    }
+}
+
+/// The view a fresh graph gives: the owner's UID is where `graph` maps it.
+fn view_of(graph: &rtao_metagraph::Metagraph, hotkey: AccountId, owner: AccountId) -> OwnerView {
+    view(
+        hotkey,
+        owner,
+        graph.by_hotkey(&owner).map(|neuron| neuron.uid.0),
+    )
+}
+
 /// `Hold` is exactly the earlier guard over every row on three UIDs with
 /// values in {0, 1, 65535}, including all-zero and empty rows, for an owner
-/// at UID 1, at the validator's own UID, and absent from the graph.
+/// at UID 1, at the validator's own UID, and absent from the graph, when
+/// the graph agrees with the dispatch block.
 #[test]
 fn owner_row_policy_hold_is_the_previous_guard() -> anyhow::Result<()> {
     let graph = graph()?;
@@ -549,14 +570,15 @@ fn owner_row_policy_hold_is_the_previous_guard() -> anyhow::Result<()> {
     }
     assert_eq!(rows.len(), 1 + 3 * 3 + 3 * 9 + 27);
     for owner in [AccountId([8; 32]), HOTKEY, AccountId([99; 32])] {
+        let view = view_of(&graph, HOTKEY, owner);
         for row in &rows {
             assert_eq!(
-                row_held(OwnerRowPolicy::Hold, row, Uid(0), HOTKEY, owner, &graph),
+                row_held(OwnerRowPolicy::Hold, row, &view),
                 previous_guard(row, Uid(0), owner, &graph),
                 "{row:?} with owner {owner}"
             );
             // Submit can only remove rows from the held set.
-            if row_held(OwnerRowPolicy::Submit, row, Uid(0), HOTKEY, owner, &graph) {
+            if row_held(OwnerRowPolicy::Submit, row, &view) {
                 assert!(previous_guard(row, Uid(0), owner, &graph), "{row:?}");
             }
         }
@@ -570,16 +592,14 @@ fn owner_row_policy_submit_unlocks_only_owner_only_rows() -> anyhow::Result<()> 
     use OwnerRowPolicy::{Hold, Submit};
     let graph = graph()?;
     let owner = AccountId([8; 32]);
-    let held = |policy, uids: &[u16], values: &[u16], hotkey, owner, graph| {
+    let held = |policy, uids: &[u16], values: &[u16], view: &OwnerView| {
         row_held(
             policy,
             &(uids.iter().copied().map(Uid).collect(), values.to_vec()),
-            Uid(0),
-            hotkey,
-            owner,
-            graph,
+            view,
         )
     };
+    let at_one = view(HOTKEY, owner, Some(1));
     // (uids, values, held under Hold, held under Submit)
     let cases: [(&[u16], &[u16], bool, bool); 8] = [
         // Owner-only burn rows.
@@ -596,52 +616,65 @@ fn owner_row_policy_submit_unlocks_only_owner_only_rows() -> anyhow::Result<()> 
         (&[], &[], true, true),
     ];
     for (uids, values, hold, submit) in cases {
-        assert_eq!(
-            held(Hold, uids, values, HOTKEY, owner, &graph),
-            hold,
-            "{uids:?}"
-        );
-        assert_eq!(
-            held(Submit, uids, values, HOTKEY, owner, &graph),
-            submit,
-            "{uids:?}"
-        );
+        assert_eq!(held(Hold, uids, values, &at_one), hold, "{uids:?}");
+        assert_eq!(held(Submit, uids, values, &at_one), submit, "{uids:?}");
         // The public predicate with a graph closure gives the same answers.
         let row = uids.iter().copied().map(Uid).zip(values.iter().copied());
         let is_owner = |uid| graph.hotkey(uid) == Some(&owner);
         assert_eq!(Hold.holds(row.clone(), Uid(0), is_owner), hold);
         assert_eq!(Submit.holds(row, Uid(0), is_owner), submit);
     }
-    // Owner absent from the graph: only self-only rows hold.
-    let absent = AccountId([99; 32]);
+    // Owner unregistered at the dispatch block: only self-only rows hold.
+    let absent = view(HOTKEY, AccountId([99; 32]), None);
     for policy in [Hold, Submit] {
-        assert!(held(policy, &[0], &[1], HOTKEY, absent, &graph));
-        assert!(!held(policy, &[1], &[1], HOTKEY, absent, &graph));
+        assert!(held(policy, &[0], &[1], &absent));
+        assert!(!held(policy, &[1], &[1], &absent));
     }
     // This validator is the owner hotkey: its own row is the owner row.
-    assert!(held(Hold, &[0], &[65535], HOTKEY, HOTKEY, &graph));
-    assert!(!held(Submit, &[0], &[65535], HOTKEY, HOTKEY, &graph));
+    let own = view(HOTKEY, HOTKEY, Some(0));
+    assert!(held(Hold, &[0], &[65535], &own));
+    assert!(!held(Submit, &[0], &[65535], &own));
     for policy in [Hold, Submit] {
-        assert!(!held(policy, &[0, 2], &[1, 1], HOTKEY, HOTKEY, &graph));
+        assert!(!held(policy, &[0, 2], &[1, 1], &own));
     }
-    // A stale graph whose UID 0 is another hotkey still treats an owner
-    // validator's preflight UID as the owner's.
-    let stale = graph_with([AccountId([11; 32]), owner, AccountId([10; 32])])?;
-    assert!(held(Hold, &[0], &[1], HOTKEY, HOTKEY, &stale));
-    assert!(!held(Submit, &[0], &[1], HOTKEY, HOTKEY, &stale));
-    // A non-owner validator gains nothing from the preflight-UID clause.
-    assert!(held(Submit, &[0], &[1], HOTKEY, owner, &stale));
-    // A stale graph that still maps a non-owner validator's preflight UID to
-    // the owner hotkey (the validator took over the owner's UID) does not
-    // make its self-only row an owner row: the preflight decides that UID.
-    let taken = graph_with([owner, AccountId([11; 32]), AccountId([10; 32])])?;
+    // A non-owner validator's own UID is never the owner's, whatever UID the
+    // view carries for the owner.
+    let confused = view(HOTKEY, owner, Some(0));
     for policy in [Hold, Submit] {
-        assert!(held(policy, &[0], &[65535], HOTKEY, owner, &taken));
-        assert!(held(policy, &[0, 2], &[65535, 0], HOTKEY, owner, &taken));
+        assert!(held(policy, &[0], &[65535], &confused));
+        assert!(held(policy, &[0, 2], &[65535, 0], &confused));
     }
-    // The owner validator's own row stays the owner row under that graph.
-    assert!(!held(Submit, &[0], &[65535], HOTKEY, HOTKEY, &taken));
     Ok(())
+}
+
+/// The owner moved from UID 1 to UID 2 after a metagraph snapshot (D-098):
+/// the guard follows the dispatch block, so the old owner UID, now a miner,
+/// is an ordinary destination and the new one is the owner's.
+#[test]
+fn owner_row_guard_follows_the_dispatch_block_not_the_graph() {
+    use OwnerRowPolicy::{Hold, Submit};
+    let owner = AccountId([8; 32]);
+    let moved = view(HOTKEY, owner, Some(2));
+    let row = |uid: u16| (vec![Uid(uid)], vec![65535]);
+    // UID 1 was the owner's in the snapshot; it is not at the dispatch block.
+    assert!(!row_held(Hold, &row(1), &moved));
+    assert!(!row_held(Submit, &row(1), &moved));
+    // UID 2 is the owner's now, although the snapshot mapped it elsewhere.
+    assert!(row_held(Hold, &row(2), &moved));
+    assert!(!row_held(Submit, &row(2), &moved));
+    // Two other destinations never need the owner's UID.
+    assert_eq!(
+        single_other_destination(&(vec![Uid(0), Uid(1), Uid(2)], vec![1, 1, 1]), Uid(0)),
+        None
+    );
+    assert_eq!(
+        single_other_destination(&(vec![Uid(0), Uid(1), Uid(2)], vec![1, 0, 1]), Uid(0)),
+        Some(Uid(2))
+    );
+    assert_eq!(
+        single_other_destination(&(vec![Uid(0)], vec![1]), Uid(0)),
+        None
+    );
 }
 
 #[test]
@@ -724,21 +757,16 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
         )
         .is_err()
     );
+    let owner_at_one = view(HOTKEY, AccountId([8; 32]), Some(1));
     assert!(row_held(
         OwnerRowPolicy::Hold,
         &(vec![Uid(0), Uid(1), Uid(2)], vec![1, 1, 0]),
-        Uid(0),
-        HOTKEY,
-        AccountId([8; 32]),
-        &graph
+        &owner_at_one
     ));
     assert!(!row_held(
         OwnerRowPolicy::Hold,
         &(vec![Uid(0), Uid(1), Uid(2)], vec![1, 1, 1]),
-        Uid(0),
-        HOTKEY,
-        AccountId([8; 32]),
-        &graph
+        &owner_at_one
     ));
     state.max_weights_limit = u16::MAX;
     assert_eq!(

@@ -117,6 +117,17 @@ fn outcome(scheduler: &WeightScheduler) -> WeightAttemptOutcome {
         .clone()
 }
 
+/// The `OwnerRowHeld` refusal queued work reports when the guard holds it.
+fn owner_row_held(scheduler: &WeightScheduler) -> super::super::WeightRefusal {
+    match outcome(scheduler) {
+        WeightAttemptOutcome::Refused(refusal) if refusal.name == "OwnerRowHeld" => {
+            assert_eq!(refusal.code, rtao_catalog::ErrorCode::PolicyViolation);
+            refusal
+        }
+        other => panic!("expected OwnerRowHeld: {other:?}"),
+    }
+}
+
 fn submitted(scheduler: &WeightScheduler) -> bool {
     matches!(outcome(scheduler), WeightAttemptOutcome::Submitted { .. })
 }
@@ -150,7 +161,13 @@ fn attempt_rows(record: &rtao_client::journal::OperationRecord) -> Vec<(Vec<Uid>
 /// Model the native commit queue after each journaled shielded inclusion, so
 /// reveal tracking can locate the commitment.
 fn queue_model(lab: &JournalLab, account: AccountId) {
+    queue_model_in(lab, account, Arc::new(std::sync::atomic::AtomicU64::new(5)));
+}
+
+/// [`queue_model`] into the queue of the epoch `epoch` holds at inclusion.
+fn queue_model_in(lab: &JournalLab, account: AccountId, epoch: Arc<std::sync::atomic::AtomicU64>) {
     lab.after_inclusion(move |state, record, number| {
+        let epoch = epoch.load(std::sync::atomic::Ordering::SeqCst);
         let (ciphertext, round): (Vec<u8>, u64) =
             serde_json::from_value(record.material["commit"].clone()).expect("commit material");
         super::super::tests::seed_at(
@@ -158,7 +175,7 @@ fn queue_model(lab: &JournalLab, account: AccountId) {
             number,
             "SubtensorModule",
             "TimelockedWeightCommits",
-            (NetUidStorageIndex(1), 5u64),
+            (NetUidStorageIndex(1), epoch),
             vec![(account, number, ciphertext, round)],
         )
         .expect("native queue model");
@@ -457,7 +474,14 @@ async fn queued_owner_row_policy_survives_restart_and_rebuild() -> anyhow::Resul
         Box::pin(scheduler.on_finalized(&cx, &head, |_| panic!("queued work must be reused")))
             .await?;
     }
-    assert_eq!(outcome(&scheduler), WeightAttemptOutcome::HoldPrevious);
+    // Queued work is re-proposed without the callback, so the hold names
+    // the operation and the way out (D-098).
+    let refusal = owner_row_held(&scheduler);
+    assert!(refusal.remediation.contains("burn-held"), "{refusal:?}");
+    assert!(
+        refusal.remediation.contains("OwnerRowPolicy::Submit"),
+        "{refusal:?}"
+    );
     assert_eq!(lab.authors(), 0);
     assert!(scheduler.pending_work(MechId(0))?.is_some());
     close_cr_lab(scheduler, lab, cx).await;
@@ -502,7 +526,11 @@ async fn legacy_journal_owner_row_keeps_holding() -> anyhow::Result<()> {
         Box::pin(scheduler.on_finalized_with(&cx, &head, |_| panic!("queued work must be reused")))
             .await?;
     }
-    assert_eq!(outcome(&scheduler), WeightAttemptOutcome::HoldPrevious);
+    assert!(
+        owner_row_held(&scheduler)
+            .remediation
+            .contains("legacy-burn")
+    );
     assert_eq!(lab.authors(), 0);
     let record = lab.journal().unwrap().bind("legacy-burn")?.record()?;
     assert!(record.intent.effects.get("owner_rows").is_none());
@@ -808,6 +836,231 @@ async fn held_callback_row_is_not_journaled() -> anyhow::Result<()> {
     assert!(record.intent.effects.get("owner_rows").is_none());
     let rendered = cx.metrics.render();
     assert!(rendered.contains("rtao_weights_hold_total 2"), "{rendered}");
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// Feed finalized heads with queued work only until the scheduler authors
+/// once more, at most one lab epoch of heads.
+async fn until_queued_authored(
+    scheduler: &mut WeightScheduler,
+    lab: &JournalLab,
+    cx: &NeuronCx,
+) -> anyhow::Result<()> {
+    until_authored_with(scheduler, lab, cx, |_| panic!("queued work must be reused")).await
+}
+
+/// Open the subnet epoch `index` at the lab's current block; `queue` follows.
+fn next_epoch(
+    lab: &JournalLab,
+    queue: &std::sync::atomic::AtomicU64,
+    index: u64,
+) -> anyhow::Result<()> {
+    queue.store(index, std::sync::atomic::Ordering::SeqCst);
+    lab.node.mutate_state(|state| -> anyhow::Result<()> {
+        let block = state.block;
+        state.seed(&super::super::st::SUBNET_EPOCH_INDEX, (NetUid(1),), index)?;
+        state.seed(&super::super::st::LAST_EPOCH_BLOCK, (NetUid(1),), block)?;
+        Ok(())
+    })
+}
+
+/// Register `hotkeys[i]` at UID `i` on chain and in the runtime API, as a
+/// live metagraph refresh would see it.
+fn reregister(lab: &JournalLab, hotkeys: [AccountId; 3]) -> anyhow::Result<()> {
+    lab.node.mutate_state(|state| -> anyhow::Result<()> {
+        for (uid, hotkey) in (0u16..).zip(hotkeys) {
+            state.seed_typed("SubtensorModule", "Uids", (NetUid(1), hotkey), uid)?;
+        }
+        let names: Vec<String> = hotkeys.iter().map(ToString::to_string).collect();
+        state.seed_runtime(
+            "SubnetInfoRuntimeApi",
+            "get_selective_mechagraph",
+            json!({"netuid":1,"block":100,"tempo":10,"last_step":100,"blocks_since_last_step":0,"num_uids":3,"hotkeys":names}),
+        )?;
+        Ok(())
+    })
+}
+
+/// The owner hotkey's UID changes after the application's one metagraph
+/// snapshot (its refresh worker stopped, as a validator on a paced endpoint
+/// does): the owner `[9; 32]` re-registers at UID 1 and a miner `[10; 32]`
+/// takes UID 2, which the snapshot still maps to the owner (D-098).
+///
+/// Earlier releases mapped destinations through that snapshot: a queued row
+/// for the miner at UID 2 held as an owner row on every head and its
+/// operation stayed pending for good, while a queued `Hold` row for UID 1,
+/// the owner's at the dispatch block, was signed as an ordinary row. The
+/// guard now reads the owner's UID at the dispatch block; held queued work
+/// reports `OwnerRowHeld` and `retire_pending` frees the mechanism.
+#[tokio::test]
+async fn owner_uid_change_after_the_snapshot_is_decided_at_the_dispatch_block() -> anyhow::Result<()>
+{
+    let (lab, cx, account) = owner_lab("owner-moved", |_| Ok(())).await?;
+    let queue = Arc::new(std::sync::atomic::AtomicU64::new(5));
+    queue_model_in(&lab, account, queue.clone());
+    let (owner, miner) = (AccountId([9; 32]), AccountId([10; 32]));
+    cx.metagraph.shutdown().await;
+    assert_eq!(cx.metagraph.load().hotkey(Uid(2)), Some(&owner));
+    reregister(&lab, [account, owner, miner])?;
+    let mut scheduler = durable(&lab, account)?;
+
+    // (1) UID 2 is a miner at the dispatch block: the row is committable.
+    scheduler.enqueue("miner-row", None, MechId(0), by_uid(&[(2, 1.0)]))?;
+    until_queued_authored(&mut scheduler, &lab, &cx).await?;
+    assert!(submitted(&scheduler), "{:?}", outcome(&scheduler));
+    assert_eq!(lab.authors(), 1);
+    assert!(scheduler.pending_work(MechId(0))?.is_none());
+    assert_eq!(pending_rows(&scheduler.reveals), vec![vec![Uid(2)]]);
+
+    // (2) UID 1 is the owner's at the dispatch block: a queued Hold row
+    // holds, names the operation, and stays pending.
+    next_epoch(&lab, &queue, 6)?;
+    let burn_at_one = by_uid(&[(0, 0.0), (1, 65535.0), (2, 0.0)]);
+    scheduler.enqueue("owner-row", None, MechId(0), burn_at_one.clone())?;
+    // Past the chain rate limit of the first row.
+    drive(&mut scheduler, &lab, &cx, 12, |_| {
+        panic!("queued work must be reused")
+    })
+    .await?;
+    let refusal = owner_row_held(&scheduler);
+    for part in [
+        "owner-row",
+        "the subnet owner hotkey's UID 1",
+        "retire_pending",
+    ] {
+        assert!(refusal.remediation.contains(part), "{part}: {refusal:?}");
+    }
+    assert_eq!(lab.authors(), 1, "a held row signs nothing");
+    assert!(scheduler.pending_work(MechId(0))?.is_some());
+    let rendered = cx.metrics.render();
+    assert!(rendered.contains("rtao_weights_hold_total"), "{rendered}");
+
+    // Retiring it frees the mechanism; the ID stays idempotent.
+    assert!(scheduler.retire_pending(MechId(0), "miner-row").is_err());
+    scheduler.retire_pending(MechId(0), "owner-row")?;
+    assert!(scheduler.pending_work(MechId(0))?.is_none());
+    let record = lab.journal().unwrap().bind("owner-row")?.record()?;
+    assert_eq!(record.extensions["scheduler_retired"], true);
+    assert!(record.attempts.is_empty());
+    scheduler.enqueue("owner-row", None, MechId(0), burn_at_one)?;
+    assert!(scheduler.pending_work(MechId(0))?.is_none());
+    assert!(scheduler.retire_pending(MechId(0), "owner-row").is_err());
+
+    // (3) The same epoch accepts a replacement under a new ID.
+    scheduler.enqueue_with_owner_rows(
+        "owner-burn",
+        None,
+        MechId(0),
+        by_uid(&[(1, 65535.0)]),
+        OwnerRowPolicy::Submit,
+    )?;
+    until_queued_authored(&mut scheduler, &lab, &cx).await?;
+    assert!(submitted(&scheduler), "{:?}", outcome(&scheduler));
+    assert_eq!(lab.authors(), 2);
+    assert!(pending_rows(&scheduler.reveals).contains(&vec![Uid(1)]));
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// This validator's own UID changes after the snapshot: it re-registers at
+/// UID 1, replacing the miner `[8; 32]`, and `[11; 32]` takes UID 0. The
+/// guard uses the dispatch block's UID for this validator, so a queued
+/// `Submit` row for UID 1 plus the owner's UID 2 is now self-plus-owner and
+/// holds with `OwnerRowHeld` instead of a silent `HoldPrevious`, and a
+/// queued row for UID 0 (no longer this validator) is committable (D-098).
+#[tokio::test]
+async fn own_uid_change_after_the_snapshot_is_decided_at_the_dispatch_block() -> anyhow::Result<()>
+{
+    let (lab, cx, account) = owner_lab("own-moved", |_| Ok(())).await?;
+    queue_model(&lab, account);
+    let owner = AccountId([9; 32]);
+    cx.metagraph.shutdown().await;
+    reregister(&lab, [AccountId([11; 32]), account, owner])?;
+    let mut scheduler = durable(&lab, account)?;
+
+    scheduler.enqueue_with_owner_rows(
+        "self-and-owner",
+        None,
+        MechId(0),
+        by_uid(&[(1, 1.0), (2, 1.0)]),
+        OwnerRowPolicy::Submit,
+    )?;
+    drive(&mut scheduler, &lab, &cx, 4, |_| {
+        panic!("queued work must be reused")
+    })
+    .await?;
+    let refusal = owner_row_held(&scheduler);
+    assert!(
+        refusal.remediation.contains("this validator's UID 1"),
+        "{refusal:?}"
+    );
+    assert_eq!(lab.authors(), 0);
+    scheduler.retire_pending(MechId(0), "self-and-owner")?;
+
+    scheduler.enqueue("old-self", None, MechId(0), by_uid(&[(0, 1.0)]))?;
+    until_queued_authored(&mut scheduler, &lab, &cx).await?;
+    assert!(submitted(&scheduler), "{:?}", outcome(&scheduler));
+    assert_eq!(pending_rows(&scheduler.reveals), vec![vec![Uid(0)]]);
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// A queued row's weight version below the chain's `WeightsVersionKey` is
+/// refused before anything is signed, as `IncorrectWeightVersionKey`
+/// (`invalid_argument`) carrying the observed key and block. The version is
+/// part of the queued work's immutable effects, so raising the policy does
+/// not rescue it; `retire_pending` frees the mechanism for a replacement
+/// queued under the new version (D-098).
+#[tokio::test]
+async fn queued_version_below_weights_version_key_is_refused_before_signing() -> anyhow::Result<()>
+{
+    let (lab, cx, account) = owner_lab("version-key", |_| Ok(())).await?;
+    queue_model(&lab, account);
+    let mut scheduler = durable(&lab, account)?;
+    scheduler.enqueue("old-version", None, MechId(0), by_uid(&[(1, 1.0)]))?;
+    lab.node.mutate_state(|state| {
+        state.seed(&super::super::st::WEIGHTS_VERSION_KEY, (NetUid(1),), 7u64)
+    })?;
+    drive(&mut scheduler, &lab, &cx, 4, |_| {
+        panic!("queued work must be reused")
+    })
+    .await?;
+    let refused = |scheduler: &WeightScheduler| match outcome(scheduler) {
+        WeightAttemptOutcome::Refused(refusal) => refusal,
+        other => panic!("expected a refusal: {other:?}"),
+    };
+    let refusal = refused(&scheduler);
+    assert_eq!(refusal.name, "IncorrectWeightVersionKey");
+    assert_eq!(refusal.code, rtao_catalog::ErrorCode::InvalidArgument);
+    for part in [
+        "requires weight version 7 (WeightsVersionKey at block",
+        "this attempt carries 0",
+        "queued operation old-version carries weight version 0",
+        "retire_pending",
+    ] {
+        assert!(refusal.remediation.contains(part), "{part}: {refusal:?}");
+    }
+    assert_eq!(lab.authors(), 0, "nothing is signed");
+
+    // Raising the policy does not change queued work.
+    scheduler.update_policy(WeightPolicy {
+        version_key: super::super::VersionKey::Fixed(7),
+        ..policy()
+    });
+    drive(&mut scheduler, &lab, &cx, 2, |_| {
+        panic!("queued work must be reused")
+    })
+    .await?;
+    assert_eq!(refused(&scheduler).name, "IncorrectWeightVersionKey");
+    assert_eq!(lab.authors(), 0);
+
+    scheduler.retire_pending(MechId(0), "old-version")?;
+    scheduler.enqueue("new-version", None, MechId(0), by_uid(&[(1, 1.0)]))?;
+    until_queued_authored(&mut scheduler, &lab, &cx).await?;
+    assert!(submitted(&scheduler), "{:?}", outcome(&scheduler));
+    let record = lab.journal().unwrap().bind("new-version")?.record()?;
+    assert_eq!(record.intent.effects["version_key"], 7);
     close_cr_lab(scheduler, lab, cx).await;
     Ok(())
 }

@@ -386,6 +386,14 @@ async fn finalized_scheduler_callback_preserves_queued_work_across_pause_restart
         false,
     )?;
     state.seed_typed("SubtensorModule", "Uids", (NetUid(1), account), 0u16)?;
+    // The owner hotkey's registration, which the self/owner guard reads at
+    // the dispatch block (D-098), matches the graph below.
+    state.seed_typed(
+        "SubtensorModule",
+        "Uids",
+        (NetUid(1), rtao_primitives::AccountId([9; 32])),
+        2u16,
+    )?;
     state.seed(
         &super::super::st::MECHANISM_COUNT_CURRENT,
         (NetUid(1),),
@@ -610,6 +618,14 @@ pub(super) async fn cr_lab_with(
     state.set_finalized(state.block)?;
     state.seed(&super::super::st::COMMIT_REVEAL_WEIGHTS_VERSION, (), tag)?;
     state.seed_typed("SubtensorModule", "Uids", (NetUid(1), account), 0u16)?;
+    // The owner hotkey's registration, which the self/owner guard reads at
+    // the dispatch block (D-098), matches the graph below.
+    state.seed_typed(
+        "SubtensorModule",
+        "Uids",
+        (NetUid(1), rtao_primitives::AccountId([9; 32])),
+        2u16,
+    )?;
     state.seed(
         &super::super::st::MECHANISM_COUNT_CURRENT,
         (NetUid(1),),

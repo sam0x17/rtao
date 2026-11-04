@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Owner-row guard and weight refusals at the dispatch block (D-098)
+
+#### rtao-neuron
+
+- Fixed: the self/owner weight-row guard took the owner hotkey's UID from the last-good metagraph. If the owner re-registered at another UID after that graph was taken (for example, by an application that keeps one snapshot and stops the refresh worker), a queued row for the miner now at the old UID was held on every head, and its operation stayed pending with no reason. Under `Hold`, a row for the owner's new UID was signed as an ordinary row. The guard now reads the owner's `Uids` entry at the block the attempt is prepared at, alongside this validator's UID and `SubnetOwnerHotkey`. The read happens only when exactly one other UID carries positive weight, so ordinary rows cost no extra request.
+- Queued (journaled) work that the guard holds now reports `WeightAttemptOutcome::Refused` named `OwnerRowHeld` (`policy_violation`) instead of `HoldPrevious`. The refusal names the operation, the block and the held destinations. The work stays pending and is decided again at every head. A held callback row still reports `HoldPrevious`.
+- New: `WeightScheduler::retire_pending(mechanism, id)` retires a pending operation that never reached the chain: it has no attempts, or every attempt is `ExpiredUnexecuted`. It is marked `scheduler_retired` (and handed off, so earlier releases skip it too). Its ID stays idempotent, so a replacement needs a new ID.
+- `IncorrectWeightVersionKey` (`invalid_argument`, unchanged) now reports the observed `WeightsVersionKey`, its block and the version the attempt carries. For queued work it also says the version is part of the immutable effects and points to `retire_pending`. The check still runs before signing on every path.
+- No journal or checkpoint schema change.
+
 ### rtao-neuron
 
 #### Added

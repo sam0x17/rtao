@@ -166,12 +166,14 @@ impl WeightScheduler {
     /// another policy is refused like changed input.
     ///
     /// Work queued here is journaled before the guard runs, so a row the
-    /// policy holds stays pending and blocks the mechanism, and no scheduler
-    /// API retires it; check [`OwnerRowPolicy::holds`] first when queuing
-    /// directly. (A callback proposal the guard holds is not journaled.) An
-    /// earlier release cannot read effects that carry the policy and then
-    /// refuses every mechanism of the scope, so let `Submit` work finish
-    /// before rolling back.
+    /// policy holds stays pending and blocks the mechanism. The guard decides
+    /// again at every head from that head's UIDs and owner hotkey and reports
+    /// [`super::WeightAttemptOutcome::Refused`] named `OwnerRowHeld`, naming
+    /// the operation; [`Self::retire_pending`] drops it (D-098). Check
+    /// [`OwnerRowPolicy::holds`] first when queuing directly. (A callback
+    /// proposal the guard holds is not journaled.) An earlier release cannot
+    /// read effects that carry the policy and then refuses every mechanism of
+    /// the scope, so let `Submit` work finish before rolling back.
     pub fn enqueue_with_owner_rows(
         &self,
         id: impl Into<String>,
@@ -213,6 +215,74 @@ impl WeightScheduler {
             obligation: false,
             semantic_policy: self.semantic_policy.clone(),
             extensions: Default::default(),
+        })?;
+        Ok(())
+    }
+    /// Retire the pending operation `id` of `mechanism`, which never reached
+    /// the chain, so the mechanism accepts new work (D-098).
+    ///
+    /// Use it for queued work the scheduler refuses at every head without
+    /// signing, such as a row the self/owner guard holds (`OwnerRowHeld`) or
+    /// a weight version below the chain's `WeightsVersionKey`
+    /// (`IncorrectWeightVersionKey`), when it should not wait for the chain to
+    /// change. Nothing is signed or submitted.
+    ///
+    /// Refused unless `id` is this mechanism's pending operation and every
+    /// signed attempt it has is proven unexecuted (`ExpiredUnexecuted`, no
+    /// conflicting evidence) and the mechanism's last submission is not
+    /// uncertain: an unresolved or finalized attempt belongs to recovery.
+    ///
+    /// The record is kept and marked `"scheduler_retired": true` together
+    /// with the handoff marker, so an earlier release skips it too. Its ID
+    /// stays idempotent: queuing the same ID and input again is a no-op, so a
+    /// replacement row needs a new operation ID.
+    pub fn retire_pending(&self, mechanism: MechId, id: &str) -> anyhow::Result<()> {
+        use rtao_client::journal::{AttemptOutcome, JournalError};
+        let d = self
+            .durable
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("retiring work requires a durable journal"))?;
+        let Some((binding, _)) = self.pending_work(mechanism)? else {
+            anyhow::bail!("mechanism {} has no pending operation", mechanism.0);
+        };
+        anyhow::ensure!(
+            binding.id() == id,
+            "operation {id} is not the pending operation of mechanism {}",
+            mechanism.0
+        );
+        anyhow::ensure!(
+            !self
+                .slots
+                .get(&mechanism)
+                .is_some_and(|slot| slot.uncertain),
+            "mechanism {} has an uncertain submission; recover finalized history first",
+            mechanism.0
+        );
+        d.journal.update(|image| {
+            let record = image
+                .operations
+                .get_mut(id)
+                .filter(|record| {
+                    record.intent.scope == d.scope
+                        && record.extensions.get("scheduler_handed_off")
+                            != Some(&serde_json::Value::Bool(true))
+                })
+                .ok_or(JournalError::Identity)?;
+            if record.attempts.iter().any(|attempt| {
+                attempt.outcome != AttemptOutcome::ExpiredUnexecuted
+                    || !attempt.evidence_conflicts.is_empty()
+            }) {
+                return Err(JournalError::Blocked(
+                    "a signed attempt is not proven unexecuted; recover finalized history".into(),
+                ));
+            }
+            record
+                .extensions
+                .insert("scheduler_retired".into(), serde_json::Value::Bool(true));
+            record
+                .extensions
+                .insert("scheduler_handed_off".into(), serde_json::Value::Bool(true));
+            Ok(())
         })?;
         Ok(())
     }
