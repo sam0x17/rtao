@@ -502,3 +502,40 @@ async fn fetch_resolved_reports_each_read_separately() -> anyhow::Result<()> {
     client.close().await;
     Ok(())
 }
+
+/// The chain-clock read falls back to the name-resolved read when the
+/// compiled `Timestamp.Now` shape no longer matches (D-111).
+#[tokio::test]
+async fn chain_clock_timestamp_reads_by_name_after_widening() -> anyhow::Result<()> {
+    let (chain, client) = fixture_with(|meta| {
+        let ty = add_type(meta, &[], TypeDef::Primitive(TypeDefPrimitive::U128));
+        let now = entry(meta, "Timestamp", "Now");
+        match &mut now.ty {
+            StorageEntryType::Plain(value) | StorageEntryType::Map { value, .. } => {
+                *value = ty.into();
+            }
+        }
+        now.default = vec![0; 16];
+    })
+    .await?;
+    chain.mutate_state(|state| state.seed_typed("Timestamp", "Now", (), 1_700_000_000_123u128))?;
+    let best = client.at(BlockRef::Best).await?;
+    let now = rtao_runtime::storage::timestamp::NOW.surface();
+    assert_eq!(
+        reads::route(&best.block().runtime, &now)?,
+        reads::Route::Resolved
+    );
+    assert_eq!(
+        reads::storage(&best, &rtao_runtime::storage::timestamp::NOW, ()).await?,
+        1_700_000_000_123
+    );
+    chain
+        .mutate_state(|state| state.seed_typed("Timestamp", "Now", (), u128::from(u64::MAX) + 1))?;
+    let best = client.at(BlockRef::Best).await?;
+    let error = reads::storage(&best, &rtao_runtime::storage::timestamp::NOW, ())
+        .await
+        .expect_err("beyond u64");
+    assert_eq!(by_name_error(&error).item, "Now");
+    client.close().await;
+    Ok(())
+}

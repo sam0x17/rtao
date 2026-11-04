@@ -257,7 +257,38 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
     assert_eq!(state.commit_reveal_version, 5);
     assert_eq!(state.runtime_code, Some(code));
 
-    let mut scheduler = fresh_scheduler()?;
+    // By default an unreviewed runtime is followed and reported (D-110).
+    let following = fresh_scheduler()?;
+    assert_eq!(following.commit_reveal_tag(&state)?, 5);
+    assert_eq!(
+        following.commit_reveal_decision(&state),
+        rtao_core::commit_reveal::TagDecision::Follow {
+            tag: 5,
+            basis: rtao_core::commit_reveal::TagBasis::Unreviewed
+        }
+    );
+    assert_ne!(
+        following.next_action(MechId(0), HOTKEY, &state)?,
+        WeightOpportunity::Paused
+    );
+    // An unexplained miss under this code and tag refutes it.
+    let mut refuted = fresh_scheduler()?;
+    refuted.reveals.remember_missed_reveal(code, 5);
+    let refusal = refuted
+        .commit_reveal_tag(&state)
+        .expect_err("refuted tag pauses");
+    assert!(
+        refusal.remediation.contains("missed its reveal"),
+        "{refusal}"
+    );
+    assert_eq!(
+        refuted.next_action(MechId(0), HOTKEY, &state)?,
+        WeightOpportunity::Paused
+    );
+
+    // The earlier behavior, kept as an option: unproven code pauses.
+    let mut scheduler =
+        fresh_scheduler()?.with_unreviewed_cr_tags(rtao_core::commit_reveal::Unreviewed::Pause);
     let refusal = scheduler
         .commit_reveal_tag(&state)
         .expect_err("unproven code pauses");
@@ -309,6 +340,7 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
     let upgraded_state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
     assert_eq!(upgraded_state.runtime_code, Some(upgraded));
     assert!(scheduler.commit_reveal_tag(&upgraded_state).is_err());
+    assert_eq!(fresh_scheduler()?.commit_reveal_tag(&upgraded_state)?, 5);
 
     // Reviewed pinned runtimes are followed without prior evidence.
     let reviewed = REVIEWED_CR_RUNTIME_CODE[REVIEWED_CR_RUNTIME_CODE.len() - 1].1;
@@ -317,6 +349,14 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
     state.runtime_code = Some(rtao_primitives::H256(bytes));
     assert_eq!(reviewed_cr_runtime(rtao_primitives::H256(bytes)), Some(486));
     assert_eq!(fresh_scheduler()?.commit_reveal_tag(&state)?, 5);
+    let mut refuted = fresh_scheduler()?;
+    refuted
+        .reveals
+        .remember_missed_reveal(rtao_primitives::H256(bytes), 5);
+    assert!(
+        refuted.commit_reveal_tag(&state).is_err(),
+        "refutation beats review"
+    );
     // Missing identity never follows a changed tag.
     state.runtime_code = None;
     assert!(fresh_scheduler()?.commit_reveal_tag(&state).is_err());

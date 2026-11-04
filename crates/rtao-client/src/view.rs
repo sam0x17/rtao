@@ -846,6 +846,41 @@ mod tuples {
     fetch_tuples!((A:0),(A:0,B:1),(A:0,B:1,C:2),(A:0,B:1,C:2,D:3),(A:0,B:1,C:2,D:3,E:4),(A:0,B:1,C:2,D:3,E:4,F:5),(A:0,B:1,C:2,D:3,E:4,F:5,G:6),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9,K:10),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9,K:10,L:11),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9,K:10,L:11,M:12),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9,K:10,L:11,M:12,N:13),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9,K:10,L:11,M:12,N:13,O:14),(A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,J:9,K:10,L:11,M:12,N:13,O:14,P:15));
 }
 
+/// A homogeneous, variable-length list of typed queries, coalesced with the
+/// rest of its plan; the outputs keep the list's order.
+impl<F: Fetch> Fetch for Vec<F> {
+    type Output = Vec<F::Output>;
+    fn queries(&self) -> Vec<ReadSpec> {
+        self.iter().flat_map(Fetch::queries).collect()
+    }
+    fn decode(
+        self,
+        runtime: &RuntimeHandle,
+        values: &[Option<Bytes>],
+    ) -> Result<Self::Output, ClientError> {
+        let mut offset = 0usize;
+        let mut outputs = Vec::with_capacity(self.len());
+        for item in self {
+            let end = offset
+                .checked_add(item.queries().len())
+                .ok_or_else(|| ClientError::Protocol("storage plan length overflow".into()))?;
+            let slice = values.get(offset..end).ok_or_else(|| {
+                ClientError::Protocol(
+                    "coalesced storage result length differs from its plan".into(),
+                )
+            })?;
+            outputs.push(item.decode(runtime, slice)?);
+            offset = end;
+        }
+        if offset != values.len() {
+            return Err(ClientError::Protocol(
+                "coalesced storage result contains extra values".into(),
+            ));
+        }
+        Ok(outputs)
+    }
+}
+
 /// A variable-length coalesced plan whose outputs retain Python's shapes.
 #[derive(Clone, Debug, Default)]
 pub struct ReadPlan {

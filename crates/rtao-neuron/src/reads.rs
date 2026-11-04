@@ -114,6 +114,14 @@ pub const VALIDATOR_READS: [ResolvedStorage; 23] = [
     global("Drand", "LastStoredRound", ReadClass::Uint(64)),
 ];
 
+/// Name-resolved form of the chain-clock read: `Timestamp.Now`, in
+/// milliseconds (D-111).
+///
+/// It is outside [`VALIDATOR_READS`] because its failure only warns and
+/// retries; it still reads by name when the compiled shape no longer matches,
+/// so a widened or wrapped timestamp keeps anchoring the timelock clock.
+pub const CLOCK_READS: [ResolvedStorage; 1] = [global("Timestamp", "Now", ReadClass::Uint(64))];
+
 /// Class of the Aura `SlotDuration` constant, in milliseconds.
 #[cfg(feature = "validator")]
 pub const SLOT_DURATION: ReadClass = ReadClass::Uint(64);
@@ -122,6 +130,7 @@ pub const SLOT_DURATION: ReadClass = ReadClass::Uint(64);
 pub(crate) fn resolved_storage(surface: &StorageSurface) -> Option<&'static ResolvedStorage> {
     VALIDATOR_READS
         .iter()
+        .chain(&CLOCK_READS)
         .find(|item| item.pallet == surface.pallet && item.name == surface.name)
 }
 
@@ -444,6 +453,18 @@ macro_rules! resolved_tuples {
             }
         }
     )+};
+}
+
+impl<F: ResolvedFetch> ResolvedFetch for Vec<F> {
+    fn reads(&self) -> Vec<(StorageSurface, Vec<ReadDatum>)> {
+        self.iter().flat_map(ResolvedFetch::reads).collect()
+    }
+    fn take(
+        self,
+        values: &mut dyn Iterator<Item = Result<Option<ReadDatum>, ClientError>>,
+    ) -> anyhow::Result<Self::Output> {
+        self.into_iter().map(|item| item.take(values)).collect()
+    }
 }
 
 resolved_tuples!(

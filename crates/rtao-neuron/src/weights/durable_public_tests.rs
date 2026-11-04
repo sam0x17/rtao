@@ -843,11 +843,13 @@ async fn an_exhausted_admission_window_fails_the_attempt_before_signing() -> any
 #[tokio::test]
 async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow::Result<()> {
     let (lab, cx, account) = cr_lab("version", 5).await?;
+    // The opt-in pause for unreviewed code (D-110); the default follows it.
     let mut scheduler = WeightScheduler::new(
         WeightPolicy::default(),
         Arc::new(ChainClock::new(1_800_000_000_000)),
         ClockGuard::default(),
     )?
+    .with_unreviewed_cr_tags(rtao_core::commit_reveal::Unreviewed::Pause)
     .with_journal(
         lab.journal().unwrap().clone(),
         lab.client.genesis(),
@@ -966,11 +968,13 @@ async fn dispatch_rejected_cr_version_reselects_the_tag_from_fresh_state() -> an
     let code = H256([42; 32]);
     for proven in [true, false] {
         let (lab, cx, account) = cr_lab(&format!("dispatch-{proven}"), 4).await?;
+        // The opt-in pause for unreviewed code (D-110).
         let mut scheduler = WeightScheduler::new(
             WeightPolicy::default(),
             Arc::new(ChainClock::new(1_800_000_000_000)),
             ClockGuard::default(),
-        )?;
+        )?
+        .with_unreviewed_cr_tags(rtao_core::commit_reveal::Unreviewed::Pause);
         if proven {
             scheduler.reveals.remember_revealed_code(code, 5);
         }
@@ -1133,6 +1137,106 @@ async fn journal_bound_cr_version_rejection_goes_uncertain_without_resigning() -
         !rendered.contains("rtao_weights_submitted_total"),
         "{rendered}"
     );
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// A bounded dispatch returns after the admission window plus its block
+/// wait while a journaled commit sits in the pool, instead of waiting out
+/// the 128-block era; the mechanism stays uncertain, nothing is signed
+/// again, and later calls scan for the attempt within the recovery budget
+/// (D-113).
+#[tokio::test]
+async fn a_bounded_dispatch_leaves_an_unresolved_attempt_to_budgeted_recovery() -> anyhow::Result<()>
+{
+    let (lab, cx, account) = cr_lab("bounded-dispatch", 4).await?;
+    let unbounded = WeightScheduler::new(
+        WeightPolicy::default(),
+        Arc::new(ChainClock::new(1_800_000_000_000)),
+        ClockGuard::default(),
+    )?;
+    assert!(unbounded.with_bounded_dispatch(0).is_err());
+    let budget = || {
+        WeightScheduler::new(
+            WeightPolicy::default(),
+            Arc::new(ChainClock::new(1_800_000_000_000)),
+            ClockGuard::default(),
+        )
+    };
+    assert!(budget()?.with_recovery_budget(0, 1).is_err());
+    assert!(budget()?.with_recovery_budget(1, 0).is_err());
+    let mut scheduler = budget()?
+        .with_submit_deadline(std::time::Duration::from_secs(2))?
+        .with_bounded_dispatch(1)?
+        .with_recovery_budget(2, 4)?
+        .with_journal(
+            lab.journal().unwrap().clone(),
+            lab.client.genesis(),
+            NetUid(1),
+            account,
+        )?;
+    assert_eq!(scheduler.reveals().read_budget(), 4);
+    lab.node
+        .mutate_state(|state| state.queue_submit(rtao_testkit::SubmitScript::Pooled));
+    let block_time = {
+        let best = lab.client.at(BlockRef::Best).await?;
+        crate::reads::slot_duration(&best).await? as f64 / 1000.0
+    };
+    let mut dispatched = None;
+    for _ in 0..12 {
+        let head = advance(&lab)?;
+        let started = std::time::Instant::now();
+        Box::pin(scheduler.on_finalized(&cx, &head, scored)).await?;
+        if lab.authors() > 0 {
+            dispatched = Some(started.elapsed());
+            break;
+        }
+    }
+    let elapsed = dispatched.expect("an attempt was due within one epoch");
+    // The admission window (2 s) plus one block, not the 128-block era.
+    assert!(
+        elapsed.as_secs_f64() < 2.0 + block_time + 10.0,
+        "{elapsed:?} with {block_time} s blocks"
+    );
+    assert!(scheduler.slots[&MechId(0)].uncertain);
+    assert!(
+        matches!(
+            scheduler
+                .last_attempt(MechId(0))
+                .map(|attempt| &attempt.outcome),
+            Some(super::super::WeightAttemptOutcome::Unresolved(_))
+        ),
+        "{:?}",
+        scheduler.last_attempt(MechId(0))
+    );
+    // Later heads scan for the pooled attempt at most two blocks per call,
+    // resuming from the journaled cursor, and never sign again.
+    let mut cursors: Vec<u64> = Vec::new();
+    for _ in 0..4 {
+        lab.node.mutate_state(|state| state.advance(3));
+        let head = advance(&lab)?;
+        let before = lab.node.requests().len();
+        Box::pin(scheduler.on_finalized(&cx, &head, scored)).await?;
+        let bodies = lab.node.requests()[before..]
+            .iter()
+            .filter(|request| request.method == "chain_getBlock")
+            .count();
+        assert!(bodies <= 2, "{bodies} block bodies in one call");
+        assert!(scheduler.slots[&MechId(0)].uncertain);
+        let outcome = format!("{:?}", scheduler.last_attempt(MechId(0)).unwrap().outcome);
+        let next = outcome
+            .split("ScanBudget { next: ")
+            .nth(1)
+            .and_then(|rest| rest.split(' ').next())
+            .and_then(|next| next.parse::<u64>().ok())
+            .unwrap_or_else(|| panic!("no scan cursor in {outcome}"));
+        if let Some(previous) = cursors.last() {
+            assert_eq!(next, previous + 2, "the cursor resumes where it stopped");
+        }
+        cursors.push(next);
+    }
+    assert_eq!(cursors.len(), 4);
+    assert_eq!(lab.authors(), 1);
     close_cr_lab(scheduler, lab, cx).await;
     Ok(())
 }

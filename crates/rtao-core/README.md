@@ -7,6 +7,9 @@ in `rtao-core-ext`.
 Use `codec` and `runtime` for dynamic SCALE values and metadata, `extrinsic`
 for era and multisig helpers, and `keys` for key derivation and verification.
 `digest`, `mlkem` and `timelock` expose the corresponding upstream formats.
+`commit_reveal` is owned by rtao: it chooses the version tag of a timelocked
+weight commit and lists the runtime code reviewed for it. It has no I/O and
+allocates nothing, so it builds for `wasm32-unknown-unknown` too.
 `DynValue` provides JSON conversion, and `CoreError` is the owned error type.
 
 | Feature | Effect |
