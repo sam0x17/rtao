@@ -2,7 +2,8 @@
 use super::reveal::RevealPreparation;
 use super::{OwnerRowPolicy, RevealWatcher, Slot, WeightPreflight, WeightScheduler, WeightsInput};
 use rtao_client::journal::{
-    JournalBinding, JournalOwner, OperationIntent, OperationJournal, RecoveryStatus, SemanticGuard,
+    JournalBinding, JournalError, JournalOwner, OperationIntent, OperationJournal, RecordFormat,
+    RecoveryStatus, SemanticGuard,
 };
 use rtao_intents::weights::PreparedWeightCommit;
 use rtao_primitives::{AccountId, MechId, NetUid, Uid};
@@ -17,15 +18,24 @@ pub(super) struct Durable {
     pub netuid: NetUid,
     pub _owner: JournalOwner,
 }
+/// Scheduler checkpoint, format 1 under its `schema` key (D-120). It is
+/// derived state: a release reading a newer checkpoint that declares itself
+/// readable drops the unknown fields and rewrites format 1.
+pub(super) const CHECKPOINT_FORMAT: RecordFormat =
+    RecordFormat::new("weight checkpoint", "schema", 1);
+/// Weight work in an operation's effects, format 1 (D-120). The `format` key
+/// is omitted at format 1, so effects keep their bytes. Effects are immutable
+/// identity: a newer format that an older release must not reinterpret
+/// declares `readable_by` above 1 and that release refuses the work.
+pub(super) const WORK_FORMAT: RecordFormat = RecordFormat::new("weight work", "format", 1);
+/// Attempt material, format 1 (D-120); same rules as [`WORK_FORMAT`].
+pub(super) const MATERIAL_FORMAT: RecordFormat = RecordFormat::new("weight material", "format", 1);
 #[derive(Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 struct Checkpoint {
-    schema: u32,
     slots: BTreeMap<MechId, Slot>,
     reveals: RevealWatcher,
 }
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(super) struct Work {
     pub netuid: NetUid,
     pub mechanism: MechId,
@@ -39,7 +49,6 @@ pub(super) struct Work {
     pub owner_rows: OwnerRowPolicy,
 }
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(super) struct Material {
     pub row: (Vec<Uid>, Vec<u16>),
     #[serde(with = "optional_commit")]
@@ -109,6 +118,27 @@ mod optional_commit {
     }
 }
 impl WeightScheduler {
+    /// Whether [`OperationJournal::compact`] may compact `record` as far as
+    /// weight scheduling is concerned (D-120): true for an operation outside
+    /// every weight scope, and for weight work the scheduler has handed off
+    /// (its finalized commit is already in the reveal watcher's checkpoint).
+    /// Weight work that finalized but was not yet handed off still needs its
+    /// material for recovery and is kept whole.
+    ///
+    /// ```no_run
+    /// # fn demo(journal: &rtao_client::journal::OperationJournal, finalized: u64) -> anyhow::Result<()> {
+    /// use rtao_client::journal::CompactionPolicy;
+    /// use rtao_neuron::WeightScheduler;
+    /// // Keep about a day of finished work whole.
+    /// let policy = CompactionPolicy::finalized_before(finalized.saturating_sub(7200));
+    /// let report = journal.compact(&policy, WeightScheduler::compactable)?;
+    /// println!("compacted {} operations", report.compacted.len());
+    /// # Ok(()) }
+    /// ```
+    pub fn compactable(record: &rtao_client::journal::OperationRecord) -> bool {
+        !record.intent.scope.starts_with("weights:")
+            || record.extensions.get("scheduler_handed_off") == Some(&serde_json::Value::Bool(true))
+    }
     /// Restore durable scheduling and acquire exclusive ownership of this validator.
     ///
     /// The native backend additionally locks against other processes. Identity and
@@ -123,11 +153,9 @@ impl WeightScheduler {
         let scope = format!("weights:{}:{netuid}:{hotkey}", hex::encode(genesis.0));
         let owner = journal.claim(scope.clone())?;
         if let Some(saved) = journal.snapshot()?.checkpoints.get(&scope) {
-            let checkpoint: Checkpoint = serde_json::from_value(saved.clone())?;
-            anyhow::ensure!(
-                checkpoint.schema == 1,
-                "unsupported weight checkpoint; retain journal"
-            );
+            let checkpoint: Checkpoint = CHECKPOINT_FORMAT.decode(saved).map_err(|e| {
+                anyhow::anyhow!("unsupported weight checkpoint ({e}); retain journal")
+            })?;
             self.slots = checkpoint.slots;
             let budget = self.reveals.read_budget();
             self.reveals = checkpoint.reveals;
@@ -200,14 +228,14 @@ impl WeightScheduler {
         let effects = serde_json::to_value(&work)?;
         // JSON encodes nonfinite scores as null. Refuse lossy input before
         // inserting an immutable operation that could not be restored later.
-        let _: Work = serde_json::from_value(effects.clone())?;
+        let _: Work = WORK_FORMAT.decode(&effects)?;
         if let Some((binding, _)) = self.pending_work(mechanism)? {
             anyhow::ensure!(
                 binding.id() == id,
                 "reconcile the existing mechanism operation before queuing another"
             );
         }
-        d.journal.begin(OperationIntent {
+        match d.journal.begin(OperationIntent {
             id,
             correlation_id,
             genesis: d.genesis,
@@ -217,8 +245,11 @@ impl WeightScheduler {
             obligation: false,
             semantic_policy: self.semantic_policy.clone(),
             extensions: Default::default(),
-        })?;
-        Ok(())
+        }) {
+            // Redelivered finished work stays a no-op after compaction (D-120).
+            Ok(_) | Err(JournalError::Compacted) => Ok(()),
+            Err(error) => Err(error.into()),
+        }
     }
     /// Retire the pending operation `id` of `mechanism`, which never reached
     /// the chain, so the mechanism accepts new work (D-098).
@@ -326,7 +357,7 @@ impl WeightScheduler {
             r.intent.scope == d.scope
                 && r.extensions.get("scheduler_handed_off") != Some(&serde_json::Value::Bool(true))
         }) {
-            let work: Work = serde_json::from_value(record.intent.effects.clone())?;
+            let work: Work = WORK_FORMAT.decode(&record.intent.effects)?;
             anyhow::ensure!(
                 record.intent.genesis == d.genesis
                     && record.intent.account == d.account
@@ -483,7 +514,11 @@ impl WeightScheduler {
                     && r.extensions.get("scheduler_handed_off")
                         != Some(&serde_json::Value::Bool(true))
             })
-            .map(|r| serde_json::from_value::<Work>(r.intent.effects.clone()).map(|w| w.mechanism))
+            .map(|r| {
+                WORK_FORMAT
+                    .decode::<Work>(&r.intent.effects)
+                    .map(|w| w.mechanism)
+            })
             .collect::<Result<Vec<_>, _>>()?;
         for mech in mechanisms {
             let Some((binding, work)) = self.pending_work(mech)? else {
@@ -519,7 +554,7 @@ impl WeightScheduler {
                         .ok_or_else(|| {
                             anyhow::anyhow!("finalized weight effect identity differs")
                         })?;
-                    let material: Material = serde_json::from_value(attempt.material.clone())?;
+                    let material: Material = MATERIAL_FORMAT.decode(&attempt.material)?;
                     let inclusion = super::submit::inclusion(
                         client,
                         report
@@ -724,19 +759,19 @@ mod tests {
             serde_json::to_vec(&work(OwnerRowPolicy::Hold))?,
             serde_json::to_vec(&legacy)?
         );
-        let decoded: Work = serde_json::from_value(legacy.clone())?;
+        let decoded: Work = WORK_FORMAT.decode(&legacy)?;
         assert_eq!(decoded.owner_rows, OwnerRowPolicy::Hold);
         let opted = serde_json::to_value(work(OwnerRowPolicy::Submit))?;
         assert_eq!(opted["owner_rows"], "submit");
-        let decoded: Work = serde_json::from_value(opted.clone())?;
+        let decoded: Work = WORK_FORMAT.decode(&opted)?;
         assert_eq!(decoded.owner_rows, OwnerRowPolicy::Submit);
         assert_eq!(decoded.input, input);
         let mut unknown = opted.clone();
         unknown["owner_rows"] = "submit_all".into();
-        assert!(serde_json::from_value::<Work>(unknown).is_err());
+        assert!(WORK_FORMAT.decode::<Work>(&unknown).is_err());
         let mut extra = legacy;
         extra["future_field"] = true.into();
-        assert!(serde_json::from_value::<Work>(extra).is_err());
+        assert!(WORK_FORMAT.decode::<Work>(&extra).is_err());
         Ok(())
     }
 
@@ -854,6 +889,132 @@ mod tests {
         drop(restored);
         drop(journal);
         std::fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    /// A newer checkpoint that declares itself readable loads and is
+    /// rewritten in format 1; one that does not is refused unchanged (D-120).
+    #[test]
+    fn newer_checkpoint_loads_only_when_declared_readable() -> anyhow::Result<()> {
+        let root = std::path::PathBuf::from(
+            std::env::var_os("RTAO_TEST_TMPDIR").ok_or_else(|| anyhow::anyhow!("task scratch"))?,
+        )
+        .join(format!("checkpoint-range-{}", std::process::id()));
+        std::fs::create_dir_all(&root)?;
+        let journal = OperationJournal::open(root.join("journal.json"))?;
+        let make = || {
+            WeightScheduler::new(
+                WeightPolicy::default(),
+                Arc::new(ChainClock::new(1_000_000)),
+                ClockGuard::default(),
+            )
+        };
+        let genesis = rtao_primitives::H256([1; 32]);
+        let account = AccountId([2; 32]);
+        let scope = make()?
+            .with_journal(journal.clone(), genesis, NetUid(1), account)?
+            .durable
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("scope"))?
+            .scope
+            .clone();
+        let mut reveals = serde_json::to_value(RevealWatcher::default())?;
+        reveals["future_watch_state"] = serde_json::json!({"x": 1});
+        let slots = serde_json::json!({"0": {"last_attempt_epoch": 4, "last_attempt_block": 40,
+            "uncertain": false, "future_slot_field": 9}});
+        let readable = serde_json::json!({"schema": 2, "readable_by": 1, "slots": slots,
+            "reveals": reveals, "future_evidence": true});
+        journal.update(|image| {
+            image.checkpoints.insert(scope.clone(), readable.clone());
+            Ok(())
+        })?;
+        let scheduler = make()?.with_journal(journal.clone(), genesis, NetUid(1), account)?;
+        assert_eq!(scheduler.slots[&MechId(0)].last_attempt_epoch, Some(4));
+        scheduler.persist(None)?;
+        let saved = journal.snapshot()?.checkpoints[&scope].clone();
+        assert_eq!(saved["schema"], 1);
+        assert!(saved.get("readable_by").is_none() && saved.get("future_evidence").is_none());
+        assert!(saved["reveals"].get("future_watch_state").is_none());
+        assert!(saved["slots"]["0"].get("future_slot_field").is_none());
+        drop(scheduler);
+        let mut refused = readable;
+        refused["readable_by"] = 2.into();
+        journal.update(|image| {
+            image.checkpoints.insert(scope.clone(), refused.clone());
+            Ok(())
+        })?;
+        let before = std::fs::read(root.join("journal.json"))?;
+        let error = make()?
+            .with_journal(journal.clone(), genesis, NetUid(1), account)
+            .err()
+            .ok_or_else(|| anyhow::anyhow!("newer checkpoint loaded"))?;
+        assert!(error.to_string().contains("newer release"), "{error}");
+        assert_eq!(std::fs::read(root.join("journal.json"))?, before);
+        drop(journal);
+        std::fs::remove_dir_all(root)?;
+        Ok(())
+    }
+
+    /// Weight work and material follow their declared range (D-120).
+    #[test]
+    fn newer_work_and_material_read_only_when_declared_readable() -> anyhow::Result<()> {
+        let input = WeightsInput::ByUid([(Uid(2), 65535.0)].into_iter().collect());
+        let base = serde_json::json!({"netuid":1,"mechanism":0,"input":input,"version_key":0});
+        let mut readable = base.clone();
+        readable["format"] = 2.into();
+        readable["readable_by"] = 1.into();
+        readable["future_hint"] = "advisory".into();
+        let work: Work = WORK_FORMAT.decode(&readable)?;
+        assert_eq!(work.input, input);
+        let mut refused = readable.clone();
+        refused["readable_by"] = 2.into();
+        assert!(matches!(
+            WORK_FORMAT.decode::<Work>(&refused),
+            Err(JournalError::Newer {
+                version: 2,
+                readable_by: 2,
+                supported: 1,
+                ..
+            })
+        ));
+        let material = serde_json::json!({"row": [[1], [65535]], "commit": null,
+            "preparation": {"prepared_block": 5, "uid": 1, "reveal_period": 1,
+                "schedule_fields": [10, 0, 0, 0, 0, 0]}});
+        let _: Material = MATERIAL_FORMAT.decode(&material)?;
+        let mut extra = material.clone();
+        extra["future"] = true.into();
+        assert!(MATERIAL_FORMAT.decode::<Material>(&extra).is_err());
+        extra["format"] = 2.into();
+        extra["readable_by"] = 1.into();
+        let _: Material = MATERIAL_FORMAT.decode(&extra)?;
+        Ok(())
+    }
+
+    #[test]
+    fn compactable_keeps_weight_work_until_handed_off() -> anyhow::Result<()> {
+        let record = |scope: &str, handed_off: bool| -> anyhow::Result<_> {
+            let mut value = serde_json::json!({
+                "mode": "Unselected", "shield_pairs": [], "material": null, "attempts": [],
+                "incompatibility": null,
+                "intent": {"id": "w", "correlation_id": null, "genesis": rtao_primitives::H256([0; 32]),
+                    "account": AccountId([2; 32]), "scope": scope, "effects": null,
+                    "obligation": false}});
+            if handed_off {
+                value["scheduler_handed_off"] = true.into();
+            }
+            Ok(serde_json::from_value::<
+                rtao_client::journal::OperationRecord,
+            >(value)?)
+        };
+        assert!(!WeightScheduler::compactable(&record(
+            "weights:00:1:x",
+            false
+        )?));
+        assert!(WeightScheduler::compactable(&record(
+            "weights:00:1:x",
+            true
+        )?));
+        assert!(WeightScheduler::compactable(&record("transfers", false)?));
         Ok(())
     }
 

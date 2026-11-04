@@ -464,11 +464,57 @@ existing client does; this journal is not an independent consensus verifier.
 The envelope supports atomic v1/v2-to-v3 migration, preserving unresolved attempts
 and unknown extension fields. Failed publication leaves the original image
 intact; incomplete temporary files are not adopted as a new generation.
-Unknown schemas and unsupported checkpoint fields refuse recovery without
-resetting evidence. Validate a migration before starting new writes. This
+Schemas outside the compatibility range and unknown fields in a record's own
+format refuse recovery without resetting evidence (see below). Validate a migration before starting new writes. This
 journal cannot reconstruct material never persisted by an earlier in-memory
 scheduler: reconcile such pre-journal activity independently before authorizing
 new application work.
+
+## Format compatibility and compaction (D-120)
+
+Each persisted shape names the format it was written in and may declare
+`readable_by`, the oldest format whose readers can still read it. A reader
+accepts its own and older formats strictly and a newer one only when the
+writer declared it compatible. Anything else is refused with
+`JournalError::Newer` (or `Schema` for an unknown older value) and the bytes
+stay as they were. A writer raises `readable_by` whenever an older reader that
+ignored its new fields could act wrongly.
+
+The envelope's `schema_version` is 3 for new and uncompacted images, so
+revisions without this rule keep opening them after a rollback. This build
+implements schema 4 (`JOURNAL_SCHEMA_MAX`) and reads newer schemas whose
+envelope declares `readable_by` 4 or lower. It writes such an image back with
+its own schema and every unknown field, and the graph refuses a write that
+lowers the schema or `readable_by`. A newer writer that declares compatibility
+promises that its new fields are optional and stay correct when an older
+writer appends attempts or evidence without them.
+
+Weight work in operation effects and attempt material use the `format` key
+(absent means 1); the scheduler checkpoint uses `schema`. They decode through
+`journal::RecordFormat`. At format 1 every field must be known, checked by a
+lossless round trip, so an unknown field in work is still refused rather than
+silently ignored. Work and material are immutable evidence; a newer
+checkpoint is derived state and is rewritten in format 1. The shield
+extensions keep their versioned key names (`rtao_shield_absence_v1`,
+`rtao_shield_code_evidence_v1`, `rtao_submission_context_v1`): a new shape uses
+a new key, which older readers preserve as an unknown extension.
+
+`OperationJournal::compact` is explicit and never runs on its own. It selects
+operations whose finalized effect is unique and uncontradicted (success or
+dispatch failure), whose attempts are all terminal and which hold no semantic
+refusal, filtered by a finality height, an optional scope and an application
+predicate. `WeightScheduler::compactable` keeps weight work not yet handed to
+the reveal watcher, whose recovery still needs the attempt material. A
+selected record moves to `JournalImage::compacted`: intent, route, the exact
+effect attempt (signed bytes, material, receipt evidence and extensions),
+record extensions and the compacting revision. Its other attempts keep only
+ID, hash, role and outcome. The graph accepts the move only as the exact
+compacted form of a finished record, and a compacted entry is never edited or
+removed. `begin` with the same intent returns `JournalError::Compacted`, a
+different intent `Identity`, so a compacted ID is never dispatched again; the
+historical receipt can no longer be rebuilt from the journal, only its
+retained effect. The first compaction writes schema 4 with `readable_by` 4,
+which revisions before D-120 refuse unchanged.
 
 ## Local executable and qualification limits
 

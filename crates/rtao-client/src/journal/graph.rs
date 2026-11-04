@@ -1,7 +1,5 @@
 //! Persisted identities and conservative effect projection. No dispatch capability.
-use super::{
-    AttemptOutcome, JOURNAL_SCHEMA, JournalError, JournalImage, OperationRecord, SignedAttempt,
-};
+use super::{AttemptOutcome, JournalError, JournalImage, OperationRecord, SignedAttempt};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -104,12 +102,15 @@ fn invalid() -> JournalError {
 }
 
 impl JournalImage {
-    /// Validate a complete schema3 graph before adoption/publication.
+    /// Validate a complete graph (schema 3, 4 or a declared-compatible newer
+    /// schema) before adoption/publication.
     /// Unsupported or contradictory shapes never reset the image.
     pub fn validate(&self) -> Result<(), JournalError> {
-        if self.schema_version != JOURNAL_SCHEMA {
-            return Err(JournalError::Schema(self.schema_version));
-        }
+        super::format::check_schema(
+            self.schema_version,
+            self.extensions.get(super::JOURNAL_READABLE_BY),
+        )?;
+        super::compaction::validate(self)?;
         for (id, record) in &self.operations {
             if id != &record.intent.id {
                 return Err(invalid());
@@ -312,8 +313,12 @@ pub(super) fn validate_transition(
     after: &JournalImage,
 ) -> Result<(), JournalError> {
     after.validate()?;
+    super::compaction::validate_transition(before, after)?;
     for (id, old) in &before.operations {
-        let new = after.operations.get(id).ok_or_else(invalid)?;
+        let Some(new) = after.operations.get(id) else {
+            // compaction::validate_transition checked the compacted form.
+            continue;
+        };
         if old.intent != new.intent
             || old.attempts.len() > new.attempts.len()
             || old.shield_pairs.len() > new.shield_pairs.len()

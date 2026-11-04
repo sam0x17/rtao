@@ -1,5 +1,5 @@
 //! Exclusive atomic native storage. Lock files are never unlinked.
-use super::{JOURNAL_SCHEMA, JournalError, JournalImage, JournalLease, JournalStore};
+use super::{JournalError, JournalImage, JournalLease, JournalStore};
 use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
@@ -214,9 +214,7 @@ impl JournalStore for NativeJournalStore {
             .lock()
             .map_err(|_| error("store mutex poisoned"))?;
         let image = self.read()?;
-        if image.schema_version != JOURNAL_SCHEMA {
-            return Err(JournalError::Schema(image.schema_version));
-        }
+        image.check_schema()?;
         Ok(image)
     }
     fn compare_exchange(&self, expected: u64, image: &JournalImage) -> Result<(), JournalError> {
@@ -233,9 +231,7 @@ impl JournalStore for NativeJournalStore {
         {
             return Err(JournalError::Conflict);
         }
-        if image.schema_version != JOURNAL_SCHEMA {
-            return Err(JournalError::Schema(image.schema_version));
-        }
+        image.check_schema()?;
         super::graph::validate_transition(&before, image)?;
         self.write(image, None)
     }
@@ -256,6 +252,7 @@ impl Drop for ScopeLease {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::panic)]
     use super::*;
+    use crate::journal::JOURNAL_SCHEMA;
     #[test]
     fn ancestry_barrier_precedes_publication_and_retries_existing_directories() {
         let root = PathBuf::from(std::env::var_os("RTAO_TEST_TMPDIR").unwrap())

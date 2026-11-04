@@ -6,6 +6,11 @@
 //! No signing key is stored.
 //! Signed bytes and commit material are sensitive and are redacted from Debug.
 
+mod compaction;
+use compaction::missing;
+pub use compaction::{CompactedOperation, CompactionPolicy, CompactionReport, DroppedAttempt};
+mod format;
+pub use format::RecordFormat;
 mod graph;
 mod migration;
 mod native;
@@ -31,8 +36,19 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-/// Current storage envelope version. Older supported versions migrate atomically.
+/// Storage schema of a new journal and of every image that holds no
+/// compacted operation. Schemas 1 and 2 migrate to it atomically. Releases
+/// without the compatibility range (D-120) read only this schema.
 pub const JOURNAL_SCHEMA: u32 = 3;
+/// Newest storage schema this build implements. Schema 4 is schema 3 plus
+/// compacted operations ([`OperationJournal::compact`], D-120).
+pub const JOURNAL_SCHEMA_MAX: u32 = 4;
+/// Envelope key declaring the oldest schema whose readers may read and update
+/// the image (D-120). Absent, it equals `schema_version`. This build reads an
+/// image newer than [`JOURNAL_SCHEMA_MAX`] only when the image declares a value
+/// no greater than [`JOURNAL_SCHEMA_MAX`]; it keeps that image's schema and
+/// unknown fields when it writes.
+pub const JOURNAL_READABLE_BY: &str = "readable_by";
 /// Why a historical receipt cannot fulfill the current recovery request.
 /// No call bytes, signing material or application values are included.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -93,6 +109,23 @@ pub enum JournalError {
     RecoveryContext(RecoveryContextError),
     /// The envelope is not a supported storage generation.
     Schema(u32),
+    /// A newer release wrote this record and declared no compatibility with
+    /// this one (D-120). Nothing was changed: keep running the newer release,
+    /// or let its work finish before rolling back.
+    Newer {
+        /// Record kind, such as `journal` or `weight work`.
+        record: String,
+        /// Format version the record was written in.
+        version: u32,
+        /// Oldest format whose readers it declares compatible.
+        readable_by: u32,
+        /// Newest format this release reads.
+        supported: u32,
+    },
+    /// The operation finished and was compacted (D-120). Its intent and
+    /// finalized effect stay in [`JournalImage::compacted`]; nothing is signed
+    /// or sent for it again.
+    Compacted,
 }
 impl fmt::Display for JournalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -107,7 +140,23 @@ impl fmt::Display for JournalError {
                 "signed attempt {attempt} already retained; await a fresh shield signing context"
             ),
             Self::RecoveryContext(reason) => reason.fmt(f),
-            Self::Schema(version) => write!(f, "unsupported journal schema {version}"),
+            Self::Schema(version) => write!(
+                f,
+                "unsupported journal schema {version}; this release reads schemas 1 to \
+                 {JOURNAL_SCHEMA_MAX} and newer ones that declare {JOURNAL_READABLE_BY} <= \
+                 {JOURNAL_SCHEMA_MAX}"
+            ),
+            Self::Newer {
+                record,
+                version,
+                readable_by,
+                supported,
+            } => write!(
+                f,
+                "{record} format {version} (readable by {readable_by} and later) was written by \
+                 a newer release; this release reads format {supported}; nothing was changed"
+            ),
+            Self::Compacted => f.write_str("journal operation finished and was compacted"),
         }
     }
 }
@@ -328,6 +377,10 @@ pub struct JournalImage {
     /// New-submission control independent from observation.
     #[serde(default)]
     pub control: JournalControl,
+    /// Finished operations whose failed attempts were compacted (schema 4,
+    /// D-120). An ID here is never reused and never dispatched again.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub compacted: BTreeMap<String, CompactedOperation>,
     /// Preserve unknown envelope fields during supported migrations.
     #[serde(default, flatten)]
     pub extensions: BTreeMap<String, Value>,
@@ -340,6 +393,7 @@ impl Default for JournalImage {
             operations: BTreeMap::new(),
             checkpoints: BTreeMap::new(),
             control: JournalControl::default(),
+            compacted: BTreeMap::new(),
             extensions: BTreeMap::new(),
         }
     }
@@ -451,6 +505,13 @@ impl OperationJournal {
             return Err(JournalError::Identity);
         }
         let material_generation = self.update(|image| {
+            if let Some(done) = image.compacted.get(&intent.id) {
+                return Err(if done.intent == intent {
+                    JournalError::Compacted
+                } else {
+                    JournalError::Identity
+                });
+            }
             if let Some(record) = image.operations.get(&intent.id) {
                 if record.intent != intent {
                     return Err(JournalError::Identity);
@@ -491,11 +552,11 @@ impl OperationJournal {
     }
     /// Bind a persisted ID without changing its effects or authorization.
     pub fn bind(self: &Arc<Self>, id: &str) -> Result<JournalBinding, JournalError> {
-        let material_generation = self
-            .snapshot()?
+        let image = self.snapshot()?;
+        let material_generation = image
             .operations
             .get(id)
-            .ok_or(JournalError::Identity)?
+            .ok_or_else(|| missing(&image, id))?
             .material_generation;
         Ok(JournalBinding {
             journal: Arc::clone(self),
@@ -609,11 +670,11 @@ impl JournalBinding {
     }
     /// Read its retained evidence without mutating the operation.
     pub fn record(&self) -> Result<OperationRecord, JournalError> {
-        self.journal
-            .snapshot()?
+        let mut image = self.journal.snapshot()?;
+        image
             .operations
             .remove(&self.id)
-            .ok_or(JournalError::Identity)
+            .ok_or_else(|| missing(&image, &self.id))
     }
     /// Persist and select required material before preparing/signing its attempt.
     /// Use the returned binding. Old clones fail closed after any replacement,
