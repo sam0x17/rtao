@@ -163,9 +163,9 @@ fn pins(root: &Path, check: bool) -> Result<()> {
             output["spec"] = value(i64::from(spec));
             for field in ["genesis", "code_hash", "commit"] {
                 output[field] = value(
-                    row[field]
-                        .as_str()
-                        .with_context(|| format!("pin lacks {field}"))?,
+                    row.get(field)
+                        .and_then(toml_edit::Item::as_str)
+                        .with_context(|| format!("{network} spec {spec} pin lacks {field}"))?,
                 );
             }
             output["v15_sha256"] = value(sha);
@@ -523,7 +523,8 @@ async fn runtime_identity(
     // immutable values are recorded independently in codegen/probe-pins.toml.
     Ok(
         json!({"version":version,"code_hash":code_hash,"genesis":hash_hex(client.genesis()),"properties":properties,
-        "pin_tag":row["tag"].as_str(),"pin_commit":row["commit"].as_str()}),
+        "pin_tag":row.get("tag").and_then(toml_edit::Item::as_str),
+        "pin_commit":row.get("commit").and_then(toml_edit::Item::as_str)}),
     )
 }
 
