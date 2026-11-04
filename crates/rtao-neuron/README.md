@@ -36,7 +36,9 @@ restores unresolved submissions and pending reveal tracking before new work.
 Rows whose positive weight goes only to this validator or the subnet owner are
 held unless the proposal, or work queued with `enqueue_with_owner_rows`, selects
 `OwnerRowPolicy::Submit` for an owner burn row; the journal keeps that choice
-with the operation.
+with the operation. The guard reads the UIDs at the block each attempt is
+prepared at, and queued work it holds reports `OwnerRowHeld` until it proceeds
+or `retire_pending` retires it.
 Missing history and ambiguous native events retain uncertainty. Pause controls
 stop new weight dispatch while automatic native reveals remain observable.
 See `docs/recovery/durable-work.md` for the exact recovery and chain limits.

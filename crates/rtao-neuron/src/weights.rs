@@ -158,15 +158,22 @@ pub enum WeightsInput {
 /// ([`WeightScheduler::enqueue_with_owner_rows`]). A durable scheduler
 /// journals it with the operation, so restart, recovery and re-preparation
 /// decide the same way.
+///
+/// The guard decides from the best block each attempt is prepared at: this
+/// validator's UID, the `SubnetOwnerHotkey` and that hotkey's UID are all
+/// read there, never taken from the last-good metagraph (D-098). A held
+/// callback row reports [`WeightAttemptOutcome::HoldPrevious`]; held queued
+/// work reports [`WeightAttemptOutcome::Refused`] named `OwnerRowHeld`, stays
+/// pending and is decided again at every head, and
+/// [`WeightScheduler::retire_pending`] drops it.
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum OwnerRowPolicy {
-    /// Keep the previous chain row and report
-    /// [`WeightAttemptOutcome::HoldPrevious`]; nothing is signed. Earlier
-    /// releases always applied this guard.
+    /// Keep the previous chain row; nothing is signed. Earlier releases
+    /// always applied this guard.
     #[default]
     Hold,
     /// Submit a row whose every positive entry goes to the owner hotkey's UID
@@ -875,8 +882,8 @@ impl WeightPreflight {
                 rtao_catalog::ErrorCode::InvalidArgument,
                 "IncorrectWeightVersionKey",
                 format!(
-                    "the chain requires weight version {}; configure a scoring implementation that supports this version",
-                    self.required_version_key
+                    "the chain requires weight version {} (WeightsVersionKey at block {}) and this attempt carries {version_key}; nothing was signed; configure a scoring implementation that supports this version",
+                    self.required_version_key, self.at.number
                 ),
             ));
         }
@@ -1529,7 +1536,15 @@ impl WeightScheduler {
             .map_or(self.policy.version_key.value(), |(_, work)| {
                 work.version_key
             });
-        let uid = preflight.check_except_cr(version_key)?;
+        let uid = preflight.check_except_cr(version_key).map_err(|error| {
+            match (&pending_work, error.downcast::<WeightRefusal>()) {
+                (Some((binding, _)), Ok(refusal)) => {
+                    queued_refusal(refusal, binding.id(), version_key).into()
+                }
+                (_, Ok(refusal)) => refusal.into(),
+                (_, Err(error)) => error,
+            }
+        })?;
         let Some(cr_tag) = self.follow_cr_tag(&cx.metrics, mech, &preflight) else {
             return Ok(());
         };
@@ -1630,6 +1645,16 @@ impl WeightScheduler {
             }
         };
         let prepared = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph);
+        // The guard decides from the preflight's block, never the last-good
+        // graph (D-098).
+        let at = Snapshot::new(cx.client.clone(), preflight.at.clone());
+        let view = match &prepared {
+            Ok(row) => Some(OwnerView::read(&at, cx.netuid, row, uid, hotkey, owner).await?),
+            Err(_) => None,
+        };
+        let mut queued_id = pending_work
+            .as_ref()
+            .map(|(binding, _)| binding.id().to_owned());
         if self.durable.is_some() && pending_work.is_none() {
             let d = self
                 .durable
@@ -1645,8 +1670,8 @@ impl WeightScheduler {
             // ID the journal already has still goes through `begin`, which
             // reports a redelivery or an identity conflict.
             if !snapshot.operations.contains_key(&id)
-                && let Ok(row) = &prepared
-                && row_held(owner_rows, row, uid, hotkey, owner, &graph)
+                && let (Ok(row), Some(view)) = (&prepared, &view)
+                && row_held(owner_rows, row, view)
             {
                 if let Some(attempt) = self.attempts.get_mut(&mech) {
                     attempt.outcome = WeightAttemptOutcome::HoldPrevious;
@@ -1655,22 +1680,29 @@ impl WeightScheduler {
                 return Ok(());
             }
             self.enqueue_with_owner_rows(id, correlation, mech, input.clone(), owner_rows)?;
-            let Some((_, queued)) = self.pending_work(mech)? else {
+            let Some((binding, queued)) = self.pending_work(mech)? else {
                 // The application redelivered a completed logical operation.
                 return Ok(());
             };
             // The journaled policy decides, even on the first attempt.
             owner_rows = queued.owner_rows;
+            queued_id = Some(binding.id().to_owned());
         }
         let row = prepared?;
-        if row_held(owner_rows, &row, uid, hotkey, owner, &graph) {
+        let view = view.ok_or_else(|| anyhow::anyhow!("owner view of a prepared row"))?;
+        if row_held(owner_rows, &row, &view) {
+            cx.metrics.increment("rtao_weights_hold_total");
+            if let Some(id) = &queued_id {
+                // Journaled work is re-proposed without the callback, so a
+                // plain hold would keep it pending with no reason (D-098).
+                return Err(owner_row_refusal(id, owner_rows, &row, &view).into());
+            }
             if let Some(attempt) = self.attempts.get_mut(&mech) {
                 attempt.outcome = WeightAttemptOutcome::HoldPrevious;
             }
-            cx.metrics.increment("rtao_weights_hold_total");
             return Ok(());
         }
-        if row_held(OwnerRowPolicy::Hold, &row, uid, hotkey, owner, &graph) {
+        if row_held(OwnerRowPolicy::Hold, &row, &view) {
             cx.metrics.increment("rtao_weights_owner_row_total");
             tracing::info!(
                 mechanism = mech.0,
@@ -1821,21 +1853,16 @@ impl WeightScheduler {
                     let graph = cx.metagraph.load();
                     let row = prepare_row(input.clone(), &state, uid, cx.netuid, &graph)?;
                     let current_owner = *current_owner.raw();
-                    if row_held(owner_rows, &row, uid, hotkey, current_owner, &graph) {
+                    let view = OwnerView::read(&fresh, cx.netuid, &row, uid, hotkey, current_owner)
+                        .await?;
+                    if row_held(owner_rows, &row, &view) {
                         if let Some(attempt) = self.attempts.get_mut(&mech) {
                             attempt.outcome = WeightAttemptOutcome::HoldPrevious;
                         }
                         cx.metrics.increment("rtao_weights_hold_total");
                         return Ok(());
                     }
-                    if row_held(
-                        OwnerRowPolicy::Hold,
-                        &row,
-                        uid,
-                        hotkey,
-                        current_owner,
-                        &graph,
-                    ) {
+                    if row_held(OwnerRowPolicy::Hold, &row, &view) {
                         cx.metrics.increment("rtao_weights_owner_row_total");
                         tracing::info!(
                             mechanism = mech.0,
@@ -2232,34 +2259,162 @@ fn prepare_row(
         false,
     )?)
 }
-/// The self/owner guard under `policy` (D-093) for a prepared row of the
-/// validator `hotkey` at `uid`, with the subnet owner hotkey `owner`.
+/// Who holds which UID at one block, as the self/owner guard sees it
+/// (D-093, D-098).
 ///
-/// This validator's preflight UID is the owner's exactly when its hotkey is
-/// the owner hotkey: the preflight is fresher than the last-good graph, so a
-/// stale graph can neither hide an owner validator's own UID nor make a
-/// non-owner validator's own UID look like the owner's. Any other destination
-/// is the owner's when the last-good graph maps it to `owner`. Under
-/// [`OwnerRowPolicy::Hold`] this is the guard earlier releases applied.
-fn row_held(
-    policy: OwnerRowPolicy,
-    row: &(Vec<Uid>, Vec<u16>),
+/// Every field comes from the best block the attempt's preflight is pinned
+/// to: this validator's UID from the preflight, the owner hotkey from
+/// `SubnetOwnerHotkey` and the owner hotkey's UID from `Uids`, all read at
+/// that block. The last-good metagraph is never consulted, so a UID change
+/// between a metagraph snapshot and the dispatch block can neither hold a
+/// row that is no longer owner-only nor submit one that has become so.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct OwnerView {
+    /// Best block the view was read at.
+    block: u64,
+    /// This validator's UID there.
     uid: Uid,
-    hotkey: AccountId,
-    owner: AccountId,
-    graph: &rtao_metagraph::Metagraph,
-) -> bool {
+    /// Whether this validator's hotkey is the subnet owner hotkey there.
+    own_is_owner: bool,
+    /// The owner hotkey's UID there; `None` when it is unregistered or the
+    /// guard's decision does not depend on it (see [`Self::read`]).
+    owner_uid: Option<Uid>,
+}
+impl OwnerView {
+    /// The view of `row` for the validator `hotkey` at `uid`, with the owner
+    /// hotkey `owner`, all at `snapshot`.
+    ///
+    /// The owner's UID is read only when it can change the decision: when
+    /// exactly one UID other than this validator's carries positive weight
+    /// and this validator is not the owner. A row with two or more such UIDs
+    /// is never held (the owner holds one UID), so ordinary rows cost no
+    /// extra read.
+    async fn read(
+        snapshot: &Snapshot,
+        netuid: NetUid,
+        row: &(Vec<Uid>, Vec<u16>),
+        uid: Uid,
+        hotkey: AccountId,
+        owner: AccountId,
+    ) -> anyhow::Result<Self> {
+        let own_is_owner = hotkey == owner;
+        let owner_uid = if own_is_owner {
+            Some(uid)
+        } else if single_other_destination(row, uid).is_some() {
+            reads::storage(snapshot, &st::UIDS, (netuid, owner))
+                .await?
+                .map(Uid)
+        } else {
+            None
+        };
+        Ok(Self {
+            block: snapshot.block().number,
+            uid,
+            own_is_owner,
+            owner_uid,
+        })
+    }
+    /// Whether `dest` is the owner hotkey's UID at this view's block.
+    fn is_owner(&self, dest: Uid) -> bool {
+        if dest == self.uid {
+            self.own_is_owner
+        } else {
+            self.owner_uid == Some(dest)
+        }
+    }
+}
+/// The only UID other than `uid` with positive weight in `row`, if exactly one.
+fn single_other_destination(row: &(Vec<Uid>, Vec<u16>), uid: Uid) -> Option<Uid> {
+    let mut others = row
+        .0
+        .iter()
+        .zip(&row.1)
+        .filter(|(dest, value)| **value > 0 && **dest != uid)
+        .map(|(dest, _)| *dest);
+    let first = others.next()?;
+    others.all(|dest| dest == first).then_some(first)
+}
+/// The self/owner guard under `policy` (D-093) for a prepared row, decided
+/// from `view`, the dispatch block's UIDs (D-098). Under
+/// [`OwnerRowPolicy::Hold`] this is the guard earlier releases applied, with
+/// the owner's UID taken from the dispatch block instead of the last-good
+/// graph.
+fn row_held(policy: OwnerRowPolicy, row: &(Vec<Uid>, Vec<u16>), view: &OwnerView) -> bool {
     policy.holds(
         row.0.iter().copied().zip(row.1.iter().copied()),
-        uid,
-        |dest| {
-            if dest == uid {
-                hotkey == owner
-            } else {
-                graph.hotkey(dest) == Some(&owner)
-            }
-        },
+        view.uid,
+        |dest| view.is_owner(dest),
     )
+}
+/// Refusal for queued work `id` that the self/owner guard holds (D-098).
+///
+/// Queued work is re-prepared from its immutable input and policy at every
+/// head, so the guard decides again from each head's UIDs and owner hotkey;
+/// the refusal is retryable, and [`WeightScheduler::retire_pending`] drops
+/// work that should not wait for the chain to change.
+fn owner_row_refusal(
+    id: &str,
+    policy: OwnerRowPolicy,
+    row: &(Vec<Uid>, Vec<u16>),
+    view: &OwnerView,
+) -> WeightRefusal {
+    let positive = row
+        .0
+        .iter()
+        .zip(&row.1)
+        .filter(|(_, value)| **value > 0)
+        .map(|(dest, _)| *dest)
+        .collect::<Vec<_>>();
+    let destinations = if positive.is_empty() {
+        "no UID has positive weight".to_owned()
+    } else {
+        let names = positive
+            .iter()
+            .map(|dest| match (*dest == view.uid, view.is_owner(*dest)) {
+                (true, true) => format!("this validator's UID {}, the owner hotkey's", dest.0),
+                (true, false) => format!("this validator's UID {}", dest.0),
+                _ => format!("the subnet owner hotkey's UID {}", dest.0),
+            })
+            .collect::<Vec<_>>();
+        format!("its positive weight goes only to {}", names.join(" and "))
+    };
+    let unlock = match policy {
+        OwnerRowPolicy::Hold
+            if !positive.is_empty() && positive.iter().all(|d| view.is_owner(*d)) =>
+        {
+            "; queue an owner burn row under OwnerRowPolicy::Submit to commit it"
+        }
+        _ => "",
+    };
+    WeightRefusal {
+        code: rtao_catalog::ErrorCode::PolicyViolation,
+        name: "OwnerRowHeld",
+        remediation: format!(
+            "the self/owner guard holds queued operation {id} under OwnerRowPolicy::{policy:?}: at block {block} {destinations}; nothing was signed; the operation stays pending and the guard decides again at every head from that head's UIDs and owner hotkey; retire it with WeightScheduler::retire_pending and queue a new operation ID to replace it{unlock}",
+            block = view.block,
+        ),
+    }
+}
+/// `refusal` of queued work `id` carrying `version_key`, with the action the
+/// caller can take (D-098).
+///
+/// The version key is part of queued work's immutable effects, so an
+/// `IncorrectWeightVersionKey` refusal is terminal for the operation unless
+/// the subnet lowers the key. Other preflight refusals are retryable.
+fn queued_refusal(refusal: WeightRefusal, id: &str, version_key: u64) -> WeightRefusal {
+    let action = if refusal.name == "IncorrectWeightVersionKey" {
+        format!(
+            "queued operation {id} carries weight version {version_key} in its immutable effects, so it cannot sign unless the subnet lowers the key; retire it with WeightScheduler::retire_pending, raise WeightPolicy::version_key and queue the row under a new operation ID"
+        )
+    } else {
+        format!(
+            "queued operation {id} stays pending and is re-checked at every head; WeightScheduler::retire_pending drops it"
+        )
+    };
+    WeightRefusal {
+        remediation: format!("{}; {action}", refusal.remediation),
+        ..refusal
+    }
 }
 async fn snapshot_slot_duration(
     client: &Client,
