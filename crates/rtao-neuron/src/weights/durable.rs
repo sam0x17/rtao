@@ -129,7 +129,9 @@ impl WeightScheduler {
                 "unsupported weight checkpoint; retain journal"
             );
             self.slots = checkpoint.slots;
+            let budget = self.reveals.read_budget();
             self.reveals = checkpoint.reveals;
+            self.reveals.set_read_budget(budget);
         }
         self.durable = Some(Durable {
             journal,
@@ -430,7 +432,9 @@ impl WeightScheduler {
     /// Recover without obtaining a private signer or authorizing any submission.
     /// Observations continue while new submissions are paused. Each call scans
     /// at most 128 transaction blocks per active operation and reads at most
-    /// 256 reveal blocks.
+    /// 256 reveal blocks, or the bounds set by
+    /// [`WeightScheduler::with_recovery_budget`] (D-113); each continues from
+    /// its cursor on the next call.
     pub async fn recover_finalized(
         &mut self,
         client: &rtao_client::Client,
@@ -485,7 +489,7 @@ impl WeightScheduler {
             let Some((binding, work)) = self.pending_work(mech)? else {
                 continue;
             };
-            let status = binding.recover(client, 128).await?;
+            let status = binding.recover(client, self.recovery_blocks).await?;
             match status {
                 RecoveryStatus::Rebuildable => {
                     self.slots.entry(mech).or_default().uncertain = false;

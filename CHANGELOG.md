@@ -73,6 +73,36 @@ without `NeuronRuntime`, against an endpoint paced to a few requests a minute.
 
 - An HTTP 403/429 refusal of a reconnect handshake, after the session has connected, no longer ends the session (D-097). The session stays `Reconnecting`, waits the longer of the refusal's `Retry-After` (at most 10 minutes) and a backoff of 1 s doubling to 60 s per consecutive refusal, and dials again. Without `retry_forever` it becomes terminal after `max_retries` further refusals. A refused initial connect, a JSON-RPC policy error and a policy close (1008) stay terminal. New metric: `rtao_rpc_reconnect_refusals_total`.
 
+### Portable commit-reveal tags, bounded `on_finalized` and commitments (D-110 to D-115)
+
+#### rtao-core
+
+- New module `commit_reveal` (D-110): `NATIVE_PAYLOAD_VERSION`, the reviewed-runtime list (`REVIEWED_RUNTIME_CODE`, `REVIEWED_RUNTIMES`, `reviewed_runtime`), the tag decision `select_tag` (`TagDecision`, `TagBasis`, `TagPause`, `RevealEvidence`, `Unreviewed`) and `TagEvidence<N>`, a fixed-array evidence store. No I/O and no allocation; it builds for `wasm32-unknown-unknown`.
+
+#### rtao-neuron
+
+- The scheduler's commit-reveal tag comes from `rtao_core::commit_reveal::select_tag` (D-110). `NATIVE_CR_PAYLOAD_VERSION`, `REVIEWED_CR_RUNTIME_CODE` and `reviewed_cr_runtime` are now the core's values.
+- Changed: a changed `CommitRevealWeightsVersion` under runtime code that is neither reviewed nor proven by a reveal is now followed, not paused. The scheduler warns once and sets `rtao_weights_cr_version_unreviewed{mech}` to 1. An unexplained miss of a commitment that carried the tag under that code still pauses timelocked commits. `WeightScheduler::with_unreviewed_cr_tags(Unreviewed::Pause)` restores the earlier pause. New: `WeightScheduler::commit_reveal_decision`, `RevealWatcher::reveal_evidence`.
+- The chain-clock read of `Timestamp.Now` falls back to a by-name read when its compiled shape no longer matches (D-111).
+- `RevealWatcher` verifies each pending commitment's queue across skipped spans before its window opens too, and reads its inclusion block in full (D-112). A reveal period that drops (to 0, say) and returns between two read blocks, and reveals or expires a commitment early, is now seen at the block where it happened. A period change while a commitment is pending counts `rtao_weights_reveal_period_changed_total`, and that commitment's miss never refutes a followed tag. The queue read shares the schedule's storage request; on the request-budget fixture the live path makes 31 requests instead of 30 and a restart replay 16 instead of 12.
+- Bounded `on_finalized` (D-113): `WeightScheduler::with_bounded_dispatch(wait_blocks)` makes a journaled dispatch wait at most the admission window plus `wait_blocks` blocks; an attempt still unresolved stays journaled and uncertain, and the recovery at the start of later calls resolves it, instead of one call scanning inline until the era ends. `WeightScheduler::with_recovery_budget(transaction_blocks, reveal_blocks)` sets the per-call bounds of that recovery (defaults `DEFAULT_RECOVERY_BLOCKS` = 128 and `REVEAL_BLOCK_READS` = 256); both scans resume from their cursors. New: `RevealWatcher::set_read_budget`, `RevealWatcher::read_budget`.
+
+#### Checkpoints
+
+- A pending commitment whose reveal period changed records `"period_changed":true`. An earlier release cannot read a checkpoint that carries it; let such commitments settle before rolling back. Other checkpoints keep their bytes.
+
+#### rtao-client
+
+- `Fetch` is implemented for `Vec<F>`: a homogeneous list of typed queries coalesced with the rest of a plan.
+
+#### rtao-intents and rtao
+
+- New feature `commitments` with `commitments::SetCommitment`, a typed `Commitments.set_commitment` signed by the hotkey (D-114). It checks raw field lengths, refuses a failed-reveal field and blocks more fields than `Commitments.MaxFields`. It is an rtao addition, outside the generated Python catalog and `AnyIntent`. `all` and the facade's `validator` and `miner` features enable it.
+
+#### Documentation
+
+- The README and the book list rtao's workspace `[patch]` tables and which of them an application needs: only `w3f-bls` (D-115).
+
 ### Also in this release, since the last widely pinned revision
 
 - Validator storage reads fall back to name resolution against live metadata after a runtime change (D-089). Ratio and fixed-point types are refused rather than guessed.

@@ -63,12 +63,22 @@ preflight at one best head, while finalized heads trigger attempts and anchor
 transaction mortality. Commit-reveal off uses direct mechanism weights;
 commit-reveal on uses timelocked mechanism weights with the version 4 payload.
 The commit is tagged with the chain's `CommitRevealWeightsVersion`. A tag
-other than 4 is followed only under runtime code known to reveal that payload;
-otherwise `last_attempt` reports an `IncorrectCommitRevealVersion` refusal,
+other than 4 is followed under runtime code reviewed to reveal that payload,
+under code that already revealed one of this validator's commits with that
+tag, and under any other code too: a newer runtime never stops commits by
+itself. The last case logs a warning once and sets
+`rtao_weights_cr_version_unreviewed{mech="N"}` to 1 until a reveal proves the
+code. An unexplained missed reveal of a commit with a followed tag counts
+`rtao_weights_cr_version_refuted_total` and pauses that tag under that code:
+`last_attempt` reports an `IncorrectCommitRevealVersion` refusal,
 `rtao_weights_cr_version_paused{mech="N"}` is 1 and commits wait while the
-rest of the validator keeps running. An unexplained missed reveal of a commit
-with a followed tag counts `rtao_weights_cr_version_refuted_total` and pauses
-that tag again.
+rest of the validator keeps running. `with_unreviewed_cr_tags(Unreviewed::Pause)`
+pauses under unreviewed code as earlier releases did. The decision itself is
+`rtao_core::commit_reveal::select_tag`, which also builds for wasm32.
+A journaled scheduler built with `with_bounded_dispatch(n)` returns from a
+dispatch after the admission window plus `n` blocks and leaves an unresolved
+transaction to the recovery of later heads, whose per-call cost
+`with_recovery_budget` bounds.
 The weights version key defaults to zero. After upgrading the subnet binary,
 set `--weights-version-key` to the version that release supports. The scheduler
 refuses keys below the chain requirement and never follows that requirement

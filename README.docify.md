@@ -40,6 +40,19 @@ missing or mismatched:
 rtao doctor --manifest-path Cargo.toml
 ```
 
+### Downstream BLS patch
+
+That `w3f-bls` line is the whole `[patch]` set an application needs. rtao's
+own `Cargo.toml` carries more `[patch]` tables; Cargo never applies a
+dependency's `[patch]`, and none of the others is needed downstream (D-115):
+
+| rtao workspace patch | Why rtao carries it | Downstream |
+|---|---|---|
+| `[patch.crates-io] w3f-bls` at the core tag | joins the core's vendored BLS with the registry crate `tle` requests | required, as above |
+| `[patch."https://github.com/RaoFoundation/subtensor.git"] bittensor-core` to a fork revision | adds one pending upstream change, a pluggable Ledger APDU transport, so rtao's own Ledger emulator tests run | not needed: no rtao crate's public API uses it, and the core builds from the pinned tag |
+| `[patch."https://github.com/sam0x17/subtensor.git"] w3f-bls, subtensor-macros` | keeps the fork's own monorepo dependencies on the pinned tag | only with the previous row; copy both or neither, at the revisions in that rtao revision's `Cargo.toml` |
+| `[patch.crates-io] ruint = { path = "patches/ruint" }` | `ruint` 1.20.1, the release with the RUSTSEC-2026-0220 fix, with only its `rust-version` lowered to rtao's 1.89 minimum and one const loop restored (`patches/ruint/UPSTREAM.json`) | reached only through the `evm` feature (alloy). On Rust 1.90 or newer, lock crates.io `ruint` 1.20.1 or newer (`cargo update -p ruint`); on 1.89, copy `patches/ruint` from the same rtao revision and patch it by path |
+
 ## Features
 
 The `rtao` facade crate re-exports the workspace through Cargo features. The

@@ -71,6 +71,9 @@ pub mod coldkey;
 #[cfg(feature = "collateral")]
 #[cfg_attr(docsrs, doc(cfg(feature = "collateral")))]
 pub mod collateral;
+#[cfg(feature = "commitments")]
+#[cfg_attr(docsrs, doc(cfg(feature = "commitments")))]
+pub mod commitments;
 #[cfg(feature = "crowdloan")]
 #[cfg_attr(docsrs, doc(cfg(feature = "crowdloan")))]
 pub mod crowdloan;

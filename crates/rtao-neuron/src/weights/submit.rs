@@ -351,6 +351,9 @@ pub(super) struct SubmissionOptions {
     /// The admission window: signer resolution, nonce lease, preparation,
     /// signing and the pool's acknowledgment.
     pub submit_deadline: Duration,
+    /// Blocks a journaled dispatch waits for inclusion and finality after
+    /// admission before it leaves the attempt to journal recovery (D-113).
+    pub dispatch_wait: Option<u32>,
 }
 impl Default for SubmissionOptions {
     fn default() -> Self {
@@ -358,11 +361,16 @@ impl Default for SubmissionOptions {
             journal: None,
             shield_period: None,
             submit_deadline: DEFAULT_WEIGHT_SUBMIT_DEADLINE,
+            dispatch_wait: None,
         }
     }
 }
 impl SubmissionOptions {
     pub(super) fn execution(self, block_time: f64) -> ExecuteOptions {
+        // A journaled attempt can be left to the budgeted, resumable journal
+        // recovery of later heads (D-113); an unjournaled one has no record
+        // to resume from, so it reconciles inline.
+        let bounded = self.journal.as_ref().and(self.dispatch_wait);
         ExecuteOptions {
             journal: self.journal,
             shielded: self.shield_period.is_some(),
@@ -370,13 +378,15 @@ impl SubmissionOptions {
             wait_for_inclusion: true,
             wait_for_finalization: true,
             retries: 0,
-            reconcile: true,
+            reconcile: bounded.is_none(),
             submit_deadline: Some(self.submit_deadline),
             // The admission window plus a whole 128-block era, so a longer
             // window never shortens the wait for inclusion or the finalized
-            // reconciliation of a transmitted attempt.
+            // reconciliation of a transmitted attempt; or plus the bounded
+            // wait, after which journal recovery takes over.
             deadline: Some(
-                Duration::from_secs_f64(128.0 * block_time).saturating_add(self.submit_deadline),
+                Duration::from_secs_f64(f64::from(bounded.unwrap_or(128)) * block_time)
+                    .saturating_add(self.submit_deadline),
             ),
             ..Default::default()
         }
@@ -508,6 +518,18 @@ mod tests {
         assert_eq!(paced.deadline, Some(Duration::from_secs(128 * 12 + 150)));
         assert_eq!(paced.period, Some(128));
         assert!(paced.reconcile && paced.wait_for_finalization);
+        // Without a journal a bounded wait is ignored: nothing could resume
+        // the reconciliation (D-113).
+        let unjournaled = SubmissionOptions {
+            dispatch_wait: Some(3),
+            ..Default::default()
+        }
+        .execution(12.0);
+        assert!(unjournaled.reconcile);
+        assert_eq!(
+            unjournaled.deadline,
+            Some(Duration::from_secs(128 * 12 + 30))
+        );
     }
     #[test]
     fn only_current_mechanism_calls_are_constructed() {

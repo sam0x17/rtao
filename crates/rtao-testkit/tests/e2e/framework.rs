@@ -803,7 +803,11 @@ async fn cr_version_gate(ln: &Localnet, fixture: &FrameworkFixture) -> Result<()
         .await?;
     let mut blocks = fixture.cx.client.blocks(Finality::Finalized)?;
     let head = next_head(&mut blocks, Instant::now() + Duration::from_secs(120)).await?;
-    let mut scheduler = fixture.scheduler()?;
+    // The localnet runtime is not a reviewed Finney code hash. By default the
+    // scheduler follows such a tag (D-110); this gate checks the opt-in pause.
+    let mut scheduler = fixture
+        .scheduler()?
+        .with_unreviewed_cr_tags(rtao_core::commit_reveal::Unreviewed::Pause);
     scheduler
         .on_finalized(&fixture.cx, &head, |_| fixture.proposal())
         .await?;

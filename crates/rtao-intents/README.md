@@ -16,6 +16,11 @@ Enable operation families individually: `association`, `batch`, `children`,
 `registration`, `root`, `serving`, `staking`, `transfer` and `weights`. The `all` feature enables these
 families. `governance` also enables `hyperparameters`.
 
+`commitments` adds `commitments::SetCommitment`, a typed
+`Commitments.set_commitment` signed by the hotkey. It is an rtao addition
+with no Python intent, so it is outside the generated catalog and
+`AnyIntent`; `all` includes it.
+
 `pow` enables the upstream host solver and asynchronous registration support;
 `pow-gpu` adds its optional backend selection. Both are separate from `all`.
 `multisig` provides adapters that preserve the semantic intent while handling

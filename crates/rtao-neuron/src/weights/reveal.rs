@@ -133,6 +133,11 @@ struct Pending {
     /// Non-native tag this commitment carried, with the code it followed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     followed_cr: Option<FollowedCr>,
+    /// The subnet's reveal period changed while this commitment was pending
+    /// (D-112). Such a change can reveal or expire it early, so its miss
+    /// never refutes a followed commit-reveal tag.
+    #[serde(default, skip_serializing_if = "is_false")]
+    period_changed: bool,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -201,11 +206,16 @@ pub struct RevealWatcher {
     /// it again at its cursor.
     #[serde(skip)]
     anchor: Option<Anchor>,
+    /// Blocks one observation call may read; 0 means [`REVEAL_BLOCK_READS`]
+    /// (D-113). Configuration, never checkpointed.
+    #[serde(skip)]
+    read_budget: usize,
 }
 
 /// Blocks a single [`RevealWatcher::observe`] call may read before it retains
-/// its cursor for the next call.
-const REVEAL_BLOCK_READS: usize = 256;
+/// its cursor for the next call, unless [`RevealWatcher::set_read_budget`]
+/// chose another bound.
+pub const REVEAL_BLOCK_READS: usize = 256;
 
 /// The stored values that decide one subnet's reveal processing, as the
 /// chain holds them at the end of a block: the parent state of the next.
@@ -324,6 +334,20 @@ impl RevealWatcher {
     pub fn native_reveal_refuted(&self, code: rtao_primitives::H256, tag: u16) -> bool {
         self.evidence(code, tag).is_some_and(|known| known.missed)
     }
+    /// What this validator's reveals showed for `code` under `tag`, as
+    /// [`rtao_core::commit_reveal::select_tag`] takes it (D-110).
+    pub fn reveal_evidence(
+        &self,
+        code: rtao_primitives::H256,
+        tag: u16,
+    ) -> rtao_core::commit_reveal::RevealEvidence {
+        use rtao_core::commit_reveal::RevealEvidence;
+        match self.evidence(code, tag) {
+            Some(known) if known.missed => RevealEvidence::Refuted,
+            Some(_) => RevealEvidence::Revealed,
+            None => RevealEvidence::None,
+        }
+    }
     fn evidence(&self, code: rtao_primitives::H256, tag: u16) -> Option<&RevealedCode> {
         self.revealed_code.iter().find(|known| {
             known.code == code
@@ -362,6 +386,23 @@ impl RevealWatcher {
             stored_tag: Some(tag),
             missed,
         });
+    }
+    /// Bound the blocks one [`Self::observe`] call reads (D-113); `0` restores
+    /// the default, [`REVEAL_BLOCK_READS`]. A call that reaches the bound keeps
+    /// its cursor and the next call continues from it, so a long replay after
+    /// a restart or a lost connection costs at most this many block reads
+    /// (each a few requests) per call. [`Self::caught_up`] reports when the
+    /// head is reached.
+    pub fn set_read_budget(&mut self, blocks: usize) {
+        self.read_budget = blocks;
+    }
+    /// The bound [`Self::set_read_budget`] chose.
+    pub fn read_budget(&self) -> usize {
+        if self.read_budget == 0 {
+            REVEAL_BLOCK_READS
+        } else {
+            self.read_budget
+        }
     }
     /// Inspect pending native obligations without exposing ciphertext or keys.
     pub fn outstanding(&self) -> Vec<PendingReveal> {
@@ -588,6 +629,7 @@ impl RevealWatcher {
             warned_permit: false,
             ambiguous_reveal: false,
             followed_cr: state.followed_cr,
+            period_changed: false,
         });
         // Reconciliation may discover an inclusion older than the head that
         // triggered submission. Replay finalized history from that inclusion
@@ -606,16 +648,19 @@ impl RevealWatcher {
     /// Only blocks that can change a pending outcome are read (D-096): each
     /// block where an epoch is due (the only blocks that can carry an
     /// `EpochDeferred` or `EpochSkipped` event, or open or close a reveal
-    /// window), and, while a reveal window is open, the block where a
-    /// commitment's queue changes. Every other block is covered by one read
-    /// at the end of the span that confirms the stored schedule, reveal
-    /// period and open queues are what the last verified block predicts. A
+    /// window), and the block where a pending commitment's queue changes,
+    /// whether or not its window is open (D-112). Every other block is
+    /// covered by one read at the end of the span that confirms the stored
+    /// schedule, reveal period and pending queues are what the last verified
+    /// block predicts, so a reveal period that drops and returns inside the
+    /// span is still seen through the queue it revealed or expired. A
     /// mismatch (an owner-triggered epoch, a deferral, a skipped epoch or a
     /// parameter change) is located by bisection and that block is read in
     /// full. An owner trigger that fires exactly at the automatic epoch
     /// leaves no stored trace and is not reported as an epoch notice; it did
-    /// not shorten any reveal window. A call reads at most 256 blocks and
-    /// otherwise keeps its cursor for the next call.
+    /// not shorten any reveal window. A call reads at most
+    /// [`Self::read_budget`] blocks (256 by default) and otherwise keeps its
+    /// cursor for the next call.
     pub async fn observe(
         &mut self,
         client: &Client,
@@ -679,7 +724,7 @@ impl RevealWatcher {
                 Some(cursor) => cursor,
                 None => head.number.saturating_sub(1),
             };
-            if cursor >= head.number || reads >= REVEAL_BLOCK_READS {
+            if cursor >= head.number || reads >= self.read_budget() {
                 // A capped call keeps its cursor; the next continues.
                 return Ok(());
             }
@@ -694,10 +739,22 @@ impl RevealWatcher {
             // A window normally opens at an epoch block, which is read anyway;
             // one opened between epochs (a shortened reveal period) still has
             // its first block read, whose snapshot explains a miss.
+            // A commitment's inclusion block bounds a span too: the anchor
+            // before it holds the queue without the commitment, so the queue
+            // can only be verified from that block on (D-112).
             let next = if stepwise || self.opens_unchecked_window(&anchor, cursor + 1) {
                 Some(cursor + 1)
             } else {
-                anchor.next_epoch_block(head.number)
+                let inclusion = self
+                    .pending
+                    .iter()
+                    .map(|pending| pending.inclusion_block)
+                    .filter(|block| *block > cursor && *block <= head.number)
+                    .min();
+                match (anchor.next_epoch_block(head.number), inclusion) {
+                    (Some(epoch), Some(inclusion)) => Some(epoch.min(inclusion)),
+                    (epoch, inclusion) => epoch.or(inclusion),
+                }
             };
             // The span before the next epoch block, or to the head, must hold
             // what the anchor predicts before it is skipped.
@@ -792,9 +849,17 @@ impl RevealWatcher {
         self.followed_queues(&anchor.states, next)
     }
 
-    /// Queues whose change can settle a pending commitment in `block`: its
-    /// reveal window is open or has passed, unless an ambiguous reveal past
-    /// its window can no longer settle.
+    /// Queues whose change can settle a pending commitment in `block`: every
+    /// included commitment's, unless an ambiguous reveal past its window can
+    /// no longer settle.
+    ///
+    /// A queue is followed before its window opens too (D-112). Reveal
+    /// processing runs in every block with the period stored at its parent,
+    /// so a period that drops (to 0, say) and returns between two read blocks
+    /// reveals the commitment early or expires its queue, and leaves the
+    /// stored schedule and period at the span's end as predicted. The queue
+    /// read at the end of the span shows that change, and bisection locates
+    /// the block.
     fn followed_queues(
         &self,
         states: &BTreeMap<NetUid, WatchState>,
@@ -807,7 +872,7 @@ impl RevealWatcher {
                 let state = states.get(&pending.netuid)?;
                 let reveal = pending.commit_epoch.saturating_add(state.reveal_period);
                 let epoch = state.epoch_at(block);
-                (epoch == reveal || (epoch > reveal && !pending.ambiguous_reveal)).then_some((
+                (epoch <= reveal || !pending.ambiguous_reveal).then_some((
                     pending.netuid,
                     pending.mechanism,
                     pending.commit_epoch,
@@ -818,7 +883,15 @@ impl RevealWatcher {
 
     /// Read a new anchor at `snapshot`.
     async fn read_anchor(&self, snapshot: Snapshot) -> anyhow::Result<Anchor> {
-        let anchor = self.read_state(snapshot, std::iter::empty()).await?;
+        // Every queue the span after it can follow, read with the schedule.
+        let next = snapshot.block().number.saturating_add(1);
+        let candidates = self
+            .pending
+            .iter()
+            .filter(|pending| next >= pending.inclusion_block)
+            .map(|pending| (pending.netuid, pending.mechanism, pending.commit_epoch))
+            .collect::<BTreeSet<_>>();
+        let anchor = self.read_state(snapshot, candidates.iter()).await?;
         self.anchor_at(anchor).await
     }
 
@@ -835,22 +908,41 @@ impl RevealWatcher {
         Ok(anchor)
     }
 
-    /// Read each pending subnet's state and the named queues at `snapshot`.
+    /// Read each pending subnet's state and the named queues at `snapshot`,
+    /// one coalesced storage request per subnet.
     async fn read_state<'a>(
         &self,
         snapshot: Snapshot,
         queues: impl Iterator<Item = &'a QueueKey>,
     ) -> anyhow::Result<Anchor> {
+        let queues = queues.copied().collect::<BTreeSet<_>>();
         let mut states = BTreeMap::new();
-        for netuid in self
+        let mut read = BTreeMap::new();
+        let netuids = self
             .pending
             .iter()
             .map(|pending| pending.netuid)
-            .collect::<BTreeSet<_>>()
-        {
-            let (tempo, last_epoch_block, pending_epoch_at, subnet_epoch_index, since, period) =
-                super::reads::fetch(
-                    &snapshot,
+            .collect::<BTreeSet<_>>();
+        for netuid in &netuids {
+            let netuid = *netuid;
+            let keys = queues
+                .iter()
+                .filter(|key| key.0 == netuid)
+                .copied()
+                .collect::<Vec<_>>();
+            let commits = keys
+                .iter()
+                .map(|&(netuid, mechanism, epoch)| {
+                    Ok(st::TIMELOCKED_WEIGHT_COMMITS
+                        .at((NetUidStorageIndex::new(netuid, mechanism)?, epoch)))
+                })
+                .collect::<anyhow::Result<Vec<_>>>()?;
+            let (
+                (tempo, last_epoch_block, pending_epoch_at, subnet_epoch_index, since, period),
+                commits,
+            ) = super::reads::fetch(
+                &snapshot,
+                (
                     (
                         st::TEMPO.at((netuid,)),
                         st::LAST_EPOCH_BLOCK.at((netuid,)),
@@ -859,8 +951,10 @@ impl RevealWatcher {
                         st::BLOCKS_SINCE_LAST_STEP.at((netuid,)),
                         st::REVEAL_PERIOD_EPOCHS.at((netuid,)),
                     ),
-                )
-                .await?;
+                    commits,
+                ),
+            )
+            .await?;
             states.insert(
                 netuid,
                 WatchState {
@@ -872,9 +966,9 @@ impl RevealWatcher {
                     reveal_period: period,
                 },
             );
+            read.extend(keys.into_iter().zip(commits));
         }
-        let mut read = BTreeMap::new();
-        for key in queues {
+        for key in queues.iter().filter(|key| !netuids.contains(&key.0)) {
             read.insert(*key, read_queue(&snapshot, *key).await?);
         }
         Ok(Anchor {
@@ -945,6 +1039,18 @@ impl RevealWatcher {
                 .ok_or_else(|| anyhow::anyhow!("reveal parent state lacks a pending subnet"))?;
             // Runtime reveal processing selects the queue using its current
             // period, not a period frozen when our process prepared the commit.
+            let previous = pending.reveal_epoch.saturating_sub(pending.commit_epoch);
+            if state.reveal_period != previous {
+                metrics.increment("rtao_weights_reveal_period_changed_total");
+                tracing::warn!(
+                    mechanism = pending.mechanism.0,
+                    block = number,
+                    from = previous,
+                    to = state.reveal_period,
+                    "the reveal period changed while a commitment was pending; its reveal epoch follows the stored period"
+                );
+                pending.period_changed = true;
+            }
             pending.reveal_epoch = pending
                 .commit_epoch
                 .checked_add(state.reveal_period)
@@ -1091,6 +1197,7 @@ impl RevealWatcher {
                     metrics.update_readiness(|ready| ready.last_weight_succeeded = false);
                     tracing::warn!(mechanism = mechanism.0, reason = reason.label(), round = pending.round, predicted_first_block = pending.predicted_first_block, last_stored_round = pending.last_round, epoch_notices = ?pending.notices, "weight reveal epoch ended without a success event");
                     if reason == RevealMissReason::Unknown
+                        && !pending.period_changed
                         && let Some(followed) = pending.followed_cr
                     {
                         // Nothing else explains the miss of a commitment
@@ -1933,8 +2040,26 @@ mod tests {
         let code = code_hash(b"code X");
         assert!(!watcher.reveals_native_payload(code, 5));
 
-        // Root then stores 5 under the same unreviewed code: the scheduler pauses.
-        let mut scheduler = crate::weights::tests::fresh_scheduler()?;
+        // Root then stores 5 under the same unreviewed code. Evidence under
+        // the native tag proves nothing for 5: by default the scheduler
+        // follows 5 as unreviewed code (D-110), and with the opt-in pause it
+        // pauses.
+        let mut following = crate::weights::tests::fresh_scheduler()?;
+        following.reveals = std::mem::take(&mut watcher);
+        let best = client.at(BlockRef::Best).await?;
+        let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+        state.commit_reveal_version = 5;
+        state.runtime_code = Some(code);
+        assert_eq!(
+            following.commit_reveal_decision(&state),
+            rtao_core::commit_reveal::TagDecision::Follow {
+                tag: 5,
+                basis: rtao_core::commit_reveal::TagBasis::Unreviewed
+            }
+        );
+        let watcher = std::mem::take(&mut following.reveals);
+        let mut scheduler = crate::weights::tests::fresh_scheduler()?
+            .with_unreviewed_cr_tags(rtao_core::commit_reveal::Unreviewed::Pause);
         scheduler.reveals = watcher;
         let best = client.at(BlockRef::Best).await?;
         let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
@@ -2491,22 +2616,24 @@ mod tests {
     /// Requests the watcher makes against a regular chain (tempo 10, a
     /// commitment included at 112, its reveal window opening at 120), measured
     /// on this fixture before and after D-096, which reads only the blocks
-    /// that can change the outcome:
+    /// that can change the outcome, and with D-112, which also verifies a
+    /// commitment's queue before its window opens (coalesced with the
+    /// schedule read) and reads its inclusion block in full:
     ///
-    /// | case | before | after |
-    /// |---|---|---|
-    /// | live, one head per call, 112..=120 | 55 | 30 |
-    /// | live, head snapshot already resolved (the scheduler's path) | 47 | 13 |
-    /// | restart, one call replaying to 125 | 82 | 12 |
-    /// | dropped at 120, window ends at 130 (calls at 125, 131) | 182 | 29 |
-    /// | drand lag, revealed at 124 (one call to 126) | 124 | 31 |
+    /// | case | before | D-096 | D-112 |
+    /// |---|---|---|---|
+    /// | live, one head per call, 112..=120 | 55 | 30 | 31 |
+    /// | live, head snapshot already resolved (the scheduler's path) | 47 | 13 | 14 |
+    /// | restart, one call replaying to 125 | 82 | 12 | 16 |
+    /// | dropped at 120, window ends at 130 (calls at 125, 131) | 182 | 29 | 30 |
+    /// | drand lag, revealed at 124 (one call to 126) | 124 | 31 | 31 |
     #[tokio::test]
     async fn reveal_watcher_request_budget() -> anyhow::Result<()> {
         let (chain, client, mut watcher, metrics) = regular_commit(119, Some(120)).await?;
         let live = observe_requests(&chain, &client, &mut watcher, &metrics, 112..=120).await?;
         let outcome = watcher.outcomes().back().cloned().expect("revealed");
         assert_eq!((outcome.observed_block, outcome.missed), (120, None));
-        assert_eq!(live, 30);
+        assert_eq!(live, 31);
         client.close().await;
 
         let (chain, client, mut watcher, metrics) = regular_commit(119, Some(120)).await?;
@@ -2522,7 +2649,7 @@ mod tests {
         }
         let outcome = watcher.outcomes().back().cloned().expect("revealed");
         assert_eq!((outcome.observed_block, outcome.missed), (120, None));
-        assert_eq!(supplied, 13);
+        assert_eq!(supplied, 14);
         client.close().await;
 
         let (chain, client, mut watcher, metrics) = regular_commit(119, Some(120)).await?;
@@ -2530,7 +2657,7 @@ mod tests {
         let outcome = watcher.outcomes().back().cloned().expect("revealed");
         assert_eq!((outcome.observed_block, outcome.missed), (120, None));
         assert!(watcher.caught_up(125));
-        assert_eq!(replay, 12);
+        assert_eq!(replay, 16);
         client.close().await;
 
         let (chain, client, mut watcher, metrics) = regular_commit(119, None).await?;
@@ -2541,7 +2668,7 @@ mod tests {
             (130, Some(RevealMissReason::Unknown))
         );
         assert!(watcher.caught_up(131));
-        assert_eq!(missed, 29);
+        assert_eq!(missed, 30);
         client.close().await;
 
         let (chain, client, mut watcher, metrics) = regular_commit(123, Some(124)).await?;
@@ -2659,6 +2786,54 @@ mod tests {
         Ok(())
     }
 
+    /// A read budget bounds each call's cost (D-113). On the unpredictable
+    /// schedule above, where every block is read, a budget of 3 blocks per
+    /// call keeps the cursor, makes at most a fixed number of requests per
+    /// call, and reaches the same outcome over several calls as one call with
+    /// the default budget.
+    #[tokio::test]
+    async fn a_read_budget_bounds_each_call_and_resumes_from_the_cursor() -> anyhow::Result<()> {
+        let unpredictable = |state: &mut rtao_testkit::FakeState| {
+            for block in 101..=145 {
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "BlocksSinceLastStep",
+                    (NetUid(1),),
+                    0u64,
+                )?;
+            }
+            Ok(())
+        };
+        let (chain, client, mut watcher, metrics) =
+            commit_with(119, Some(120), unpredictable).await?;
+        watcher.set_read_budget(3);
+        assert_eq!(watcher.read_budget(), 3);
+        let head = header(&chain, 125)?;
+        let mut calls = Vec::new();
+        while !watcher.caught_up(125) {
+            assert!(calls.len() < 20, "no progress after {calls:?}");
+            let before = (chain.requests().len(), watcher.last_observed_block);
+            watcher.observe(&client, &head, &metrics).await?;
+            assert!(
+                watcher.last_observed_block > before.1,
+                "each call advances the cursor"
+            );
+            calls.push(chain.requests().len() - before.0);
+        }
+        assert!(calls.len() > 3, "the replay took several calls: {calls:?}");
+        // A block read is a header, events or a coalesced storage request,
+        // each a few RPCs; no call grows with the length of the replay.
+        assert!(calls.iter().all(|requests| *requests <= 24), "{calls:?}");
+        let outcome = watcher.outcomes().back().cloned().expect("revealed");
+        assert_eq!((outcome.observed_block, outcome.missed), (120, None));
+        watcher.set_read_budget(0);
+        assert_eq!(watcher.read_budget(), REVEAL_BLOCK_READS);
+        client.close().await;
+        Ok(())
+    }
+
     /// A tempo shortened at 113 leaves no event, but the stored schedule no
     /// longer matches the prediction: bisection finds 113, and the earlier
     /// window's reveal is observed at 115.
@@ -2679,6 +2854,97 @@ mod tests {
         );
         assert!(watcher.caught_up(118));
         assert!(requests < 40, "{requests} requests");
+        client.close().await;
+        Ok(())
+    }
+
+    /// The reveal period drops from 1 to 0 at 114 and returns at 116, inside
+    /// the span before the next epoch block (D-112). Block 115's reveal
+    /// processing reads period 0 at its parent and reveals the epoch-6
+    /// commitment early. The span end matches the predicted schedule and
+    /// period; the emptied queue shows the change, bisection finds 114 and
+    /// the reveal at 115 is recorded instead of a miss at the window's end.
+    #[tokio::test]
+    async fn a_reveal_period_dropping_to_zero_and_back_inside_a_skipped_span_is_seen()
+    -> anyhow::Result<()> {
+        let (chain, client, mut watcher, metrics) = commit_with(114, Some(115), |state| {
+            for block in 114..=115 {
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "RevealPeriodEpochs",
+                    (NetUid(1),),
+                    0u64,
+                )?;
+            }
+            Ok(())
+        })
+        .await?;
+        let requests = observe_requests(&chain, &client, &mut watcher, &metrics, [119]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("revealed early");
+        assert_eq!(
+            (outcome.reveal_epoch, outcome.observed_block, outcome.missed),
+            (6, 115, None)
+        );
+        assert!(watcher.pending.is_empty());
+        assert!(watcher.caught_up(119));
+        assert!(
+            metrics
+                .render()
+                .contains("rtao_weights_reveal_period_changed_total 1")
+        );
+        assert!(requests < 40, "{requests} requests");
+        client.close().await;
+        Ok(())
+    }
+
+    /// With a reveal period of 2, a commitment from epoch 6 reveals in epoch
+    /// 8. The period drops to 0 at 124 and returns at 125, inside epoch 7:
+    /// block 125's reveal processing expires every queue before epoch 7,
+    /// this one included (D-112). The miss is recorded at 125, where it
+    /// happened, and a followed commit-reveal tag is not refuted by it.
+    #[tokio::test]
+    async fn a_queue_expired_by_a_transient_zero_period_is_a_miss_that_refutes_nothing()
+    -> anyhow::Result<()> {
+        let code = code_hash(b"code P");
+        let (chain, client, mut watcher, metrics) = record_commit(124, None, |state| {
+            for block in 100..=145 {
+                let period = if block == 124 { 0u64 } else { 2 };
+                seed_at(
+                    state,
+                    block,
+                    "SubtensorModule",
+                    "RevealPeriodEpochs",
+                    (NetUid(1),),
+                    period,
+                )?;
+            }
+            Ok(())
+        })
+        .await?;
+        assert_eq!(
+            (
+                watcher.pending[0].commit_epoch,
+                watcher.pending[0].reveal_epoch
+            ),
+            (6, 8)
+        );
+        watcher.pending[0].followed_cr = Some(FollowedCr { tag: 5, code });
+        watcher.remember_revealed_code(code, 5);
+        observe_requests(&chain, &client, &mut watcher, &metrics, [129, 141]).await?;
+        let outcome = watcher.outcomes().back().cloned().expect("missed");
+        assert_eq!(
+            (outcome.reveal_epoch, outcome.observed_block, outcome.missed),
+            (6, 125, Some(RevealMissReason::Unknown))
+        );
+        assert!(watcher.reveals_native_payload(code, 5));
+        assert!(!watcher.native_reveal_refuted(code, 5));
+        assert!(
+            !metrics
+                .render()
+                .contains("rtao_weights_cr_version_refuted_total")
+        );
         client.close().await;
         Ok(())
     }
