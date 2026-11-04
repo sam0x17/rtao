@@ -36,6 +36,11 @@ invalidate application work. Preserve runtime/metadata compatibility checks,
 current signing parameters and finalized-evidence reconciliation of unresolved
 transactions; prompt adoption never permits blind resubmission.
 
+The hourly `runtime-adopt` workflow (`ci/runtime-adopt.sh`) performs routine
+adoption on its own: it pushes a green adoption to `main` and tags a snapshot.
+A red or blocked run leaves `main` unchanged and opens one issue naming the
+failing stage; fix that stage as above and the next run closes the issue.
+
 # Workspace hygiene
 
 - Keep temporary tests, builds, extraction and rehearsals under one recorded

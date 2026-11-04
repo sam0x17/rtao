@@ -1,0 +1,167 @@
+name: runtime-adopt
+# Hourly adoption of activated runtimes (AGENTS.md's runtime adoption
+# policy; ci/runtime-adopt.sh). A newer Finney spec is pinned, regenerated
+# and checked in a disposable candidate; a new testnet runtime is indexed.
+# When every stage passes, the commit is pushed to main (a Finney adoption
+# with a changelog entry and a snapshot tag). Otherwise main is unchanged,
+# one issue is opened or refreshed and, when the RUNTIME_ALERT_URL and
+# RUNTIME_ALERT_TOKEN secrets are set, an alert is posted. Upstream branches
+# ahead of every network keep one informational issue for pre-staging.
+on:
+  schedule:
+    - cron: '41 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run every stage but push nothing and open no issue or alert
+        type: boolean
+        default: true
+      simulate:
+        description: A JSON observation to decide on instead of the live chains (never pushed)
+        type: string
+        default: ''
+permissions: {}
+concurrency:
+  group: runtime-adopt
+  cancel-in-progress: false
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      action: ${{ steps.decide.outputs.action }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Observe Finney, testnet and upstream; decide this run's action
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIMULATE: ${{ inputs.simulate }}
+        run: |
+          out="$RUNNER_TEMP/decision"
+          mkdir -p "$out"
+          if [ -n "$SIMULATE" ]; then
+            printf '%s\n' "$SIMULATE" > "$out/observed.json"
+          else
+            timeout 300s ci/runtime-adopt.sh observe "$out/observed.json"
+          fi
+          ci/runtime-adopt.sh decide "$out/observed.json" "$out/decision.json"
+          echo "action=$(jq -r .action "$out/decision.json")" >> "$GITHUB_OUTPUT"
+          jq . "$out/decision.json" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runtime-adopt-decision
+          path: ${{ runner.temp }}/decision
+          if-no-files-found: error
+          retention-days: 30
+
+  adopt:
+    needs: decide
+    if: needs.decide.outputs.action == 'adopt-finney' || needs.decide.outputs.action == 'record-testnet'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: write
+    env:
+      RTAO_TEMP_ROOT: ${{ runner.temp }}/runtime-adopt
+      RTAO_TEST_TMPDIR: ${{ runner.temp }}/runtime-adopt/tests
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/runtime-adopt
+      DECISION: ${{ runner.temp }}/decision/decision.json
+      EVIDENCE: ${{ runner.temp }}/evidence
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The publish step pushes main and the snapshot tag with this token.
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          components: rustfmt
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-on-failure: true
+          workspaces: . -> target/runtime-adopt
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: runtime-adopt-decision
+          path: ${{ runner.temp }}/decision
+      - name: Pin, import, regenerate and check in a disposable candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 022
+          mkdir -p "$RTAO_TEMP_ROOT" "$RTAO_TEST_TMPDIR" "$EVIDENCE"
+          set -o pipefail
+          ci/runtime-adopt.sh adopt "$DECISION" "$RTAO_TEMP_ROOT/candidate" "$EVIDENCE" 2>&1 | tee "$EVIDENCE/log.txt"
+      - name: Commit, push and tag
+        env:
+          RTAO_ADOPT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != '') && '1' || '' }}
+        run: ci/runtime-adopt.sh publish "$DECISION" "$RTAO_TEMP_ROOT/candidate" 2>&1 | tee -a "$EVIDENCE/log.txt"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runtime-adopt-evidence
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: warn
+          retention-days: 30
+
+  notify:
+    needs: [decide, adopt]
+    if: always() && !(github.event_name == 'workflow_dispatch' && inputs.dry_run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        continue-on-error: true
+        with:
+          name: runtime-adopt-decision
+          path: ${{ runner.temp }}/decision
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: needs.adopt.result != 'skipped'
+        continue-on-error: true
+        with:
+          name: runtime-adopt-evidence
+          path: ${{ runner.temp }}/evidence
+      - name: Issue and alert
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNTIME_ALERT_URL: ${{ secrets.RUNTIME_ALERT_URL }}
+          RUNTIME_ALERT_TOKEN: ${{ secrets.RUNTIME_ALERT_TOKEN }}
+          DECIDED: ${{ needs.decide.result }}
+          ACTION: ${{ needs.decide.outputs.action }}
+          ADOPTED: ${{ needs.adopt.result }}
+        run: |
+          decision="$RUNNER_TEMP/decision/decision.json"
+          if [ "$DECIDED" != success ] || [ ! -f "$decision" ]; then
+            # The decision itself failed: report it under a fixed id.
+            jq -n --arg run "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              '{action: "blocked", network: "upstream", spec: null, code: null, id: "decide",
+                reason: "the runtime-adopt decision step failed (observation or pins); see \($run)",
+                upcoming: []}' > "$RUNNER_TEMP/decide-failed.json"
+            ci/runtime-adopt.sh notify "$RUNNER_TEMP/decide-failed.json" failure
+            exit 0
+          fi
+          case "$ACTION:$ADOPTED" in
+            none:*) outcome=none ;;
+            blocked:*) outcome=failure ;;
+            *:success) outcome=success ;;
+            *) outcome=failure ;;
+          esac
+          ci/runtime-adopt.sh notify "$decision" "$outcome" "$RUNNER_TEMP/evidence"

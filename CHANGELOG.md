@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Automatic runtime adoption (repository maintenance)
+
+- New hourly `runtime-adopt` workflow (`ci/runtime-adopt.sh`, decision checks in `ci/runtime-adopt-test.sh`). When Finney finalizes a newer spec it pins it (the final `vN` release, else upstream main's release-N merge), imports, extracts, regenerates, reconciles and checks it in a disposable candidate, and if every stage passes pushes the commit to `main` with a changelog entry, an upstream-log entry and a `snapshot-<date>` tag. A testnet runtime missing from its index is recorded with `drift --network testnet --apply`.
+- A red stage or a case only a maintainer can decide leaves `main` unchanged, opens or refreshes one issue and, when the `RUNTIME_ALERT_URL` and `RUNTIME_ALERT_TOKEN` repository secrets are set, posts an alert. Upstream branches that declare a spec newer than any network runs keep one informational issue.
+- No library change: the SDK's run-time compatibility checks, pin provenance and parity gates are unchanged.
+
 ### Owner-row guard and weight refusals at the dispatch block (D-098)
 
 #### rtao-neuron

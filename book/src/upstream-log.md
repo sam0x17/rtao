@@ -303,6 +303,11 @@ local candidate.
 
 ## Recording the next change
 
+The `runtime-adopt` workflow appends an entry itself when it adopts a Finney
+runtime automatically: the observed block and `:code`, the old and new parity
+pin, the drift class, the porting report's counts and the workflow run. A
+maintainer who finishes a red adoption by hand writes the entry as below.
+
 Append an entry when a pin changes. Include the old and new tag/commit, affected
 contracts and native consumers, the porting-report findings, intentional
 differences and the exact hosted validation results. Keep an input change
