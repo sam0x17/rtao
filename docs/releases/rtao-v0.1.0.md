@@ -34,6 +34,9 @@ widely pinned revision:
 - D-110 to D-115: the commit-reveal tag decision in `rtao-core`,
   `Timestamp.Now` by name, reveal period changes inside skipped spans, bounded
   `on_finalized`, typed `set_commitment` and the downstream `[patch]` set.
+- D-116: repository maintenance only: the hourly runtime adoption workflow
+  approves a new Finney runtime on evidence from independent public endpoints
+  and the release wasm. No library change.
 - D-120: journal format compatibility range and compaction of finished
   operations (below).
 - D-121: this release process.

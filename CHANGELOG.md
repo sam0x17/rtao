@@ -16,7 +16,7 @@ its section below.
 - D-115: the downstream `[patch]` set is documented.
 - D-120: journal format compatibility range (`readable_by`, `JournalError::Newer`) and explicit compaction of finished operations.
 - D-121: versioned release process (`rtao-vX.Y.Z`, curated notes in `docs/releases/`); the first version tag waits for the macOS lane.
-- Repository maintenance: the hourly `runtime-adopt` workflow. Testnet runtime 486 is recorded. The build-weight measurement is refreshed for the `commitments` feature's manifest change, and a doc link in `rtao-cli` is qualified so the workspace docs build with `-D warnings`.
+- Repository maintenance: the hourly `runtime-adopt` workflow, which approves an adoption on evidence from independent public endpoints (D-116). Testnet runtime 486 is recorded. The build-weight measurement is refreshed for the `commitments` feature's manifest change, and a doc link in `rtao-cli` is qualified so the workspace docs build with `-D warnings`.
 - Rollback to `snapshot-2026-11-03.2`: ordinary journals stay schema 3 and open there. A compacted journal (schema 4) and a checkpoint carrying `period_changed` do not; see the sections below.
 
 ### Automatic runtime adoption (repository maintenance)
