@@ -8,11 +8,18 @@
 #   ci/runtime-adopt.sh commit <decision.json> <candidate> <bundle>
 #   ci/runtime-adopt.sh push <decision.json> <bundle>
 #   ci/runtime-adopt.sh notify <decision.json> <outcome> [<evidence-dir>]
+#   ci/runtime-adopt.sh evidence <decision.json> <evidence-dir>
+#   ci/runtime-adopt.sh verdict <live.json>
+#   ci/runtime-adopt.sh state <decision.json> <outcome> <stage> [<previous-state.json>]
 #
-# observe reads public chain RPC and the public upstream repository. decide
-# is a pure function of an observation and the committed pins: it writes the
-# one action of this run and needs no network, so ci/runtime-adopt-test.sh
-# checks it against recorded and simulated observations.
+# observe reads public chain RPC and the public upstream repository, re-reads
+# the finalized runtime from independent witness endpoints, and records the
+# open adoption issue's backoff state and a fingerprint of the adoption
+# inputs. decide is a pure function of an observation and the committed pins:
+# it writes the one action of this run and needs no network, so
+# ci/runtime-adopt-test.sh checks it against recorded and simulated
+# observations, as it checks verdict (the live-evidence rule) and state (the
+# backoff bookkeeping).
 #
 # Actions:
 #   none            Finney and testnet run indexed runtimes.
@@ -25,16 +32,36 @@
 #                   with `drift --network testnet --apply` and check.
 #   blocked         Something only a maintainer can decide (same spec with
 #                   new :code, no upstream source for a new spec, a pin ahead
-#                   of its network): nothing runs; an issue and an alert.
+#                   of its network, endpoints that disagree about the
+#                   finalized runtime): nothing runs; an issue and an alert.
+#   backoff         The same adoption failed before with the same inputs and
+#                   its retry delay (1 h doubling per failure, at most 24 h)
+#                   has not passed: nothing runs; the issue stays open. A
+#                   change to the adoption inputs (xtask, ci, crates, parity,
+#                   codegen, vendor, pins, lock, toolchain, this workflow) or a
+#                   forced dispatch retries at once.
+# A new runtime is acted on only when a second endpoint corroborates it at the
+# same finalized block; with none answering the run waits (no issue).
 # A red stage leaves main untouched and reports like blocked. Upstream
 # branches that declare a newer spec than any network runs are listed as
 # upcoming (an informational issue, no alert) so they can be pre-staged.
+#
+# A Finney adoption approves itself on evidence: the pinned runtime's :code
+# (hashed here with BLAKE2b-256), its V15/V16 metadata digests and spec read
+# at the pinned block from at least two endpoints that all agree, the release
+# wasm when upstream published one, then the pin, import, extraction,
+# regeneration, compatibility, drift, parity, build, tests and a live read
+# with the built CLI. Parity runs in adoption mode: unchanged and cosmetic
+# sources are reconciled, generated/extracted/vendored ones re-derived and
+# checked, and changed hand ports are listed in parity/port_due.toml (one
+# informational issue, no alert) instead of holding the runtime back.
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 upstream_repo=RaoFoundation/subtensor
 adopt_marker='<!-- rtao-runtime-adopt -->'
 upcoming_marker='<!-- rtao-runtime-upcoming -->'
+port_due_marker='<!-- rtao-parity-port-due -->'
 
 die() {
   echo "runtime-adopt: $*" >&2
@@ -82,9 +109,26 @@ rpc() {
     jq -ce '.result // empty'
 }
 
-# The finalized runtime of a network as JSON, or {"error": ...}.
+# One witness: the runtime another endpoint reports at the primary's
+# finalized block, or {"endpoint", "error"}. An endpoint that does not know
+# the block (lagging, pruned) is an error, not a disagreement.
+observe_witness() {
+  local endpoint=$1 block=$2 genesis version code
+  genesis=$(rpc "$endpoint" chain_getBlockHash '[0]' 2>/dev/null | jq -r .) || genesis=
+  version=$(rpc "$endpoint" state_getRuntimeVersion "[\"$block\"]" 2>/dev/null) || version=
+  code=$(rpc "$endpoint" state_getStorageHash "[\"0x3a636f6465\", \"$block\"]" 2>/dev/null | jq -r .) || code=
+  if [[ ! "$genesis" =~ ^0x[0-9a-f]{64}$ || ! "$code" =~ ^0x[0-9a-f]{64}$ || -z "$version" ]]; then
+    jq -cn --arg endpoint "$endpoint" '{endpoint: $endpoint, error: "no complete runtime at the block"}'
+    return
+  fi
+  jq -cn --arg endpoint "$endpoint" --arg genesis "$genesis" --argjson version "$version" --arg code "$code" \
+    '{endpoint: $endpoint, genesis: $genesis, spec: $version.specVersion, spec_name: $version.specName, code: $code}'
+}
+
+# The finalized runtime of a network as JSON, or {"error": ...}, with the
+# witnesses' view of the same block.
 observe_network() {
-  local name=$1 genesis=$2 endpoints=$3 endpoint="" candidate observed
+  local name=$1 genesis=$2 endpoints=$3 witnesses=${4:-} endpoint="" candidate observed
   for candidate in $endpoints; do
     if observed=$(rpc "$candidate" chain_getBlockHash '[0]' 2>/dev/null | jq -r .); then
       if [[ "$observed" == "$genesis" ]]; then
@@ -106,11 +150,54 @@ observe_network() {
     jq -cn --arg error "$name endpoint $endpoint gave no complete finalized runtime" '{error: $error}'
     return
   fi
+  local seen='[]' witness
+  for witness in $witnesses; do
+    [[ "$witness" != "$endpoint" ]] || continue
+    seen=$(jq -c --argjson row "$(observe_witness "$witness" "$finalized")" '. + [$row]' <<<"$seen")
+  done
   jq -cn --arg endpoint "$endpoint" --arg finalized "$finalized" --arg number "$number" \
-    --argjson version "$version" --arg code "$code" \
-    '{endpoint: $endpoint, finalized: $finalized, number: ($number | ltrimstr("0x") | explode | reduce .[] as $c (0; . * 16 + (if $c >= 97 then $c - 87 elif $c >= 65 then $c - 55 else $c - 48 end))),
+    --argjson version "$version" --arg code "$code" --arg genesis "$genesis" --argjson witnesses "$seen" \
+    '{endpoint: $endpoint, genesis: $genesis, finalized: $finalized, number: ($number | ltrimstr("0x") | explode | reduce .[] as $c (0; . * 16 + (if $c >= 97 then $c - 87 elif $c >= 65 then $c - 55 else $c - 48 end))),
       spec: $version.specVersion, spec_name: $version.specName,
-      transaction_version: $version.transactionVersion, code: $code}'
+      transaction_version: $version.transactionVersion, code: $code, witnesses: $witnesses}'
+}
+
+# Public Finney endpoints that re-read the primary's finalized block. One is
+# run by a different operator than the primary; agreement from two operators
+# is what a normal run sees, but the rule needs only two agreeing endpoints
+# and no disagreeing one, so one operator's outage does not stop adoption.
+finney_witnesses=${FINNEY_WITNESSES:-https://archive.chain.opentensor.ai:443 https://bittensor-finney.api.onfinality.io/public https://lite.chain.opentensor.ai:443}
+
+# A fingerprint of everything an adoption's outcome depends on, so a fix
+# merged to main retries a backed-off adoption at once.
+adopt_inputs() {
+  local path objects=""
+  for path in xtask ci crates parity codegen vendor upstream.toml Cargo.toml Cargo.lock \
+    rust-toolchain.toml .github/workflows/runtime-adopt.yml; do
+    objects+="$path $(git -C "$root" rev-parse -q --verify "HEAD:$path" 2>/dev/null || echo absent)"$'\n'
+  done
+  printf '%s' "$objects" | sha256sum | cut -c1-16
+}
+
+# The backoff states recorded in the open adoption issue ({id: state}), or
+# null. One issue can track a failing adoption and another network's block.
+previous_state() {
+  local number body
+  if [[ -z "${GITHUB_REPOSITORY:-}" ]] || ! command -v gh >/dev/null; then
+    echo null
+    return
+  fi
+  number=$(open_issue "$adopt_marker" 2>/dev/null || true)
+  [[ -n "$number" ]] || { echo null; return; }
+  body=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body 2>/dev/null || true)
+  state_from_body <<<"$body"
+}
+
+# A single recorded state (an issue written before states were keyed by id)
+# reads as a map of one.
+state_from_body() {
+  sed -n 's/^<!-- rtao-runtime-adopt-state \({.*}\) -->$/\1/p' | head -1 |
+    jq -c 'select(type == "object") | if (.id | type) == "string" then {(.id): .} else . end' 2>/dev/null | grep . || echo null
 }
 
 gh_raw() { gh api -H 'Accept: application/vnd.github.raw+json' "$@"; }
@@ -149,9 +236,10 @@ observe() {
   local pins=$root/upstream.toml
   local finney testnet
   finney=$(observe_network finney "$(toml_get "$pins" networks.finney genesis)" \
-    "${FINNEY_ENDPOINTS:-$(toml_get "$pins" networks.finney genesis_endpoint) https://archive.chain.opentensor.ai:443}")
+    "${FINNEY_ENDPOINTS:-$(toml_get "$pins" networks.finney genesis_endpoint) https://archive.chain.opentensor.ai:443}" \
+    "$finney_witnesses")
   testnet=$(observe_network testnet "$(toml_get "$pins" networks.testnet genesis)" \
-    "${TESTNET_ENDPOINTS:-$(toml_get "$pins" networks.testnet genesis_endpoint)}")
+    "${TESTNET_ENDPOINTS:-$(toml_get "$pins" networks.testnet genesis_endpoint)}" "${TESTNET_WITNESSES:-}")
   local branches='{}' sources='{}' head ref spec
   if command -v gh >/dev/null; then
     while read -r head ref; do
@@ -169,8 +257,12 @@ observe() {
   fi
   jq -n --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson finney "$finney" --argjson testnet "$testnet" \
     --argjson branches "$branches" --argjson sources "$sources" \
-    '{schema: 1, observed_at: $at, finney: $finney, testnet: $testnet, upstream: {branches: $branches, sources: $sources}}' >"$out"
-  jq -c '{finney: (.finney | {spec, code, number, error}), testnet: (.testnet | {spec, code, number, error}), upstream: .upstream.branches}' "$out"
+    --arg inputs "$(adopt_inputs)" --argjson previous "$(previous_state)" \
+    --argjson force "$([[ "${RTAO_ADOPT_FORCE:-}" == true || "${RTAO_ADOPT_FORCE:-}" == 1 ]] && echo true || echo false)" \
+    '{schema: 1, observed_at: $at, finney: $finney, testnet: $testnet, upstream: {branches: $branches, sources: $sources},
+      inputs: $inputs, previous: $previous, force: $force}' >"$out"
+  jq -c '{finney: (.finney | {spec, code, number, error, witnesses: ((.witnesses // []) | map({endpoint, spec, code, error}))}),
+          testnet: (.testnet | {spec, code, number, error}), upstream: .upstream.branches, inputs, previous, force}' "$out"
 }
 
 # ── decide ────────────────────────────────────────────────────────────
@@ -202,6 +294,42 @@ decide() {
   def result($action; $network; $spec; $code; $reason):
     {action: $action, network: $network, spec: $spec, code: $code, reason: $reason,
      id: (if $network == null then "none" else "\($network)-\($spec)-\($code | short)" end)};
+  # Witnesses re-read the primary's finalized block. A result is acted on
+  # only when one corroborates it (when witnesses are configured); any
+  # answering witness that disagrees blocks it. Unanswered ones are ignored.
+  def corroborate($n; $name):
+    if . == null then null
+    else
+      (($n.witnesses // []) | map(select((.error // null) == null))) as $answered
+      | def agrees: .genesis == ($n.genesis // .genesis) and .spec == $n.spec and .code == $n.code
+          and (.spec_name // $n.spec_name) == $n.spec_name;
+        ($answered | map(select(agrees))) as $agree
+      | ($answered | map(select(agrees | not))) as $disagree
+      | if ($disagree | length) > 0 then
+          result("blocked"; $name; $n.spec; $n.code;
+            "endpoints disagree about \($name)'s finalized runtime at block \($n.number) (\($n.finalized | short)…): \($n.endpoint) reports spec \($n.spec) with :code \($n.code | short)…, " +
+            ($disagree | map("\(.endpoint) reports spec \(.spec) with :code \(.code | short)…" + (if .genesis != ($n.genesis // .genesis) then " on another genesis" else "" end)) | join("; ")))
+          + {evidence: "inconsistent"}
+        elif (($n.witnesses // []) | length) > 0 and ($agree | length) == 0 then
+          {wait: "\($name): no witness endpoint corroborated spec \($n.spec) at block \($n.number) yet"}
+        else . + {witnesses: ($agree | map(.endpoint))} end
+    end;
+  # A retry of an adoption that failed before, with the same inputs, waits
+  # 1 h doubling per failure (at most 24 h), less five minutes of slack.
+  def backoff:
+    (($o.previous // {})[.id] // null) as $p
+    | if (.action == "adopt-finney" or .action == "record-testnet")
+       and (($o.force // false) | not)
+       and $p != null and ($p.attempted_at // null) != null
+       and ($p.inputs // null) == ($o.inputs // null)
+    then
+      ([pow(2; (($p.failures // 1) - 1)) * 3600, 86400] | min) as $delay
+      | (($p.attempted_at | fromdateiso8601) + $delay - 300) as $retry
+      | if ($o.observed_at | fromdateiso8601) < $retry then
+          . + {action: "backoff", wanted: .action, retry_at: ($retry | todate),
+               reason: "\(.reason); the last attempt failed at stage \($p.stage) (\($p.failures) consecutive failure(s) with these inputs), so the next attempt waits until \($retry | todate) or a change to the adoption inputs"}
+        else . end
+    else . end;
   # Finney first: the parity pin follows the runtime mainnet finalizes.
   (if ($f.error // null) != null then null
    elif $f.spec_name != null and $f.spec_name != "node-subtensor" then
@@ -226,7 +354,7 @@ decide() {
      result("blocked"; "finney"; $f.spec; $f.code; "Finney's :code changed at spec \($f.spec) (pinned \($finney_code | short)…, finalized \($f.code | short)…); a same-spec code change needs a reviewed index migration")
    elif $parity_network == "finney" then
      result("blocked"; "finney"; $f.spec; $f.code; "the parity pin (spec \($parity_spec)) is ahead of Finney's finalized spec \($f.spec)")
-   else null end) as $finney
+   else null end | corroborate($f; "finney")) as $finney_raw
 | (if ($t.error // null) != null then null
    elif known($testnet_rows; $t.spec; $t.code) then null
    elif spec_known($testnet_rows; $t.spec) then
@@ -235,25 +363,30 @@ decide() {
      result("blocked"; "testnet"; $t.spec; $t.code; "the parity pin follows testnet; spec \($t.spec) needs a pin, not an index record")
    else
      result("record-testnet"; "testnet"; $t.spec; $t.code; "testnet finalized spec \($t.spec) (:code \($t.code | short)…), absent from its index")
-   end) as $testnet
+   end | corroborate($t; "testnet")) as $testnet_raw
+| ([$finney_raw, $testnet_raw] | map(select(. != null and .wait != null) | .wait)) as $waits
+| (if ($finney_raw.wait // null) != null then null else $finney_raw end | if . == null then null else backoff end) as $finney
+| (if ($testnet_raw.wait // null) != null then null else $testnet_raw end | if . == null then null else backoff end) as $testnet
 | ([$f.spec, $t.spec, $parity_spec] | map(select(. != null)) | max) as $running
 | ($o.upstream.branches // {} | to_entries
    | map(select(.value.spec != null and .value.spec > $running)
          | {branch: .key, head: .value.head, spec: .value.spec})) as $upcoming
 | ([$finney, $testnet] | map(select(. != null))) as $wanted
 # Progress first: a blocked network never holds up the other's adoption.
-| ($wanted | map(select(.action == "adopt-finney")) + map(select(.action == "record-testnet")) + map(select(.action == "blocked"))) as $ordered
+| ($wanted | map(select(.action == "adopt-finney")) + map(select(.action == "record-testnet"))
+   + map(select(.action == "blocked")) + map(select(.action == "backoff"))) as $ordered
 | ($ordered[0] // result("none"; null; null; null; "Finney and testnet run indexed runtimes"))
 | . + {deferred: ($ordered[1:] | map({action, network, spec, id, reason})),
        upcoming: $upcoming,
        unobserved: ([(if ($f.error // null) != null then "finney: \($f.error)" else empty end),
-                     (if ($t.error // null) != null then "testnet: \($t.error)" else empty end)]),
+                     (if ($t.error // null) != null then "testnet: \($t.error)" else empty end)] + $waits),
        pins: {parity_tag: $parity_tag, parity_spec: $parity_spec, finney_spec: $finney_spec, finney_code: $finney_code},
-       observed: {finney: ($f | {spec, code, number, finalized, endpoint, error}),
-                  testnet: ($t | {spec, code, number, finalized, endpoint, error})},
+       observed: {finney: ($f | {spec, code, number, finalized, endpoint, error, witnesses}),
+                  testnet: ($t | {spec, code, number, finalized, endpoint, error, witnesses})},
+       inputs: ($o.inputs // null), previous: ($o.previous // null),
        observed_at: $o.observed_at}
 JQ
-  jq -c '{action, network, spec, source, id, reason, deferred: (.deferred | map(.id)), upcoming: (.upcoming | map("\(.branch)=\(.spec)")), unobserved}' "$out"
+  jq -c '{action, network, spec, source, id, reason, retry_at, deferred: (.deferred | map(.id)), upcoming: (.upcoming | map("\(.branch)=\(.spec)")), unobserved}' "$out"
 }
 
 # ── adopt (hosted runner) ─────────────────────────────────────────────
@@ -266,6 +399,170 @@ stage() {
 stage_done() { echo "::endgroup::"; }
 
 xtask() { cargo run --locked -q -p xtask -- "$@"; }
+
+# ── live evidence ─────────────────────────────────────────────────────
+
+# Hex (with or without 0x) on stdin to bytes on stdout; coreutils only.
+unhex() { sed 's/^0x//' | tr -d '\n' | tr a-f A-F | basenc --base16 -d; }
+
+# SHA-256 of the metadata inside a Metadata_metadata_at_version envelope
+# (SCALE Option<Vec<u8>>: 0x01, a compact length, the bytes) read from a hex
+# file; the bytes a metadata pin's v15_sha256/v16_sha256 digest.
+envelope_sha256() {
+  local file=$1 bin
+  bin=$(mktemp)
+  unhex <"$file" >"$bin"
+  local head mode length skip size
+  head=$(od -An -tu1 -N5 "$bin" | tr -s ' ' | sed 's/^ //')
+  read -r -a byte <<<"$head"
+  if [[ "${byte[0]:-}" != 1 ]]; then
+    rm -f "$bin"
+    echo none
+    return
+  fi
+  mode=$((byte[1] & 3))
+  case "$mode" in
+    0) length=$((byte[1] >> 2)) skip=2 ;;
+    1) length=$(((byte[1] | byte[2] << 8) >> 2)) skip=3 ;;
+    2) length=$(((byte[1] | byte[2] << 8 | byte[3] << 16 | byte[4] << 24) >> 2)) skip=5 ;;
+    *) rm -f "$bin"; echo invalid; return ;;
+  esac
+  size=$(stat -c %s "$bin")
+  if ((size != skip + length)); then
+    rm -f "$bin"
+    echo invalid
+    return
+  fi
+  tail -c +$((skip + 1)) "$bin" | sha256sum | cut -c1-64
+  rm -f "$bin"
+}
+
+# What one endpoint serves at a block: genesis, runtime version, the :code
+# storage hash it reports, the BLAKE2b-256 of the :code bytes computed here,
+# and the V15/V16 metadata digests. Errors are recorded, not raised.
+endpoint_evidence() {
+  local endpoint=$1 block=$2 dir
+  dir=$(mktemp -d)
+  local genesis version reported code_bytes v15 v16 error=""
+  genesis=$(rpc "$endpoint" chain_getBlockHash '[0]' 2>/dev/null | jq -r .) || error=${error:-"genesis unavailable"}
+  version=$(rpc "$endpoint" state_getRuntimeVersion "[\"$block\"]" 2>/dev/null) || error=${error:-"runtime version unavailable"}
+  reported=$(rpc "$endpoint" state_getStorageHash "[\"0x3a636f6465\", \"$block\"]" 2>/dev/null | jq -r .) || error=${error:-":code hash unavailable"}
+  if rpc "$endpoint" state_getStorage "[\"0x3a636f6465\", \"$block\"]" 2>/dev/null | jq -r . >"$dir/code.hex" && [[ -s "$dir/code.hex" ]]; then
+    code_bytes=0x$(unhex <"$dir/code.hex" | b2sum -l 256 | cut -c1-64)
+  else
+    error=${error:-":code unavailable"}
+  fi
+  for v in 15 16; do
+    if rpc "$endpoint" state_call "[\"Metadata_metadata_at_version\", \"0x$(printf '%02x' "$v")000000\", \"$block\"]" 2>/dev/null |
+      jq -r . >"$dir/v$v.hex" && [[ -s "$dir/v$v.hex" ]]; then
+      printf -v "v$v" '%s' "$(envelope_sha256 "$dir/v$v.hex")"
+    else
+      error=${error:-"metadata V$v unavailable"}
+    fi
+  done
+  rm -rf "$dir"
+  if [[ -n "$error" ]]; then
+    jq -cn --arg endpoint "$endpoint" --arg error "$error" '{endpoint: $endpoint, error: $error}'
+    return
+  fi
+  jq -cn --arg endpoint "$endpoint" --arg genesis "$genesis" --argjson version "$version" \
+    --arg reported "$reported" --arg code "$code_bytes" --arg v15 "$v15" --arg v16 "$v16" \
+    '{endpoint: $endpoint, genesis: $genesis, spec: $version.specVersion, spec_name: $version.specName,
+      transaction_version: $version.transactionVersion, code_reported: $reported, code: $code,
+      v15_sha256: $v15, v16_sha256: $v16}'
+}
+
+# The rule live evidence must meet, as a pure function of live.json:
+# {expected: {genesis, spec, code, v15_sha256, v16_sha256}, endpoints: [...],
+#  release: {status: matches|differs|unavailable, ...}}. Every answering
+# endpoint must match every expected field (its reported :code hash and the
+# hash of the bytes alike), at least two must answer, and a published
+# release wasm must hash to the same :code.
+verdict() {
+  local live=${1:?verdict <live.json>}
+  jq -c '
+    .expected as $x
+    | (.endpoints | map(select((.error // null) == null))) as $answered
+    | def mismatches: [
+        (if .genesis != $x.genesis then "genesis \(.genesis)" else empty end),
+        (if .spec != $x.spec then "spec \(.spec)" else empty end),
+        (if .spec_name != "node-subtensor" then "spec_name \(.spec_name)" else empty end),
+        (if .code_reported != $x.code then "reported :code hash \(.code_reported)" else empty end),
+        (if .code != $x.code then "BLAKE2b-256 of :code \(.code)" else empty end),
+        (if .v15_sha256 != $x.v15_sha256 then "V15 metadata sha256 \(.v15_sha256)" else empty end),
+        (if .v16_sha256 != $x.v16_sha256 then "V16 metadata sha256 \(.v16_sha256)" else empty end)];
+      ($answered | map({endpoint, mismatches: mismatches}) | map(select(.mismatches != []))) as $bad
+    | ((.release.status // "unavailable") == "differs") as $release_bad
+    | {ok: (($bad | length) == 0 and ($answered | length) >= 2 and ($release_bad | not)),
+       agreeing: ($answered | length) - ($bad | length),
+       disagreeing: $bad,
+       unanswered: (.endpoints | map(select((.error // null) != null) | {endpoint, error})),
+       release: (.release.status // "unavailable"),
+       reason: (if ($bad | length) > 0 then
+                  "live evidence disagrees with the pin: " + ($bad | map("\(.endpoint): \(.mismatches | join(", "))") | join("; "))
+                elif $release_bad then
+                  "the release wasm hashes to \(.release.code), not the finalized :code \($x.code)"
+                elif ($answered | length) < 2 then
+                  "only \($answered | length) endpoint(s) served the pinned block; two are required"
+                else "consistent" end)}' "$live"
+}
+
+# Check the pinned Finney runtime against the live chain at the pinned block,
+# from every evidence endpoint, and against the release wasm when upstream
+# published one. Writes live.json and verdict.json; fails unless verdict ok.
+live_evidence() {
+  local decision=$1 evidence=$2
+  local block spec code v15 v16 genesis source endpoints rows='[]' endpoint release
+  block=$(toml_get upstream.toml networks.finney.metadata finalized_head)
+  spec=$(toml_get upstream.toml networks.finney.metadata spec)
+  code=$(toml_get upstream.toml networks.finney.metadata code_hash)
+  v15=$(toml_get upstream.toml networks.finney.metadata v15_sha256)
+  v16=$(toml_get upstream.toml networks.finney.metadata v16_sha256)
+  genesis=$(toml_get upstream.toml networks.finney genesis)
+  source=$(jq -r '.source // empty' "$decision")
+  [[ "$spec" == "$(jq -r .spec "$decision")" ]] || die "the pin recorded spec $spec, not the decided $(jq -r .spec "$decision")"
+  [[ "$code" == "$(jq -r .code "$decision")" ]] || die "the pin recorded :code $code, not the observed $(jq -r .code "$decision")"
+  endpoints=${FINNEY_EVIDENCE_ENDPOINTS:-$(toml_get upstream.toml networks.finney genesis_endpoint) $finney_witnesses}
+  for endpoint in $endpoints; do
+    rows=$(jq -c --argjson row "$(endpoint_evidence "$endpoint" "$block")" '. + [$row]' <<<"$rows")
+  done
+  release='{"status": "unavailable", "detail": "no published release for this pin source"}'
+  if [[ "$source" == v* ]]; then
+    local dir
+    dir=$(mktemp -d)
+    if gh release download "$source" --repo "$upstream_repo" --pattern subtensor.wasm --dir "$dir" >/dev/null 2>&1; then
+      local hash
+      hash=0x$(b2sum -l 256 "$dir/subtensor.wasm" | cut -c1-64)
+      release=$(jq -cn --arg tag "$source" --arg code "$hash" --arg expected "$code" \
+        '{status: (if $code == $expected then "matches" else "differs" end), tag: $tag, code: $code}')
+    else
+      release=$(jq -cn --arg tag "$source" '{status: "unavailable", tag: $tag, detail: "release has no subtensor.wasm asset"}')
+    fi
+    rm -rf "$dir"
+  fi
+  jq -n --arg block "$block" --arg genesis "$genesis" --argjson spec "$spec" --arg code "$code" \
+    --arg v15 "$v15" --arg v16 "$v16" --argjson endpoints "$rows" --argjson release "$release" \
+    '{block: $block, expected: {genesis: $genesis, spec: $spec, code: $code, v15_sha256: $v15, v16_sha256: $v16},
+      endpoints: $endpoints, release: $release}' >"$evidence/live.json"
+  verdict "$evidence/live.json" | tee "$evidence/verdict.json"
+  [[ "$(jq -r .ok "$evidence/verdict.json")" == true ]] || die "$(jq -r .reason "$evidence/verdict.json")"
+}
+
+# A read-only call through the built CLI against live Finney: the compiled
+# surface, the compatibility guard and the transport on the real chain.
+# A constant, a storage value and a runtime-API read with decoding.
+live_reads=("existential-deposit" "timestamp" "subnet-hyperparameters --netuid 1")
+live_read() {
+  local evidence=$1 rtao=$CARGO_TARGET_DIR/debug/rtao read name
+  [[ -x "$rtao" ]] || die "the workspace build produced no rtao binary"
+  for read in "${live_reads[@]}"; do
+    name=${read%% *}
+    # shellcheck disable=SC2086 # the read carries its own arguments
+    timeout 120s "$rtao" query $read --network finney --json >"$evidence/live-$name.json" ||
+      die "rtao query $read --network finney failed"
+    jq -e . "$evidence/live-$name.json" >/dev/null || die "rtao query $read returned no JSON"
+  done
+}
 
 # Newest index row's metadata paths for a spec, relative to the index.
 index_blob() {
@@ -305,6 +602,9 @@ adopt() {
       stage provenance
       RTAO_PIN_CANDIDATE=1 xtask pin --parity "$source" --prepare-candidate
       stage_done
+      stage evidence
+      live_evidence "$decision" "$evidence"
+      stage_done
       stage import
       # Pin preparation removed the prior copies; restore them with its binary
       # before recompiling consumers of those files (ci/pin-pipeline.sh).
@@ -327,8 +627,17 @@ adopt() {
       xtask compat
       stage_done
       stage parity
-      xtask parity report --base "$root" --out "$evidence/porting-report.json" --autobless
-      xtask parity check --strict
+      # Adoption mode: reconcile what evidence proves, re-derive generated,
+      # extracted and vendored sources (checked below), list due hand ports.
+      xtask parity report --base "$root" --out "$evidence/porting-report.json" --adopt
+      xtask parity matrix >/dev/null
+      xtask parity check >"$evidence/parity.json"
+      # Strict parity names what remains due; it is recorded, not a gate.
+      xtask parity check --strict >/dev/null 2>"$evidence/parity-strict.txt" || true
+      if [[ -f parity/port_due.toml ]]; then
+        cp parity/port_due.toml "$evidence/port_due.toml"
+      fi
+      : >"$evidence/port_due.checked"
       stage_done
       stage drift
       local index=vendor/metadata/finney/index.toml
@@ -360,6 +669,9 @@ adopt() {
       stage_done
       stage tests
       cargo test --locked -p rtao-runtime -p rtao-reads -p rtao-intents -p rtao-client
+      stage_done
+      stage live
+      live_read "$evidence"
       stage_done
       stage record
       record_adoption "$decision" "$old_spec" "$class" "$evidence"
@@ -414,7 +726,7 @@ upstream_log_entry() {
 
 record_adoption() {
   local decision=$1 old_spec=$2 class=$3 evidence=$4
-  local spec code number finalized source tag commit run blessed changed today
+  local spec code number finalized source tag commit run blessed rederived due changed today agreeing release due_text
   spec=$(jq -r .spec "$decision")
   code=$(jq -r .code "$decision")
   number=$(jq -r .observed.finney.number "$decision")
@@ -425,20 +737,31 @@ record_adoption() {
   run=${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-local}/actions/runs/${GITHUB_RUN_ID:-local}
   changed=$(jq -r .changed "$evidence/porting-report.json")
   blessed=$(jq -r '.auto_blessed | length' "$evidence/porting-report.json")
+  rederived=$(jq -r '.rederived | length' "$evidence/porting-report.json")
+  due=$(jq -r '.port_due | length' "$evidence/porting-report.json")
+  agreeing=$(jq -r .agreeing "$evidence/verdict.json")
+  release=$(jq -r .release "$evidence/verdict.json")
   today=$(date -u +%Y-%m-%d)
+  if ((due > 0)); then
+    due_text="$due hand port(s) remain due and are listed in \`parity/port_due.toml\` ($(jq -r '.port_due | map("`\(.path)`") | join(", ")' "$evidence/porting-report.json")); strict parity names them until they are ported and blessed."
+  else
+    due_text="No hand port is due."
+  fi
   changelog_entry "### Finney runtime $spec adopted automatically
 
 - The parity pin moves from spec $old_spec to $tag (\`$commit\`, pinned as \`$source\`), the runtime Finney finalized at block $number with \`:code\` \`$code\`.
-- Metadata drift $old_spec -> $spec: \`$class\`. Code generation, extracted tables and catalogs are regenerated from the pinned sources; watched sources changed: $changed, of which $blessed were reconciled automatically (unchanged symbols, extraction and oracle evidence).
-- Checked by the hosted runtime-adopt workflow ([run]($run)): pin source identity, imports, extraction, regeneration, compatibility, probe pins, drift, strict parity, formatting, a workspace build and the runtime, reads, intents and client tests. No oracle comparison, localnet e2e or image execution; the validated range is unchanged."
+- Live evidence: $agreeing public endpoints agree at the pinned block on genesis, spec, the \`:code\` hash (and the BLAKE2b-256 of its bytes) and the V15/V16 metadata digests; release wasm: $release.
+- Metadata drift $old_spec -> $spec: \`$class\`. Code generation, extracted tables and catalogs are regenerated from the pinned sources; watched sources changed: $changed, of which $blessed were reconciled automatically and $rederived re-derived and checked. $due_text
+- Checked by the hosted runtime-adopt workflow ([run]($run)): pin source identity, live evidence, imports, extraction, regeneration, compatibility, probe pins, drift, parity, formatting, a workspace build, the runtime, reads, intents and client tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution; the validated range is unchanged."
   upstream_log_entry "## $today: Finney runtime $spec adopted automatically
 
 The hosted runtime-adopt workflow observed Finney finalize spec $spec at block
-$number (\`$finalized\`), \`:code\` \`$code\`, and advanced parity from spec
-$old_spec to \`$tag\` (\`$commit\`, pin source \`$source\`). Metadata drift is
-\`$class\`. The porting report lists $changed changed watched sources, $blessed of
-them auto-blessed, and strict parity passes, so none needed a port. Core, its
-patch and the validated range are unchanged. Workflow run: <$run>."
+$number (\`$finalized\`), \`:code\` \`$code\`, confirmed it from $agreeing public
+endpoints (release wasm: $release), and advanced parity from spec $old_spec to
+\`$tag\` (\`$commit\`, pin source \`$source\`). Metadata drift is \`$class\`. The
+porting report lists $changed changed watched sources: $blessed auto-blessed,
+$rederived re-derived and checked. $due_text Core, its patch and the validated
+range are unchanged. Workflow run: <$run>."
 }
 
 record_testnet() {
@@ -571,6 +894,76 @@ open_issue() {
     --json number,body --jq "map(select(.body | contains(\"$1\"))) | .[0].number // empty"
 }
 
+# The backoff states after this run ({id: state}), from the decision, the
+# outcome, the failing stage and the states the open issue recorded (or
+# null). A repeat of the same failure (same id and stage) counts up; anything
+# else starts at 1. A blocked decision runs nothing, so its hourly repeat does
+# not count. The states of deferred actions are kept, so a blocked network
+# reported this run does not reset a backed-off adoption; others are dropped.
+next_state() {
+  local decision=${1:?state <decision.json> <outcome> <stage> [<previous-state.json>]}
+  local outcome=${2:?state <decision.json> <outcome> <stage> [<previous-state.json>]}
+  local stage=${3:?state <decision.json> <outcome> <stage> [<previous-state.json>]}
+  local previous=null
+  if [[ -n "${4:-}" && -s "${4:-}" ]]; then
+    previous=$(jq -c . "$4")
+  fi
+  jq -c --arg outcome "$outcome" --arg stage "$stage" --argjson previous "$previous" '
+    ($previous // {}) as $all
+    | ($all[.id] // null) as $p
+    | ($p != null and $p.stage == $stage) as $same
+    | [(.deferred // [])[].id] as $keep
+    | ($all | with_entries(select(.key as $k | any($keep[]; . == $k))))
+      + {(.id): {id: .id, stage: $stage, inputs: (.inputs // null),
+                 failures: (if $same then ($p.failures // 1) + (if .action == "blocked" then 0 else 1 end) else 1 end),
+                 attempted_at: (if $same and .action == "blocked" then $p.attempted_at else .observed_at end)}}
+  ' "$decision"
+}
+
+# Open, refresh or close the informational issue for hand ports that an
+# adoption left due. Never alerts: the runtime itself is adopted.
+notify_port_due() {
+  local file=$1 number body rows
+  number=$(open_issue "$port_due_marker")
+  rows=""
+  if [[ -s "$file" ]]; then
+    rows=$(awk '
+      /^\[\[file\]\]/ { if (py != "") print "- `" py "` (" kind ", due since " tag ")" symbols; py = ""; kind = ""; tag = ""; symbols = "" }
+      $1 == "py" { py = $3; gsub(/"/, "", py) }
+      $1 == "kind" { kind = $3; gsub(/"/, "", kind) }
+      $1 == "tag" { tag = $3; gsub(/"/, "", tag) }
+      $1 == "symbols" { sub(/^[^=]*=[ \t]*/, ""); if ($0 != "[]") symbols = ": " $0 }
+      END { if (py != "") print "- `" py "` (" kind ", due since " tag ")" symbols }
+    ' "$file")
+  fi
+  if [[ -n "$rows" ]]; then
+    body="$port_due_marker
+Automatic runtime adoption moved the parity pin, and these upstream sources
+changed in ways the adoption could not reconcile on evidence alone. The
+runtime is adopted; these hand ports are due:
+
+$rows
+
+Port each change, then \`cargo xtask parity bless <path>\`, which removes its
+entry from \`parity/port_due.toml\`. Until then ordinary parity accepts the
+listed exact changes and strict parity (pr-gates) names them. Refreshed by the
+runtime-adopt workflow; closed when no port is due."
+    if [[ -z "$number" ]]; then
+      gh issue create --repo "$GITHUB_REPOSITORY" --title "Python parity: $(grep -c '^- ' <<<"$rows") hand port(s) due after runtime adoption" --body "$body" >/dev/null
+    elif ! gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body | cmp -s - <(printf '%s\n' "$body"); then
+      gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --body "$body" >/dev/null
+    fi
+  elif [[ -n "$number" ]]; then
+    gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment "No hand port is due." >/dev/null
+  fi
+}
+
+# The alert episodes an open issue tracks: its recorded states' ids and the
+# id its body reports, each once.
+tracked_ids() {
+  { jq -r '(. // {}) | keys[]' <<<"$1"; [[ -z "$2" ]] || echo "$2"; } | sort -u
+}
+
 notify() {
   local decision=${1:?notify <decision.json> <outcome> [<evidence-dir>]}
   local outcome=${2:?notify <decision.json> <outcome> [<evidence-dir>]}
@@ -607,12 +1000,37 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
     gh issue close "$number_up" --repo "$GITHUB_REPOSITORY" --comment "No upstream branch is ahead of the networks now." >/dev/null
   fi
 
+  # Due hand ports: the adopted candidate's list after a successful adoption,
+  # otherwise the list on main.
+  if [[ "$outcome" == success && -n "$evidence" && -f "$evidence/port_due.checked" ]]; then
+    notify_port_due "$evidence/port_due.toml"
+  else
+    notify_port_due "$root/parity/port_due.toml"
+  fi
+
   number=$(open_issue "$adopt_marker")
+  # previous: every state the open issue records; open_id: the failure its
+  # body currently reports; prior_stage: the stage recorded for this id.
+  local previous=null open_id="" prior_stage=""
+  if [[ -n "$number" ]]; then
+    local open_body
+    open_body=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+    previous=$(state_from_body <<<"$open_body")
+    open_id=$(sed -n 's/^<!-- rtao-runtime-adopt id=\([A-Za-z0-9._:-]*\) stage=.*/\1/p' <<<"$open_body" | head -1)
+    prior_stage=$(jq -r --arg id "$id" '(. // {})[$id].stage // empty' <<<"$previous")
+  fi
   case "$outcome" in
     success)
-      if [[ -n "$number" ]]; then
+      # Close the issue when it tracks this runtime, or when nothing else
+      # (a blocked or backed-off network) is still outstanding.
+      if [[ -n "$number" ]] && { [[ -z "$open_id" || "$open_id" == "$id" ]] ||
+        [[ "$(jq '[.deferred[] | select(.action == "blocked" or .action == "backoff")] | length' "$decision")" == 0 ]]; }; then
         gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
           --comment "Adopted: $action for $network spec $spec ([run]($run))." >/dev/null
+        local other
+        for other in $(tracked_ids "$previous" "$open_id"); do
+          [[ "$other" == "$id" ]] || alert "$other" false "runtime adoption resolved" "$run"
+        done
       fi
       alert "$id" false "$network runtime $spec adopted" "$run"
       ;;
@@ -622,32 +1040,46 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
       if [[ "$(jq '.unobserved // [] | length' "$decision")" != 0 ]]; then
         echo "not closing: $(jq -r '.unobserved | join("; ")' "$decision")"
       elif [[ -n "$number" ]]; then
-        local open_id
-        open_id=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body |
-          sed -n 's/^<!-- rtao-runtime-adopt id=\([A-Za-z0-9._:-]*\) stage=.*/\1/p' | head -1)
         gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
           --comment "Finney and testnet run indexed runtimes again ([run]($run))." >/dev/null
-        # Resolve the episode the issue opened (a maintainer finished it).
-        alert "${open_id:-none}" false "runtime adoption resolved: Finney and testnet run indexed runtimes" "$run"
+        # Resolve every episode the issue tracked (a maintainer finished them).
+        local other
+        for other in $(tracked_ids "$previous" "$open_id"); do
+          alert "$other" false "runtime adoption resolved: Finney and testnet run indexed runtimes" "$run"
+        done
       fi
       ;;
     superseded)
       echo "main moved during the run; the next scheduled run retries from the new main"
+      ;;
+    backoff)
+      echo "backing off: $reason"
       ;;
     failure)
       local tail_text=""
       if [[ -n "$evidence" && -f "$evidence/log.txt" ]]; then
         tail_text=$(tail -n 60 "$evidence/log.txt")
       fi
-      local title body
+      local title body state retry
       if [[ "$action" == blocked ]]; then
         title="Runtime adoption blocked: $network spec $spec"
         stage=decide
       else
         title="Runtime adoption failed: $network spec $spec at stage $stage"
       fi
+      local previous_file
+      previous_file=$(mktemp)
+      printf '%s\n' "$previous" >"$previous_file"
+      state=$(next_state "$decision" failure "$stage" "$previous_file")
+      rm -f "$previous_file"
+      if [[ "$action" == blocked ]]; then
+        retry="Nothing runs while it is blocked; the next scheduled run re-evaluates it."
+      else
+        retry="The next attempt waits $(jq -r --arg id "$id" '[pow(2; .[$id].failures - 1), 24] | min' <<<"$state") h after this one (doubling per repeated failure, at most 24 h) unless the adoption inputs change (a fix merged to main) or the workflow is dispatched with force."
+      fi
       body="$adopt_marker
 <!-- rtao-runtime-adopt id=$id stage=$stage -->
+<!-- rtao-runtime-adopt-state $state -->
 $reason.
 
 | | |
@@ -655,11 +1087,13 @@ $reason.
 | Action | \`$action\` |
 | Network and spec | $network $spec, \`:code\` \`$(jq -r .code "$decision")\` |
 | Stage | \`$stage\` |
+| Consecutive failures | $(jq -r --arg id "$id" '.[$id].failures' <<<"$state") |
 | Run | $run |
+$(jq -r 'if (.deferred // []) == [] then "" else "\nAlso outstanding:\n\n" + (.deferred | map("- `\(.action)` \(.network) spec \(.spec): \(.reason)") | join("\n")) + "\n" end' "$decision")
 
-Main is unchanged. The runtime adoption policy (AGENTS.md) applies: make the
-focused port the failing stage names, rerun the stage commands locally (the
-workflow's adopt step lists them in order), and commit; the next scheduled run
+Main is unchanged. $retry The runtime adoption policy (AGENTS.md) applies:
+make the focused fix the failing stage names, rerun the stage commands locally
+(the workflow's adopt step lists them in order), and commit; the next run
 closes this issue once Finney and testnet run indexed runtimes.
 
 <details><summary>Log tail</summary>
@@ -670,11 +1104,17 @@ $tail_text
 </details>"
       if [[ -z "$number" ]]; then
         gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
-      elif ! gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body |
-        grep -qF "<!-- rtao-runtime-adopt id=$id stage=$stage -->"; then
+      elif [[ "$action" != blocked || "$open_id" != "$id" || "$prior_stage" != "$stage" ]]; then
         gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
       fi
-      alert "$id" true "$title" "$reason; $run"
+      # One alert per episode (network, spec, :code and stage); repeats of
+      # the same failure update the issue only, even when another network's
+      # report shared the issue in between.
+      if [[ "$prior_stage" != "$stage" ]]; then
+        alert "$id" true "$title" "$reason; $run"
+      else
+        echo "same failure as the open issue records; no new alert"
+      fi
       ;;
     *) die "unknown outcome $outcome" ;;
   esac
@@ -689,6 +1129,14 @@ case "$command" in
   commit) commit "$@" ;;
   push) push "$@" ;;
   notify) notify "$@" ;;
+  evidence)
+    # Rehearse the live-evidence stage for the checkout's Finney pin.
+    mkdir -p "${2:?evidence <decision.json> <evidence-dir>}"
+    cd "$root"
+    live_evidence "${1:?evidence <decision.json> <evidence-dir>}" "$2"
+    ;;
+  verdict) verdict "$@" ;;
+  state) next_state "$@" ;;
   *)
     sed -n '2,30p' "$0" >&2
     exit 2

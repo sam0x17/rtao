@@ -74,6 +74,9 @@ mod matrix;
 #[path = "parity_report.rs"]
 mod report;
 
+#[path = "parity_port_due.rs"]
+mod port_due;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Row {
     py: String,
@@ -217,7 +220,10 @@ fn bless(root: &Path, paths: &[String]) -> Result<()> {
         row.synced_blob.clone_from(blob);
         row.synced_tag = tag.to_owned();
     }
-    check_files(&candidates, &tree, false)?;
+    // A blessed file is ported: its port-due entry, if any, is done.
+    let mut due = port_due::read(root)?;
+    due.retain(|path, _| !paths.contains(path));
+    check_files_with(&candidates, &tree, false, &due)?;
     check_licenses(root, &candidates)?;
     let tables = document
         .get_mut("file")
@@ -235,6 +241,7 @@ fn bless(root: &Path, paths: &[String]) -> Result<()> {
         }
     }
     fs::write(destination, document.to_string())?;
+    port_due::write(root, &due)?;
     println!(
         "parity: explicitly reconciled {} reviewed file rows; regenerate parity matrix",
         paths.len()
@@ -293,7 +300,8 @@ fn check_all(root: &Path, strict: bool, base: Option<&str>) -> Result<serde_json
     let index = symbols::index(root)?;
     let mut matrix = serde_json::Map::new();
     let mut findings = Vec::new();
-    layer(&mut matrix,&mut findings,"files",check_files(&rows,&tree,strict).map(|()|serde_json::json!({"watched":rows.len(),"pending":rows.iter().filter(|row|row.synced_blob=="pending").count()})));
+    let due = port_due::read(root)?;
+    layer(&mut matrix,&mut findings,"files",check_files_with(&rows,&tree,strict,&due).map(|()|serde_json::json!({"watched":rows.len(),"pending":rows.iter().filter(|row|row.synced_blob=="pending").count(),"port_due":due.len()})));
     layer(
         &mut matrix,
         &mut findings,
@@ -508,6 +516,17 @@ fn read_map(contents: &str) -> Result<Vec<Row>> {
 }
 
 fn check_files(rows: &[Row], tree: &BTreeMap<String, String>, strict: bool) -> Result<()> {
+    check_files_with(rows, tree, strict, &port_due::PortDue::new())
+}
+
+/// File parity with the hand ports an automatic runtime adoption left due:
+/// a listed exact change is accepted unless `strict`; a stale entry fails.
+fn check_files_with(
+    rows: &[Row],
+    tree: &BTreeMap<String, String>,
+    strict: bool,
+    due: &port_due::PortDue,
+) -> Result<()> {
     let mapped: BTreeSet<_> = rows.iter().map(|row| row.py.as_str()).collect();
     let mut findings = Vec::new();
     for path in tree.keys() {
@@ -526,11 +545,35 @@ fn check_files(rows: &[Row], tree: &BTreeMap<String, String>, strict: bool) -> R
                     ));
                 }
             }
+            Some(blob)
+                if blob != &row.synced_blob
+                    && due.get(&row.py).is_some_and(|entry| {
+                        &entry.to == blob && entry.from == row.synced_blob
+                    }) =>
+            {
+                if strict {
+                    findings.push(format!(
+                        "port due since {}: {}\n  git diff {} {}",
+                        due[&row.py].tag, row.py, row.synced_blob, blob
+                    ));
+                }
+            }
             Some(blob) if blob != &row.synced_blob => findings.push(format!(
                 "changed blessed file: {}\n  git diff {} {}",
                 row.py, row.synced_blob, blob
             )),
             Some(_) => {}
+        }
+    }
+    for entry in due.values() {
+        let row = rows.iter().find(|row| row.py == entry.py);
+        if row.is_none_or(|row| row.synced_blob != entry.from)
+            || tree.get(&entry.py) != Some(&entry.to)
+        {
+            findings.push(format!(
+                "stale port-due entry: {} ({} -> {}) no longer matches the map row and upstream tree",
+                entry.py, entry.from, entry.to
+            ));
         }
     }
     ensure!(
@@ -1349,6 +1392,46 @@ mod tests {
             .context("expected changed blob failure")?
             .to_string();
         assert!(error.contains(&format!("git diff {OTHER_SHA} {SHA}")));
+        Ok(())
+    }
+
+    #[test]
+    fn port_due_accepts_only_its_exact_change_and_strict_names_it() -> Result<()> {
+        let path = "sdk/python/bittensor/example.py";
+        let mut mapped = row(path);
+        mapped.synced_blob = OTHER_SHA.to_owned();
+        let tree = read_tree(&listing(path))?;
+        let entry = |from: &str, to: &str| port_due::Entry {
+            py: path.into(),
+            kind: "ported".into(),
+            from: from.into(),
+            to: to.into(),
+            tag: "v487".into(),
+            symbols: vec![],
+        };
+        let due = port_due::PortDue::from([(path.into(), entry(OTHER_SHA, SHA))]);
+        check_files_with(std::slice::from_ref(&mapped), &tree, false, &due)?;
+        let strict = check_files_with(std::slice::from_ref(&mapped), &tree, true, &due)
+            .err()
+            .context("strict parity accepted a due port")?
+            .to_string();
+        assert!(strict.contains("port due since v487"));
+        // An entry for another change, or one left after the row was blessed,
+        // is stale in either mode.
+        let third = "3333333333333333333333333333333333333333";
+        let wrong = port_due::PortDue::from([(path.into(), entry(third, SHA))]);
+        let error = check_files_with(std::slice::from_ref(&mapped), &tree, false, &wrong)
+            .err()
+            .context("stale entry accepted")?
+            .to_string();
+        assert!(error.contains("changed blessed file") && error.contains("stale port-due entry"));
+        let mut blessed = row(path);
+        blessed.synced_blob = SHA.to_owned();
+        let error = check_files_with(&[blessed], &tree, false, &due)
+            .err()
+            .context("entry left after bless accepted")?
+            .to_string();
+        assert!(error.contains("stale port-due entry") && !error.contains("changed blessed"));
         Ok(())
     }
 

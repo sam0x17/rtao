@@ -2,13 +2,22 @@ name: runtime-adopt
 # Hourly adoption of activated runtimes (AGENTS.md's runtime adoption
 # policy; ci/runtime-adopt.sh). A newer Finney spec is pinned, regenerated
 # and checked in a disposable candidate; a new testnet runtime is indexed.
+# A new runtime is acted on only when a second public endpoint reports it at
+# the same finalized block, and a Finney adoption approves itself on live
+# evidence (the pinned :code and V15/V16 metadata digests read at the pinned
+# block from at least two agreeing endpoints, the release wasm when published),
+# the pipeline's checks and live reads with the built CLI; changed hand ports
+# are listed in parity/port_due.toml rather than holding the runtime back.
 # When every stage passes, the commit leaves the read-only adopt job as a
 # git bundle and a push job that builds nothing pushes it to main (a Finney
 # adoption with a changelog entry and a snapshot tag, atomically); if main
 # moved meanwhile the next run starts again. Otherwise main is unchanged,
 # one issue is opened or refreshed and, when the RUNTIME_ALERT_URL and
-# RUNTIME_ALERT_TOKEN secrets are set, an alert is posted. Upstream branches
-# ahead of every network keep one informational issue for pre-staging.
+# RUNTIME_ALERT_TOKEN secrets are set, an alert is posted once per failure.
+# A failed adoption backs off (1 h doubling per repeated failure, at most
+# 24 h) unless main changes its inputs or a dispatch forces it. Upstream
+# branches ahead of every network keep one informational issue for
+# pre-staging, and due hand ports another; neither alerts.
 on:
   schedule:
     - cron: '41 * * * *'
@@ -22,6 +31,10 @@ on:
         description: A JSON observation to decide on instead of the live chains (never pushed)
         type: string
         default: ''
+      force:
+        description: Attempt the adoption even while a failed one is backing off
+        type: boolean
+        default: false
 permissions: {}
 concurrency:
   group: runtime-adopt
@@ -37,6 +50,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # The open adoption issue records the backoff state.
+      issues: read
     outputs:
       action: ${{ steps.decide.outputs.action }}
     steps:
@@ -48,6 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SIMULATE: ${{ inputs.simulate }}
+          RTAO_ADOPT_FORCE: ${{ inputs.force }}
         run: |
           out="$RUNNER_TEMP/decision"
           mkdir -p "$out"
@@ -203,6 +219,7 @@ jobs:
           fi
           case "$ACTION:$ADOPTED:$PUSHED" in
             none:*) outcome=none ;;
+            backoff:*) outcome=backoff ;;
             blocked:*) outcome=failure ;;
             *:success:success) outcome=success ;;
             *) outcome=failure ;;
