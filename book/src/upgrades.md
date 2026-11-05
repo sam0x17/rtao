@@ -122,10 +122,11 @@ tag that misses its reveal for no visible reason is counted and logged, and
 commits under that tag and code continue at most once per subnet epoch until
 one reveals. `Unreviewed::Pause` opts into the earlier pause instead. If the
 chain rejects a commit's tag at dispatch, the scheduler re-reads the tag and
-retries, at most 10 times with a growing wait. A runtime pin reviews the
-reveal path and adds the new code hash to `REVIEWED_CR_RUNTIME_CODE` when the
-payload format is unchanged, which changes only what is reported; a test
-keeps the newest pin in that list.
+retries, at most 10 times with a growing wait. A test checks that the pinned
+reveal path still decodes the version 4 payload without reading the stored
+tag, so a pin that changes the payload fails its checks. Adding a reviewed
+pin's code hash to `REVIEWED_CR_RUNTIME_CODE` is optional and changes only
+what is reported; an automated adoption does not need it.
 Follow the [validator guide](validator.md) for reveal observations,
 shutdown and saved-state compatibility. Retain application checkpoints when
 updating the binary; a changed state format needs an explicit schema version

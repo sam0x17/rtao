@@ -49,6 +49,7 @@ code authentication, metadata-hash and signing checks are unchanged.
 - Changed: `WeightPreflight::check` no longer refuses a stored tag other than 4. New `WeightPreflight::commit_reveal_tag`.
 - New gauges: `rtao_weights_cr_version_reviewed{mech}` (the listed spec version of the live code, 0 when unlisted) and `rtao_weights_cr_version_refuted{mech}`. `rtao_weights_cr_version_unreviewed{mech}` is also 1 when the code identity was not read.
 - The pause refusal (only under `Unreviewed::Pause`) no longer tells operators to upgrade rtao.
+- A new pin no longer has to be added to `REVIEWED_CR_RUNTIME_CODE` for the tests to pass; the test still checks that the pinned reveal path decodes the version 4 payload without reading the tag.
 - Owner monitor: changed events are read by field name, so a `Proxy.ProxyAdded` or `ProxyRemoved` with a new `ProxyType` no longer ends the event stream. Positional fields are refused only when the live field lost its compiled type identity. A changed `AlphaAssets.AlphaBurned` contract decodes by name; only an absent entry refuses.
 - Miner readiness accepts `serve_axon` and `serve_axon_tls` that resolve by name in live metadata.
 - Reads outside `VALIDATOR_READS` decode by name against live metadata when their shape changed, instead of failing.

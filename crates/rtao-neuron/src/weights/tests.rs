@@ -445,10 +445,12 @@ async fn the_reviewed_observation_is_reported_and_never_decides() -> anyhow::Res
     Ok(())
 }
 
-/// Every reviewed entry comes from a pinned provenance record, the newest pin
-/// is reviewed, and the pinned reveal path still decodes the native payload
-/// without reading the stored version. A pin that changes reveal decoding must
-/// leave its code out and revisit [`NATIVE_CR_PAYLOAD_VERSION`].
+/// Every reviewed entry comes from a pinned provenance record, and the pinned
+/// reveal path still decodes the native payload without reading the stored
+/// version. A pin that changes reveal decoding fails here and must revisit
+/// [`NATIVE_CR_PAYLOAD_VERSION`]. A new pin need not be added to the list:
+/// the list is an observation (D-122), so an automated adoption whose reveal
+/// path is unchanged passes without a manual review entry.
 #[test]
 fn reviewed_cr_runtimes_match_pinned_provenance_and_reveal_source() -> anyhow::Result<()> {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -473,14 +475,7 @@ fn reviewed_cr_runtimes_match_pinned_provenance_and_reveal_source() -> anyhow::R
             .ok_or_else(|| anyhow::anyhow!("{name} has no Finney code hash"))?;
         pinned.push((u32::try_from(spec)?, code.to_owned()));
     }
-    pinned.sort();
-    let newest = pinned.last().expect("pinned provenance");
-    assert!(
-        REVIEWED_CR_RUNTIME_CODE
-            .iter()
-            .any(|(spec, code)| (*spec, code.to_string()) == *newest),
-        "review the commit-reveal path of the newest pin {newest:?}"
-    );
+    anyhow::ensure!(!pinned.is_empty(), "pinned provenance");
     for (spec, code) in REVIEWED_CR_RUNTIME_CODE {
         assert!(
             pinned.iter().any(|entry| *entry == (spec, code.to_owned())),
