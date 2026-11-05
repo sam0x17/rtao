@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Since `snapshot-2026-11-03.2`
+
+Tagged as `snapshot-2026-11-04`; not a versioned release. Each item links to
+its section below.
+
+- D-098: the self/owner weight-row guard reads the owner's UID at the dispatch block; held queued work reports `OwnerRowHeld`; `WeightScheduler::retire_pending`; `IncorrectWeightVersionKey` names the observed key and block.
+- D-110: the commit-reveal tag decision and the reviewed-runtime list live in `rtao_core::commit_reveal` (builds for `wasm32-unknown-unknown`). Changed default: a changed tag under unreviewed code is followed and reported, not paused.
+- D-111: `Timestamp.Now` falls back to a by-name read (scheduler anchor and runtime clock worker).
+- D-112: the reveal watcher sees a reveal period that changes and returns inside a skipped span. Checkpoint caveat: `period_changed`.
+- D-113: bounded `on_finalized` (`with_bounded_dispatch`, `with_recovery_budget`).
+- D-114: typed `SetCommitment` intent (feature `commitments`).
+- D-115: the downstream `[patch]` set is documented.
+- D-120: journal format compatibility range (`readable_by`, `JournalError::Newer`) and explicit compaction of finished operations.
+- D-121: versioned release process (`rtao-vX.Y.Z`, curated notes in `docs/releases/`); the first version tag waits for the macOS lane.
+- Repository maintenance: the hourly `runtime-adopt` workflow. Testnet runtime 486 is recorded.
+- Rollback to `snapshot-2026-11-03.2`: ordinary journals stay schema 3 and open there. A compacted journal (schema 4) and a checkpoint carrying `period_changed` do not; see the sections below.
+
 ### Automatic runtime adoption (repository maintenance)
 
 - New hourly `runtime-adopt` workflow (`ci/runtime-adopt.sh`, decision checks in `ci/runtime-adopt-test.sh`). When Finney finalizes a newer spec it pins it (the final `vN` release, else upstream main's release-N merge), imports, extracts, regenerates, reconciles and checks it in a disposable candidate, and if every stage passes pushes the commit to `main` with a changelog entry, an upstream-log entry and a `snapshot-<date>` tag. A testnet runtime missing from its index is recorded with `drift --network testnet --apply`.
