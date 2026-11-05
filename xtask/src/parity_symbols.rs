@@ -1084,11 +1084,20 @@ fn old_source(root: &Path, blob: &str) -> Result<String> {
                 .map(|root| std::path::PathBuf::from(root).join("pin/upstream.git"))
         })
         .unwrap_or_else(|| root.join("target/upstream.git"));
-    let output = Command::new("git")
+    let mut output = Command::new("git")
         .arg("-C")
         .arg(cache)
         .args(["cat-file", "blob", blob])
         .output()?;
+    if !output.status.success() {
+        // Every previously reconciled source was committed under
+        // vendor/upstream/src, so this repository's history holds its blob.
+        output = Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args(["cat-file", "blob", blob])
+            .output()?;
+    }
     ensure!(
         output.status.success() && output.stdout.len() <= 8 * 1024 * 1024,
         "previous blessed Python blob {blob} unavailable offline; retain the pin cache to produce its structural report"

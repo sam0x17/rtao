@@ -37,9 +37,15 @@ current signing parameters and finalized-evidence reconciliation of unresolved
 transactions; prompt adoption never permits blind resubmission.
 
 The hourly `runtime-adopt` workflow (`ci/runtime-adopt.sh`) performs routine
-adoption on its own: it pushes a green adoption to `main` and tags a snapshot.
-A red or blocked run leaves `main` unchanged and opens one issue naming the
-failing stage; fix that stage as above and the next run closes the issue.
+adoption on its own: it confirms the runtime from independent public endpoints
+(`:code` and metadata digests, the release wasm when published), pushes a green
+adoption to `main` and tags a snapshot. Changed hand-ported sources do not hold
+the runtime back: they are listed in `parity/port_due.toml` and one
+informational issue; port them and `cargo xtask parity bless` them (strict
+parity names them until then). A red or blocked run leaves `main` unchanged and
+opens one issue naming the failing stage, and the same failure is retried with
+backoff (1 h doubling, at most 24 h); fix that stage as above, and the fix on
+`main` retries at once and closes the issue.
 
 # Workspace hygiene
 
