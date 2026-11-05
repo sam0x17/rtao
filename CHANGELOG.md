@@ -41,6 +41,16 @@ its section below.
 - Fixed: GitHub refused to parse the workflow, so neither the hourly schedule nor a dispatch ever ran it. The adopt job's job-level `env` read the `runner` context, which is not available there; those paths are now set by the job's first step.
 - No library change: the SDK's run-time compatibility checks and pin provenance are unchanged.
 
+### Runtime 487 `ProxyType` variants (D-125)
+
+#### rtao-runtime
+
+- New: `ProxyType::Lock` and `ProxyType::GammaSpend` (runtime 487). Composing either under an earlier runtime refuses that call, since the live enum has no such variant.
+
+#### rtao-intents
+
+- `PROXY_TYPES` lists `Lock` and `GammaSpend`.
+
 ### No runtime lock-in (D-122 to D-124)
 
 A newer runtime never stops the SDK by itself. Checks compare against live
@@ -91,7 +101,6 @@ code authentication, metadata-hash and signing checks are unchanged.
 #### Not changed
 
 - V16-only metadata is still rejected; the core parser needs V16 support first. Every current runtime serves V15.
-- The `ProxyType` variants of runtime 487 (`Lock` 21, `GammaSpend` 22) wait for the 487 pin. Until then calls with the existing variants compose from live metadata and dynamic reads show the new names, but the typed `ProxyType` model cannot hold them.
 
 ### Owner-row guard and weight refusals at the dispatch block (D-098)
 
