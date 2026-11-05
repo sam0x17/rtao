@@ -438,21 +438,25 @@ impl Executor {
         // Queries remain pinned to one block; new calls use the head's signing
         // runtime rather than a historical block's execution runtime.
         let runtime = self.client.refresh_runtime().await?;
+        // A wrapped call whose compiled shape differs from live metadata is
+        // composed from live metadata by name (D-123); composition itself
+        // refuses a call the live metadata cannot encode. The difference is
+        // reported as a warning, never a refusal here.
+        let mut surface_warnings = Vec::new();
         for descriptor in semantic.wraps() {
             let report = rtao_runtime::verify_surface_with(
                 &runtime,
                 &[rtao_runtime::SurfaceDescriptor::Call(descriptor)],
             );
-            if let Some(error) = report
+            if let Some(change) = report
                 .changes
                 .into_iter()
                 .find(|change| change.class == rtao_runtime::SurfaceClass::Breaking)
             {
-                return Err(TxError::SurfaceChanged {
-                    pallet: descriptor.pallet.into(),
-                    call: descriptor.name.into(),
-                    detail: error.detail,
-                });
+                surface_warnings.push(format!(
+                    "{}.{} differs from this build's descriptor ({}); it is composed from live metadata by name",
+                    descriptor.pallet, descriptor.name, change.detail
+                ));
             }
         }
         let origin = opts
@@ -524,6 +528,7 @@ impl Executor {
         };
         let mut preview = intent.preflight_dyn(&pfcx).await?;
         let mut warnings = preview.warnings.clone();
+        warnings.extend(surface_warnings);
         let role: SignerRole = intent.signer_role_dyn()?;
         if !shielded
             && role == SignerRole::Hotkey

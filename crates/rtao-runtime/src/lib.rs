@@ -6,6 +6,7 @@ mod descriptor;
 /// Generated chain descriptors, refreshed by `cargo xtask regen`.
 pub mod generated;
 mod handle;
+mod live;
 /// Handwritten by-name runtime return models.
 pub mod models;
 mod resolved;
@@ -28,6 +29,7 @@ pub use generated::{
 pub use handle::{
     CallBytes, ComposeError, MetadataLevel, RuntimeEntry, RuntimeHandle, RuntimeStamp,
 };
+pub use live::{call_resolves_by_name, compose_by_name, event_field_matches, live_compositions};
 pub use resolved::{
     ArgClass, ArgValue, InspectedCall, InspectedField, ResolvedArg, check_resolved,
     compose_resolved, inspect_call,

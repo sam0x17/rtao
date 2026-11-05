@@ -751,3 +751,68 @@ async fn finalized_backfill_uses_target_ancestry_before_delivering_any_stale_hei
     client.close().await;
     Ok(())
 }
+
+/// Runtime 487 adds `Lock` (21) and `GammaSpend` (22) to `ProxyType`, which
+/// changes the exact shape of `Proxy.ProxyAdded` and `ProxyRemoved`. The
+/// monitor reads them by field name and keeps following instead of ending its
+/// stream at the first such event from any account (D-123).
+#[tokio::test]
+async fn proxy_events_with_new_proxy_types_are_read_by_name() -> anyhow::Result<()> {
+    let (_chain, client, monitor) = fixture(|state| {
+        state.patch_metadata(|meta| {
+            let proxy_type = meta
+                .types
+                .types
+                .iter_mut()
+                .find(|ty| ty.ty.path.segments.last().map(String::as_str) == Some("ProxyType"));
+            if let Some(ty) = proxy_type
+                && let scale_info::TypeDef::Variant(variants) = &mut ty.ty.type_def
+            {
+                for (name, index) in [("Lock", 21), ("GammaSpend", 22)] {
+                    variants.variants.push(scale_info::Variant {
+                        name: name.into(),
+                        fields: vec![],
+                        index,
+                        docs: vec![],
+                    });
+                }
+            }
+        })?;
+        let hash = state.block_hash(100).ok_or_else(|| anyhow::anyhow!("block"))?;
+        state.seed_events(hash, json!([
+            {"phase":{"Initialization":null}, "event":{"Proxy":{"ProxyAdded":{"delegator":CHALLENGER.to_string(),"delegatee":DELEGATE.to_string(),"proxy_type":"Lock","delay":0}}}, "topics":[]},
+            {"phase":{"Initialization":null}, "event":{"Proxy":{"ProxyAdded":{"delegator":OWNER.to_string(),"delegatee":DELEGATE.to_string(),"proxy_type":"GammaSpend","delay":5}}}, "topics":[]},
+            {"phase":{"Initialization":null}, "event":{"Proxy":{"ProxyRemoved":{"delegator":OWNER.to_string(),"delegatee":DELEGATE.to_string(),"proxy_type":"Owner","delay":5}}}, "topics":[]},
+        ]))?;
+        Ok(())
+    })
+    .await?;
+    let snapshot = client.at(BlockRef::Number(100)).await?;
+    assert!(
+        !snapshot
+            .block()
+            .runtime
+            .surface_report()
+            .shape_matches("event:Proxy.ProxyAdded"),
+        "the new variants change the compiled event shape"
+    );
+    let events = monitor.events_at(&snapshot).await?;
+    assert_eq!(
+        events
+            .iter()
+            .map(|event| event.cursor.event_index)
+            .collect::<Vec<_>>(),
+        [1, 2]
+    );
+    // A typed read of an entry whose shape changed decodes by name too.
+    assert!(
+        !snapshot
+            .block()
+            .runtime
+            .surface_report()
+            .shape_matches("storage:Proxy.Proxies")
+    );
+    snapshot.storage(&PROXY_DEFINITIONS, (OWNER,)).await?;
+    client.close().await;
+    Ok(())
+}

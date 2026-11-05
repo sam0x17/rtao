@@ -167,7 +167,8 @@ fn changed(runtime: &RuntimeHandle, id: &str) -> String {
 ///
 /// An entry whose absence is meaningful also needs its live modifier on the
 /// compiled route, which the exact shape hash does not cover. An entry
-/// outside [`VALIDATOR_READS`] keeps the exact gate.
+/// outside [`VALIDATOR_READS`] keeps the compiled route, which decodes by name
+/// against live metadata (D-123).
 pub(crate) fn route(
     runtime: &RuntimeHandle,
     surface: &StorageSurface,
@@ -181,10 +182,10 @@ pub(crate) fn route(
         return Ok(Route::Compiled);
     }
     let Some(item) = item else {
-        return Err(ClientError::SurfaceChanged {
-            descriptor: surface.name,
-            detail: changed(runtime, &id),
-        });
+        // Outside the name-resolved set, the compiled read still encodes its
+        // key and decodes its value against live metadata, strictly and by
+        // name (D-123); a value it cannot represent fails on its own.
+        return Ok(Route::Compiled);
     };
     item.check(runtime)?;
     Ok(Route::Resolved)

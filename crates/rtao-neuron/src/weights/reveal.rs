@@ -324,8 +324,9 @@ impl RevealWatcher {
         self.evidence(code, tag).is_some_and(|known| !known.missed)
     }
     /// Whether a commitment tagged `tag` under runtime code `code` last missed
-    /// its reveal with no other explanation. The scheduler then pauses that
-    /// tag under that code until a later reveal proves it again.
+    /// its reveal with no other explanation. The scheduler then reports the
+    /// miss and commits under that tag and code at most once per subnet epoch
+    /// until a later reveal proves it again (D-122).
     pub fn native_reveal_refuted(&self, code: rtao_primitives::H256, tag: u16) -> bool {
         self.evidence(code, tag).is_some_and(|known| known.missed)
     }
@@ -1196,14 +1197,15 @@ impl RevealWatcher {
                         && let Some(followed) = pending.followed_cr
                     {
                         // Nothing else explains the miss of a commitment
-                        // tagged with a followed version: stop following it.
+                        // tagged with a followed version: report it. The tag
+                        // is still followed, once per epoch (D-122).
                         self.remember_missed_reveal(followed.code, followed.tag);
                         metrics.increment("rtao_weights_cr_version_refuted_total");
                         tracing::warn!(
                             mechanism = mechanism.0,
                             commit_reveal_version = followed.tag,
                             runtime_code = ?followed.code,
-                            "a commitment tagged with a followed commit-reveal version missed its reveal; timelocked commits pause under this code and version"
+                            "a commitment tagged with a followed commit-reveal version missed its reveal with no other explanation; timelocked commits under this code and version continue at most once per subnet epoch until one reveals"
                         );
                     }
                 } else {
@@ -2069,11 +2071,14 @@ mod tests {
         Ok(())
     }
 
-    /// An unexplained miss of a commitment tagged with a followed version
-    /// refutes following it under that code: the scheduler pauses again. A
-    /// miss with another explanation, or of a native-tag commitment, does not.
+    /// An unexplained miss of a commitment tagged with a followed version is
+    /// reported and refutes the evidence under that code, but never stops
+    /// commits (D-122): the tag is still followed, at most once per subnet
+    /// epoch. Only the `Unreviewed::Pause` opt-in pauses. A miss with another
+    /// explanation, or of a native-tag commitment, refutes nothing.
     #[tokio::test]
-    async fn unexplained_miss_of_a_followed_tag_pauses_timelocked_commits() -> anyhow::Result<()> {
+    async fn unexplained_miss_of_a_followed_tag_is_reported_and_never_stops_commits()
+    -> anyhow::Result<()> {
         let code = code_hash(b"code X");
         let unexplained = |chain: &rtao_testkit::FakeChain| {
             // Drand reached the round inside the window; no other reason applies.
@@ -2107,19 +2112,22 @@ mod tests {
                 .render()
                 .contains("rtao_weights_cr_version_refuted_total 1")
         );
-        let refusal = scheduler
-            .commit_reveal_tag(&state)
-            .expect_err("a refuted tag pauses");
-        assert_eq!(refusal.name, "IncorrectCommitRevealVersion");
-        assert!(
-            refusal.remediation.contains("missed its reveal"),
-            "{refusal}"
-        );
+        // The refuted tag is still the chain's tag: it is followed and
+        // reported, and the next commit is not stopped.
+        assert_eq!(scheduler.commit_reveal_tag(&state)?, 5);
         assert_eq!(
+            scheduler.commit_reveal_decision(&state),
+            rtao_core::commit_reveal::TagDecision::Follow {
+                tag: 5,
+                basis: rtao_core::commit_reveal::TagBasis::Refuted
+            }
+        );
+        assert_ne!(
             scheduler.next_action(MechId(0), HOTKEY, &state)?,
             crate::weights::WeightOpportunity::Paused
         );
-        // Even a reviewed runtime stops being followed after such a miss.
+        // A reviewed runtime is reported as refuted after such a miss, and
+        // still followed.
         let reviewed = crate::weights::REVIEWED_CR_RUNTIME_CODE[1].1;
         let mut bytes = [0u8; 32];
         hex::decode_to_slice(&reviewed[2..], &mut bytes)?;
@@ -2127,7 +2135,20 @@ mod tests {
         state.runtime_code = Some(reviewed);
         assert_eq!(scheduler.commit_reveal_tag(&state)?, 5);
         scheduler.reveals.remember_missed_reveal(reviewed, 5);
-        assert!(scheduler.commit_reveal_tag(&state).is_err());
+        assert_eq!(scheduler.commit_reveal_tag(&state)?, 5);
+        assert!(scheduler.commit_reveal_decision(&state).once_per_epoch());
+        // The opt-in pause keeps the earlier behavior.
+        let mut paused = crate::weights::tests::fresh_scheduler()?
+            .with_unreviewed_cr_tags(rtao_core::commit_reveal::Unreviewed::Pause);
+        paused.reveals = std::mem::take(&mut scheduler.reveals);
+        let refusal = paused
+            .commit_reveal_tag(&state)
+            .expect_err("the opt-in pauses a refuted tag");
+        assert_eq!(refusal.name, "IncorrectCommitRevealVersion");
+        assert!(
+            refusal.remediation.contains("missed its reveal"),
+            "{refusal}"
+        );
         client.close().await;
 
         // A drand-explained miss of a followed commitment refutes nothing.

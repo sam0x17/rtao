@@ -1,8 +1,9 @@
 //! A moved call index with an unchanged argument contract must still compose.
 //!
 //! Composition resolves the call by name and encodes the live pallet and call
-//! indices, so a newer runtime that only renumbers a call stays usable. A real
-//! argument change must still be refused.
+//! indices, so a newer runtime that only renumbers a call stays usable. A
+//! changed argument composes from live metadata only when the value fits
+//! (D-123).
 #![allow(clippy::unwrap_used, clippy::panic)]
 
 use rtao_core::runtime::Runtime;
@@ -114,8 +115,11 @@ fn moved_call_index_with_unchanged_shape_composes_with_the_live_index() {
     assert!(scoped.shape_matches(DESCRIPTOR));
 }
 
+/// A changed argument type no longer refuses by itself (D-123): the call is
+/// composed from live metadata when the value fits the live type, and refused
+/// when it does not. The surface report still records the breaking change.
 #[test]
-fn changed_argument_shape_is_still_refused() {
+fn changed_argument_shape_composes_only_when_the_value_fits() {
     let changed = with_variant(|variants| {
         let variant = variants
             .iter_mut()
@@ -130,8 +134,22 @@ fn changed_argument_shape_is_still_refused() {
         assert_ne!(version_key.ty, netuid);
         version_key.ty = netuid;
     });
+    // Version key 9 fits the narrower live type.
+    let composed = set_weights().compose(&changed).unwrap();
+    assert_eq!(
+        rtao_runtime::CallBytes::decode(composed.as_bytes(), &changed).unwrap(),
+        composed
+    );
+    // A version key the live type cannot hold refuses per call.
+    let too_large = calls::subtensor_module::set_mechanism_weights(
+        NetUid(7),
+        MechId(0),
+        vec![0, 3],
+        vec![u16::MAX, 1],
+        u64::from(u32::MAX) + 1,
+    );
     assert!(matches!(
-        set_weights().compose(&changed),
+        too_large.compose(&changed),
         Err(ComposeError::SurfaceChanged { .. })
     ));
     let report = changed.surface_report();

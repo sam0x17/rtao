@@ -403,7 +403,14 @@ impl RawCallRequest {
             .get_one::<String>("target")
             .ok_or_else(|| CliError::input("missing TARGET"))?
             .clone();
-        resolve_builder(&target)?;
+        // A call this build has no descriptor for may exist in the live
+        // runtime (D-123); `compose` decides once the runtime is known.
+        if let Err(error) = resolve_builder(&target) {
+            target
+                .split_once('.')
+                .filter(|(pallet, function)| !pallet.is_empty() && !function.is_empty())
+                .ok_or(error)?;
+        }
         let selected = matches
             .get_one::<String>("signer_backend")
             .map(String::as_str)
@@ -676,7 +683,36 @@ fn compose_target(
     params: &Map<String, Json>,
     depth: usize,
 ) -> Result<CallBytes, CliError> {
-    let descriptor = resolve_builder(target)?;
+    let descriptor = match resolve_builder(target) {
+        Ok(descriptor) => descriptor,
+        Err(error) => {
+            // Not compiled into this build: a call a newer runtime added is
+            // composed from live metadata by name, with strict per-field
+            // checks and a strict import (D-123).
+            let Some((pallet, function)) = target
+                .split_once('.')
+                .filter(|(pallet, function)| runtime.call_index(pallet, function).is_some())
+            else {
+                return Err(error);
+            };
+            let args = params
+                .iter()
+                .map(|(name, value)| {
+                    Ok((
+                        CoreValue::Str(name.clone()),
+                        json_to_core(runtime, value, depth)?,
+                    ))
+                })
+                .collect::<Result<Vec<_>, CliError>>()?;
+            return rtao_runtime::compose_by_name(
+                runtime,
+                pallet,
+                function,
+                &CoreValue::Dict(args),
+            )
+            .map_err(public_input);
+        }
+    };
     if let Some(unknown) = params.keys().find(|name| {
         !descriptor
             .fields

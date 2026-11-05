@@ -519,24 +519,15 @@ async fn finalize_safety_at<V: View + ?Sized>(
                     .field("call_function")
                     .and_then(ValueExt::as_str)
                     .ok_or_else(|| callback_error("call has no function"))?;
+                // The callback was decoded with live metadata and its fields
+                // are read by name below, so a compiled shape difference alone
+                // is not a reason to refuse (D-123); a field the inspection
+                // needs and cannot read still refuses.
                 let descriptor = rtao_runtime::calls::ALL
                     .iter()
                     .copied()
                     .find(|descriptor| descriptor.pallet == pallet && descriptor.name == name)
                     .ok_or_else(|| callback_error(format!("unsupported call {pallet}.{name}")))?;
-                let report = rtao_runtime::verify_surface_with(
-                    cx.runtime,
-                    &[rtao_runtime::SurfaceDescriptor::Call(descriptor)],
-                );
-                if report
-                    .changes
-                    .iter()
-                    .any(|change| change.class == rtao_runtime::SurfaceClass::Breaking)
-                {
-                    return Err(callback_error(format!(
-                        "call surface changed for {pallet}.{name}"
-                    )));
-                }
                 match (pallet, name) {
                     ("Utility", "batch" | "batch_all" | "force_batch") => {
                         let children = core_list(call_arg(&call, "calls")?)

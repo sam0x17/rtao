@@ -40,6 +40,11 @@ widely pinned revision:
 - D-120: journal format compatibility range and compaction of finished
   operations (below).
 - D-121: this release process.
+- D-122 to D-124: no runtime lock-in. The commit-reveal tag is followed
+  under any runtime code and a missed reveal limits commits to one per epoch
+  instead of pausing; typed calls, reads and events whose compiled shape
+  differs use live metadata by name with strict checks; shield guards
+  qualify unlisted code from signing metadata by default.
 
 ## Journal compatibility
 

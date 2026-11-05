@@ -59,11 +59,13 @@ pub const SUPPORTED_CR_VERSION: u16 = NATIVE_CR_PAYLOAD_VERSION;
 /// The table is [`rtao_core::commit_reveal::REVIEWED_RUNTIME_CODE`] (D-110).
 /// Each entry's pinned `coinbase/reveal_commits.rs` decodes
 /// `WeightsTlockPayload` (freeze_struct `b6833b5029be4127`) and never reads
-/// `CommitRevealWeightsVersion`. Under exactly this code the scheduler tags
-/// commits with whatever version root stores. Unlisted code is followed too,
-/// reported as unreviewed, unless the scheduler is built with
+/// `CommitRevealWeightsVersion`. The list is an observation (D-122): the
+/// scheduler tags commits with whatever version root stores under any code,
+/// and reports whether the live code is listed
+/// (`rtao_weights_cr_version_reviewed{mech}` carries the listed spec version,
+/// 0 when unlisted). Only a scheduler built with
 /// [`rtao_core::commit_reveal::Unreviewed::Pause`]
-/// ([`WeightScheduler::with_unreviewed_cr_tags`]).
+/// ([`WeightScheduler::with_unreviewed_cr_tags`]) pauses under unlisted code.
 pub const REVIEWED_CR_RUNTIME_CODE: [(u32, &str);
     rtao_core::commit_reveal::REVIEWED_RUNTIME_CODE.len()] =
     rtao_core::commit_reveal::REVIEWED_RUNTIME_CODE;
@@ -782,8 +784,20 @@ impl WeightPreflight {
         let commit_reveal = boolean(&values[3], "CommitRevealWeightsEnabled")?;
         let commit_reveal_version = u16::try_from(integer(4, "CommitRevealWeightsVersion")?)?;
         // The default tag needs no code identity, so it costs no extra read.
+        // The identity is an observation: without it the tag is still
+        // followed (D-122), so a failed read only warns.
         let runtime_code = if commit_reveal && commit_reveal_version != NATIVE_CR_PAYLOAD_VERSION {
-            Some(runtime_code_hash(snapshot.client(), snapshot.block().hash).await?)
+            match runtime_code_hash(snapshot.client(), snapshot.block().hash).await {
+                Ok(code) => Some(code),
+                Err(error) => {
+                    tracing::warn!(
+                        %error,
+                        commit_reveal_version,
+                        "runtime code identity unavailable; the commit-reveal version is followed without it"
+                    );
+                    None
+                }
+            }
         } else {
             None
         };
@@ -813,20 +827,30 @@ impl WeightPreflight {
         })
     }
 
-    /// Check certain registration, Null permit and client upgrade refusals.
+    /// Check certain registration, Null permit and weight version-key
+    /// refusals.
     ///
-    /// This check is strict about the commit-reveal tag: it refuses any stored
-    /// version other than [`NATIVE_CR_PAYLOAD_VERSION`]. The scheduler instead
-    /// follows a stored tag when the live runtime code is known to reveal the
-    /// native payload (D-086).
+    /// The commit-reveal tag is never a refusal here (D-122): a commit
+    /// repeats whatever `CommitRevealWeightsVersion` stores, as
+    /// [`Self::commit_reveal_tag`] and
+    /// [`rtao_core::commit_reveal::select_tag`] decide. Before D-122 this
+    /// check refused any stored version other than
+    /// [`NATIVE_CR_PAYLOAD_VERSION`].
     pub fn check(&self, version_key: u64) -> anyhow::Result<Uid> {
-        let uid = self.check_except_cr(version_key)?;
-        if self.commit_reveal && self.commit_reveal_version != NATIVE_CR_PAYLOAD_VERSION {
-            return Err(self.cr_refusal(false).into());
-        }
-        Ok(uid)
+        self.check_except_cr(version_key)
     }
-    /// Refusal for a stored commit-reveal tag this build does not follow here.
+    /// The tag a commit prepared against this state carries: the stored
+    /// version when commit-reveal is on, otherwise
+    /// [`NATIVE_CR_PAYLOAD_VERSION`] (D-122).
+    pub fn commit_reveal_tag(&self) -> u16 {
+        if self.commit_reveal {
+            self.commit_reveal_version
+        } else {
+            NATIVE_CR_PAYLOAD_VERSION
+        }
+    }
+    /// Refusal for a stored commit-reveal tag the
+    /// [`rtao_core::commit_reveal::Unreviewed::Pause`] opt-in does not follow.
     /// `refuted` reports that a commitment tagged with it under the live code
     /// missed its reveal with no other explanation.
     fn cr_refusal(&self, refuted: bool) -> WeightRefusal {
@@ -841,12 +865,12 @@ impl WeightPreflight {
             name: "IncorrectCommitRevealVersion",
             remediation: if refuted {
                 format!(
-                    "the chain requires commit-reveal version {tag}; this rtao build encodes the version {NATIVE_CR_PAYLOAD_VERSION} payload, and a commitment this validator tagged {tag} under runtime code {code} missed its reveal with no drand, epoch or chain-check explanation (metadata default {default}); timelocked commits pause for this mechanism while other duties continue; they resume once the chain returns to version {NATIVE_CR_PAYLOAD_VERSION} or an outstanding commitment reveals under this code and version; otherwise upgrade rtao to a build that supports this runtime's payload",
+                    "the chain requires commit-reveal version {tag}; a commitment this validator tagged {tag} under runtime code {code} missed its reveal with no drand, epoch or chain-check explanation (metadata default {default}); this scheduler was built with Unreviewed::Pause, so timelocked commits pause for this mechanism while other duties continue; they resume once the chain returns to version {NATIVE_CR_PAYLOAD_VERSION} or an outstanding commitment reveals under this code and version; the default Unreviewed::Follow keeps committing once per epoch and reports the miss",
                     tag = self.commit_reveal_version
                 )
             } else {
                 format!(
-                    "the chain requires commit-reveal version {tag}; this rtao build encodes the version {NATIVE_CR_PAYLOAD_VERSION} payload and has not seen runtime code {code} reveal it while version {tag} was stored (metadata default {default}); timelocked commits pause for this mechanism while other duties continue; they resume once the chain returns to version {NATIVE_CR_PAYLOAD_VERSION} or an outstanding commitment reveals under this code and version; otherwise upgrade rtao to a build that reviewed this runtime",
+                    "the chain requires commit-reveal version {tag}; runtime code {code} is not on this build's reviewed list and has not revealed one of this validator's commitments while version {tag} was stored (metadata default {default}); this scheduler was built with Unreviewed::Pause, so timelocked commits pause for this mechanism while other duties continue; they resume once the chain returns to version {NATIVE_CR_PAYLOAD_VERSION} or an outstanding commitment reveals under this code and version; the default Unreviewed::Follow commits with the chain's version and reports the code as unreviewed",
                     tag = self.commit_reveal_version
                 )
             },
@@ -925,6 +949,8 @@ struct Advisories {
     activity_alarm: bool,
     cr_version_paused: bool,
     cr_version_followed: Option<(u16, Option<rtao_primitives::H256>)>,
+    /// Basis last logged for the followed tag, so each change logs once.
+    cr_version_basis: Option<rtao_core::commit_reveal::TagBasis>,
     /// Composer and runtime of the last call composed without the compiled
     /// descriptor, so each switch is logged once (D-088).
     composed_with: Option<(&'static str, rtao_runtime::RuntimeStamp)>,
@@ -1078,15 +1104,20 @@ impl WeightScheduler {
         Ok(self)
     }
     /// What a changed commit-reveal tag does under runtime code that is
-    /// neither reviewed nor proven by one of this validator's reveals (D-110).
+    /// neither reviewed nor proven by one of this validator's reveals, or
+    /// whose reveal missed (D-110, D-122).
     ///
-    /// The default, [`rtao_core::commit_reveal::Unreviewed::Follow`], tags
-    /// commits with the stored version, warns once, and sets
-    /// `rtao_weights_cr_version_unreviewed{mech}` to 1 until the code is proven
-    /// or the tag returns to [`NATIVE_CR_PAYLOAD_VERSION`]; an unexplained miss
-    /// of such a commitment pauses timelocked commits under that code and tag.
-    /// [`rtao_core::commit_reveal::Unreviewed::Pause`] keeps the earlier
-    /// behavior: commits pause until the code is reviewed or proven.
+    /// The default, [`rtao_core::commit_reveal::Unreviewed::Follow`], always
+    /// tags commits with the stored version and reports why: it warns once
+    /// per change, sets `rtao_weights_cr_version_unreviewed{mech}` to 1 while
+    /// the code is neither listed nor proven, and
+    /// `rtao_weights_cr_version_reviewed{mech}` to the listed spec version (0
+    /// when unlisted). After an unexplained miss of such a commitment it keeps
+    /// committing at most once per subnet epoch, sets
+    /// `rtao_weights_cr_version_refuted{mech}` to 1 and warns, until a reveal
+    /// proves the tag again. [`rtao_core::commit_reveal::Unreviewed::Pause`]
+    /// keeps the earlier behavior: commits pause until the code is reviewed
+    /// or proven, which ties them to this build's list.
     pub fn with_unreviewed_cr_tags(
         mut self,
         unreviewed: rtao_core::commit_reveal::Unreviewed,
@@ -1138,13 +1169,11 @@ impl WeightScheduler {
             .as_ref()
             .map_or(self.policy.version_key.value(), |(_, w)| w.version_key);
         let uid = state.check_except_cr(version)?;
-        if self.commit_reveal_tag(state).is_err() {
+        let decision = self.commit_reveal_decision(state);
+        if decision.tag().is_none() {
             return Ok(WeightOpportunity::Paused);
         }
-        let cadence = self
-            .policy
-            .cadence
-            .unwrap_or_else(|| default_cadence(hotkey, state.schedule.tempo, state.commit_reveal));
+        let cadence = self.cadence_for(hotkey, state, decision);
         let empty = Slot::default();
         Ok(cadence_opportunity(
             cadence,
@@ -1153,12 +1182,31 @@ impl WeightScheduler {
             uid,
         ))
     }
+    /// Cadence for one mechanism under `decision`: the policy's, or the
+    /// default. A tag followed after a refuting miss commits at most once per
+    /// subnet epoch, so a faster rate-limited cadence is replaced by the
+    /// default epoch cadence while the refutation lasts (D-122).
+    fn cadence_for(
+        &self,
+        hotkey: AccountId,
+        state: &WeightPreflight,
+        decision: rtao_core::commit_reveal::TagDecision,
+    ) -> WeightCadence {
+        let default = || default_cadence(hotkey, state.schedule.tempo, state.commit_reveal);
+        match self.policy.cadence {
+            Some(WeightCadence::RateLimited { .. }) if decision.once_per_epoch() => default(),
+            Some(cadence) => cadence,
+            None => default(),
+        }
+    }
     /// Version tag this scheduler puts on a timelocked commit under `state`.
     ///
     /// The chain only requires the tag to equal `CommitRevealWeightsVersion`;
     /// the runtime code alone decides which payload a reveal decodes (D-086).
-    /// See [`Self::commit_reveal_decision`]; a pause is returned as the
-    /// refusal that explains it. The scheduler retries every block.
+    /// See [`Self::commit_reveal_decision`]: by default the stored tag is
+    /// always returned (D-122). Only the
+    /// [`rtao_core::commit_reveal::Unreviewed::Pause`] opt-in returns a
+    /// refusal that explains its pause; the scheduler retries every block.
     pub fn commit_reveal_tag(&self, state: &WeightPreflight) -> Result<u16, WeightRefusal> {
         use rtao_core::commit_reveal::{TagDecision, TagPause};
         match self.commit_reveal_decision(state) {
@@ -1174,13 +1222,14 @@ impl WeightScheduler {
     /// The [`rtao_core::commit_reveal::select_tag`] decision for `state`
     /// (D-110).
     ///
-    /// The stored tag is followed when it is [`NATIVE_CR_PAYLOAD_VERSION`],
-    /// when the live `:code` is listed in [`REVIEWED_CR_RUNTIME_CODE`], when
-    /// one of this validator's commitments revealed under it while the same
-    /// tag was stored, and otherwise as unreviewed code unless the scheduler
-    /// was built with [`rtao_core::commit_reveal::Unreviewed::Pause`]. A
-    /// later unexplained miss of a commitment tagged with it under that code
-    /// refutes any of these reasons and pauses timelocked commits.
+    /// The stored tag is always followed by default (D-122); the basis
+    /// reports what is known: [`NATIVE_CR_PAYLOAD_VERSION`], the live `:code`
+    /// listed in [`REVIEWED_CR_RUNTIME_CODE`], a reveal of one of this
+    /// validator's commitments under it while the same tag was stored, an
+    /// unexplained miss of such a commitment (followed at most once per
+    /// subnet epoch), unreviewed code, or an unread code identity. A
+    /// scheduler built with [`rtao_core::commit_reveal::Unreviewed::Pause`]
+    /// pauses in the last four cases instead.
     pub fn commit_reveal_decision(
         &self,
         state: &WeightPreflight,
@@ -1201,28 +1250,29 @@ impl WeightScheduler {
 
     /// Select the commit tag for one attempt, or record a non-fatal pause.
     ///
-    /// A pause is an operator-visible refusal, logged once while it lasts. It
-    /// never counts as a scheduler error; other mechanisms and duties continue.
+    /// The basis of a followed tag is reported (D-122): a warning or info log
+    /// when it changes, and gauges for the review list, an unreviewed code and
+    /// a refuting miss. A pause happens only under the
+    /// [`rtao_core::commit_reveal::Unreviewed::Pause`] opt-in; it is an
+    /// operator-visible refusal, logged once while it lasts. It never counts
+    /// as a scheduler error; other mechanisms and duties continue.
     fn follow_cr_tag(
         &mut self,
         metrics: &crate::Metrics,
         mech: MechId,
         state: &WeightPreflight,
     ) -> Option<u16> {
+        use rtao_core::commit_reveal::TagBasis;
         let decision = self.commit_reveal_decision(state);
-        let unreviewed = matches!(
-            decision,
-            rtao_core::commit_reveal::TagDecision::Follow {
-                basis: rtao_core::commit_reveal::TagBasis::Unreviewed,
-                ..
-            }
-        );
         let selected = self.commit_reveal_tag(state);
         let gauge = format!("rtao_weights_cr_version_paused{{mech=\"{}\"}}", mech.0);
         let unreviewed_gauge = format!("rtao_weights_cr_version_unreviewed{{mech=\"{}\"}}", mech.0);
+        let reviewed_gauge = format!("rtao_weights_cr_version_reviewed{{mech=\"{}\"}}", mech.0);
+        let refuted_gauge = format!("rtao_weights_cr_version_refuted{{mech=\"{}\"}}", mech.0);
         let advisories = self.advisories.entry(mech).or_default();
         match selected {
             Ok(tag) => {
+                let basis = decision.basis();
                 let resumed = std::mem::take(&mut advisories.cr_version_paused);
                 // Direct-row mechanisms publish the gauge only to clear a pause.
                 if state.commit_reveal || resumed {
@@ -1237,30 +1287,57 @@ impl WeightScheduler {
                 }
                 let followed =
                     (tag != NATIVE_CR_PAYLOAD_VERSION).then_some((tag, state.runtime_code));
-                if followed.is_some() && advisories.cr_version_followed != followed {
-                    if unreviewed {
-                        // Never refuse a newer runtime (D-110): follow, and
-                        // let the reveal prove or refute it.
-                        tracing::warn!(
+                let reported = followed.map(|_| basis);
+                if followed.is_some()
+                    && (advisories.cr_version_followed != followed
+                        || advisories.cr_version_basis != basis)
+                {
+                    // Never refuse a newer runtime (D-110, D-122): follow, and
+                    // report what is known about the code.
+                    let reviewed_spec = state.runtime_code.and_then(reviewed_cr_runtime);
+                    match basis {
+                        Some(TagBasis::Refuted) => tracing::warn!(
                             mechanism = mech.0,
                             commit_reveal_version = tag,
                             runtime_code = ?state.runtime_code,
-                            "following the chain's commit-reveal version under unreviewed runtime code with the version {NATIVE_CR_PAYLOAD_VERSION} payload; a reveal proves it, and a miss with no other explanation pauses timelocked commits under this code and version"
-                        );
-                    } else {
-                        tracing::info!(
+                            ?reviewed_spec,
+                            "following the chain's commit-reveal version although a commitment tagged with it under this runtime code missed its reveal with no other explanation; committing at most once per subnet epoch until a reveal proves it again"
+                        ),
+                        Some(TagBasis::Unreviewed) => tracing::warn!(
                             mechanism = mech.0,
                             commit_reveal_version = tag,
                             runtime_code = ?state.runtime_code,
-                            reviewed_spec = ?state.runtime_code.and_then(reviewed_cr_runtime),
+                            "following the chain's commit-reveal version under runtime code not on this build's reviewed list with the version {NATIVE_CR_PAYLOAD_VERSION} payload; the next reveal proves it or reports a miss"
+                        ),
+                        Some(TagBasis::CodeUnknown) => tracing::warn!(
+                            mechanism = mech.0,
+                            commit_reveal_version = tag,
+                            "following the chain's commit-reveal version without the runtime code identity; reveal evidence is not recorded for these commits"
+                        ),
+                        _ => tracing::info!(
+                            mechanism = mech.0,
+                            commit_reveal_version = tag,
+                            runtime_code = ?state.runtime_code,
+                            ?reviewed_spec,
+                            ?basis,
                             "following the chain's commit-reveal version under runtime code known to reveal the version {NATIVE_CR_PAYLOAD_VERSION} payload"
-                        );
+                        ),
                     }
                 }
                 if state.commit_reveal || advisories.cr_version_followed.is_some() {
+                    let unreviewed = followed.is_some()
+                        && matches!(basis, Some(TagBasis::Unreviewed | TagBasis::CodeUnknown));
+                    let refuted = followed.is_some() && basis == Some(TagBasis::Refuted);
+                    let reviewed_spec = followed
+                        .and_then(|(_, code)| code)
+                        .and_then(reviewed_cr_runtime)
+                        .unwrap_or(0);
                     metrics.gauge(&unreviewed_gauge, if unreviewed { 1.0 } else { 0.0 });
+                    metrics.gauge(&refuted_gauge, if refuted { 1.0 } else { 0.0 });
+                    metrics.gauge(&reviewed_gauge, f64::from(reviewed_spec));
                 }
                 advisories.cr_version_followed = followed;
+                advisories.cr_version_basis = reported.flatten();
                 Some(tag)
             }
             Err(refusal) => {
@@ -1272,12 +1349,14 @@ impl WeightScheduler {
                         mechanism = mech.0,
                         commit_reveal_version = state.commit_reveal_version,
                         error = %refusal,
-                        "timelocked weight commits paused"
+                        "timelocked weight commits paused (Unreviewed::Pause)"
                     );
                 }
                 if advisories.cr_version_followed.take().is_some() {
                     metrics.gauge(&unreviewed_gauge, 0.0);
+                    metrics.gauge(&refuted_gauge, 0.0);
                 }
+                advisories.cr_version_basis = None;
                 self.attempts.insert(
                     mech,
                     WeightAttempt {
@@ -1691,13 +1770,11 @@ impl WeightScheduler {
                 "validator is approaching the activity cutoff"
             );
         }
+        let cadence = self.cadence_for(hotkey, &preflight, self.commit_reveal_decision(&preflight));
         let slot = self.slots.entry(mech).or_default();
         if slot.uncertain {
             return Ok(());
         }
-        let cadence = self.policy.cadence.unwrap_or_else(|| {
-            default_cadence(hotkey, preflight.schedule.tempo, preflight.commit_reveal)
-        });
         let last_submission = preflight
             .last_update(uid)
             .max(slot.last_attempt_block.unwrap_or(0));

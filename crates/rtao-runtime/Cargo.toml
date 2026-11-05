@@ -26,6 +26,7 @@ scale-info.workspace = true
 frame-metadata.workspace = true
 scale-decode.workspace = true
 serde.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 criterion = "0.7"

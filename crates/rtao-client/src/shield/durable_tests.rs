@@ -44,6 +44,9 @@ impl ShieldProtocolGuard for TestOnlyProtocol {
             extensions: Default::default(),
         })
     }
+    fn qualify_unlisted(&self) -> bool {
+        false
+    }
 }
 impl Fixture {
     async fn new(inner: bool) -> Self {

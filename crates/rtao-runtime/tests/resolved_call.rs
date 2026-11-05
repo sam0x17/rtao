@@ -237,13 +237,19 @@ fn reordered_fields_compose_in_live_order() {
     let runtime = changed(SET, |core| {
         variant(core, SET).fields.swap(2, 4);
     });
-    assert!(matches!(
-        calls::subtensor_module::set_mechanism_weights(NetUid(7), MechId(1), vec![], vec![], 9)
-            .compose(&runtime),
-        Err(ComposeError::SurfaceChanged { .. })
-    ));
     let bytes = compose_resolved(&runtime, PALLET, SET, &set_args()).unwrap();
     decoded(&runtime, &bytes, &set_args());
+    // The typed builder composes from live metadata by name too (D-123).
+    let typed = calls::subtensor_module::set_mechanism_weights(
+        NetUid(7),
+        MechId(1),
+        vec![0, 3],
+        vec![u16::MAX, 1],
+        9,
+    )
+    .compose(&runtime)
+    .unwrap();
+    assert_eq!(typed, bytes);
 }
 
 #[test]

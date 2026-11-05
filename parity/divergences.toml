@@ -1131,9 +1131,9 @@ upstream_report = "Generic native improvement with fixture coverage; focused loc
 id = "D-086"
 upstream_symbol = "WeightScheduler commit_timelocked_mechanism_weights commit_reveal_version"
 python_behavior = "n/a (no framework); `CommitWeights` tags its `commit_reveal_version` field, default 4, and lets the chain refuse a mismatch (`PY/intents/weights.py:33, 472-477`)"
-rtao_behavior = "The scheduler encodes the version 4 `WeightsTlockPayload` and tags it with the stored `CommitRevealWeightsVersion` when that is 4, or when the live `:code` hash is a reviewed pinned runtime or revealed one of this validator's own commitments (bound to its exact parent-queue ciphertext) while the same tag was stored, unless a commitment carrying that tag under that code later missed its reveal with no other explanation. Otherwise timelocked commits pause per mechanism as an `IncorrectCommitRevealVersion` refusal, logged once, with no error count, re-checked every block; other duties continue. A fee-free `IncorrectCommitRevealVersion` dispatch re-selects the tag from fresh state, after a block backoff, at most 10 times when no journal binding exists."
-rationale = "Reveal decoding is fixed by runtime code and never reads the stored version (`coinbase/reveal_commits.rs`), so a root storage bump under identical reviewed code cannot change what decodes. Unreviewed code may decode by the stored version, so evidence counts only under the tag stored when it was collected, and an unexplained miss withdraws it; unproven code could drop a v4 payload silently, so it pauses instead of echoing the tag blindly. The low-level intents keep Python's behavior."
-decision = "D-086; operator report that a commit-reveal version change defers commits until a rebuild"
+rtao_behavior = "The scheduler encodes the version 4 `WeightsTlockPayload` and always tags it with the stored `CommitRevealWeightsVersion` (D-122). It reports what is known about the live `:code` hash: a reviewed pinned runtime, one that revealed one of this validator's own commitments (bound to its exact parent-queue ciphertext) while the same tag was stored, unreviewed code, an unread code hash, or a commitment carrying that tag under that code that later missed its reveal with no other explanation; in the last case commits continue at most once per subnet epoch and the miss is counted and logged. Only the `Unreviewed::Pause` opt-in pauses per mechanism as an `IncorrectCommitRevealVersion` refusal, logged once, with no error count, re-checked every block. A fee-free `IncorrectCommitRevealVersion` dispatch re-selects the tag from fresh state, after a block backoff, at most 10 times when no journal binding exists. `SetWeights` and a default `CommitWeights` tag their commit with the stored version."
+rationale = "The chain checks only that a commit's tag equals the stored version, and runtime code decides what a reveal decodes, so a newer runtime must never stop weights by itself: pausing under unreviewed code left a validator with nothing outstanding unable to gather the evidence its pause waited for, and pausing after a miss left a pair that no longer commits unable to reveal and clear itself. Following is never worse than pausing (a skipped commit loses the epoch anyway); reveals and misses are observed and reported, and a refuted tag commits once per epoch. The low-level `CommitWeights` keeps an explicit non-default `commit_reveal_version`."
+decision = "D-086, D-110, D-122; operator rule that a runtime version never locks the SDK"
 status = "active"
 class = "addition"
 milestone = "M8"
@@ -1142,10 +1142,13 @@ pinning_tests = [
   "rtao_neuron::weights::tests::reviewed_cr_runtimes_match_pinned_provenance_and_reveal_source",
   "rtao_neuron::weights::tests::finality_lag_three_preflight_uses_best_state_in_one_seventeen_key_rpc",
   "rtao_neuron::weights::durable::public_tests::changed_cr_version_pauses_quietly_then_follows_proven_code",
+  "rtao_neuron::weights::durable::public_tests::a_changed_tag_under_unlisted_code_with_nothing_outstanding_commits_next_epoch",
+  "rtao_neuron::weights::durable::public_tests::a_missed_reveal_never_stops_the_next_commit",
+  "rtao_neuron::weights::tests::the_reviewed_observation_is_reported_and_never_decides",
   "rtao_neuron::weights::reveal::tests::inclusion_slip_follows_actual_epoch_and_never_counts_a_miss",
   "rtao_neuron::weights::reveal::tests::revealed_code_evidence_is_bounded_and_checkpoint_compatible",
   "rtao_neuron::weights::reveal::tests::reveal_evidence_under_the_native_tag_never_follows_a_later_tag",
-  "rtao_neuron::weights::reveal::tests::unexplained_miss_of_a_followed_tag_pauses_timelocked_commits",
+  "rtao_neuron::weights::reveal::tests::unexplained_miss_of_a_followed_tag_is_reported_and_never_stops_commits",
   "rtao_neuron::weights::durable::public_tests::dispatch_rejected_cr_version_reselects_the_tag_from_fresh_state",
   "rtao_neuron::weights::durable::public_tests::persistent_cr_version_rejections_stop_after_the_retry_bound",
   "rtao_neuron::weights::durable::public_tests::journal_bound_cr_version_rejection_goes_uncertain_without_resigning",
