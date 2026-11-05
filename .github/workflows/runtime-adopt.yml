@@ -93,13 +93,20 @@ jobs:
     # The validated commit leaves it as a bundle; the push job builds nothing.
     permissions:
       contents: read
+    # Job-level env cannot read the runner context (GitHub refuses to parse
+    # the whole workflow), so the paths under the runner's temp directory are
+    # set by the first step.
     env:
-      RTAO_TEMP_ROOT: ${{ runner.temp }}/runtime-adopt
-      RTAO_TEST_TMPDIR: ${{ runner.temp }}/runtime-adopt/tests
       CARGO_TARGET_DIR: ${{ github.workspace }}/target/runtime-adopt
-      DECISION: ${{ runner.temp }}/decision/decision.json
-      EVIDENCE: ${{ runner.temp }}/evidence
     steps:
+      - name: Paths under the runner's temp directory
+        run: |
+          {
+            echo "RTAO_TEMP_ROOT=$RUNNER_TEMP/runtime-adopt"
+            echo "RTAO_TEST_TMPDIR=$RUNNER_TEMP/runtime-adopt/tests"
+            echo "DECISION=$RUNNER_TEMP/decision/decision.json"
+            echo "EVIDENCE=$RUNNER_TEMP/evidence"
+          } >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
