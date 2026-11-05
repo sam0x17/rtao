@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Since `snapshot-2026-11-05`
+
+Tagged as `snapshot-2026-11-05.2`; not a versioned release. Each item links to
+its section below.
+
+- D-122: the commit-reveal tag is followed under any runtime code; a missed reveal limits commits to one per subnet epoch and is reported (`rtao_weights_cr_version_refuted{mech}`) instead of pausing; the reviewed-runtime list is an observation (`rtao_weights_cr_version_reviewed{mech}`). `Unreviewed::Pause` stays opt-in.
+- D-123: typed calls whose compiled shape differs compose from live metadata by name with strict per-field checks and a strict import (`compose_by_name` for calls the build lacks); typed reads and owner-monitor events decode by name; intent review warns instead of refusing.
+- D-124: `ShieldProtocolGuard::qualify_unlisted` defaults to true.
+- Unchanged: runtime stamps, V15, signing status, the metadata hash, unknown signed extensions and shield evidence. No journal format change.
+
 ### Since `snapshot-2026-11-03.2`
 
 Tagged as `snapshot-2026-11-05`; not a versioned release. Each item links to
@@ -81,7 +91,7 @@ code authentication, metadata-hash and signing checks are unchanged.
 #### Not changed
 
 - V16-only metadata is still rejected; the core parser needs V16 support first. Every current runtime serves V15.
-- The `ProxyType` variants of runtime 487 (`Lock` 21, `GammaSpend` 22) wait for the 487 pin on branch `stage-487` (D-125). Until then calls with the existing variants compose from live metadata and dynamic reads show the new names, but the typed `ProxyType` model cannot hold them.
+- The `ProxyType` variants of runtime 487 (`Lock` 21, `GammaSpend` 22) wait for the 487 pin. Until then calls with the existing variants compose from live metadata and dynamic reads show the new names, but the typed `ProxyType` model cannot hold them.
 
 ### Owner-row guard and weight refusals at the dispatch block (D-098)
 
