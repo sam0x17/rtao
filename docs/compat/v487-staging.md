@@ -47,7 +47,8 @@ code.
   changed `Proxy.*` and `LimitOrders` order-format shapes are generated, not
   hand-written. The new `HashedAccounts` pallet is outside the Python covered
   set and stays out of scope; its calls compose by name.
-- Merge `stage-487`, then run the usual pin checks. Expect the D-086
-  provenance test to ask for the 487 `:code` hash in
-  `REVIEWED_CR_RUNTIME_CODE` once its reveal path is reviewed; under D-122 that
-  list only changes what is reported.
+- Merge `stage-487` together with the 487 pin, then run the usual pin
+  checks. The provenance test does not require the 487 `:code` hash in
+  `REVIEWED_CR_RUNTIME_CODE` (D-122): it still checks that the pinned reveal
+  path decodes the version 4 payload without reading the stored tag, and
+  adding the hash only changes what is reported.
