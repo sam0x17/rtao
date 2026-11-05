@@ -1,6 +1,6 @@
 //! Format compatibility range and compaction (D-120).
 //!
-//! `fixtures/schema3-before-d110.json` was written through the public journal
+//! `fixtures/schema3-before-d120.json` was written through the public journal
 //! API by the release before D-120 (snapshot-2026-11-03.2) against the
 //! FakeChain with the fixed test key used throughout these tests. It holds
 //! `logical-op` (an attempt that expired unexecuted, then a finalized one),
@@ -8,7 +8,7 @@
 //! an application checkpoint.
 use super::*;
 
-const FIXTURE: &[u8] = include_bytes!("fixtures/schema3-before-d110.json");
+const FIXTURE: &[u8] = include_bytes!("fixtures/schema3-before-d120.json");
 
 fn fixture_journal(f: &Fixture) -> PathBuf {
     let path = f.0.join("journal.json");
@@ -38,7 +38,7 @@ fn logical_intent(image: &JournalImage) -> OperationIntent {
 }
 
 #[test]
-fn schema3_written_before_d110_reads_and_stays_readable_by_that_release() {
+fn schema3_written_before_d120_reads_and_stays_readable_by_that_release() {
     let f = Fixture::new();
     let path = fixture_journal(&f);
     let j = OperationJournal::open(&path).unwrap();
@@ -409,4 +409,25 @@ fn record_format_declares_a_compatible_range() {
     }
     // A newer record whose known fields no longer decode is still refused.
     assert!(decode(json!({"a": "x", "format": 2, "readable_by": 1})).is_err());
+}
+
+#[test]
+fn review_compacted_entry_cannot_appear_without_a_finished_operation() {
+    let f = Fixture::new();
+    let path = fixture_journal(&f);
+    let j = OperationJournal::open(&path).unwrap();
+    j.compact(&CompactionPolicy::finalized_before(u64::MAX), |_| true)
+        .unwrap();
+    let bytes = std::fs::read(&path).unwrap();
+    // A compacted entry for an ID that was never a finished operation would
+    // make `begin` report finished work that never ran.
+    let result = j.update(|image| {
+        let mut done = image.compacted["logical-op"].clone();
+        done.intent.id = "never-ran".into();
+        done.revision = image.revision + 1;
+        image.compacted.insert("never-ran".into(), done);
+        Ok(())
+    });
+    assert!(result.is_err(), "forged compacted entry was accepted");
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
 }

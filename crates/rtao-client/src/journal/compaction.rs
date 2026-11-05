@@ -216,6 +216,14 @@ pub(super) fn validate_transition(
             return Err(invalid());
         }
     }
+    // A new compacted entry only ever replaces a finished operation, checked
+    // below; one with no prior operation would report work that never ran
+    // as finished.
+    for id in after.compacted.keys() {
+        if !before.compacted.contains_key(id) && !before.operations.contains_key(id) {
+            return Err(invalid());
+        }
+    }
     for (id, record) in &before.operations {
         if after.operations.contains_key(id) {
             continue;
