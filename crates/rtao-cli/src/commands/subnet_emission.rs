@@ -11,11 +11,12 @@
 //! signed.
 //!
 //! Writes print the receipt at inclusion, as Python does, then wait up to
-//! [`FINALITY_WAIT`] (or the submission deadline) for the inclusion block to
-//! finalize, read the subnet's stored vector back at that block and compare
-//! it, slot by slot and in exact parts, with the vector the extrinsic applied:
-//! its `SubnetEmissionWeightsSet` event, else the previewed vector. A
-//! difference means another change landed in the same block and is an error.
+//! [`FINALITY_WAIT`](crate::commands::subnet_emission::FINALITY_WAIT) (or
+//! the submission deadline) for the inclusion block to finalize, read the
+//! subnet's stored vector back at that block and compare it, slot by slot
+//! and in exact parts, with the vector the extrinsic applied: its
+//! `SubnetEmissionWeightsSet` event, else the previewed vector. A difference
+//! means another change landed in the same block and is an error.
 //! When finality does not arrive in time, the read fails, or a saved multisig
 //! approval has not executed yet, the read-back is skipped with the reason and
 //! the receipt stands. Previews read nothing back.
