@@ -1,5 +1,10 @@
 # Release automation
 
+The versioned release process, the curated notes each tag needs and the
+rule that the macOS lane passes before a tag is pushed are in
+[`docs/releases/README.md`](../../docs/releases/README.md) (D-121). This file
+describes the build and verification scripts.
+
 Every hosted job uses free `ubuntu-latest`. `release.yml` has two phases because
 this runner does not build the supported macOS CLI targets.
 

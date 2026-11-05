@@ -109,7 +109,6 @@ pub struct PendingReveal {
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
 struct Pending {
     netuid: NetUid,
     mechanism: MechId,
@@ -141,7 +140,6 @@ struct Pending {
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
 struct Unlocated {
     netuid: NetUid,
     mechanism: MechId,
@@ -157,7 +155,6 @@ struct Unlocated {
 /// A non-native `CommitRevealWeightsVersion` a commitment was tagged with,
 /// and the runtime code under which the scheduler followed it (D-086).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(super) struct FollowedCr {
     tag: u16,
     code: rtao_primitives::H256,
@@ -166,7 +163,6 @@ pub(super) struct FollowedCr {
 /// What one of this validator's reveals showed about one runtime code under
 /// one stored commit-reveal tag (D-086).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
 struct RevealedCode {
     /// Payload format the revealed commitment used.
     payload_version: u16,
@@ -192,7 +188,6 @@ const REVEALED_CODE_LIMIT: usize = 16;
 
 /// Retains outstanding reveals and the last 256 completed outcomes.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct RevealWatcher {
     pending: Vec<Pending>,
     unlocated: Vec<Unlocated>,
@@ -3075,7 +3070,6 @@ mod tests {
 
 /// Historical client projection sufficient to locate an already signed commitment.
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(super) struct RevealPreparation {
     prepared_block: u64,
     uid: Option<Uid>,

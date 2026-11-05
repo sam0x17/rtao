@@ -124,7 +124,7 @@ fn insert_new(value: &mut Value, name: &str, field: Value) -> Result<(), Journal
     object.insert(name.into(), field);
     Ok(())
 }
-fn preserves(before: &Value, after: &Value) -> bool {
+pub(super) fn preserves(before: &Value, after: &Value) -> bool {
     match (before, after) {
         (Value::Object(old), Value::Object(new)) => old
             .iter()
@@ -136,7 +136,9 @@ fn preserves(before: &Value, after: &Value) -> bool {
     }
 }
 
-/// Returns a validated schema3 image and whether it requires atomic publication.
+/// Returns a validated image and whether it requires atomic publication.
+/// Schemas 1 and 2 migrate to [`JOURNAL_SCHEMA`]; schema 3, 4 and newer images
+/// declaring compatibility (D-120) are read as they are and keep their schema.
 /// Unknown nested fields must survive typed roundtripping; unsupported semantics
 /// are refused before the original file can be replaced.
 pub(super) fn decode(
@@ -148,9 +150,13 @@ pub(super) fn decode(
         .and_then(Value::as_u64)
         .and_then(|v| u32::try_from(v).ok())
         .ok_or_else(invalid)?;
-    let migrated = version != JOURNAL_SCHEMA;
-    if migrated {
-        if !allow_migration || !matches!(version, 1 | 2) {
+    let migrated = matches!(version, 1 | 2);
+    if !migrated {
+        // Refuse an incompatible newer image by its declaration, before typed
+        // decoding could report its unknown shapes as a lossy image.
+        super::format::check_schema(version, raw.get(super::JOURNAL_READABLE_BY))?;
+    } else {
+        if !allow_migration {
             return Err(JournalError::Schema(version));
         }
         let revision = raw

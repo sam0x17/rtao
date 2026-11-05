@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Since `snapshot-2026-11-03.2`
+
+Tagged as `snapshot-2026-11-05`; not a versioned release. Each item links to
+its section below.
+
+- D-098: the self/owner weight-row guard reads the owner's UID at the dispatch block; held queued work reports `OwnerRowHeld`; `WeightScheduler::retire_pending`; `IncorrectWeightVersionKey` names the observed key and block.
+- D-110: the commit-reveal tag decision and the reviewed-runtime list live in `rtao_core::commit_reveal` (builds for `wasm32-unknown-unknown`). Changed default: a changed tag under unreviewed code is followed and reported, not paused.
+- D-111: `Timestamp.Now` falls back to a by-name read (scheduler anchor and runtime clock worker).
+- D-112: the reveal watcher sees a reveal period that changes and returns inside a skipped span. Checkpoint caveat: `period_changed`.
+- D-113: bounded `on_finalized` (`with_bounded_dispatch`, `with_recovery_budget`).
+- D-114: typed `SetCommitment` intent (feature `commitments`).
+- D-115: the downstream `[patch]` set is documented.
+- D-120: journal format compatibility range (`readable_by`, `JournalError::Newer`) and explicit compaction of finished operations.
+- D-121: versioned release process (`rtao-vX.Y.Z`, curated notes in `docs/releases/`); the first version tag waits for the macOS lane.
+- Repository maintenance: the hourly `runtime-adopt` workflow, which approves an adoption on evidence from independent public endpoints (D-116). Testnet runtime 486 is recorded. The build-weight measurement is refreshed for the `commitments` feature's manifest change, and a doc link in `rtao-cli` is qualified so the workspace docs build with `-D warnings`.
+- Rollback to `snapshot-2026-11-03.2`: ordinary journals stay schema 3 and open there. A compacted journal (schema 4) and a checkpoint carrying `period_changed` do not; see the sections below.
+
 ### Automatic runtime adoption (repository maintenance)
 
 - New hourly `runtime-adopt` workflow (`ci/runtime-adopt.sh`, decision checks in `ci/runtime-adopt-test.sh`). When Finney finalizes a newer spec it pins it (the final `vN` release, else upstream main's release-N merge), imports, extracts, regenerates, reconciles and checks it in a disposable candidate, and if every stage passes pushes the commit to `main` with a changelog entry, an upstream-log entry and a `snapshot-<date>` tag. A testnet runtime missing from its index is recorded with `drift --network testnet --apply`.
@@ -23,6 +40,32 @@
 - New: `WeightScheduler::retire_pending(mechanism, id)` retires a pending operation that never reached the chain: it has no attempts, or every attempt is `ExpiredUnexecuted`. It is marked `scheduler_retired` (and handed off, so earlier releases skip it too). Its ID stays idempotent, so a replacement needs a new ID.
 - `IncorrectWeightVersionKey` (`invalid_argument`, unchanged) now reports the observed `WeightsVersionKey`, its block and the version the attempt carries. For queued work it also says the version is part of the immutable effects and points to `retire_pending`. The check still runs before signing on every path.
 - No journal or checkpoint schema change.
+
+### Journal format compatibility and compaction (D-120)
+
+#### rtao-client
+
+- The journal envelope may declare `readable_by`, the oldest schema whose readers can read and update it. This release reads schemas 1 and 2 (migrated to 3), 3 and 4, and a newer schema whose `readable_by` is 4 or lower; it keeps a newer image's schema and unknown fields when it writes. New: `JOURNAL_SCHEMA_MAX`, `JOURNAL_READABLE_BY`, `JournalImage::readable_by`, `JournalImage::check_schema`.
+- An incompatible newer journal or record is refused with the new `JournalError::Newer { record, version, readable_by, supported }` and left unchanged.
+- `journal::RecordFormat` applies the same rule to SDK-owned records inside a journal: strict at or below the reader's format, a newer record only when it declares `readable_by` within range.
+- `OperationJournal::compact(&CompactionPolicy, select)` compacts finished operations: a unique uncontradicted finalized effect, every attempt terminal, effect finalized below `CompactionPolicy::finalized_before`, optionally one scope, and selected by the predicate. The intent and the exact effect attempt stay in `JournalImage::compacted` (`CompactedOperation`); the other attempts keep only ID, hash, role and outcome (`DroppedAttempt`). Unresolved work is never compacted. Returns `CompactionReport`.
+- `begin`, `bind` and `record` return the new `JournalError::Compacted` for a compacted ID with the same intent, so it is never dispatched again; a different intent is still `Identity`.
+
+#### rtao-neuron
+
+- Weight work and attempt material (`format`, omitted at 1) and the scheduler checkpoint (`schema`) decode through `RecordFormat`. Format 1 records still refuse unknown fields; a newer record that declares `readable_by` 1 is read, and a newer checkpoint is rewritten as format 1.
+- `WeightScheduler::compactable`: a predicate for `compact` that keeps weight work not yet handed to the reveal watcher.
+- `WeightScheduler::enqueue` of a compacted ID with the same work succeeds without queuing anything, as redelivery of finished work did before.
+
+#### Journal
+
+- Ordinary writes keep schema 3 and add no field, so revisions before this release still open the journal after a rollback.
+- The first compaction raises the image to schema 4 with `readable_by` 4. Revisions before this release refuse it with `unsupported journal schema 4` and leave it unchanged. Compact only when that rollback is no longer needed.
+
+### Versioned releases (D-121)
+
+- Releases are immutable `rtao-vX.Y.Z` tags with curated notes in `docs/releases/`, mapped to D-numbers and stating the journal compatibility range; see `docs/releases/README.md`. The first version is 0.1.0.
+- `cargo xtask release-notes` includes the curated notes and refuses a tag without them.
 
 ### rtao-neuron
 
