@@ -150,6 +150,20 @@ async fn ensure_raw_null(snapshot: &Snapshot, netuid: NetUid) -> Result<(), Inte
     Ok(())
 }
 
+/// The tag a timelocked commit carries (D-122): the chain's stored
+/// `CommitRevealWeightsVersion`, as [`rtao_core::commit_reveal::select_tag`]
+/// follows it, unless the caller asked for a version other than the
+/// generated default, which is kept as an explicit override.
+fn commit_tag(requested: u16, stored: u16) -> u16 {
+    use rtao_core::commit_reveal::{RevealEvidence, Unreviewed, select_tag};
+    if requested != crate::generated::defaults::commit_weights::commit_reveal_version() {
+        return requested;
+    }
+    select_tag(true, stored, None, RevealEvidence::None, Unreviewed::Follow)
+        .tag()
+        .unwrap_or(stored)
+}
+
 async fn timelocked<V: View + ?Sized>(
     cx: &BuildCx<'_, V>,
     snapshot: &Snapshot,
@@ -162,7 +176,7 @@ async fn timelocked<V: View + ?Sized>(
         version_key,
         commit_reveal_version,
     } = commit;
-    let (tempo, reveal, last_epoch, pending, epoch_index, since) = snapshot
+    let (tempo, reveal, last_epoch, pending, epoch_index, since, stored_tag) = snapshot
         .fetch((
             st::TEMPO.at((netuid,)),
             st::REVEAL_PERIOD_EPOCHS.at((netuid,)),
@@ -170,8 +184,10 @@ async fn timelocked<V: View + ?Sized>(
             st::PENDING_EPOCH_AT.at((netuid,)),
             st::SUBNET_EPOCH_INDEX.at((netuid,)),
             st::BLOCKS_SINCE_LAST_STEP.at((netuid,)),
+            st::COMMIT_REVEAL_WEIGHTS_VERSION.at(()),
         ))
         .await?;
+    let commit_reveal_version = commit_tag(commit_reveal_version, stored_tag);
     let now = cx
         .clock
         .now()
@@ -714,6 +730,51 @@ mod tests {
         );
     }
 
+    /// A commit follows the chain's stored tag unless the caller asked for
+    /// another version than the default (D-122).
+    #[test]
+    fn commit_tags_follow_the_stored_version_by_default() {
+        let default = crate::generated::defaults::commit_weights::commit_reveal_version();
+        assert_eq!(default, 4);
+        assert_eq!(super::commit_tag(default, 4), 4);
+        assert_eq!(super::commit_tag(default, 5), 5);
+        assert_eq!(super::commit_tag(default, 9), 9);
+        assert_eq!(super::commit_tag(3, 5), 3, "an explicit version is kept");
+    }
+
+    /// `SetWeights` and a default `CommitWeights` on a commit-reveal subnet
+    /// tag the commit with the chain's stored version, not a compiled one
+    /// (D-122). The call closes with `.., reveal_round: u64, version: u16`.
+    #[tokio::test]
+    async fn timelocked_intents_tag_commits_with_the_stored_version() {
+        let (snapshot, fake) = fixture(false, true).await;
+        fake.mutate_state(|state| {
+            state
+                .seed_typed("SubtensorModule", "CommitRevealWeightsVersion", (), 5u16)
+                .unwrap();
+        });
+        let set = input(&[1.0, 2.0, 3.0]);
+        let built = build(&set, &snapshot).await.unwrap();
+        assert!(built.call.as_bytes().ends_with(&5u16.to_le_bytes()));
+        let commit = CommitWeights {
+            netuid: set.netuid,
+            uids: set.uids.clone(),
+            weights: set.weights.clone(),
+            mechid: set.mechid,
+            version_key: set.version_key,
+            raw_u16: false,
+            commit_reveal_version: 4,
+        };
+        let built = build(&commit, &snapshot).await.unwrap();
+        assert!(built.call.as_bytes().ends_with(&5u16.to_le_bytes()));
+        let explicit = CommitWeights {
+            commit_reveal_version: 3,
+            ..commit
+        };
+        let built = build(&explicit, &snapshot).await.unwrap();
+        assert!(built.call.as_bytes().ends_with(&3u16.to_le_bytes()));
+    }
+
     #[tokio::test]
     async fn null_commit_preserves_python_preflight_and_schedule_reads() {
         let (snapshot, fake) = fixture(true, true).await;
@@ -736,6 +797,7 @@ mod tests {
         let expected = [
             "BlocksSinceLastStep",
             "CommitRevealWeightsEnabled",
+            "CommitRevealWeightsVersion",
             "LastEpochBlock",
             "LastUpdate",
             "MaxWeightsLimit",

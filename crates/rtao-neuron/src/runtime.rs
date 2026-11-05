@@ -687,8 +687,17 @@ async fn epoch_at(
     .await?;
     let report = snapshot.block().runtime.surface_report();
     let verified = if kind == "miner" {
-        report.shape_matches("call:SubtensorModule.serve_axon")
-            && report.shape_matches("call:SubtensorModule.serve_axon_tls")
+        // A changed shape composes from live metadata by name (D-123).
+        let runtime = &snapshot.block().runtime;
+        [
+            &rtao_runtime::calls::subtensor_module::SERVE_AXON,
+            &rtao_runtime::calls::subtensor_module::SERVE_AXON_TLS,
+        ]
+        .into_iter()
+        .all(|call| {
+            report.shape_matches(&format!("call:{}.{}", call.pallet, call.name))
+                || rtao_runtime::call_resolves_by_name(runtime, call)
+        })
     } else {
         weight_calls_usable(&snapshot.block().runtime, weight_encoder)
     };

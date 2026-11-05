@@ -10,8 +10,8 @@ pub(in crate::journal) use negative::{
 /// The SDK obtains actual code hashes at pinned states from the configured
 /// history/submission RPC. [`Self::check`] matches those hashes against code
 /// identities the adapter trusts, never a peer-provided claim or spec version.
-/// An adapter that also returns true from [`Self::qualify_unlisted`] lets the
-/// SDK qualify any other code from its fresh, hash-checked signing metadata:
+/// Unless the adapter returns false from [`Self::qualify_unlisted`], the SDK
+/// qualifies any other code from its fresh, hash-checked signing metadata:
 /// the carrier call/event shape and the nonce and mortality extensions that
 /// make finalized era expiry an absence proof (see [`NativeShieldProtocol`]).
 /// It does not establish application economics (SemanticGuard does that) or
@@ -22,10 +22,12 @@ pub trait ShieldProtocolGuard: Send + Sync {
     /// Qualify this chain and exact runtime code from the adapter's own list.
     fn check(&self, genesis: H256, code_hash: H256) -> Result<(), Incompatibility>;
     /// Whether code that [`Self::check`] does not list may be qualified from
-    /// its own signing metadata. Allowlist adapters keep the default, false,
-    /// so any unlisted code stays refused exactly as before.
+    /// its own signing metadata. The default is true (D-124): a newer runtime
+    /// is qualified from evidence rather than refused for being new. An
+    /// adapter that returns false refuses every code its list lacks, which
+    /// ties shielded submission to its list until the adapter is updated.
     fn qualify_unlisted(&self) -> bool {
-        false
+        true
     }
 }
 

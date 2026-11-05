@@ -234,6 +234,11 @@ impl ShieldProtocolGuard for SyntheticProtocol {
             extensions: Default::default(),
         })
     }
+    /// The synthetic adapter is a strict allowlist, so tests can exercise
+    /// refusal of unlisted code.
+    fn qualify_unlisted(&self) -> bool {
+        false
+    }
 }
 type InclusionHook = Box<dyn FnMut(&mut FakeState, &OperationRecord, u64) + Send>;
 struct Control {

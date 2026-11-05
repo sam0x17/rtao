@@ -31,6 +31,57 @@ its section below.
 - Fixed: GitHub refused to parse the workflow, so neither the hourly schedule nor a dispatch ever ran it. The adopt job's job-level `env` read the `runner` context, which is not available there; those paths are now set by the job's first step.
 - No library change: the SDK's run-time compatibility checks and pin provenance are unchanged.
 
+### No runtime lock-in (D-122 to D-124)
+
+A newer runtime never stops the SDK by itself. Checks compare against live
+metadata and refuse only what live metadata cannot encode or decode; runtime
+code authentication, metadata-hash and signing checks are unchanged.
+
+#### rtao-core
+
+- Changed: `commit_reveal::select_tag` follows the stored `CommitRevealWeightsVersion` under any code by default (`Unreviewed::Follow`). The review list and reveal evidence are reported, never required. New `TagBasis::Refuted` (the latest commitment with this tag under this code missed its reveal with no other explanation) and `TagBasis::CodeUnknown` (no `:code` hash was read) replace the pauses those cases caused. New `TagDecision::basis` and `TagDecision::once_per_epoch` (true under `Refuted`: commit at most once per subnet epoch until a reveal proves the tag again).
+- `Unreviewed::Pause` is unchanged and still opt-in. It now also covers the refuted and unidentified cases, and its documentation says it ties commits to the build's list.
+
+#### rtao-neuron
+
+- Changed: the weight scheduler commits with the chain's tag after an unexplained missed reveal instead of pausing. While the refutation lasts it commits at most once per subnet epoch, even under a `RateLimited` cadence, and it warns. A reveal under that code and tag clears it.
+- Changed: a failed `:code` read in `WeightPreflight::fetch` warns and the tag is followed (`CodeUnknown`). Before, the preflight failed.
+- Changed: `WeightPreflight::check` no longer refuses a stored tag other than 4. New `WeightPreflight::commit_reveal_tag`.
+- New gauges: `rtao_weights_cr_version_reviewed{mech}` (the listed spec version of the live code, 0 when unlisted) and `rtao_weights_cr_version_refuted{mech}`. `rtao_weights_cr_version_unreviewed{mech}` is also 1 when the code identity was not read.
+- The pause refusal (only under `Unreviewed::Pause`) no longer tells operators to upgrade rtao.
+- Owner monitor: changed events are read by field name, so a `Proxy.ProxyAdded` or `ProxyRemoved` with a new `ProxyType` no longer ends the event stream. Positional fields are refused only when the live field lost its compiled type identity. A changed `AlphaAssets.AlphaBurned` contract decodes by name; only an absent entry refuses.
+- Miner readiness accepts `serve_axon` and `serve_axon_tls` that resolve by name in live metadata.
+- Reads outside `VALIDATOR_READS` decode by name against live metadata when their shape changed, instead of failing.
+
+#### rtao-intents
+
+- Changed: `SetWeights` and `CommitWeights` on a commit-reveal subnet read `CommitRevealWeightsVersion` in their snapshot and tag the commit with it. A `CommitWeights.commit_reveal_version` other than the default 4 is kept as an explicit override.
+- The crowdloan callback inspection no longer refuses a decoded callback because the compiled shape of one of its calls changed. Its fields are read by name from the live decode.
+
+#### rtao-runtime
+
+- Changed: `Call::compose` composes a call whose compiled argument shape differs from live metadata by name instead of refusing it. Every live field must be supplied and no other; each value must fit its live type without lenient coercion; the bytes must import through the strict `CallBytes::decode`. It refuses with `ComposeError::SurfaceChanged` only when that fails (a removed variant the value uses, an added or renamed field, a field type the value does not fit). Each such composition warns once per call and runtime.
+- New: `compose_by_name` (a call without a compiled descriptor, same checks), `live_compositions` (process-wide count), `call_resolves_by_name`, `event_field_matches`.
+- Unchanged: the surface report still classifies a call shape difference as breaking; it is a report, not a refusal.
+
+#### rtao-client
+
+- Changed: typed storage reads (`ViewExt::fetch`, `ViewExt::storage`, unpinned head reads) no longer fail on a changed shape. Keys use the live types, hashers and prefix; values decode strictly against the live type by name, so only a value the typed model cannot represent fails. The difference warns once per runtime and entry.
+- Changed: `ShieldProtocolGuard::qualify_unlisted` defaults to true, so an allowlist adapter qualifies a newer runtime from its signing metadata. An adapter that must refuse unlisted code returns false explicitly.
+
+#### rtao-tx
+
+- Changed: intent review reports a wrapped call's breaking surface difference as a plan warning instead of refusing. Composition decides.
+
+#### rtao-cli
+
+- Changed: a raw call (`rtao call Pallet.function`) that this build has no descriptor for is composed from live metadata by name when the runtime has it.
+
+#### Not changed
+
+- V16-only metadata is still rejected; the core parser needs V16 support first. Every current runtime serves V15.
+- The `ProxyType` variants of runtime 487 (`Lock` 21, `GammaSpend` 22) wait for the 487 pin on branch `stage-487` (D-125). Until then calls with the existing variants compose from live metadata and dynamic reads show the new names, but the typed `ProxyType` model cannot hold them.
+
 ### Owner-row guard and weight refusals at the dispatch block (D-098)
 
 #### rtao-neuron

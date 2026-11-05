@@ -259,6 +259,16 @@ impl Call {
     ///
     /// Nested calls must carry the same specification and transaction versions.
     /// The core resolves pallet and call indices from this runtime by name.
+    ///
+    /// When the compiled descriptor's argument shape no longer matches the
+    /// live call, the call is composed from live metadata by name instead
+    /// (D-123): every live field must be supplied, each value must fit its
+    /// live type strictly, and the bytes must import through the strict
+    /// [`CallBytes::decode`]. It refuses with
+    /// [`ComposeError::SurfaceChanged`] only when that fails, for example
+    /// for a removed variant the call uses, an added field or a changed
+    /// field type the value does not fit. Each such composition counts in
+    /// [`crate::live_compositions`] and warns once per call and runtime.
     pub fn compose(&self, runtime: &RuntimeHandle) -> Result<CallBytes, ComposeError> {
         if runtime.metadata_level() != MetadataLevel::V15 {
             return Err(ComposeError::MetadataDegraded);
@@ -274,16 +284,41 @@ impl Call {
                 });
             }
         }
-        verify_call(runtime, self.descriptor).map_err(|detail| ComposeError::SurfaceChanged {
-            pallet: self.descriptor.pallet.into(),
-            call: self.descriptor.name.into(),
-            detail,
-        })?;
+        if let Err(detail) = verify_call(runtime, self.descriptor) {
+            return self.compose_live(runtime, detail);
+        }
         let bytes = runtime
             .core()
             .compose_call(self.descriptor.pallet, self.descriptor.name, &self.args)
             .map_err(CoreError::from)?;
         Ok(CallBytes::from_encoded(bytes, runtime))
+    }
+
+    /// Compose from live metadata after the compiled shape check failed.
+    fn compose_live(
+        &self,
+        runtime: &RuntimeHandle,
+        compiled: String,
+    ) -> Result<CallBytes, ComposeError> {
+        let (pallet, call) = (self.descriptor.pallet, self.descriptor.name);
+        let refuse = |detail: String| ComposeError::SurfaceChanged {
+            pallet: pallet.into(),
+            call: call.into(),
+            detail: format!("{compiled}; composing from live metadata failed: {detail}"),
+        };
+        let fields = call_variant(runtime.core(), self.descriptor)
+            .map_err(refuse)?
+            .fields
+            .as_slice();
+        crate::live::fit_call_args(runtime.core(), fields, &self.args).map_err(refuse)?;
+        let bytes = runtime
+            .core()
+            .compose_call(pallet, call, &self.args)
+            .map_err(|error| refuse(CoreError::from(error).to_string()))?;
+        let imported = CallBytes::decode(&bytes, runtime)
+            .map_err(|error| refuse(format!("strict import failed: {error}")))?;
+        crate::live::note(pallet, call, runtime.stamp(), Some(&compiled));
+        Ok(imported)
     }
 }
 
@@ -1047,15 +1082,29 @@ mod tests {
     }
 
     #[test]
-    fn mismatch_refuses_only_the_changed_call() {
+    fn mismatch_composes_from_live_metadata_and_is_reported() {
         let runtime = runtime();
         let good = descriptor(&runtime, "System", "remark");
         let mut bad = *good;
         bad.shape = ShapeHash([255; 32]);
         let bad = Box::leak(Box::new(bad));
-        let error = remark(bad).compose(&runtime).unwrap_err();
+        // A changed shape whose arguments still fit composes by name (D-123).
+        let before = crate::live_compositions();
+        let live = remark(bad).compose(&runtime).unwrap();
+        assert!(crate::live_compositions() > before);
+        assert_eq!(live, remark(good).compose(&runtime).unwrap());
+        // Arguments that do not name the live fields still refuse.
+        let mut renamed = *good;
+        renamed.shape = ShapeHash([255; 32]);
+        let renamed = Box::leak(Box::new(renamed));
+        let error = Call::new(
+            renamed,
+            Value::record(vec![("text".into(), Value::Bytes(b"x".to_vec()))]),
+            Vec::new(),
+        )
+        .compose(&runtime)
+        .unwrap_err();
         assert!(matches!(error, ComposeError::SurfaceChanged { .. }));
-        assert!(remark(good).compose(&runtime).is_ok());
         let report = verify_surface_with(&runtime, &[SurfaceDescriptor::Call(bad)]);
         assert_eq!(report.breaking_items(), 1);
         assert!(!report.shape_matches("call:System.remark"));

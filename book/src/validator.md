@@ -62,18 +62,19 @@ mechanism has a separate cadence and rate-limit slot. The scheduler reads its
 preflight at one best head, while finalized heads trigger attempts and anchor
 transaction mortality. Commit-reveal off uses direct mechanism weights;
 commit-reveal on uses timelocked mechanism weights with the version 4 payload.
-The commit is tagged with the chain's `CommitRevealWeightsVersion`. A tag
-other than 4 is followed under runtime code reviewed to reveal that payload,
-under code that already revealed one of this validator's commits with that
-tag, and under any other code too: a newer runtime never stops commits by
-itself. The last case logs a warning once and sets
-`rtao_weights_cr_version_unreviewed{mech="N"}` to 1 until a reveal proves the
-code. An unexplained missed reveal of a commit with a followed tag counts
-`rtao_weights_cr_version_refuted_total` and pauses that tag under that code:
-`last_attempt` reports an `IncorrectCommitRevealVersion` refusal,
-`rtao_weights_cr_version_paused{mech="N"}` is 1 and commits wait while the
-rest of the validator keeps running. `with_unreviewed_cr_tags(Unreviewed::Pause)`
-pauses under unreviewed code as earlier releases did. The decision itself is
+The commit is always tagged with the chain's `CommitRevealWeightsVersion`: a
+newer runtime never stops commits by itself. What is known about the live code
+is reported, not required. `rtao_weights_cr_version_reviewed{mech="N"}` carries
+the spec version when the code is on this build's reviewed list (0 otherwise),
+and `rtao_weights_cr_version_unreviewed{mech="N"}` is 1 while the code is
+neither listed nor proven by one of this validator's reveals, or its identity
+could not be read; each change logs once. An unexplained missed reveal of a
+commit with a non-native tag counts `rtao_weights_cr_version_refuted_total`,
+warns and sets `rtao_weights_cr_version_refuted{mech="N"}` to 1; commits
+continue with the chain's tag at most once per subnet epoch until a reveal
+proves it again. `with_unreviewed_cr_tags(Unreviewed::Pause)` opts into the
+behavior of earlier releases (pause under unreviewed, refuted or unidentified
+code), which ties commits to this build's list. The decision itself is
 `rtao_core::commit_reveal::select_tag`, which also builds for wasm32.
 A journaled scheduler built with `with_bounded_dispatch(n)` returns from a
 dispatch after the admission window plus `n` blocks and leaves an unresolved

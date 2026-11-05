@@ -883,7 +883,7 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
             .remediation
             .contains(&format!("0x{}", hex::encode(code.0)))
     );
-    assert!(refusal.remediation.contains("upgrade"));
+    assert!(refusal.remediation.contains("Unreviewed::Pause"));
     let rendered = cx.metrics.render();
     assert!(
         rendered.contains("rtao_weights_cr_version_mismatch_total 3"),
@@ -951,6 +951,119 @@ async fn changed_cr_version_pauses_quietly_then_follows_proven_code() -> anyhow:
         rendered.contains("rtao_weights_submitted_total 1"),
         "{rendered}"
     );
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// A tag change under runtime code that is not on the reviewed list, with
+/// nothing outstanding to reveal, commits at the mechanism's next epoch
+/// opportunity with the chain's tag and reports the code as unreviewed
+/// (D-122). Before D-110 such a validator could never gather the evidence its
+/// pause waited for.
+#[tokio::test]
+async fn a_changed_tag_under_unlisted_code_with_nothing_outstanding_commits_next_epoch()
+-> anyhow::Result<()> {
+    let (lab, cx, account) = cr_lab("unlisted", 5).await?;
+    let mut scheduler = WeightScheduler::new(
+        WeightPolicy::default(),
+        Arc::new(ChainClock::new(1_800_000_000_000)),
+        ClockGuard::default(),
+    )?;
+    assert_eq!(scheduler.reveals().pending(), 0, "nothing outstanding");
+    // The lab answers every `:code` read with this unlisted identity.
+    let code = H256([42; 32]);
+    assert_eq!(super::super::reviewed_cr_runtime(code), None);
+    let tails = plain_author(&lab, account, |_, _| {});
+    until_authored(&mut scheduler, &lab, &cx).await?;
+    assert_eq!(lab.authors(), 1);
+    assert_eq!(tails.lock().unwrap()[0].2, 5, "the commit carries tag 5");
+    assert!(matches!(
+        scheduler.last_attempt(MechId(0)).unwrap().outcome,
+        super::super::WeightAttemptOutcome::Submitted { .. }
+    ));
+    assert_eq!(scheduler.reveals().pending(), 1);
+    let rendered = cx.metrics.render();
+    for line in [
+        "rtao_weights_cr_version_unreviewed{mech=\"0\"} 1",
+        "rtao_weights_cr_version_reviewed{mech=\"0\"} 0",
+        "rtao_weights_cr_version_refuted{mech=\"0\"} 0",
+        "rtao_weights_cr_version_paused{mech=\"0\"} 0",
+    ] {
+        assert!(rendered.contains(line), "{line} absent from {rendered}");
+    }
+    assert!(
+        !rendered.contains("rtao_weights_cr_version_mismatch_total"),
+        "{rendered}"
+    );
+    assert!(
+        !rendered.contains("rtao_weights_errors_total"),
+        "{rendered}"
+    );
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
+/// A missed reveal of a commitment tagged with the followed version never
+/// stops the next commit (D-122): it is reported
+/// (`rtao_weights_cr_version_refuted{mech}` is 1) and the tag is followed at
+/// most once per subnet epoch, even under a faster rate-limited cadence.
+#[tokio::test]
+async fn a_missed_reveal_never_stops_the_next_commit() -> anyhow::Result<()> {
+    let (lab, cx, account) = cr_lab("refuted", 5).await?;
+    let code = H256([42; 32]);
+    let mut scheduler = WeightScheduler::new(
+        WeightPolicy {
+            cadence: Some(super::super::WeightCadence::RateLimited { margin: 0 }),
+            ..WeightPolicy::default()
+        },
+        Arc::new(ChainClock::new(1_800_000_000_000)),
+        ClockGuard::default(),
+    )?;
+    scheduler.reveals.remember_missed_reveal(code, 5);
+    let best = lab.client.at(BlockRef::Best).await?;
+    let preflight = WeightPreflight::fetch(&best, NetUid(1), MechId(0), account).await?;
+    assert!(
+        scheduler
+            .commit_reveal_decision(&preflight)
+            .once_per_epoch()
+    );
+    let tails = plain_author(&lab, account, |_, _| {});
+    until_authored(&mut scheduler, &lab, &cx).await?;
+    assert_eq!(lab.authors(), 1, "{:?}", scheduler.last_attempt(MechId(0)));
+    assert_eq!(tails.lock().unwrap()[0].2, 5);
+    let rendered = cx.metrics.render();
+    assert!(
+        rendered.contains("rtao_weights_cr_version_refuted{mech=\"0\"} 1"),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains("rtao_weights_cr_version_paused{mech=\"0\"} 0"),
+        "{rendered}"
+    );
+    // At most one commit per epoch while the refutation lasts.
+    let best = lab.client.at(BlockRef::Best).await?;
+    let preflight = WeightPreflight::fetch(&best, NetUid(1), MechId(0), account).await?;
+    assert!(
+        matches!(
+            scheduler.next_action(MechId(0), account, &preflight)?,
+            super::super::WeightOpportunity::AwaitEpoch { .. }
+                | super::super::WeightOpportunity::RateLimited { .. }
+                | super::super::WeightOpportunity::AwaitBlock { .. }
+        ),
+        "{:?}",
+        scheduler.next_action(MechId(0), account, &preflight)?
+    );
+    let epoch = preflight.schedule.subnet_epoch_index;
+    for _ in 0..3 {
+        let head = advance(&lab)?;
+        let best = lab.client.at(BlockRef::Best).await?;
+        let state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), account).await?;
+        if state.schedule.subnet_epoch_index != epoch {
+            break;
+        }
+        Box::pin(scheduler.on_finalized(&cx, &head, scored)).await?;
+        assert_eq!(lab.authors(), 1, "no second commit in the same epoch");
+    }
     close_cr_lab(scheduler, lab, cx).await;
     Ok(())
 }

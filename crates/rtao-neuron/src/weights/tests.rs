@@ -188,16 +188,9 @@ async fn preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates() -
         rtao_catalog::ErrorCode::NotAuthorized
     );
     state.permits[0] = true;
+    // A changed commit-reveal tag is never a preflight refusal (D-122).
     state.commit_reveal_version = 5;
-    assert_eq!(
-        state
-            .check(0)
-            .expect_err("unsupported protocol")
-            .downcast_ref::<WeightRefusal>()
-            .expect("typed refusal")
-            .name,
-        "IncorrectCommitRevealVersion"
-    );
+    assert_eq!(state.check(0)?, Uid(0));
     state.commit_reveal_version = 4;
     state.required_version_key = 42;
     assert!(state.check(0).is_err());
@@ -271,17 +264,19 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
         following.next_action(MechId(0), HOTKEY, &state)?,
         WeightOpportunity::Paused
     );
-    // An unexplained miss under this code and tag refutes it.
+    // An unexplained miss under this code and tag is reported, and the tag
+    // is still followed (D-122).
     let mut refuted = fresh_scheduler()?;
     refuted.reveals.remember_missed_reveal(code, 5);
-    let refusal = refuted
-        .commit_reveal_tag(&state)
-        .expect_err("refuted tag pauses");
-    assert!(
-        refusal.remediation.contains("missed its reveal"),
-        "{refusal}"
-    );
+    assert_eq!(refuted.commit_reveal_tag(&state)?, 5);
     assert_eq!(
+        refuted.commit_reveal_decision(&state),
+        rtao_core::commit_reveal::TagDecision::Follow {
+            tag: 5,
+            basis: rtao_core::commit_reveal::TagBasis::Refuted
+        }
+    );
+    assert_ne!(
         refuted.next_action(MechId(0), HOTKEY, &state)?,
         WeightOpportunity::Paused
     );
@@ -295,10 +290,10 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
     assert_eq!(refusal.name, "IncorrectCommitRevealVersion");
     for needle in [
         "version 5",
-        "version 4 payload",
+        "reviewed list",
         &format!("0x{}", hex::encode(code.0)),
         "metadata default 4",
-        "upgrade",
+        "Unreviewed::Pause",
     ] {
         assert!(
             refusal.remediation.contains(needle),
@@ -323,16 +318,9 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
         scheduler.next_action(MechId(0), HOTKEY, &state)?,
         WeightOpportunity::Paused
     );
-    // The public preflight check stays strict; only the scheduler follows.
-    assert_eq!(
-        state
-            .check(0)
-            .expect_err("strict check")
-            .downcast_ref::<WeightRefusal>()
-            .expect("typed refusal")
-            .name,
-        "IncorrectCommitRevealVersion"
-    );
+    // The public preflight check never refuses the chain's tag (D-122).
+    assert_eq!(state.check(0)?, Uid(0));
+    assert_eq!(state.commit_reveal_tag(), 5);
 
     // A runtime upgrade to unproven code pauses again.
     let upgraded = seed_code(&chain, b"runtime code B");
@@ -353,13 +341,26 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
     refuted
         .reveals
         .remember_missed_reveal(rtao_primitives::H256(bytes), 5);
-    assert!(
-        refuted.commit_reveal_tag(&state).is_err(),
-        "refutation beats review"
+    assert_eq!(
+        refuted.commit_reveal_decision(&state).basis(),
+        Some(rtao_core::commit_reveal::TagBasis::Refuted),
+        "refutation beats review in the reported basis"
     );
-    // Missing identity never follows a changed tag.
+    assert_eq!(refuted.commit_reveal_tag(&state)?, 5);
+    // Missing identity follows the tag and reports it (D-122); only the
+    // opt-in pauses.
     state.runtime_code = None;
-    assert!(fresh_scheduler()?.commit_reveal_tag(&state).is_err());
+    assert_eq!(fresh_scheduler()?.commit_reveal_tag(&state)?, 5);
+    assert_eq!(
+        fresh_scheduler()?.commit_reveal_decision(&state).basis(),
+        Some(rtao_core::commit_reveal::TagBasis::CodeUnknown)
+    );
+    assert!(
+        fresh_scheduler()?
+            .with_unreviewed_cr_tags(rtao_core::commit_reveal::Unreviewed::Pause)
+            .commit_reveal_tag(&state)
+            .is_err()
+    );
 
     // The native tag and direct rows never depend on code identity.
     state.commit_reveal_version = NATIVE_CR_PAYLOAD_VERSION;
@@ -367,6 +368,79 @@ async fn changed_cr_version_reads_code_identity_and_follows_only_known_code() ->
     state.commit_reveal_version = 5;
     state.commit_reveal = false;
     assert_eq!(fresh_scheduler()?.commit_reveal_tag(&state)?, 4);
+    client.close().await;
+    Ok(())
+}
+
+/// The review list is an observation (D-122): the scheduler follows the
+/// stored tag under listed and unlisted code alike and reports the listed spec
+/// version, an unreviewed code and a refuting miss in gauges.
+#[tokio::test]
+async fn the_reviewed_observation_is_reported_and_never_decides() -> anyhow::Result<()> {
+    let (chain, client) = fixture().await?;
+    chain.mutate_state(|state| state.seed(&st::COMMIT_REVEAL_WEIGHTS_VERSION, (), 5u16))?;
+    let unlisted = seed_code(&chain, b"runtime code A");
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+    let reviewed = REVIEWED_CR_RUNTIME_CODE[REVIEWED_CR_RUNTIME_CODE.len() - 1];
+    let mut bytes = [0u8; 32];
+    hex::decode_to_slice(&reviewed.1[2..], &mut bytes)?;
+    let listed = rtao_primitives::H256(bytes);
+    let gauges = |metrics: &crate::Metrics| {
+        let rendered = metrics.render();
+        ["reviewed", "unreviewed", "refuted"].map(|name| {
+            let prefix = format!("rtao_weights_cr_version_{name}{{mech=\"0\"}} ");
+            rendered
+                .lines()
+                .find_map(|line| line.strip_prefix(&prefix))
+                .map_or_else(|| format!("{prefix} absent"), str::to_owned)
+        })
+    };
+    let metrics = crate::Metrics::default();
+    let mut scheduler = fresh_scheduler()?;
+    state.runtime_code = Some(listed);
+    assert_eq!(
+        scheduler.follow_cr_tag(&metrics, MechId(0), &state),
+        Some(5)
+    );
+    assert_eq!(
+        gauges(&metrics),
+        [reviewed.0.to_string(), "0".into(), "0".into()]
+    );
+    state.runtime_code = Some(unlisted);
+    assert_eq!(
+        scheduler.follow_cr_tag(&metrics, MechId(0), &state),
+        Some(5)
+    );
+    assert_eq!(gauges(&metrics), ["0".to_owned(), "1".into(), "0".into()]);
+    scheduler.reveals.remember_missed_reveal(unlisted, 5);
+    assert_eq!(
+        scheduler.follow_cr_tag(&metrics, MechId(0), &state),
+        Some(5)
+    );
+    assert_eq!(gauges(&metrics), ["0".to_owned(), "0".into(), "1".into()]);
+    scheduler.reveals.remember_missed_reveal(listed, 5);
+    state.runtime_code = Some(listed);
+    assert_eq!(
+        scheduler.follow_cr_tag(&metrics, MechId(0), &state),
+        Some(5)
+    );
+    assert_eq!(
+        gauges(&metrics),
+        [reviewed.0.to_string(), "0".into(), "1".into()]
+    );
+    // The native tag clears every observation.
+    state.commit_reveal_version = NATIVE_CR_PAYLOAD_VERSION;
+    assert_eq!(
+        scheduler.follow_cr_tag(&metrics, MechId(0), &state),
+        Some(4)
+    );
+    assert_eq!(gauges(&metrics), ["0".to_owned(), "0".into(), "0".into()]);
+    assert!(
+        !metrics
+            .render()
+            .contains("rtao_weights_cr_version_mismatch_total")
+    );
     client.close().await;
     Ok(())
 }

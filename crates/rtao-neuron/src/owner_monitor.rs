@@ -268,12 +268,17 @@ impl OwnerMonitor {
         &self,
         snapshot: &Snapshot,
     ) -> Result<OwnerObservation, OwnerMonitorError> {
-        let burned_contract = rtao_runtime::verify_surface_with(
-            &snapshot.block().runtime,
-            &[SurfaceDescriptor::Storage(ALPHA_BURNED.surface())],
-        );
-        if !burned_contract.changes.is_empty() {
-            return Err(invalid("AlphaAssets.AlphaBurned source contract changed"));
+        // A changed AlphaBurned contract decodes against live metadata by
+        // name (D-123); only an absent entry refuses.
+        if snapshot
+            .block()
+            .runtime
+            .storage_entry(ALPHA_BURNED.surface().pallet, ALPHA_BURNED.surface().name)
+            .is_none()
+        {
+            return Err(invalid(
+                "AlphaAssets.AlphaBurned is absent from live metadata",
+            ));
         }
         let (
             exists,
@@ -486,28 +491,39 @@ fn filtered_events(
         let Some(descriptor) = event_descriptor(record) else {
             continue;
         };
+        // Events are decoded with live metadata. A changed shape (for
+        // example a new `ProxyType` variant in `ProxyAdded`) is read by field
+        // name (D-123); positional fields are read only while the compiled
+        // shape matches, or where the live field still carries the compiled
+        // type identity at that position.
         let report = rtao_runtime::verify_surface_with(
             &snapshot.block().runtime,
             &[SurfaceDescriptor::Event(descriptor)],
         );
-        if !report.shapes_match() {
-            return Err(invalid(format!(
-                "{}.{} event contract changed",
-                descriptor.pallet, descriptor.name
-            )));
-        }
+        let positional =
+            report.shapes_match() || positional_fields_hold(&snapshot.block().runtime, descriptor);
         let matched = if descriptor.pallet == "Proxy" {
             let name = if descriptor.name == "Announced" {
                 "real"
             } else {
                 "delegator"
             };
-            account(event_field(&record.attributes, name, 0)?)? == owner
+            account(located_field(
+                &record.attributes,
+                name,
+                positional,
+                descriptor,
+            )?)? == owner
         } else if descriptor.name == "NetworkRegistrationQueued" {
-            account(event_field(&record.attributes, "coldkey", 0)?)? == owner
+            account(located_field(
+                &record.attributes,
+                "coldkey",
+                positional,
+                descriptor,
+            )?)? == owner
         } else {
             let value = uint(
-                event_field(&record.attributes, "netuid", 0)?,
+                located_field(&record.attributes, "netuid", positional, descriptor)?,
                 "event netuid",
             )?;
             let event_netuid =
@@ -530,6 +546,31 @@ fn filtered_events(
         }
     }
     Ok(result)
+}
+/// The first field of an owner-relevant event, by name, or by position while
+/// positional fields are known to hold (D-123).
+fn located_field<'a>(
+    attributes: &'a Value,
+    name: &str,
+    positional: bool,
+    descriptor: &rtao_runtime::EventDescriptor,
+) -> Result<&'a Value, OwnerMonitorError> {
+    if !positional && !matches!(attributes, Value::Dict(_)) {
+        return Err(invalid(format!(
+            "{}.{} changed its positional fields; field {name} cannot be located",
+            descriptor.pallet, descriptor.name
+        )));
+    }
+    event_field(attributes, name, 0)
+}
+/// Whether the live event's first field still carries the compiled type
+/// identity, so a positional read at index 0 stays correct after an
+/// unrelated change to the event's other fields.
+fn positional_fields_hold(
+    runtime: &rtao_runtime::RuntimeHandle,
+    descriptor: &rtao_runtime::EventDescriptor,
+) -> bool {
+    rtao_runtime::event_field_matches(runtime, descriptor, 0)
 }
 fn event_field<'a>(
     attributes: &'a Value,

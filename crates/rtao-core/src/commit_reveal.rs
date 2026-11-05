@@ -1,4 +1,4 @@
-//! Commit-reveal version tag following (D-086, D-110).
+//! Commit-reveal version tag following (D-086, D-110, D-122).
 //!
 //! Every timelocked weight commit repeats the chain's
 //! `CommitRevealWeightsVersion` storage value as a tag; a commit with any
@@ -17,11 +17,16 @@
 //! [`TagEvidence`] keeps bounded reveal evidence in a fixed array for callers
 //! without a checkpointed store of their own.
 //!
-//! An unreviewed runtime never stops commits by itself: under
-//! [`Unreviewed::Follow`], the default, its stored tag is followed and the
-//! decision reports [`TagBasis::Unreviewed`] for the operator. Only reveal
-//! evidence pauses a tag: an unexplained miss of a commitment that carried
-//! that tag under that code ([`TagPause::Refuted`]).
+//! Under [`Unreviewed::Follow`], the default, the stored tag is always
+//! followed (D-122): the chain checks only that a commit's tag equals the
+//! stored value, and runtime code decides the payload. The review list and
+//! reveal evidence are observations reported in the decision's
+//! [`TagBasis`], never preconditions. An unread `:code` hash follows as
+//! [`TagBasis::CodeUnknown`]; an unexplained missed reveal follows as
+//! [`TagBasis::Refuted`], which asks the caller to commit at most once per
+//! subnet epoch ([`TagDecision::once_per_epoch`]) and to report the miss, so
+//! the next reveal can prove the tag again. Only the explicit
+//! [`Unreviewed::Pause`] opt-in pauses.
 
 /// Timelocked payload format this build encodes.
 ///
@@ -36,8 +41,9 @@ pub const NATIVE_PAYLOAD_VERSION: u16 = 4;
 /// `WeightsTlockPayload` and never reads `CommitRevealWeightsVersion`, so
 /// under exactly this code a commit may carry whatever tag the chain stores.
 /// A runtime adoption adds the newly pinned code here once its reveal path is
-/// checked; until then [`select_tag`] still follows the stored tag under
-/// [`Unreviewed::Follow`].
+/// checked. The list is an observation ([`TagBasis::Reviewed`]): under
+/// [`Unreviewed::Follow`] [`select_tag`] follows the stored tag under any
+/// code, listed or not.
 pub const REVIEWED_RUNTIME_CODE: [(u32, &str); 2] = [
     (
         484,
@@ -126,16 +132,22 @@ pub enum RevealEvidence {
 }
 
 /// What [`select_tag`] does with a changed tag under code that is neither
-/// reviewed nor proven by a reveal.
+/// reviewed nor proven by a reveal, or whose reveal missed.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Unreviewed {
-    /// Follow the stored tag and report [`TagBasis::Unreviewed`]. A
-    /// refuting miss still pauses it.
+    /// Follow the stored tag under any code and report why
+    /// ([`TagBasis`]). A refuting miss is reported and limits commits to one
+    /// per subnet epoch; it never stops them (D-122).
     #[default]
     Follow,
-    /// Pause commits until the code is reviewed or a reveal proves it, the
-    /// behavior of D-086 before D-110.
+    /// Opt-in: pause commits until the code is reviewed or a reveal proves
+    /// it, and after a refuting miss or without a `:code` hash, the behavior
+    /// of D-086 before D-110. This locks timelocked commits to
+    /// [`REVIEWED_RUNTIME_CODE`] and to outstanding evidence: a validator
+    /// with nothing outstanding cannot gather a reveal, so it waits for a
+    /// release that lists the code or for the chain to return to
+    /// [`NATIVE_PAYLOAD_VERSION`].
     Pause,
 }
 
@@ -155,9 +167,19 @@ pub enum TagBasis {
     /// Neither reviewed nor proven yet. Operators should know: the next
     /// reveal under this code either proves the tag or refutes it.
     Unreviewed,
+    /// The latest commitment carrying this tag under this code missed its
+    /// reveal with no other explanation. The tag is still the only one the
+    /// chain accepts, so it is followed; the caller commits at most once per
+    /// subnet epoch and reports the miss, and a later reveal proves the tag
+    /// again (D-122).
+    Refuted,
+    /// The caller did not read the live `:code` hash, so neither the review
+    /// list nor reveal evidence applies; the stored tag is followed (D-122).
+    CodeUnknown,
 }
 
-/// Why [`select_tag`] pauses timelocked commits.
+/// Why [`select_tag`] pauses timelocked commits. Only the
+/// [`Unreviewed::Pause`] opt-in pauses.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum TagPause {
@@ -198,9 +220,30 @@ impl TagDecision {
             Self::Pause { .. } => None,
         }
     }
+    /// Why the tag is followed, if it is.
+    pub const fn basis(self) -> Option<TagBasis> {
+        match self {
+            Self::Follow { basis, .. } => Some(basis),
+            Self::Pause { .. } => None,
+        }
+    }
+    /// Whether the caller should make at most one timelocked commit per
+    /// subnet epoch under this decision: the tag is followed although the
+    /// latest commitment carrying it under this code missed its reveal
+    /// ([`TagBasis::Refuted`]). One commit per epoch is the evidence a
+    /// validator needs to see the tag reveal again (D-122).
+    pub const fn once_per_epoch(self) -> bool {
+        matches!(
+            self,
+            Self::Follow {
+                basis: TagBasis::Refuted,
+                ..
+            }
+        )
+    }
 }
 
-/// Decide the tag for a timelocked commit (D-110).
+/// Decide the tag for a timelocked commit (D-110, D-122).
 ///
 /// - `commit_reveal`: `CommitRevealWeightsEnabled` for the subnet; when off,
 ///   no commit is made and the native tag is returned for completeness.
@@ -210,8 +253,12 @@ impl TagDecision {
 ///   `stored_tag` is not [`NATIVE_PAYLOAD_VERSION`].
 /// - `evidence`: what this validator's reveals showed for that code and tag.
 ///
-/// Refutation wins over review: reviewed code whose reveals are seen failing
-/// stops being followed until a later reveal proves it again.
+/// Under [`Unreviewed::Follow`] the stored tag is always followed and the
+/// basis reports what is known: refutation wins over review (reviewed code
+/// whose reveals are seen failing reports [`TagBasis::Refuted`] until a later
+/// reveal proves it again), then review, then a reveal, then nothing. Under
+/// [`Unreviewed::Pause`] a refuted, unreviewed and unproven, or unidentified
+/// code pauses instead.
 pub fn select_tag(
     commit_reveal: bool,
     stored_tag: u16,
@@ -229,15 +276,19 @@ pub fn select_tag(
         tag: stored_tag,
         reason,
     };
-    let Some(code) = code_hash else {
-        return pause(TagPause::CodeUnknown);
-    };
     let follow = |basis| TagDecision::Follow {
         tag: stored_tag,
         basis,
     };
+    let Some(code) = code_hash else {
+        return match unreviewed {
+            Unreviewed::Follow => follow(TagBasis::CodeUnknown),
+            Unreviewed::Pause => pause(TagPause::CodeUnknown),
+        };
+    };
     match (evidence, reviewed_runtime(code), unreviewed) {
-        (RevealEvidence::Refuted, _, _) => pause(TagPause::Refuted),
+        (RevealEvidence::Refuted, _, Unreviewed::Follow) => follow(TagBasis::Refuted),
+        (RevealEvidence::Refuted, _, Unreviewed::Pause) => pause(TagPause::Refuted),
         (_, Some(spec_version), _) => follow(TagBasis::Reviewed { spec_version }),
         (RevealEvidence::Revealed, None, _) => follow(TagBasis::Revealed),
         (RevealEvidence::None, None, Unreviewed::Follow) => follow(TagBasis::Unreviewed),
@@ -370,7 +421,37 @@ mod tests {
     }
 
     #[test]
-    fn an_unreviewed_runtime_is_followed_and_reported_until_refuted() {
+    fn the_stored_tag_is_followed_under_any_code_by_default() {
+        let reviewed = REVIEWED_RUNTIMES[0];
+        for (code, evidence, basis) in [
+            (Some(&UNKNOWN), RevealEvidence::None, TagBasis::Unreviewed),
+            (Some(&UNKNOWN), RevealEvidence::Revealed, TagBasis::Revealed),
+            (Some(&UNKNOWN), RevealEvidence::Refuted, TagBasis::Refuted),
+            (
+                Some(&reviewed.code_hash),
+                RevealEvidence::None,
+                TagBasis::Reviewed {
+                    spec_version: reviewed.spec_version,
+                },
+            ),
+            (
+                Some(&reviewed.code_hash),
+                RevealEvidence::Refuted,
+                TagBasis::Refuted,
+            ),
+            (None, RevealEvidence::None, TagBasis::CodeUnknown),
+            (None, RevealEvidence::Refuted, TagBasis::CodeUnknown),
+        ] {
+            let decision = select_tag(true, 9, code, evidence, Unreviewed::default());
+            assert_eq!(decision, TagDecision::Follow { tag: 9, basis });
+            assert_eq!(decision.tag(), Some(9));
+            assert_eq!(decision.basis(), Some(basis));
+            assert_eq!(decision.once_per_epoch(), basis == TagBasis::Refuted);
+        }
+    }
+
+    #[test]
+    fn the_pause_opt_in_pauses_unproven_refuted_and_unidentified_code() {
         let follow = select_tag(
             true,
             5,
@@ -399,22 +480,26 @@ mod tests {
                 basis: TagBasis::Revealed
             }
         );
-        for unreviewed in [Unreviewed::Follow, Unreviewed::Pause] {
-            assert_eq!(
-                select_tag(true, 5, Some(&UNKNOWN), RevealEvidence::Refuted, unreviewed),
-                TagDecision::Pause {
-                    tag: 5,
-                    reason: TagPause::Refuted
-                }
-            );
-            assert_eq!(
-                select_tag(true, 5, None, RevealEvidence::None, unreviewed),
-                TagDecision::Pause {
-                    tag: 5,
-                    reason: TagPause::CodeUnknown
-                }
-            );
-        }
+        assert_eq!(
+            select_tag(
+                true,
+                5,
+                Some(&UNKNOWN),
+                RevealEvidence::Refuted,
+                Unreviewed::Pause
+            ),
+            TagDecision::Pause {
+                tag: 5,
+                reason: TagPause::Refuted
+            }
+        );
+        assert_eq!(
+            select_tag(true, 5, None, RevealEvidence::None, Unreviewed::Pause),
+            TagDecision::Pause {
+                tag: 5,
+                reason: TagPause::CodeUnknown
+            }
+        );
         assert_eq!(
             select_tag(
                 true,
@@ -431,7 +516,7 @@ mod tests {
     }
 
     #[test]
-    fn reviewed_code_is_followed_unless_refuted() {
+    fn reviewed_code_is_followed_and_a_refutation_is_reported() {
         let reviewed = REVIEWED_RUNTIMES[REVIEWED_RUNTIMES.len() - 1];
         assert_eq!(
             select_tag(
@@ -448,13 +533,22 @@ mod tests {
                 }
             }
         );
+        let refuted = select_tag(
+            true,
+            6,
+            Some(&reviewed.code_hash),
+            RevealEvidence::Refuted,
+            Unreviewed::Follow,
+        );
+        assert_eq!(refuted.tag(), Some(6));
+        assert!(refuted.once_per_epoch());
         assert_eq!(
             select_tag(
                 true,
                 6,
                 Some(&reviewed.code_hash),
                 RevealEvidence::Refuted,
-                Unreviewed::Follow
+                Unreviewed::Pause
             )
             .tag(),
             None

@@ -537,10 +537,11 @@ impl Client {
     /// own latest state rather than a header the client resolved first; an
     /// endpoint whose headers trail its state cannot return an older value.
     /// This ignores `ClientConfig::read_at_one_block`. The value is decoded
-    /// with the head runtime, and the live entry's shape is checked first;
-    /// that runtime is itself read unpinned but may be cached for a few
-    /// seconds, so an entry whose type changes in a runtime upgrade can be
-    /// checked against the previous metadata until the head is refreshed.
+    /// with the head runtime, by name and strictly when the live entry's
+    /// shape differs from the compiled one (D-123); that runtime is itself
+    /// read unpinned but may be cached for a few seconds, so an entry whose
+    /// type changes in a runtime upgrade can be decoded against the previous
+    /// metadata until the head is refreshed.
     pub(crate) async fn storage_unpinned<K: KeyArgs + 'static, V: FromStorage>(
         &self,
         descriptor: &StorageDescriptor<K, V>,
@@ -1027,27 +1028,54 @@ fn storage_info(
             CoreError::NotInRuntime(format!("storage {}.{}", surface.pallet, surface.name)).into()
         })
 }
+/// Runtimes and storage entries already reported as decoded by name.
+static READ_BY_NAME: std::sync::Mutex<
+    std::collections::BTreeSet<(rtao_runtime::RuntimeStamp, String)>,
+> = std::sync::Mutex::new(std::collections::BTreeSet::new());
+
+/// Check a typed storage entry against live metadata (D-123).
+///
+/// A changed exact shape is not a refusal: keys are encoded with the live
+/// key types, hashers and prefix, and the value decodes against the live
+/// type, strictly (canonical SCALE, complete input) and by field and variant
+/// name, so a value the typed model cannot represent fails on its own. The
+/// change is logged once per runtime and entry. Only an entry absent from
+/// live metadata refuses, when its key is built.
 fn check_surface(
     runtime: &RuntimeHandle,
     descriptor: rtao_runtime::SurfaceDescriptor,
     id: String,
-    name: &'static str,
+    _name: &'static str,
 ) -> Result<(), ClientError> {
     let report = rtao_runtime::verify_surface_with(runtime, &[descriptor]);
     if report.shape_matches(&id) {
-        Ok(())
-    } else {
-        Err(ClientError::SurfaceChanged {
-            descriptor: name,
-            detail: report
-                .changes
-                .iter()
-                .filter(|change| change.descriptor == id)
-                .map(|change| change.detail.as_str())
-                .collect::<Vec<_>>()
-                .join("; "),
-        })
+        return Ok(());
     }
+    let detail = report
+        .changes
+        .iter()
+        .filter(|change| change.descriptor == id)
+        .map(|change| change.detail.as_str())
+        .collect::<Vec<_>>()
+        .join("; ");
+    let fresh = READ_BY_NAME
+        .lock()
+        .map(|mut seen| {
+            if seen.len() >= 1024 {
+                seen.clear();
+            }
+            seen.insert((runtime.stamp(), id.clone()))
+        })
+        .unwrap_or(true);
+    if fresh {
+        tracing::warn!(
+            descriptor = %id,
+            spec_version = runtime.spec_version(),
+            %detail,
+            "the compiled storage descriptor no longer matches live metadata; decoding it by name against live metadata"
+        );
+    }
+    Ok(())
 }
 fn storage_key(
     runtime: &RuntimeHandle,

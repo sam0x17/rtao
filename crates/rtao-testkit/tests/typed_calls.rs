@@ -131,22 +131,8 @@ fn all_ten_golden_calls_use_generated_builders() -> Result {
         let call = build(&vector.module, &vector.function, &vector.params, &runtime)?;
         let expected = decode_hex(&vector.data_hex)?;
         // Spec 482 extended ProxyType, so a recording from an older runtime
-        // refuses the pinned Proxy.proxy shape. The core still encodes the
-        // recorded arguments to the recorded bytes.
-        if (vector.module.as_str(), vector.function.as_str()) == ("Proxy", "proxy")
-            && fixture.network.spec_version < 482
-        {
-            assert!(matches!(
-                call.compose(&runtime),
-                Err(rtao_runtime::ComposeError::SurfaceChanged { .. })
-            ));
-            let bytes = runtime
-                .core()
-                .compose_call(call.descriptor.pallet, call.descriptor.name, &call.args)
-                .map_err(rtao_core::CoreError::from)?;
-            assert_eq!(bytes, expected, "{}.{}", vector.module, vector.function);
-            continue;
-        }
+        // differs from the pinned Proxy.proxy shape; the call composes from
+        // the recording's live metadata by name (D-123) to the recorded bytes.
         let encoded = call
             .compose(&runtime)
             .map_err(|error| format!("{}.{}: {error}", vector.module, vector.function))?;

@@ -6393,6 +6393,7 @@ dependencies = [
  "scale-info",
  "serde",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]

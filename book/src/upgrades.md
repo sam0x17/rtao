@@ -21,7 +21,8 @@ responding to a chain upgrade.
    with the application's `Policy`. Review the resulting call, signer,
    estimated fee and violations against current state. Resolve any runtime
    surface refusal by reviewing and updating the affected client code and
-   descriptors before submitting again.
+   descriptors before submitting again. A changed surface that live metadata
+   can still encode appears as a plan warning, not a refusal.
 4. After a runtime change, prepare a fresh plan and review any changed call.
    Preserve receipts and recovery records for work already submitted. An
    unknown transaction outcome needs reconciliation before a replacement is
@@ -47,7 +48,21 @@ attestations before recording the reports and regenerating `compat.json`. See
 for the report requirements.
 
 Typed composition checks the required call surfaces, and reads check their
-own descriptors. `CallBytes` records both specification and transaction
+own descriptors. A newer runtime never stops a typed call or read just for
+being newer. When a call's compiled argument shape no longer matches the live
+runtime (for example an enum it carries gained a variant), it is composed
+from the live metadata by name: every live field must be supplied, each value
+must fit its live type without lenient conversion, and the bytes must decode
+and re-encode identically under the live metadata. A warning is logged once
+per call and runtime, and `rtao_runtime::live_compositions()` counts them.
+Only a call the live metadata cannot encode refuses, naming the cause: a
+removed variant the value uses, an added or renamed field, or a field type the
+value does not fit. Typed storage reads decode a changed entry by name and
+strictly against the live type in the same way, and fail only for a value the
+typed model cannot hold. Intent review lists such differences as warnings. A
+call this build has no descriptor for can be composed by name with
+`rtao_runtime::compose_by_name` or the CLI's `rtao call Pallet.function`.
+`CallBytes` records both specification and transaction
 versions. Signature preparation and submission reject stale stamps. Semantic
 execution can refresh and replan once after a version mismatch, reapplying
 its policy. An `ExecuteOptions::expected_call` constraint remains enforced,
@@ -99,17 +114,18 @@ there would read an unregistered hotkey as UID 0.
 Commit-reveal commits carry a version tag that root sets in
 `CommitRevealWeightsVersion`. The chain only checks that the tag matches; the
 runtime code decides which payload a reveal can decode. rtao encodes the
-version 4 payload. When the stored tag changes, the scheduler follows it
-without a rebuild if the live runtime code is a reviewed pinned runtime or has
-already revealed one of the validator's own commitments while that same tag
-was stored. Otherwise timelocked commits pause for that mechanism, with one
-warning, until the tag returns to 4 or the code is proven; other duties keep
-running. A commitment carrying a followed tag that then misses its reveal for
-no visible reason pauses that tag under that code again. If the chain rejects
-a commit's tag at dispatch, the scheduler re-reads the tag and retries, at
-most 10 times with a growing wait. A runtime pin must review
-the reveal path and add the new code hash to `REVIEWED_CR_RUNTIME_CODE` when
-the payload format is unchanged; a test keeps the newest pin in that list.
+version 4 payload. When the stored tag changes, the scheduler follows it under
+any runtime code, without a rebuild, and reports what it knows: whether the
+code is a reviewed pinned runtime, has revealed one of the validator's own
+commitments under that tag, or neither. A commitment carrying a non-native
+tag that misses its reveal for no visible reason is counted and logged, and
+commits under that tag and code continue at most once per subnet epoch until
+one reveals. `Unreviewed::Pause` opts into the earlier pause instead. If the
+chain rejects a commit's tag at dispatch, the scheduler re-reads the tag and
+retries, at most 10 times with a growing wait. A runtime pin reviews the
+reveal path and adds the new code hash to `REVIEWED_CR_RUNTIME_CODE` when the
+payload format is unchanged, which changes only what is reported; a test
+keeps the newest pin in that list.
 Follow the [validator guide](validator.md) for reveal observations,
 shutdown and saved-state compatibility. Retain application checkpoints when
 updating the binary; a changed state format needs an explicit schema version
