@@ -35,20 +35,23 @@
 #                   of its network, endpoints that disagree about the
 #                   finalized runtime): nothing runs; an issue and an alert.
 #   backoff         The same adoption failed before with the same inputs and
-#                   its retry delay (1 h doubling per failure, at most 24 h)
-#                   has not passed: nothing runs; the issue stays open. A
+#                   its retry delay (1 h doubling per failed attempt, at most
+#                   24 h, from when the last attempt failed) has not passed:
+#                   nothing runs; the issue stays open. A
 #                   change to the adoption inputs (xtask, ci, crates, parity,
 #                   codegen, vendor, pins, lock, toolchain, this workflow) or a
 #                   forced dispatch retries at once.
 # A new runtime is acted on only when a second endpoint corroborates it at the
-# same finalized block; with none answering the run waits (no issue).
+# same finalized block, which it holds on its own finalized chain; with none
+# answering the run waits (no issue).
 # A red stage leaves main untouched and reports like blocked. Upstream
 # branches that declare a newer spec than any network runs are listed as
 # upcoming (an informational issue, no alert) so they can be pre-staged.
 #
 # A Finney adoption approves itself on evidence: the pinned runtime's :code
 # (hashed here with BLAKE2b-256), its V15/V16 metadata digests and spec read
-# at the pinned block from at least two endpoints that all agree, the release
+# at the pinned block, which each holds on its own finalized chain, from at
+# least two endpoints that all agree, the release
 # wasm when upstream published one, then the pin, import, extraction,
 # regeneration, compatibility, drift, parity, build, tests and a live read
 # with the built CLI. Parity runs in adoption mode: unchanged and cosmetic
@@ -109,20 +112,71 @@ rpc() {
     jq -ce '.result // empty'
 }
 
+# A hex block number (0x...) as decimal; empty when malformed.
+block_number() {
+  if [[ "${1:-}" =~ ^0x[0-9a-fA-F]{1,15}$ ]]; then echo $((16#${1#0x})); fi
+}
+
+# Whether an endpoint holds a block on its own finalized chain: "true" when
+# its canonical hash at the block's number is the block and it has finalized
+# that number, "false" when it finalized another block at that number,
+# "unfinalized" when it has not finalized that far (re-read once after a
+# short pause, for an endpoint a block or two behind), empty when it cannot
+# say. A single endpoint's finalized head is never taken on trust.
+on_finalized_chain() {
+  local endpoint=$1 block=$2 number=$3 canonical head final
+  canonical=$(rpc "$endpoint" chain_getBlockHash "[$number]" 2>/dev/null | jq -r .) || return 0
+  local attempt
+  for attempt in 1 2; do
+    head=$(rpc "$endpoint" chain_getFinalizedHead '[]' 2>/dev/null | jq -r .) || return 0
+    final=$(block_number "$(rpc "$endpoint" chain_getHeader "[\"$head\"]" 2>/dev/null | jq -r .number)") || return 0
+    [[ -n "$final" ]] || return 0
+    if ((final >= number)); then
+      [[ "$canonical" == "$block" ]] && echo true || echo false
+      return 0
+    fi
+    ((attempt == 2)) || sleep "${RTAO_ADOPT_LAG_PAUSE:-12}"
+    canonical=$(rpc "$endpoint" chain_getBlockHash "[$number]" 2>/dev/null | jq -r .) || return 0
+  done
+  echo unfinalized
+}
+
 # One witness: the runtime another endpoint reports at the primary's
 # finalized block, or {"endpoint", "error"}. An endpoint that does not know
-# the block (lagging, pruned) is an error, not a disagreement.
+# the block (lagging, pruned) or has not finalized it yet is an error, not a
+# disagreement; one that finalized another block at that height disagrees
+# (canonical false). The first failed read ends the witness, so a hung
+# endpoint costs one read's retries.
 observe_witness() {
-  local endpoint=$1 block=$2 genesis version code
-  genesis=$(rpc "$endpoint" chain_getBlockHash '[0]' 2>/dev/null | jq -r .) || genesis=
-  version=$(rpc "$endpoint" state_getRuntimeVersion "[\"$block\"]" 2>/dev/null) || version=
-  code=$(rpc "$endpoint" state_getStorageHash "[\"0x3a636f6465\", \"$block\"]" 2>/dev/null | jq -r .) || code=
+  local endpoint=$1 block=$2 number=$3 genesis version code canonical
+  local none='no complete runtime at the block'
+  genesis=$(rpc "$endpoint" chain_getBlockHash '[0]' 2>/dev/null | jq -r .) &&
+    version=$(rpc "$endpoint" state_getRuntimeVersion "[\"$block\"]" 2>/dev/null) &&
+    code=$(rpc "$endpoint" state_getStorageHash "[\"0x3a636f6465\", \"$block\"]" 2>/dev/null | jq -r .) || {
+    jq -cn --arg endpoint "$endpoint" --arg error "$none" '{endpoint: $endpoint, error: $error}'
+    return
+  }
   if [[ ! "$genesis" =~ ^0x[0-9a-f]{64}$ || ! "$code" =~ ^0x[0-9a-f]{64}$ || -z "$version" ]]; then
-    jq -cn --arg endpoint "$endpoint" '{endpoint: $endpoint, error: "no complete runtime at the block"}'
+    jq -cn --arg endpoint "$endpoint" --arg error "$none" '{endpoint: $endpoint, error: $error}'
     return
   fi
+  canonical=$(on_finalized_chain "$endpoint" "$block" "$number")
+  case "$canonical" in
+    true | false) ;;
+    unfinalized)
+      jq -cn --arg endpoint "$endpoint" --argjson number "$number" \
+        '{endpoint: $endpoint, error: "has not finalized block \($number) yet"}'
+      return
+      ;;
+    *)
+      jq -cn --arg endpoint "$endpoint" '{endpoint: $endpoint, error: "finalized chain unavailable"}'
+      return
+      ;;
+  esac
   jq -cn --arg endpoint "$endpoint" --arg genesis "$genesis" --argjson version "$version" --arg code "$code" \
-    '{endpoint: $endpoint, genesis: $genesis, spec: $version.specVersion, spec_name: $version.specName, code: $code}'
+    --argjson canonical "$canonical" \
+    '{endpoint: $endpoint, genesis: $genesis, spec: $version.specVersion, spec_name: $version.specName, code: $code,
+      canonical: $canonical}'
 }
 
 # The finalized runtime of a network as JSON, or {"error": ...}, with the
@@ -150,10 +204,12 @@ observe_network() {
     jq -cn --arg error "$name endpoint $endpoint gave no complete finalized runtime" '{error: $error}'
     return
   fi
-  local seen='[]' witness
+  local seen='[]' witness decimal
+  decimal=$(block_number "$number")
+  [[ -n "$decimal" ]] || { jq -cn --arg error "$name endpoint $endpoint gave block number $number" '{error: $error}'; return; }
   for witness in $witnesses; do
     [[ "$witness" != "$endpoint" ]] || continue
-    seen=$(jq -c --argjson row "$(observe_witness "$witness" "$finalized")" '. + [$row]' <<<"$seen")
+    seen=$(jq -c --argjson row "$(observe_witness "$witness" "$finalized" "$decimal")" '. + [$row]' <<<"$seen")
   done
   jq -cn --arg endpoint "$endpoint" --arg finalized "$finalized" --arg number "$number" \
     --argjson version "$version" --arg code "$code" --arg genesis "$genesis" --argjson witnesses "$seen" \
@@ -167,12 +223,14 @@ observe_network() {
 # is what a normal run sees, but the rule needs only two agreeing endpoints
 # and no disagreeing one, so one operator's outage does not stop adoption.
 finney_witnesses=${FINNEY_WITNESSES:-https://archive.chain.opentensor.ai:443 https://bittensor-finney.api.onfinality.io/public https://lite.chain.opentensor.ai:443}
+# Testnet's second public name, so a testnet record is corroborated too.
+testnet_witnesses=${TESTNET_WITNESSES-https://test.chain.opentensor.ai:443}
 
 # A fingerprint of everything an adoption's outcome depends on, so a fix
 # merged to main retries a backed-off adoption at once.
 adopt_inputs() {
   local path objects=""
-  for path in xtask ci crates parity codegen vendor upstream.toml Cargo.toml Cargo.lock \
+  for path in xtask ci crates parity codegen vendor patches .cargo upstream.toml Cargo.toml Cargo.lock \
     rust-toolchain.toml .github/workflows/runtime-adopt.yml; do
     objects+="$path $(git -C "$root" rev-parse -q --verify "HEAD:$path" 2>/dev/null || echo absent)"$'\n'
   done
@@ -239,7 +297,7 @@ observe() {
     "${FINNEY_ENDPOINTS:-$(toml_get "$pins" networks.finney genesis_endpoint) https://archive.chain.opentensor.ai:443}" \
     "$finney_witnesses")
   testnet=$(observe_network testnet "$(toml_get "$pins" networks.testnet genesis)" \
-    "${TESTNET_ENDPOINTS:-$(toml_get "$pins" networks.testnet genesis_endpoint)}" "${TESTNET_WITNESSES:-}")
+    "${TESTNET_ENDPOINTS:-$(toml_get "$pins" networks.testnet genesis_endpoint)}" "$testnet_witnesses")
   local branches='{}' sources='{}' head ref spec
   if command -v gh >/dev/null; then
     while read -r head ref; do
@@ -294,40 +352,45 @@ decide() {
   def result($action; $network; $spec; $code; $reason):
     {action: $action, network: $network, spec: $spec, code: $code, reason: $reason,
      id: (if $network == null then "none" else "\($network)-\($spec)-\($code | short)" end)};
-  # Witnesses re-read the primary's finalized block. A result is acted on
-  # only when one corroborates it (when witnesses are configured); any
-  # answering witness that disagrees blocks it. Unanswered ones are ignored.
+  # Witnesses re-read the primary's finalized block and check it is on their
+  # own finalized chain. A result is acted on only when one corroborates it
+  # (when witnesses are configured); any answering witness that disagrees,
+  # or finalized another block at that height, blocks it. Unanswered ones
+  # (unreachable, pruned, not finalized that far yet) are ignored.
   def corroborate($n; $name):
     if . == null then null
     else
       (($n.witnesses // []) | map(select((.error // null) == null))) as $answered
       | def agrees: .genesis == ($n.genesis // .genesis) and .spec == $n.spec and .code == $n.code
-          and (.spec_name // $n.spec_name) == $n.spec_name;
+          and (.spec_name // $n.spec_name) == $n.spec_name and .canonical == true;
         ($answered | map(select(agrees))) as $agree
       | ($answered | map(select(agrees | not))) as $disagree
       | if ($disagree | length) > 0 then
           result("blocked"; $name; $n.spec; $n.code;
             "endpoints disagree about \($name)'s finalized runtime at block \($n.number) (\($n.finalized | short)…): \($n.endpoint) reports spec \($n.spec) with :code \($n.code | short)…, " +
-            ($disagree | map("\(.endpoint) reports spec \(.spec) with :code \(.code | short)…" + (if .genesis != ($n.genesis // .genesis) then " on another genesis" else "" end)) | join("; ")))
+            ($disagree | map("\(.endpoint) reports spec \(.spec) with :code \(.code | short)…"
+              + (if .genesis != ($n.genesis // .genesis) then " on another genesis" else "" end)
+              + (if .canonical != true then " and finalized another block at that height" else "" end)) | join("; ")))
           + {evidence: "inconsistent"}
         elif (($n.witnesses // []) | length) > 0 and ($agree | length) == 0 then
           {wait: "\($name): no witness endpoint corroborated spec \($n.spec) at block \($n.number) yet"}
         else . + {witnesses: ($agree | map(.endpoint))} end
     end;
   # A retry of an adoption that failed before, with the same inputs, waits
-  # 1 h doubling per failure (at most 24 h), less five minutes of slack.
+  # 1 h doubling per failed attempt (at most 24 h) from the end of the last
+  # attempt, less five minutes of slack. A blocked report is no attempt.
   def backoff:
     (($o.previous // {})[.id] // null) as $p
     | if (.action == "adopt-finney" or .action == "record-testnet")
        and (($o.force // false) | not)
-       and $p != null and ($p.attempted_at // null) != null
+       and $p != null and ($p.attempted_at // null) != null and ($p.failures // 1) >= 1
        and ($p.inputs // null) == ($o.inputs // null)
     then
       ([pow(2; (($p.failures // 1) - 1)) * 3600, 86400] | min) as $delay
       | (($p.attempted_at | fromdateiso8601) + $delay - 300) as $retry
       | if ($o.observed_at | fromdateiso8601) < $retry then
           . + {action: "backoff", wanted: .action, retry_at: ($retry | todate),
-               reason: "\(.reason); the last attempt failed at stage \($p.stage) (\($p.failures) consecutive failure(s) with these inputs), so the next attempt waits until \($retry | todate) or a change to the adoption inputs"}
+               reason: "\(.reason); the last attempt failed at stage \($p.stage) (\($p.failures) failed attempt(s) with these inputs), so the next attempt waits until \($retry | todate) or a change to the adoption inputs"}
         else . end
     else . end;
   # Finney first: the parity pin follows the runtime mainnet finalizes.
@@ -439,7 +502,9 @@ envelope_sha256() {
 
 # What one endpoint serves at a block: genesis, runtime version, the :code
 # storage hash it reports, the BLAKE2b-256 of the :code bytes computed here,
-# and the V15/V16 metadata digests. Errors are recorded, not raised.
+# the V15/V16 metadata digests, and whether the block is on the endpoint's
+# own finalized chain (the pin took its finalized head from one endpoint).
+# Errors are recorded, not raised.
 endpoint_evidence() {
   local endpoint=$1 block=$2 dir
   dir=$(mktemp -d)
@@ -461,23 +526,37 @@ endpoint_evidence() {
     fi
   done
   rm -rf "$dir"
+  local number canonical=""
+  if [[ -z "$error" ]]; then
+    number=$(block_number "$(rpc "$endpoint" chain_getHeader "[\"$block\"]" 2>/dev/null | jq -r .number)")
+    if [[ -n "$number" ]]; then
+      canonical=$(on_finalized_chain "$endpoint" "$block" "$number")
+    fi
+    case "$canonical" in
+      true | false) ;;
+      unfinalized) error="has not finalized block $number" ;;
+      *) error="finalized chain unavailable" ;;
+    esac
+  fi
   if [[ -n "$error" ]]; then
     jq -cn --arg endpoint "$endpoint" --arg error "$error" '{endpoint: $endpoint, error: $error}'
     return
   fi
   jq -cn --arg endpoint "$endpoint" --arg genesis "$genesis" --argjson version "$version" \
     --arg reported "$reported" --arg code "$code_bytes" --arg v15 "$v15" --arg v16 "$v16" \
+    --argjson number "$number" --argjson canonical "$canonical" \
     '{endpoint: $endpoint, genesis: $genesis, spec: $version.specVersion, spec_name: $version.specName,
       transaction_version: $version.transactionVersion, code_reported: $reported, code: $code,
-      v15_sha256: $v15, v16_sha256: $v16}'
+      v15_sha256: $v15, v16_sha256: $v16, number: $number, canonical: $canonical}'
 }
 
 # The rule live evidence must meet, as a pure function of live.json:
 # {expected: {genesis, spec, code, v15_sha256, v16_sha256}, endpoints: [...],
 #  release: {status: matches|differs|unavailable, ...}}. Every answering
-# endpoint must match every expected field (its reported :code hash and the
-# hash of the bytes alike), at least two must answer, and a published
-# release wasm must hash to the same :code.
+# endpoint must hold the pinned block on its own finalized chain and match
+# every expected field (its reported :code hash and the hash of the bytes
+# alike), at least two must answer, and a published release wasm must hash
+# to the same :code.
 verdict() {
   local live=${1:?verdict <live.json>}
   jq -c '
@@ -487,6 +566,7 @@ verdict() {
         (if .genesis != $x.genesis then "genesis \(.genesis)" else empty end),
         (if .spec != $x.spec then "spec \(.spec)" else empty end),
         (if .spec_name != "node-subtensor" then "spec_name \(.spec_name)" else empty end),
+        (if .canonical != true then "finalized another block at height \(.number), not the pinned block" else empty end),
         (if .code_reported != $x.code then "reported :code hash \(.code_reported)" else empty end),
         (if .code != $x.code then "BLAKE2b-256 of :code \(.code)" else empty end),
         (if .v15_sha256 != $x.v15_sha256 then "V15 metadata sha256 \(.v15_sha256)" else empty end),
@@ -783,6 +863,19 @@ bot() {
     -c user.email="${RTAO_ADOPT_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}" "$@"
 }
 
+# An adoption writes pins, vendored metadata and sources, generated code,
+# parity and compatibility records and the changelog; it never changes the
+# tooling that validated it (scripts, xtask, workflows, manifests, the lock,
+# the toolchain, Cargo configuration or the core patch). A commit that does
+# was not produced by the pipeline as checked: refuse it, here and again in
+# the push job, which trusts nothing the adopt job built.
+tooling_paths='^(\.github/|ci/|xtask/|\.cargo/|\.config/|patches/|rust-toolchain\.toml$|deny\.toml$|clippy\.toml$|AGENTS\.md$)|(^|/)(Cargo\.toml|Cargo\.lock|build\.rs)$'
+check_paths() {
+  local touched
+  touched=$(git diff --name-only "$1" "$2" | grep -E "$tooling_paths" || true)
+  [[ -z "$touched" ]] || die "the adoption commit changes its own tooling, which the pipeline never writes: $(tr '\n' ' ' <<<"$touched")"
+}
+
 # Commit the validated candidate and write it as a git bundle. Runs in the
 # adopt job, whose token cannot write: nothing here pushes.
 commit() {
@@ -809,6 +902,7 @@ drift --apply and the probe pins regenerated."
   esac
   git add -A
   bot commit -q -m "$title [skip ci]" -m "$body"
+  check_paths HEAD~1 HEAD
   git bundle create -q "$bundle" HEAD~1..HEAD
   git rev-parse HEAD
 }
@@ -830,6 +924,7 @@ push() {
   commit=$(git rev-parse FETCH_HEAD)
   [[ "$(git rev-list --count --no-walk=unsorted "$commit^@")" == 1 ]] || die "the bundle's commit is not a single-parent commit"
   parent=$(git rev-parse "$commit^")
+  check_paths "$parent" "$commit"
   git fetch -q origin main
   if [[ "$(git rev-parse origin/main)" != "$parent" ]]; then
     echo "superseded: main moved from $parent during the run; the next scheduled run starts again from the new main"
@@ -896,10 +991,18 @@ open_issue() {
 
 # The backoff states after this run ({id: state}), from the decision, the
 # outcome, the failing stage and the states the open issue recorded (or
-# null). A repeat of the same failure (same id and stage) counts up; anything
-# else starts at 1. A blocked decision runs nothing, so its hourly repeat does
-# not count. The states of deferred actions are kept, so a blocked network
-# reported this run does not reset a backed-off adoption; others are dropped.
+# null). failures counts the failed attempts of this id with the same
+# adoption inputs, whatever stage each failed at (a flaky stage must not
+# reset the backoff); changed inputs start again. attempted_at is when the
+# attempt failed (RTAO_ADOPT_NOW, else now), not when it was decided: an
+# adoption can run for hours, and the delay is measured from its end. A
+# blocked decision runs nothing: it keeps the recorded attempts and adds
+# none, so it never delays a later adoption. A recorded state is dropped
+# only when its network was observed this run on another runtime (it moved
+# on) or, for the decide step's own state, when the decide step worked; an
+# unobserved or unconfirmed network, another network's report or a failed
+# decide step never resets a backoff. stage is the last reported stage (one
+# alert per change of stage).
 next_state() {
   local decision=${1:?state <decision.json> <outcome> <stage> [<previous-state.json>]}
   local outcome=${2:?state <decision.json> <outcome> <stage> [<previous-state.json>]}
@@ -908,15 +1011,28 @@ next_state() {
   if [[ -n "${4:-}" && -s "${4:-}" ]]; then
     previous=$(jq -c . "$4")
   fi
-  jq -c --arg outcome "$outcome" --arg stage "$stage" --argjson previous "$previous" '
+  jq -c --arg outcome "$outcome" --arg stage "$stage" --argjson previous "$previous" \
+    --arg now "${RTAO_ADOPT_NOW:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" '
     ($previous // {}) as $all
     | ($all[.id] // null) as $p
-    | ($p != null and $p.stage == $stage) as $same
-    | [(.deferred // [])[].id] as $keep
-    | ($all | with_entries(select(.key as $k | any($keep[]; . == $k))))
+    | ($p != null and ($p.inputs // null) == (.inputs // null)) as $same
+    | (if $same then ($p.failures // 1) else 0 end) as $before
+    | . as $d
+    | def current($network):
+        ($d.observed[$network] // null) as $n
+        | if $n == null or ($n.error // null) != null or $n.spec == null then null
+          else "\($network)-\($n.spec)-\($n.code[0:10])" end;
+      def kept($key):
+        ($key | split("-")[0]) as $network
+        | if $key == "decide" then $d.id == "decide"
+          elif $network == "finney" or $network == "testnet" then
+            current($network) as $now | $now == null or $now == $key
+          else true end;
+      ($all | with_entries(select(kept(.key))))
       + {(.id): {id: .id, stage: $stage, inputs: (.inputs // null),
-                 failures: (if $same then ($p.failures // 1) + (if .action == "blocked" then 0 else 1 end) else 1 end),
-                 attempted_at: (if $same and .action == "blocked" then $p.attempted_at else .observed_at end)}}
+                 failures: (if .action == "blocked" then $before else $before + 1 end),
+                 attempted_at: (if .action != "blocked" then $now
+                                elif $same then ($p.attempted_at // null) else null end)}}
   ' "$decision"
 }
 
@@ -1075,7 +1191,7 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
       if [[ "$action" == blocked ]]; then
         retry="Nothing runs while it is blocked; the next scheduled run re-evaluates it."
       else
-        retry="The next attempt waits $(jq -r --arg id "$id" '[pow(2; .[$id].failures - 1), 24] | min' <<<"$state") h after this one (doubling per repeated failure, at most 24 h) unless the adoption inputs change (a fix merged to main) or the workflow is dispatched with force."
+        retry="The next attempt waits $(jq -r --arg id "$id" '[pow(2; .[$id].failures - 1), 24] | min' <<<"$state") h after this one failed (doubling per failed attempt, at most 24 h) unless the adoption inputs change (a fix merged to main) or the workflow is dispatched with force."
       fi
       body="$adopt_marker
 <!-- rtao-runtime-adopt id=$id stage=$stage -->
@@ -1087,7 +1203,7 @@ $reason.
 | Action | \`$action\` |
 | Network and spec | $network $spec, \`:code\` \`$(jq -r .code "$decision")\` |
 | Stage | \`$stage\` |
-| Consecutive failures | $(jq -r --arg id "$id" '.[$id].failures' <<<"$state") |
+| Failed attempts with these inputs | $(jq -r --arg id "$id" '.[$id].failures' <<<"$state") |
 | Run | $run |
 $(jq -r 'if (.deferred // []) == [] then "" else "\nAlso outstanding:\n\n" + (.deferred | map("- `\(.action)` \(.network) spec \(.spec): \(.reason)") | join("\n")) + "\n" end' "$decision")
 
@@ -1107,6 +1223,14 @@ $tail_text
       elif [[ "$action" != blocked || "$open_id" != "$id" || "$prior_stage" != "$stage" ]]; then
         gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
       fi
+      # A state dropped above (its network moved to another runtime, or the
+      # decide step works again) is no longer outstanding: resolve its alert.
+      local dropped
+      for dropped in $(tracked_ids "$previous" "$open_id"); do
+        if [[ "$dropped" != "$id" && "$(jq --arg k "$dropped" 'has($k)' <<<"$state")" != true ]]; then
+          alert "$dropped" false "runtime adoption no longer outstanding: $dropped" "$run"
+        fi
+      done
       # One alert per episode (network, spec, :code and stage); repeats of
       # the same failure update the issue only, even when another network's
       # report shared the issue in between.

@@ -91,13 +91,14 @@ expect wrong-spec-name "$(observation "$spec" "$code" "$testnet_spec" "$testnet_
 
 # ── witnesses and backoff ─────────────────────────────────────────────
 genesis=$(toml_get "$root/upstream.toml" networks.finney genesis)
-# witness <endpoint> <spec> <code> [genesis]: one witness row; "error" for none.
+# witness <endpoint> <spec> <code> [genesis] [canonical]: one witness row;
+# "error" for none; canonical false when it finalized another block there.
 witness() {
   if [[ "$2" == error ]]; then
     jq -cn --arg e "$1" '{endpoint: $e, error: "no complete runtime at the block"}'
   else
-    jq -cn --arg e "$1" --argjson s "$2" --arg c "$3" --arg g "${4:-$genesis}" \
-      '{endpoint: $e, genesis: $g, spec: $s, spec_name: "node-subtensor", code: $c}'
+    jq -cn --arg e "$1" --argjson s "$2" --arg c "$3" --arg g "${4:-$genesis}" --argjson canonical "${5:-true}" \
+      '{endpoint: $e, genesis: $g, spec: $s, spec_name: "node-subtensor", code: $c, canonical: $canonical}'
   fi
 }
 # witnessed <observation> <witness rows...>: Finney seen by these witnesses.
@@ -118,6 +119,8 @@ expect new-spec-witness-disagrees "$(witnessed "$fresh" "$agree" "$(witness http
   '.action == "blocked" and .evidence == "inconsistent" and (.reason | test("disagree.*liar"))'
 expect new-spec-other-genesis "$(witnessed "$fresh" "$(witness https://fork.invalid "$next" "$other" "0x$(printf '%064d' 9)")")" \
   '.action == "blocked" and (.reason | test("another genesis"))'
+expect new-spec-witness-finalized-another-block "$(witnessed "$fresh" "$agree" "$(witness https://fork.invalid "$next" "$other" "$genesis" false)")" \
+  '.action == "blocked" and .evidence == "inconsistent" and (.reason | test("finalized another block"))'
 expect new-spec-uncorroborated "$(witnessed "$fresh" "$(witness https://down.invalid error)")" \
   '.action == "none" and (.unobserved | map(test("corroborated")) | any)'
 # state <failures> <hours ago> [inputs] [id] [stage]: one recorded state.
@@ -133,6 +136,7 @@ retry() { jq -c --argjson p "$1" --arg inputs "${2:-abc}" --argjson force "${3:-
 expect backoff-after-first-failure "$(retry "$(previous 1 0.5)")" \
   '.action == "backoff" and .wanted == "adopt-finney" and .retry_at == "2026-11-04T00:25:00Z"'
 expect retry-after-first-delay "$(retry "$(previous 1 1)")" '.action == "adopt-finney"'
+expect blocked-report-does-not-delay "$(retry "$(previous 0 0 abc "$id" decide | jq -c '.[].attempted_at = null')")" '.action == "adopt-finney"'
 expect backoff-doubles "$(retry "$(previous 3 3)")" '.action == "backoff" and .retry_at == "2026-11-04T00:55:00Z"'
 expect backoff-caps-at-a-day "$(retry "$(previous 9 23)")" '.action == "backoff" and .retry_at == "2026-11-04T00:55:00Z"'
 expect retry-after-a-day "$(retry "$(previous 9 24)")" '.action == "adopt-finney"'
@@ -153,8 +157,8 @@ v16=$(toml_get "$root/upstream.toml" networks.finney.metadata v16_sha256)
 endpoint() {
   jq -cn --arg e "$1" --arg g "$genesis" --argjson s "$spec" --arg c "$code" --arg v15 "$v15" --arg v16 "$v16" \
     '{endpoint: $e, genesis: $g, spec: $s, spec_name: "node-subtensor", transaction_version: 1,
-      code_reported: $c, code: $c, v15_sha256: $v15, v16_sha256: $v16}' |
-    if [[ -n "${2:-}" ]]; then jq -c --arg k "$2" --arg v "$3" '.[$k] = $v'; else cat; fi
+      code_reported: $c, code: $c, v15_sha256: $v15, v16_sha256: $v16, number: 9400000, canonical: true}' |
+    if [[ -n "${2:-}" ]]; then jq -c --arg k "$2" --argjson v "$3" '.[$k] = $v'; else cat; fi
 }
 # judge <name> <release status> <jq predicate> <endpoint rows...>
 judge() {
@@ -175,24 +179,26 @@ down='{"endpoint": "https://down.invalid", "error": "metadata V16 unavailable"}'
 judge consistent matches '.ok and .agreeing == 2' "$(endpoint a)" "$(endpoint b)" "$down"
 judge no-release-published unavailable '.ok' "$(endpoint a)" "$(endpoint b)"
 judge one-endpoint unavailable '(.ok | not) and (.reason | test("two are required"))' "$(endpoint a)" "$down"
-judge code-bytes-differ matches '(.ok | not) and (.reason | test("BLAKE2b"))' "$(endpoint a)" "$(endpoint b code 0x02)"
-judge reported-hash-differs matches '(.ok | not) and (.reason | test("reported"))' "$(endpoint a)" "$(endpoint b code_reported 0x02)"
-judge metadata-differs matches '(.ok | not) and (.reason | test("V16"))' "$(endpoint a)" "$(endpoint b v16_sha256 00)" "$(endpoint c)"
+judge code-bytes-differ matches '(.ok | not) and (.reason | test("BLAKE2b"))' "$(endpoint a)" "$(endpoint b code '"0x02"')"
+judge reported-hash-differs matches '(.ok | not) and (.reason | test("reported"))' "$(endpoint a)" "$(endpoint b code_reported '"0x02"')"
+judge metadata-differs matches '(.ok | not) and (.reason | test("V16"))' "$(endpoint a)" "$(endpoint b v16_sha256 '"00"')" "$(endpoint c)"
+judge not-on-finalized-chain matches '(.ok | not) and (.reason | test("finalized another block"))' "$(endpoint a)" "$(endpoint b)" "$(endpoint c canonical false)"
 judge release-differs differs '(.ok | not) and (.reason | test("release wasm"))' "$(endpoint a)" "$(endpoint b)"
 
 # ── backoff bookkeeping ───────────────────────────────────────────────
 # bookkeep <name> <decision action> <stage> <previous states or ""> <jq
 # predicate on this id's new state> [deferred ids, comma-separated]
-# [jq predicate on all states]
+# [jq predicate on all states] [observed networks] [failure time] [inputs]
+# [decision id]
 bookkeep() {
   local name=$1 decision=$work/$1.state-decision.json prior=$work/$1.prior.json
-  jq -n --arg action "$2" --arg id "$id" --arg deferred "${6:-}" \
-    '{action: $action, id: $id, inputs: "abc", observed_at: "2026-11-04T00:00:00Z",
+  jq -n --arg action "$2" --arg id "${11:-$id}" --arg deferred "${6:-}" --argjson observed "${8:-{\}}" --arg inputs "${10:-abc}" \
+    '{action: $action, id: $id, inputs: $inputs, observed_at: "2026-11-04T00:00:00Z", observed: $observed,
       deferred: ($deferred | split(",") | map(select(. != "") | {id: .}))}' >"$decision"
   printf '%s\n' "${4:-null}" >"$prior"
   local states
-  states=$(bash "$script" state "$decision" failure "$3" "$prior")
-  if jq -e --arg id "$id" ".[\$id] | $5" <<<"$states" >/dev/null && jq -e "${7:-true}" <<<"$states" >/dev/null; then
+  states=$(RTAO_ADOPT_NOW=${9:-2026-11-04T00:00:00Z} bash "$script" state "$decision" failure "$3" "$prior")
+  if jq -e --arg id "${11:-$id}" ".[\$id] | $5" <<<"$states" >/dev/null && jq -e "${7:-true}" <<<"$states" >/dev/null; then
     echo "ok   state $name: $states"
   else
     echo "FAIL state $name: $states"
@@ -201,13 +207,26 @@ bookkeep() {
 }
 bookkeep first-failure adopt-finney build "" '.failures == 1 and .stage == "build" and .attempted_at == "2026-11-04T00:00:00Z" and .inputs == "abc"'
 bookkeep repeated-failure adopt-finney build "$(previous 2 3)" '.failures == 3'
-bookkeep later-stage-resets adopt-finney tests "$(previous 2 3)" '.failures == 1 and .stage == "tests"'
+bookkeep later-stage-counts adopt-finney tests "$(previous 2 3)" '.failures == 3 and .stage == "tests"'
+bookkeep attempt-time-is-failure-time adopt-finney tests "$(previous 1 1)" '.failures == 2 and .attempted_at == "2026-11-04T02:30:00Z"' "" true '{}' 2026-11-04T02:30:00Z
+bookkeep changed-inputs-reset adopt-finney build "$(previous 4 3)" '.failures == 1 and .inputs == "def"' "" true '{}' "" def
 bookkeep other-runtime-resets adopt-finney build "$(previous 2 3 abc finney-999-0x00000000)" '.failures == 1'
 bookkeep blocked-does-not-count blocked decide "$(previous 1 5 abc "$id" decide)" '.failures == 1 and .attempted_at == "2026-11-03T19:00:00Z"'
+bookkeep blocked-records-no-attempt blocked decide "" '.failures == 0 and .attempted_at == null'
+bookkeep blocked-keeps-attempts blocked decide "$(previous 3 1)" '.failures == 3 and .stage == "decide" and .attempted_at == "2026-11-03T23:00:00Z"'
 held=testnet-$spec-${other:0:10}
 bookkeep deferred-state-kept blocked decide "$(jq -c --argjson t "$(state 2 3 abc "$held")" '. + {($t.id): $t}' <<<"$(previous 1 5 abc "$id" decide)")" \
   '.failures == 1' "$held" "keys == ([\"$id\", \"$held\"] | sort) and .[\"$held\"].failures == 2"
-bookkeep stale-state-dropped adopt-finney build "$(jq -c --argjson t "$(state 2 3 abc "$held")" '. + {($t.id): $t}' <<<"$(previous 2 3)")" \
+two=$(jq -c --argjson t "$(state 2 3 abc "$held")" '. + {($t.id): $t}' <<<"$(previous 2 3)")
+bookkeep moved-on-state-dropped adopt-finney build "$two" \
+  '.failures == 3' "" "keys == [\"$id\"]" "{\"testnet\": {\"spec\": $next, \"code\": \"$code\"}}"
+bookkeep unobserved-state-kept adopt-finney build "$two" \
+  '.failures == 3' "" "keys == ([\"$id\", \"$held\"] | sort)" '{"testnet": {"error": "unreachable"}}'
+bookkeep same-runtime-state-kept adopt-finney build "$two" \
+  '.failures == 3' "" "keys == ([\"$id\", \"$held\"] | sort)" "{\"testnet\": {\"spec\": $spec, \"code\": \"$other\"}}"
+bookkeep decide-failure-keeps-states blocked decide "$two" '.failures == 0' "" \
+  "keys == ([\"$id\", \"$held\", \"decide\"] | sort) and .[\"$id\"].failures == 2" '{}' "" "" decide
+bookkeep decide-state-dropped-once-it-works adopt-finney build "$(jq -c '. + {decide: {id: "decide", stage: "decide", failures: 0}}' <<<"$(previous 2 3)")" \
   '.failures == 3' "" "keys == [\"$id\"]"
 
 # ── metadata envelope ─────────────────────────────────────────────────
@@ -315,8 +334,9 @@ check() {
     failures=$((failures + 1))
   fi
 }
-# run <name> <observation> <outcome> [stage]: decide on the observation with
-# the stand-in issue's states, then notify the outcome.
+# run <name> <observation> <outcome> [stage] [finished at]: decide on the
+# observation with the stand-in issue's states, then notify the outcome at
+# the time the run finished (default: when it observed).
 run() {
   local observed=$work/loop-$1.observed.json decision=$work/loop-$1.decision.json evidence=$work/loop-$1.evidence
   mkdir -p "$evidence"
@@ -325,8 +345,14 @@ run() {
   if [[ -n "${4:-}" ]]; then
     jq -n --arg stage "$4" '{status: "running", stage: $stage}' >"$evidence/stage.json"
   fi
-  loop bash "$script" notify "$decision" "$3" "$evidence" >/dev/null
+  RTAO_ADOPT_NOW=${5:-$(jq -r .observed_at "$observed")} loop bash "$script" notify "$decision" "$3" "$evidence" >/dev/null
   jq -r .action "$decision"
+}
+# decide_failed <at>: the workflow's report of a failed decide step.
+decide_failed() {
+  jq -n '{action: "blocked", network: "upstream", spec: null, code: null, id: "decide",
+    reason: "the runtime-adopt decision step failed (observation or pins)", upcoming: []}' >"$work/decide-failed.json"
+  RTAO_ADOPT_NOW=$1 loop bash "$script" notify "$work/decide-failed.json" failure >/dev/null
 }
 liar=$(witnessed "$fresh" "$agree" "$(witness https://liar.invalid "$next" "$code")")
 at() { jq -c --arg at "$1" '.observed_at = $at' <<<"$2"; }
@@ -337,7 +363,11 @@ check adoption-failure-records-state '[[ "$(run f1 "$(at 2026-11-04T02:00:00Z "$
 check next-hour-backs-off '[[ "$(run b1 "$(at 2026-11-04T02:40:00Z "$good")" backoff)" == backoff && "$(alerts "$id")" == "[true,true]" ]]'
 check retry-repeats-quietly '[[ "$(run f2 "$(at 2026-11-04T03:00:00Z "$good")" failure build)" == adopt-finney && "$(alerts "$id")" == "[true,true]" && "$(loop previous_state | jq -r --arg id "$id" ".[\$id].failures")" == 2 ]]'
 check backoff-doubles-after-repeat '[[ "$(run b2 "$(at 2026-11-04T04:00:00Z "$good")" backoff)" == backoff && "$(jq -r .retry_at $work/loop-b2.decision.json)" == 2026-11-04T04:55:00Z ]]'
-check adoption-closes-and-resolves '[[ "$(run s1 "$(at 2026-11-04T05:00:00Z "$good")" success)" == adopt-finney && -f $fake/issues/1.closed && "$(alerts "$id")" == "[true,true,false]" ]]'
+# A failed decide step in between reports itself once and keeps the backoff.
+check decide-failure-keeps-backoff '{ decide_failed 2026-11-04T04:10:00Z; [[ "$(alerts decide)" == "[true]" && "$(loop previous_state | jq -r --arg id "$id" ".[\$id].failures")" == 2 && "$(run b3 "$(at 2026-11-04T04:20:00Z "$good")" backoff)" == backoff && "$(jq -r .retry_at $work/loop-b3.decision.json)" == 2026-11-04T04:55:00Z && "$(alerts "$id")" == "[true,true]" ]]; }'
+# A long attempt backs off from when it failed, and drops the decide state.
+check long-attempt-backs-off-from-its-end '[[ "$(run f3 "$(at 2026-11-04T05:00:00Z "$good")" failure build 2026-11-04T07:30:00Z)" == adopt-finney && "$(alerts "$id")" == "[true,true]" && "$(alerts decide)" == "[true,false]" && "$(run b4 "$(at 2026-11-04T07:40:00Z "$good")" backoff)" == backoff && "$(jq -r .retry_at $work/loop-b4.decision.json)" == 2026-11-04T11:25:00Z ]]'
+check adoption-closes-and-resolves '[[ "$(run s1 "$(at 2026-11-04T11:30:00Z "$good")" success)" == adopt-finney && -f $fake/issues/1.closed && "$(alerts "$id")" == "[true,true,false]" && "$(alerts decide)" == "[true,false]" ]]'
 
 if ((failures)); then
   echo "$failures decision checks failed" >&2

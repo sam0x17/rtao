@@ -3,9 +3,10 @@ name: runtime-adopt
 # policy; ci/runtime-adopt.sh). A newer Finney spec is pinned, regenerated
 # and checked in a disposable candidate; a new testnet runtime is indexed.
 # A new runtime is acted on only when a second public endpoint reports it at
-# the same finalized block, and a Finney adoption approves itself on live
-# evidence (the pinned :code and V15/V16 metadata digests read at the pinned
-# block from at least two agreeing endpoints, the release wasm when published),
+# the same block on its own finalized chain, and a Finney adoption approves
+# itself on live evidence (the pinned :code and V15/V16 metadata digests read
+# at the pinned block, finalized on each, from at least two agreeing
+# endpoints, the release wasm when published),
 # the pipeline's checks and live reads with the built CLI; changed hand ports
 # are listed in parity/port_due.toml rather than holding the runtime back.
 # When every stage passes, the commit leaves the read-only adopt job as a
@@ -14,9 +15,10 @@ name: runtime-adopt
 # moved meanwhile the next run starts again. Otherwise main is unchanged,
 # one issue is opened or refreshed and, when the RUNTIME_ALERT_URL and
 # RUNTIME_ALERT_TOKEN secrets are set, an alert is posted once per failure.
-# A failed adoption backs off (1 h doubling per repeated failure, at most
-# 24 h) unless main changes its inputs or a dispatch forces it. Upstream
-# branches ahead of every network keep one informational issue for
+# A failed adoption backs off (1 h doubling per failed attempt, at most
+# 24 h, from when it failed) unless main changes its inputs or a dispatch
+# forces it. A bundle that changes the tooling that validated it is refused.
+# Upstream branches ahead of every network keep one informational issue for
 # pre-staging, and due hand ports another; neither alerts.
 on:
   schedule:
