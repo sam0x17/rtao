@@ -27,6 +27,8 @@ pub mod drand;
 pub mod emission_weights;
 /// Portable EVM address normalization and native-account mappings.
 pub mod evm;
+/// Gamma amounts as exact decimal strings and the chain's units.
+pub mod gamma;
 /// Table-free conversion of human proportions into chain integers.
 pub mod hyperparams;
 /// Digit-exact, Value-first JSON text parsing and oracle comparisons.

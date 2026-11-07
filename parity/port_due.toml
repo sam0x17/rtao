@@ -5,54 +5,6 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "eco-tests/src/mock.rs"
-kind = "n/a"
-from = "08767cbbd2f475c4c0a8b566cadfdab4f3c455fd"
-to = "ff8215891eb40893be3bec92dc7db9613ef7ab52"
-tag = "v488"
-symbols = []
-
-[[file]]
-py = "pallets/admin-utils/src/lib.rs"
-kind = "ported"
-from = "59b354eb3208bd12b4b8c24867436da1fdacb2f3"
-to = "cb5f50be2425fadf629dc357448ef0121e1e1ae4"
-tag = "v488"
-symbols = []
-
-[[file]]
-py = "pallets/subtensor/src/rpc_info/mod.rs"
-kind = "n/a"
-from = "32f152d05661cb3fe5c216fb1bf591dd0e95b3c9"
-to = "2991a5e44bab8473817deddc218801ba7511b0cc"
-tag = "v488"
-symbols = []
-
-[[file]]
-py = "pallets/subtensor/src/subnets/serving.rs"
-kind = "ported"
-from = "867c497710872a1226ebd6b5a95f111fd02a9ca2"
-to = "a9e5b2ba801dd33defb975b2eefb9c0c5a959f9d"
-tag = "v488"
-symbols = []
-
-[[file]]
-py = "pallets/subtensor/src/subnets/subnet.rs"
-kind = "ported"
-from = "256231d7a0041fb61c2f0f260043322dbfa06810"
-to = "326756fd5a792b4c17dce75e3266db822d1a16e7"
-tag = "v488"
-symbols = []
-
-[[file]]
-py = "pallets/subtensor/src/utils/rate_limiting.rs"
-kind = "ported"
-from = "e6c0a6fec37a86c98e7f7fb0edd657599fcaeb6a"
-to = "7c50fd80383b16eb7c647afb075185e2982cb4db"
-tag = "v488"
-symbols = []
-
-[[file]]
 py = "sdk/bittensor-core-py/pyproject.toml"
 kind = "oracle-only"
 from = "f74371f1940e852295fce71bbb1f2eba35dad324"
@@ -341,14 +293,6 @@ tag = "v488"
 symbols = ["bittensor.cli.commands.root_move.parse_recipient", "bittensor.cli.commands.root_move.root_move"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/subnet_emission.py"
-kind = "ported"
-from = "afa97fe485d8a118db6370587016f04d09f203f3"
-to = "4744f437d8fb4733398a7beb93155b61227e23db"
-tag = "v488"
-symbols = ["bittensor.cli.commands.subnet_emission._ERROR_SLOT", "bittensor.cli.commands.subnet_emission._SLOT_HELP", "bittensor.cli.commands.subnet_emission._card", "bittensor.cli.commands.subnet_emission._parse_slot", "bittensor.cli.commands.subnet_emission._reject", "bittensor.cli.commands.subnet_emission.app", "bittensor.cli.commands.subnet_emission.decrease", "bittensor.cli.commands.subnet_emission.increase", "bittensor.cli.commands.subnet_emission.set_value", "bittensor.cli.commands.subnet_emission.set_weights", "bittensor.cli.commands.subnet_emission.show"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/upgrade.py"
 kind = "ported"
 from = "f6878d8b9725b98213253ef5992203862ee65877"
@@ -469,14 +413,6 @@ tag = "v488"
 symbols = ["bittensor.config.add_multisig"]
 
 [[file]]
-py = "sdk/python/bittensor/emission_weights.py"
-kind = "ported"
-from = "9d6633e22db5395aa1aa23b89be3947cffeaf182"
-to = "71b2c76d7f04471d6065519e281a1be7753f7239"
-tag = "v488"
-symbols = ["bittensor.emission_weights.ADJUSTABLE_SLOTS", "bittensor.emission_weights.MAX_BURN_RECYCLE", "bittensor.emission_weights.Rules", "bittensor.emission_weights.Rules.limits", "bittensor.emission_weights.Rules.table", "bittensor.emission_weights.merge", "bittensor.emission_weights.renormalize", "bittensor.emission_weights.validate"]
-
-[[file]]
 py = "sdk/python/bittensor/evm/__init__.py"
 kind = "n/a"
 from = "e73671b64f25c4a5ab33bdc9c144bf6626ce3caf"
@@ -523,14 +459,6 @@ from = "4d481e32a0ee00faecd01c14cd3ddae552fc967b"
 to = "9db3e6b1fb2d2e88bfd027bec9020457e1d1de5a"
 tag = "v488"
 symbols = ["bittensor.intents.AuthorizeOrder", "bittensor.intents.CancelOrder", "bittensor.intents.CloseGammaDeposit", "bittensor.intents.ExecuteBatchedOrders", "bittensor.intents.ExecuteOrders", "bittensor.intents.MintGamma", "bittensor.intents.MintGammaWithStake", "bittensor.intents.MoveGamma", "bittensor.intents.ResetAxon", "bittensor.intents.ServeAxon", "bittensor.intents.ServeAxonTls", "bittensor.intents.ServePrometheus", "bittensor.intents.SetGammaDepositDailySpendCap", "bittensor.intents.SetGammaDepositSpender", "bittensor.intents.SetService", "bittensor.intents.SpendGamma", "bittensor.intents.__all__"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/_money.py"
-kind = "ported"
-from = "488ac94eb53fd272ae4618dd8ff22d4fedd49842"
-to = "f45a39a4852703d52d91776ffbc216ed5b9a5dbd"
-tag = "v488"
-symbols = ["bittensor.intents._money.GAMMA_UNITS", "bittensor.intents._money.gamma_amount", "bittensor.intents._money.gamma_from_units", "bittensor.intents._money.gamma_units"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/association.py"
@@ -589,14 +517,6 @@ tag = "v488"
 symbols = ["bittensor.intents.crowdloan.BuiltCall", "bittensor.intents.crowdloan.ContributeCrowdloan", "bittensor.intents.crowdloan.ContributeCrowdloan.build", "bittensor.intents.crowdloan.CreateCrowdloan", "bittensor.intents.crowdloan.CreateCrowdloan.build", "bittensor.intents.crowdloan.Intent", "bittensor.intents.crowdloan.compose_pinned_call", "bittensor.intents.crowdloan.partial"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/emission_weights.py"
-kind = "ported"
-from = "16da15aac323c1ca3efd87832f8ea83b077ee3a4"
-to = "d6764dac54418228a63a5d969cb0e019bf6ae1e5"
-tag = "v488"
-symbols = ["bittensor.intents.emission_weights.RENORMALIZE_HELP", "bittensor.intents.emission_weights.SLOTS_HELP", "bittensor.intents.emission_weights.SetSubnetEmissionWeights", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.__post_init__", "bittensor.intents.emission_weights.VALUES_HELP", "bittensor.intents.emission_weights._slot_label", "bittensor.intents.emission_weights._vector_text"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/evm.py"
 kind = "ported"
 from = "62274b85ee0d003ae650099b83bb1e73dba37533"
@@ -611,14 +531,6 @@ from = "9a8423befd567aeba394dbcbd694b5aa73210e7e"
 to = "16aa92faf0386a65aa9f58ad51dca09042339f26"
 tag = "v488"
 symbols = ["bittensor.intents.governance.DEFAULT_RATE_TOLERANCE", "bittensor.intents.governance.StakeBurn", "bittensor.intents.governance.StakeBurn.build", "bittensor.intents.governance._alpha_price_rao", "bittensor.intents.governance._check_rate_tolerance", "bittensor.intents.governance._stake_limit_price_rao", "bittensor.intents.governance.compose_staking_call", "bittensor.intents.governance.partial"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/hyperparameters.py"
-kind = "ported"
-from = "2a67742d9e18497bc1b270827bf3102c2a5fd493"
-to = "898812ed48595a20cb343a80297728d759b5cf2e"
-tag = "v488"
-symbols = ["bittensor.intents.hyperparameters.OWNER_HYPERPARAMETERS"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/lock.py"
@@ -653,14 +565,6 @@ tag = "v488"
 symbols = ["bittensor.intents.proxy.BuiltCall", "bittensor.intents.proxy.CreatePureProxy", "bittensor.intents.proxy.CreatePureProxy.account_mode", "bittensor.intents.proxy.CreatePureProxy.build", "bittensor.intents.proxy.CreatePureProxy.requires_build_for_policy", "bittensor.intents.proxy.CreatePureProxy.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.Intent", "bittensor.intents.proxy.KillPureProxy", "bittensor.intents.proxy.KillPureProxy.account_mode", "bittensor.intents.proxy.KillPureProxy.build", "bittensor.intents.proxy.KillPureProxy.wraps", "bittensor.intents.proxy.PROXY_TYPES"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/serving.py"
-kind = "ported"
-from = "b2fdd4e42a329b495011878b1ae23771f37b02e3"
-to = "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6"
-tag = "v488"
-symbols = ["bittensor.intents.serving.Any", "bittensor.intents.serving.BittensorError", "bittensor.intents.serving.MAX_SERVICE_URL_LEN", "bittensor.intents.serving.Optional", "bittensor.intents.serving.SetService", "bittensor.intents.serving.SetService.__post_init__", "bittensor.intents.serving.SetService.build", "bittensor.intents.serving.SetService.hotkey_ss58", "bittensor.intents.serving.SetService.netuid", "bittensor.intents.serving.SetService.op", "bittensor.intents.serving.SetService.signer", "bittensor.intents.serving.SetService.spender_ss58", "bittensor.intents.serving.SetService.summary", "bittensor.intents.serving.SetService.url", "bittensor.intents.serving.SetService.wraps", "bittensor.intents.serving.urlsplit"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/staking.py"
 kind = "ported"
 from = "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c"
@@ -677,36 +581,12 @@ tag = "v488"
 symbols = ["bittensor.intents.transfer.Any", "bittensor.intents.transfer.ClassVar", "bittensor.intents.transfer.Optional", "bittensor.intents.transfer.Transfer", "bittensor.intents.transfer.Transfer.hashed_descriptor", "bittensor.intents.transfer.TransferAll", "bittensor.intents.transfer.TransferAll.hashed_descriptor"]
 
 [[file]]
-py = "sdk/python/bittensor/keyfiles.py"
-kind = "ported"
-from = "3f70e24657a3aa1003b71ef4692dc84f71a38271"
-to = "7ad89c89209ab3bd570ea9a1e81169ef48cfb901"
-tag = "v488"
-symbols = ["bittensor.keyfiles.Callable", "bittensor.keyfiles.Keyfile", "bittensor.keyfiles.Keyfile._confirm_overwrite", "bittensor.keyfiles.Keyfile._prepare_keypair_payload", "bittensor.keyfiles.Keyfile._publish_staged", "bittensor.keyfiles.Keyfile._stage_data", "bittensor.keyfiles.Keyfile._write_data", "bittensor.keyfiles.Keyfile.set_keypair", "bittensor.keyfiles.errno", "bittensor.keyfiles.tempfile"]
-
-[[file]]
 py = "sdk/python/bittensor/multisig.py"
 kind = "ported"
 from = "25b5105b4300daa25b2fae8626064ee0f2697f15"
 to = "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3"
 tag = "v488"
 symbols = ["bittensor.multisig.Multisig", "bittensor.multisig.Multisig._compose_as_multi", "bittensor.multisig.Multisig._preflight_funds", "bittensor.multisig.Multisig.account_mode", "bittensor.multisig.Multisig.approve", "bittensor.multisig.Multisig.funding_call", "bittensor.multisig.Multisig.protection_call", "bittensor.multisig.Multisig.protection_status", "bittensor.multisig._funding_error", "bittensor.multisig.check_multisig_funds", "bittensor.multisig.merge_approval_metadata", "bittensor.multisig.multisig_call", "bittensor.multisig.warn_legacy_mldsa"]
-
-[[file]]
-py = "sdk/python/bittensor/namespaces.py"
-kind = "ported"
-from = "4a7cd8f32a776a526e2efbf4d21180ceb289f8ec"
-to = "50e955460ed0413f956398844f94d83dd00092c8"
-tag = "v488"
-symbols = ["bittensor.namespaces.Gamma", "bittensor.namespaces.Gamma._category", "bittensor.namespaces.NAMESPACES"]
-
-[[file]]
-py = "sdk/python/bittensor/namespaces.pyi"
-kind = "n/a"
-from = "3c504ac6e61fd88fd0dcff62c77ba71ea0d4943a"
-to = "0e0432be5438baff1d199b74b364f8ffb1e5b451"
-tag = "v488"
-symbols = []
 
 [[file]]
 py = "sdk/python/bittensor/pow_registration.py"
@@ -717,14 +597,6 @@ tag = "v488"
 symbols = ["bittensor.pow_registration.mine_registration", "bittensor.pow_registration.parse_recipient"]
 
 [[file]]
-py = "sdk/python/bittensor/reads/__init__.py"
-kind = "n/a"
-from = "ea46bee016c2a51fff7dcdf4eb1edd566c5607e5"
-to = "70894659bc957942e1a6f699380224e25acd06b7"
-tag = "v488"
-symbols = ["bittensor.reads.accounts", "bittensor.reads.chain", "bittensor.reads.collateral", "bittensor.reads.delegation", "bittensor.reads.epochs", "bittensor.reads.gamma", "bittensor.reads.hyperparameters", "bittensor.reads.identity", "bittensor.reads.leasing", "bittensor.reads.locks", "bittensor.reads.neurons", "bittensor.reads.prices", "bittensor.reads.root", "bittensor.reads.staking", "bittensor.reads.subnets", "bittensor.reads.weights"]
-
-[[file]]
 py = "sdk/python/bittensor/reads/base.py"
 kind = "ported"
 from = "f74a29405503ad610431ceded37c31c23be73c40"
@@ -733,36 +605,12 @@ tag = "v488"
 symbols = ["bittensor.reads.base._coercing"]
 
 [[file]]
-py = "sdk/python/bittensor/reads/subnets.py"
-kind = "ported"
-from = "72ebf3fd8948e09ee03ac9878e1b3829e049cf58"
-to = "8cc78cffa8572f583a95cbe81326f702d034f30a"
-tag = "v488"
-symbols = ["bittensor.reads.subnets._url_text", "bittensor.reads.subnets.services"]
-
-[[file]]
-py = "sdk/python/bittensor/result.py"
-kind = "ported"
-from = "2f62ffa3c47304ffd8e450fe23fcefa39806d24d"
-to = "8f2d33830bea92232ef7173adad3105a553f9d9d"
-tag = "v488"
-symbols = ["bittensor.result._NAME_HELP_OVERRIDES"]
-
-[[file]]
 py = "sdk/python/bittensor/signing.py"
 kind = "ported"
 from = "25e9a4a9dcbe5ac7fadcc8dedb41c011e904adcd"
 to = "98e1ec5934be865830ee493ec6e54f7820803d88"
 tag = "v488"
 symbols = ["bittensor.signing.REGISTERED_CRYPTO_TYPES", "bittensor.signing.WalletSigner", "bittensor.signing.WalletSigner.__init__", "bittensor.signing.WalletSigner._public", "bittensor.signing.WalletSigner._unlock", "bittensor.signing.WalletSigner.at_generation", "bittensor.signing.WalletSigner.hashed_descriptor", "bittensor.signing._check_signer_identity", "bittensor.signing._signer_identity", "bittensor.signing.is_stateless_pq", "bittensor.signing.resolve_signer", "bittensor.signing.ss58_decode"]
-
-[[file]]
-py = "sdk/python/bittensor/snapshot.py"
-kind = "ported"
-from = "3fba1f5a9cf2b3c19aa6e5974384dc0c82a73a7f"
-to = "1df277924db3939470e959c1f3901af035bbf708"
-tag = "v488"
-symbols = ["bittensor.snapshot.Snapshot", "bittensor.snapshot.Snapshot.__init__"]
 
 [[file]]
 py = "sdk/python/bittensor/sp_core.py"
@@ -779,14 +627,6 @@ from = "016c553c25af0acd871346968934cf0bc1a535c6"
 to = "e6c93496802b43aaae09ee551a054e9317f6bcc1"
 tag = "v488"
 symbols = ["bittensor.sync.DEFAULT_ERA_PERIOD", "bittensor.sync.DEFAULT_NETWORK", "bittensor.sync.MEV_SHIELD_ERA_PERIOD", "bittensor.sync.SyncClient", "bittensor.sync.SyncClient.__init__", "bittensor.sync.SyncClient.estimate_shielded_carrier_fee", "bittensor.sync.SyncClient.gamma", "bittensor.sync.SyncClient.multisig", "bittensor.sync.SyncClient.preflight", "bittensor.sync.SyncClient.prepare_mldsa_call", "bittensor.sync.SyncClient.prepare_pq_call", "bittensor.sync.SyncClient.register_wallet"]
-
-[[file]]
-py = "sdk/python/bittensor/vault/signer.py"
-kind = "ported"
-from = "a253b1c654887a3be70be9d41d995a40ac14cf80"
-to = "e9a5d41dd19aec3cf7288ef4c145e7b7f41d2da7"
-tag = "v488"
-symbols = ["bittensor.vault.signer.CRYPTO_ED25519", "bittensor.vault.signer.CRYPTO_SR25519", "bittensor.vault.signer.VaultSigner", "bittensor.vault.signer.VaultSigner.__init__", "bittensor.vault.signer.VaultSigner._validated_signature", "bittensor.vault.signer.ss58_decode", "bittensor.vault.signer.verify"]
 
 [[file]]
 py = "sdk/python/bittensor/wallet.py"
@@ -827,14 +667,6 @@ from = "5ad19b8b78ac71abc6f31b4b3b1e4fd1a8259563"
 to = "4f9e26186ea51f3b9edcb9b574ebbf378081a415"
 tag = "v488"
 symbols = ["tests.unit.test_codec_golden.test_singleton_bounded_tuple_sequence"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_emission_weights.py"
-kind = "ported"
-from = "ca9f33b66bd23c97b066d375897d979d6f3b06e5"
-to = "a5a7a865a9cb315d43ea27c42d8e4e21aa005e7b"
-tag = "v488"
-symbols = ["tests.unit.test_emission_weights.test_cli_explains_rule_violations_before_submitting", "tests.unit.test_emission_weights.test_cli_show_human_output", "tests.unit.test_emission_weights.test_constants_match_chain", "tests.unit.test_emission_weights.test_intent_accepts_nonzero_burn", "tests.unit.test_emission_weights.test_intent_rejects_malformed_input", "tests.unit.test_emission_weights.test_merge_keeps_omitted_slots_including_burn_and_recycle", "tests.unit.test_emission_weights.test_merge_zeroes_reserved_slots_and_keeps_the_rest", "tests.unit.test_emission_weights.test_renormalize_accepts_nonzero_burn_and_rescales_the_rest", "tests.unit.test_emission_weights.test_renormalize_rejects_overflow_and_incomplete_pin", "tests.unit.test_emission_weights.test_renormalize_rejects_overflow_and_nonzero_reserved", "tests.unit.test_emission_weights.test_renormalize_scales_untouched_slots_proportionally", "tests.unit.test_emission_weights.test_renormalize_splits_evenly_when_free_slots_are_zero", "tests.unit.test_emission_weights.test_rules_limits_and_table_cover_every_slot", "tests.unit.test_emission_weights.test_validate_accepts_default_and_names_each_rule"]
 
 [[file]]
 py = "sdk/python/tests/unit/test_evm.py"

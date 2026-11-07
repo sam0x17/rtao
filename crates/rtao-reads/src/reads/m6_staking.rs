@@ -389,7 +389,7 @@ fn quote(record: models::SimSwapResult, netuid: NetUid, symbols: &Symbols) -> Sw
 // Python's quote convenience input is Decimal(str(amount)), rounded to integral
 // rao with ties to even. Multiplying the binary64 directly would double-round.
 // The decimal is bounded by a single finite f64, rather than external text.
-fn quote_rao(amount: f64, name: &str) -> Result<u64, ReadError> {
+pub(crate) fn quote_rao(amount: f64, name: &str) -> Result<u64, ReadError> {
     let invalid = |reason: &str| ReadError::InvalidParam {
         name: name.into(),
         reason: reason.into(),

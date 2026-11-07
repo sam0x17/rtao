@@ -44,7 +44,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
-      "sha256": "a55614beba4e97b5817b240148bf44c27011bb1920c745addbdd0050ec365868"
+      "sha256": "514348f4b0f79d40d24cb8411f996f97b0bbc247ce05ae76bc1d6f92335b82ca"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
@@ -1685,9 +1685,11 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
       "function": "set_weights",
       "options": [
+        "--burn",
         "--miner",
         "--netuid",
         "--owner",
+        "--recycle",
         "--validator"
       ],
       "positionals": [],

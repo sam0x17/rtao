@@ -1,11 +1,11 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnet_emission.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnet_emission.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! `rtao subnets emission`: view and change how a subnet splits its alpha emission.
 //!
-//! The vector is `[burn, recycle, owner, validator, miner]`; owners move the
-//! last three. `show` prints the vector, what root keeps, the allowed range of
-//! every slot and when the owner may change it next. `set` writes the three
-//! shares in one go; `set-value`, `increase` and `decrease` move one slot and
-//! rescale the other two so the vector still sums to 100%. Every write is
+//! The vector is `[burn, recycle, owner, validator, miner]`. `show` prints the
+//! vector, what root keeps, the allowed range of every slot and when the owner
+//! may change it next. `set` writes owner / validator / miner (and optionally
+//! burn / recycle) in one go; `set-value`, `increase` and `decrease` move one
+//! slot and rescale the others so the vector still sums to 100%. Every write is
 //! checked against the chain's rules locally first, and a rejected change
 //! names the rule and the allowed range, so nothing the chain would refuse is
 //! signed.
@@ -47,7 +47,7 @@ use std::time::Duration;
 
 const EXIT_CODES: &str = "Exit codes: 0 done, including a read-back skipped with its reason; 1 subnet missing, change blocked right now, rejected by the chain, or the vector read back at the finalized inclusion block differs from the one the extrinsic applied; 2 invalid input or a vector the chain's rules would reject.";
 const NETUID_HELP: &str = "Numeric identifier of the subnet.";
-const SLOT_HELP: &str = "Slot to change: owner, validator or miner.";
+const SLOT_HELP: &str = "Slot to change: burn, recycle, owner, validator or miner.";
 const SHARE_HELP: &str = "A percentage (41%), a 0..1 fraction (0.41), or raw u64 parts.";
 
 fn show_hint(netuid: NetUid) -> String {
@@ -59,6 +59,7 @@ fn show_hint(netuid: NetUid) -> String {
 /// Which slot each chain error is about; `None` for whole-vector rules.
 fn error_slot(error: &str) -> Option<&'static str> {
     match error {
+        "BurnRecycleEmissionAboveMaximum" => None,
         "BurnEmissionMustBeZero" => Some("burn"),
         "RecycleEmissionMustBeZero" => Some("recycle"),
         "OwnerEmissionAboveMaximum" | "LeasedSubnetOwnerCutBelowMinimum" => Some("owner"),
@@ -82,15 +83,19 @@ fn text_arg(id: &'static str, help: String) -> Arg {
     Arg::new(id).long(id).required(true).help(help)
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:36-50
+fn optional_share_arg(id: &'static str, help: String) -> Arg {
+    Arg::new(id).long(id).default_value("0").help(help)
+}
+
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:34-46
 /// The `subnets emission` command group.
 pub fn command() -> Command {
     Command::new("emission")
         .about(
-            "Subnet emission weights: how a subnet splits its alpha emission between the owner, validators and miners.",
+            "Subnet emission weights: how a subnet splits its alpha emission between burn, recycle, the owner, validators and miners.",
         )
         .long_about(format!(
-            "Subnet emission weights: how a subnet splits its alpha emission between the owner, validators and miners.\n\nOnly the subnet owner coldkey can change the vector, once every 50,400 blocks (about 7 days) per subnet. Root is paid its baseline share of emission off the top of the validator slot every block, whatever the subnet sets. Add --dry-run to any write to preview the before/after vector and what root and validators keep; --json for machine-readable output. A write prints its receipt at inclusion, then waits up to 3 minutes for that block to finalize, reads the stored vector back there and checks it equals the vector the extrinsic applied; if finality does not arrive in time or the read fails, the read-back is skipped with the reason. With --json the receipt and the {{\"readback\": ...}} result are two documents.\n\n{EXIT_CODES}\n\nGuide: {}/guides/subnets",
+            "Subnet emission weights: how a subnet splits its alpha emission between burn, recycle, the owner, validators and miners.\n\nOnly the subnet owner coldkey can change the vector, once every 50,400 blocks (about 7 days) per subnet. Root is paid its baseline share of emission off the top of the validator slot every block, whatever the subnet sets. Burn + recycle together may be at most 33%. Add --dry-run to any write to preview the before/after vector and what root and validators keep; --json for machine-readable output. A write prints its receipt at inclusion, then waits up to 3 minutes for that block to finalize, reads the stored vector back there and checks it equals the vector the extrinsic applied; if finality does not arrive in time or the read fails, the read-back is skipped with the reason. With --json the receipt and the {{\"readback\": ...}} result are two documents.\n\n{EXIT_CODES}\n\nGuide: {}/guides/subnets",
             rtao_catalog::py::DOCS_URL
         ))
         .subcommand_required(true)
@@ -104,19 +109,21 @@ pub fn command() -> Command {
         ))
         .subcommand(with_globals(
             Command::new("set")
-                .about("Set the owner / validator / miner split in one go (burn and recycle stay 0).")
-                .long_about("Set the owner / validator / miner split in one go (burn and recycle stay 0).\n\nThe three shares must add up to 100%; rounding dust of a few parts lands in the miner slot. Root stakers always keep their baseline share: it is paid off the top of the validator slot every block, so the validator share must stay above it (a share at or below the baseline is rejected) and alpha validators share what is left.")
-                .after_help(format!("Example: rtao subnets emission set --netuid 4 --owner 18% --validator 20% --miner 62% --dry-run\n\n{EXIT_CODES}"))
+                .about("Set the full emission split in one go.")
+                .long_about("Set the full emission split in one go.\n\nBurn + recycle together may be at most 33%. Root stakers always keep their baseline share: it is paid off the top of the validator slot every block, so the validator share must stay above it (a share at or below the baseline is rejected) and alpha validators share what is left.")
+                .after_help(format!("Example: rtao subnets emission set --netuid 4 --owner 18% --validator 20% --miner 62% --dry-run\nExample with burn: rtao subnets emission set --netuid 4 --burn 5% --owner 10% --validator 40% --miner 45%\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("owner", format!("Owner share. {SHARE_HELP}")))
                 .arg(text_arg("validator", format!("Validator share. {SHARE_HELP}")))
-                .arg(text_arg("miner", format!("Miner share. {SHARE_HELP}"))),
+                .arg(text_arg("miner", format!("Miner share. {SHARE_HELP}")))
+                .arg(optional_share_arg("burn", format!("Burn share (default 0). {SHARE_HELP}")))
+                .arg(optional_share_arg("recycle", format!("Recycle share (default 0). {SHARE_HELP}"))),
             Tier::Tx,
         ))
         .subcommand(with_globals(
             Command::new("set-value")
-                .about("Set one slot; the other two are rescaled so the vector still sums to 100%.")
-                .long_about("Set one slot; the other two are rescaled so the vector still sums to 100%.\n\nThe untouched slots keep their ratio: lowering owner from 18% to 10% hands the 8% to validators and miners in their current 41:41 proportion.")
+                .about("Set one slot; the other slots are rescaled so the vector still sums to 100%.")
+                .long_about("Set one slot; the other slots are rescaled so the vector still sums to 100%.\n\nThe untouched slots keep their ratio: lowering owner from 18% to 10% hands the 8% to the other non-zero slots in their current proportions.")
                 .after_help(format!("Example: rtao subnets emission set-value --netuid 4 --slot validator --value 20% --dry-run\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("slot", SLOT_HELP.into()))
@@ -125,7 +132,7 @@ pub fn command() -> Command {
         ))
         .subcommand(with_globals(
             Command::new("increase")
-                .about("Raise one slot by an amount; the other two are rescaled to fill 100%.")
+                .about("Raise one slot by an amount; the other slots are rescaled to fill 100%.")
                 .after_help(format!("Example: rtao subnets emission increase --netuid 4 --slot miner --by 5%\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("slot", SLOT_HELP.into()))
@@ -134,7 +141,7 @@ pub fn command() -> Command {
         ))
         .subcommand(with_globals(
             Command::new("decrease")
-                .about("Lower one slot by an amount; the other two are rescaled to fill 100%.")
+                .about("Lower one slot by an amount; the other slots are rescaled to fill 100%.")
                 .after_help(format!("Example: rtao subnets emission decrease --netuid 4 --slot validator --by 10%\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("slot", SLOT_HELP.into()))
@@ -147,7 +154,14 @@ pub fn command() -> Command {
 pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
     match matches.subcommand_name() {
         Some("show") => Ok(vec!["netuid"]),
-        Some("set") => Ok(vec!["netuid", "owner", "validator", "miner"]),
+        Some("set") => Ok(vec![
+            "netuid",
+            "owner",
+            "validator",
+            "miner",
+            "burn",
+            "recycle",
+        ]),
         Some("set-value") => Ok(vec!["netuid", "slot", "value"]),
         Some("increase" | "decrease") => Ok(vec!["netuid", "slot", "by"]),
         _ => Err(CliError::input("missing subnets emission command")),
@@ -162,10 +176,14 @@ pub enum Request {
         /// Subnet to inspect.
         netuid: NetUid,
     },
-    /// Write the owner/validator/miner split.
+    /// Write the full split; burn and recycle default to `0`.
     Set {
         /// Subnet to configure.
         netuid: NetUid,
+        /// Burn share text.
+        burn: String,
+        /// Recycle share text.
+        recycle: String,
         /// Owner share text.
         owner: String,
         /// Validator share text.
@@ -216,6 +234,8 @@ impl Request {
             "show" => Self::Show { netuid },
             "set" => Self::Set {
                 netuid,
+                burn: text("burn")?,
+                recycle: text("recycle")?,
                 owner: text("owner")?,
                 validator: text("validator")?,
                 miner: text("miner")?,
@@ -270,7 +290,7 @@ fn report(
     }
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:76-84
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:69-77
 async fn fetch(
     ctx: &AppContext,
     client: &Client,
@@ -292,7 +312,7 @@ async fn fetch(
         })
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:87-105
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:80-98
 /// The stable machine-readable shape of `show`.
 pub fn record(info: &SubnetEmissionWeights) -> Value {
     json!({
@@ -333,7 +353,7 @@ fn group_digits(digits: &str) -> String {
         .map_or_else(|_| digits.to_owned(), fmt_grouped)
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:108-110
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:101-103
 fn hours(blocks: u64) -> String {
     let hours = blocks as f64 * ew::BLOCK_SECONDS as f64 / 3600.0;
     if hours >= 48.0 {
@@ -343,7 +363,7 @@ fn hours(blocks: u64) -> String {
     }
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:113-122
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:106-115
 fn next_change(rate: &ew::RateLimitStatus) -> (String, String) {
     if rate.owner_can_change_now {
         let why = if rate.last_change_block == 0 {
@@ -381,7 +401,7 @@ fn range(rules: &ew::Rules, slot: &str) -> Option<(String, String)> {
         .map(|(_, rule, why)| (rule, why))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:130-135
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:123-128
 fn parse_share(ctx: &AppContext, raw: &str, flag: &str) -> Result<u64, CliError> {
     ew::parse_share(raw).map_err(|error| {
         report(
@@ -394,26 +414,12 @@ fn parse_share(ctx: &AppContext, raw: &str, flag: &str) -> Result<u64, CliError>
     })
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:138-150
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:131-136
 fn parse_slot(ctx: &AppContext, raw: &str) -> Result<usize, CliError> {
-    let slot = ew::slot_index(raw)
-        .map_err(|error| report(ctx, 2, &error.to_string(), None, Some(SLOT_HELP)))?;
-    if !ew::ADJUSTABLE_SLOTS.contains(&slot) {
-        return Err(report(
-            ctx,
-            2,
-            &format!(
-                "{} (slot {slot}) is reserved and pinned to 0 in this runtime",
-                ew::SLOT_NAMES[slot]
-            ),
-            None,
-            Some(SLOT_HELP),
-        ));
-    }
-    Ok(slot)
+    ew::slot_index(raw).map_err(|error| report(ctx, 2, &error.to_string(), None, Some(SLOT_HELP)))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:153-175
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:139-168
 fn reject(
     ctx: &AppContext,
     info: &SubnetEmissionWeights,
@@ -431,6 +437,11 @@ fn reject(
             && let Some((rule, why)) = range(&rules, slot)
         {
             allowed.push((slot, rule, why));
+        } else if violation.error == "BurnRecycleEmissionAboveMaximum"
+            && !allowed.iter().any(|(known, _, _)| *known == "burn+recycle")
+            && let Some((rule, why)) = range(&rules, "burn+recycle")
+        {
+            allowed.push(("burn+recycle", rule, why));
         }
     }
     let text = if let [violation] = violations.as_slice() {
@@ -465,12 +476,15 @@ fn reject(
     ))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:178-225
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:171-213
 /// Review-card rows: each moving slot, what root keeps, what validators are left.
 pub fn card(info: &SubnetEmissionWeights, preview: &ew::Preview) -> Vec<(String, Value)> {
     let (before, after) = (&preview.before.weights, &preview.after.weights);
     let mut rows = Vec::new();
     for slot in ew::ADJUSTABLE_SLOTS {
+        if after[slot] == before[slot] && after[slot] == 0 {
+            continue;
+        }
         let mut value = ew::format_share(after[slot], 2);
         if after[slot] != before[slot] {
             value = format!("{} -> {value}", ew::format_share(before[slot], 2));
@@ -518,7 +532,7 @@ pub fn card(info: &SubnetEmissionWeights, preview: &ew::Preview) -> Vec<(String,
     rows
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:228-251
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:216-239
 #[allow(clippy::too_many_arguments)]
 async fn submit(
     ctx: &mut AppContext,
@@ -709,6 +723,16 @@ pub fn readback_record(
     })
 }
 
+/// `burn 5.0000% / recycle 0.0000% / owner ... / miner ...` in slot order.
+fn slot_shares(weights: &ew::Weights) -> String {
+    ew::SLOT_NAMES
+        .iter()
+        .zip(weights)
+        .map(|(name, parts)| format!("{name} {}", ew::format_share(*parts, 4)))
+        .collect::<Vec<_>>()
+        .join(" / ")
+}
+
 /// Print a skipped read-back with its reason; the receipt stands.
 fn skipped(ctx: &AppContext, netuid: NetUid, reason: &str) -> Result<(), CliError> {
     ctx.output
@@ -767,10 +791,7 @@ async fn read_back(
     let record = readback_record(previewed, applied.as_ref(), &stored, block);
     let matches = record["matches"] == json!(true);
     let mut vector = Vec::new();
-    for slot in ew::ADJUSTABLE_SLOTS
-        .into_iter()
-        .chain([ew::BURN, ew::RECYCLE])
-    {
+    for slot in ew::ADJUSTABLE_SLOTS {
         let parts = stored.weights[slot];
         let mut note = format!("{parts} parts");
         if parts != submitted[slot] {
@@ -800,13 +821,9 @@ async fn read_back(
             "base".into(),
             "changed before submission".into(),
             Some(format!(
-                "the change was rebuilt on a newer vector: owner {} / validator {} / miner {} instead of the previewed {} / {} / {}",
-                ew::format_share(applied[ew::OWNER], 4),
-                ew::format_share(applied[ew::VALIDATOR], 4),
-                ew::format_share(applied[ew::MINER], 4),
-                ew::format_share(previewed[ew::OWNER], 4),
-                ew::format_share(previewed[ew::VALIDATOR], 4),
-                ew::format_share(previewed[ew::MINER], 4),
+                "the change was rebuilt on a newer vector: {} instead of the previewed {}",
+                slot_shares(&applied),
+                slot_shares(previewed),
             )),
         )),
         Some(_) => {}
@@ -867,7 +884,7 @@ async fn read_back(
     )))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:254-262
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:242-250
 fn renormalized(
     ctx: &AppContext,
     info: &SubnetEmissionWeights,
@@ -885,7 +902,7 @@ fn renormalized(
     })
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:265-350
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:253-327
 fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> {
     let netuid = info.netuid;
     let mut vector = Vec::new();
@@ -894,13 +911,6 @@ fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> 
             ew::SLOT_NAMES[slot].to_owned(),
             ew::format_share(info.weights[slot], 2),
             Some(format!("{} parts", info.weights[slot])),
-        ));
-    }
-    for slot in [ew::BURN, ew::RECYCLE] {
-        vector.push((
-            ew::SLOT_NAMES[slot].to_owned(),
-            ew::format_share(info.weights[slot], 2),
-            Some("reserved, pinned to 0".to_owned()),
         ));
     }
     let (next_value, next_note) = next_change(&info.rate_limit());
@@ -954,10 +964,9 @@ fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> 
         ),
     ];
     let table = ranges(&info.rules());
-    let allowed = ew::ADJUSTABLE_SLOTS
+    let allowed = ew::SLOT_NAMES
         .into_iter()
-        .map(|slot| ew::SLOT_NAMES[slot])
-        .chain(["burn", "recycle", "sum"])
+        .chain(["burn+recycle", "sum"])
         .filter_map(|name| {
             table
                 .iter()
@@ -984,7 +993,7 @@ fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> 
             ],
             &record(info),
             Some(&format!(
-                "change one slot with `rtao subnets emission set-value --netuid {netuid} --slot owner --value 10%` (the other two rescale to fill 100%); add --dry-run to preview"
+                "change one slot with `rtao subnets emission set-value --netuid {netuid} --slot owner --value 10%` (the other slots rescale to fill 100%); add --dry-run to preview"
             )),
         )
         .map_err(|error| CliError::failure(error.to_string()))
@@ -1005,18 +1014,25 @@ pub async fn execute(
             show(ctx, &info)?;
             Ok(None)
         }
-        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:353-391
+        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:330-376
         Request::Set {
             netuid,
+            burn,
+            recycle,
             owner,
             validator,
             miner,
         } => {
             let info = fetch(ctx, client, *netuid, BlockRef::Best).await?;
+            let burn = parse_share(ctx, burn, "--burn")?;
+            let recycle = parse_share(ctx, recycle, "--recycle")?;
             let owner = parse_share(ctx, owner, "--owner")?;
             let validator = parse_share(ctx, validator, "--validator")?;
             let miner = parse_share(ctx, miner, "--miner")?;
-            let total = u128::from(owner) + u128::from(validator) + u128::from(miner);
+            let total = [burn, recycle, owner, validator, miner]
+                .into_iter()
+                .map(u128::from)
+                .sum::<u128>();
             let gap = i128::from(ew::ONE) - i128::try_from(total).unwrap_or(i128::MAX);
             let miner = if gap != 0 && gap.abs() <= 1_000 {
                 // Decimal shares rarely hit u64::MAX exactly; the miner slot
@@ -1035,25 +1051,23 @@ pub async fn execute(
                     ctx,
                     2,
                     &format!(
-                        "owner + validator + miner must add up to 100%, not {}",
+                        "burn + recycle + owner + validator + miner must add up to 100%, not {}",
                         ew::format_share(total, 4)
                     ),
                     None,
-                    Some(
-                        "give all three shares, or use set-value to move one slot and rescale the rest",
-                    ),
+                    Some("give all shares, or use set-value to move one slot and rescale the rest"),
                 ));
             } else {
                 miner
             };
-            let proposed = [0, 0, owner, validator, miner];
+            let proposed = [burn, recycle, owner, validator, miner];
             let slots: Vec<usize> = (0..ew::SLOT_NAMES.len()).collect();
             submit(
                 ctx, client, &info, &proposed, &slots, false, options, external, history,
             )
             .await
         }
-        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:394-418
+        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:379-403
         Request::SetValue {
             netuid,
             slot,
@@ -1076,7 +1090,7 @@ pub async fn execute(
             )
             .await
         }
-        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:421-448
+        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:406-448
         Request::Adjust {
             netuid,
             slot,

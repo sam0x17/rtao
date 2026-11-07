@@ -4,6 +4,8 @@
 pub mod chain;
 /// Epoch schedules and signed LastUpdate differences.
 pub mod epochs;
+/// Gamma deposits, mint quotes, the TAO/USD price and subnet services.
+pub mod gamma;
 /// Generated scalar hyperparameter entry points.
 pub mod hyperparameters;
 /// Reporting subnet lifecycle and legacy fallback.

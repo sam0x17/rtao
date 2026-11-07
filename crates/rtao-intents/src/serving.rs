@@ -1,6 +1,6 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/serving.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/serving.rs @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Publishing axon and metrics addresses as chain data.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/serving.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor pallets/subtensor/src/subnets/serving.rs @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+//! Publishing axon, metrics and service addresses as chain data.
 
 use std::net::IpAddr;
 
@@ -8,7 +8,123 @@ use rtao_client::View;
 use rtao_runtime::{Call, calls::subtensor_module as calls};
 use rtao_tx::{BuildCx, Built, Intent, IntentError};
 
-pub use crate::{ResetAxon, ServeAxon, ServeAxonTls, ServePrometheus};
+pub use crate::{ResetAxon, ServeAxon, ServeAxonTls, ServePrometheus, SetService};
+
+/// Longest service url the chain stores, in UTF-8 bytes.
+pub const MAX_SERVICE_URL_LEN: usize = 256;
+
+// Python's urlsplit: leading C0 controls and spaces are stripped, tab, CR and
+// LF removed; the scheme is a letter then letters, digits, `+`, `-` or `.`,
+// lowercased; the netloc follows `//` up to the first `/`, `?` or `#`.
+fn http_url(url: &str) -> Result<bool, String> {
+    let url: String = url
+        .trim_start_matches(|c: char| c <= ' ')
+        .chars()
+        .filter(|c| !matches!(c, '\t' | '\r' | '\n'))
+        .collect();
+    let Some((scheme, rest)) = url.split_once(':') else {
+        return Ok(false);
+    };
+    let valid_scheme = scheme
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic())
+        && scheme
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'));
+    if !valid_scheme || !matches!(scheme.to_ascii_lowercase().as_str(), "http" | "https") {
+        return Ok(false);
+    }
+    let Some(rest) = rest.strip_prefix("//") else {
+        return Ok(false);
+    };
+    let netloc = rest.split(['/', '?', '#']).next().unwrap_or_default();
+    if netloc.contains('[') != netloc.contains(']') {
+        return Err("Invalid IPv6 URL".into());
+    }
+    Ok(!netloc.is_empty())
+}
+
+impl SetService {
+    /// `set_service` for `hotkey`; without `spender_ss58` the spender is the
+    /// signing `coldkey`.
+    fn chain_call(
+        &self,
+        hotkey: rtao_primitives::AccountId,
+        coldkey: Option<rtao_primitives::AccountId>,
+    ) -> Result<Call, IntentError> {
+        self.check()?;
+        let spender = match (&self.spender_ss58, coldkey) {
+            (Some(spender), _) => spender.account(),
+            (None, Some(coldkey)) => coldkey,
+            (None, None) => {
+                return Err(IntentError::validation(
+                    "set_service needs the signing coldkey as its default spender",
+                ));
+            }
+        };
+        Ok(calls::set_service(
+            self.netuid,
+            hotkey,
+            self.url.as_bytes().to_vec(),
+            spender,
+        ))
+    }
+
+    // py: sdk/python/bittensor/intents/serving.py:194-202
+    fn check(&self) -> Result<(), IntentError> {
+        let bytes = self.url.len();
+        if bytes > MAX_SERVICE_URL_LEN {
+            return Err(IntentError::validation(format!(
+                "set_service: the url is {bytes} bytes, at most {MAX_SERVICE_URL_LEN} are allowed"
+            )));
+        }
+        if !self.url.is_empty() && !http_url(&self.url).map_err(IntentError::validation)? {
+            return Err(IntentError::validation(format!(
+                "set_service: {} is not an http(s) url",
+                rtao_primitives::pyfmt::string_repr(&self.url)
+            )));
+        }
+        Ok(())
+    }
+}
+
+// py: sdk/python/bittensor/intents/serving.py:162-217
+impl Intent for SetService {
+    fn summary(&self) -> String {
+        if self.url.is_empty() {
+            return format!("remove the service on netuid {}", self.netuid);
+        }
+        let spender = self
+            .spender_ss58
+            .as_ref()
+            .map_or_else(String::new, |spender| format!(", spent by {spender}"));
+        format!(
+            "set the service {} on netuid {}{spender}",
+            self.url, self.netuid
+        )
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        self.check()?;
+        let hotkey = cx.hotkey_address(
+            self.hotkey_ss58
+                .as_ref()
+                .map(rtao_primitives::Ss58Address::account),
+        )?;
+        let coldkey = match &self.spender_ss58 {
+            Some(_) => None,
+            None => Some(cx.coldkey_address()?),
+        };
+        Ok(Built::new(
+            self.chain_call(hotkey, coldkey)?.compose(cx.runtime)?,
+        ))
+    }
+
+    fn validate(&self) -> Result<(), IntentError> {
+        self.check()
+    }
+}
 
 // py: sdk/python/bittensor/intents/serving.py:52-64
 impl Intent for ServeAxon {
@@ -204,6 +320,94 @@ mod tests {
     use super::*;
     use rtao_primitives::NetUid;
     use rtao_runtime::RuntimeHandle;
+
+    fn service(url: &str, spender: Option<rtao_primitives::AccountId>) -> SetService {
+        SetService {
+            netuid: NetUid(1),
+            url: url.into(),
+            hotkey_ss58: None,
+            spender_ss58: spender.map(rtao_primitives::Ss58Address::from),
+        }
+    }
+
+    // pyt: unit/test_gamma.py::TestService::test_accepts_an_empty_url_and_256_bytes
+    // pyt: unit/test_gamma.py::TestService::test_rejects_non_http_and_over_256_utf8_bytes
+    // pyt: unit/test_gamma.py::TestService::test_names_the_spender
+    #[test]
+    fn set_service_checks_urls_and_names_the_spender() {
+        let long = format!("https://{}", "a".repeat(248));
+        for url in [
+            "",
+            long.as_str(),
+            "HTTP://a.example/x?y#z",
+            " \x01https://a.example",
+        ] {
+            assert!(service(url, None).validate().is_ok(), "{url:?}");
+        }
+        let too_long = format!("https://{}", "a".repeat(249));
+        let wide = format!("https://{}", "\u{e9}".repeat(125));
+        for url in [
+            "not a url at all",
+            "ftp://a.example",
+            "https://",
+            "https:a.example",
+            "1http://a.example",
+            too_long.as_str(),
+            wide.as_str(),
+        ] {
+            assert!(service(url, None).validate().is_err(), "{url:?}");
+        }
+        assert_eq!(
+            service(&too_long, None).validate().unwrap_err().to_string(),
+            "set_service: the url is 257 bytes, at most 256 are allowed"
+        );
+        assert_eq!(
+            service("ftp://a.example", None)
+                .validate()
+                .unwrap_err()
+                .to_string(),
+            "set_service: 'ftp://a.example' is not an http(s) url"
+        );
+        let runtime = RuntimeHandle::parse(
+            include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
+            488,
+            1,
+            42,
+        )
+        .unwrap();
+        let (hotkey, coldkey, alice) = (
+            rtao_primitives::AccountId([2; 32]),
+            rtao_primitives::AccountId([1; 32]),
+            rtao_primitives::AccountId([9; 32]),
+        );
+        for (spender, expected) in [(None, coldkey), (Some(alice), alice)] {
+            let built = service("https://a.example", spender)
+                .chain_call(hotkey, Some(coldkey))
+                .unwrap()
+                .compose(&runtime)
+                .unwrap();
+            let call =
+                calls::set_service(NetUid(1), hotkey, b"https://a.example".to_vec(), expected)
+                    .compose(&runtime)
+                    .unwrap();
+            assert_eq!(built.as_bytes(), call.as_bytes());
+        }
+        let removal = SetService {
+            netuid: NetUid(1),
+            url: String::new(),
+            hotkey_ss58: None,
+            spender_ss58: None,
+        };
+        assert!(removal.validate().is_ok());
+        assert_eq!(removal.summary(), "remove the service on netuid 1");
+        assert_eq!(
+            service("https://a.example", Some(alice)).summary(),
+            format!(
+                "set the service https://a.example on netuid 1, spent by {}",
+                rtao_primitives::Ss58Address::from(alice)
+            )
+        );
+    }
 
     fn runtime() -> RuntimeHandle {
         RuntimeHandle::parse(

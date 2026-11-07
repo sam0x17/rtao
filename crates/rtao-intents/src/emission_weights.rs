@@ -1,11 +1,11 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/emission_weights.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/emission_weights.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Subnet emission weights: how a subnet splits its alpha emission.
 //!
 //! Each subnet carries a five-slot vector `[burn, recycle, owner, validator,
 //! miner]` of `u64 / u64::MAX` shares. The subnet owner (or root) changes it
 //! with `AdminUtils.sudo_set_subnet_emission_weights`, a sparse update: name
-//! the slots being changed and their new shares; untouched
-//! owner/validator/miner slots keep their value. The chain enforces the rules
+//! the slots being changed and their new shares; omitted slots keep their
+//! current value. The chain enforces the rules
 //! in [`rtao_primitives::emission_weights`] and rate-limits owners to one
 //! change per week per subnet (root is exempt; the first change on a subnet is
 //! always allowed). Read the current vector and its bounds with the
@@ -23,19 +23,12 @@ use serde_json::Value;
 
 pub use crate::SetSubnetEmissionWeights;
 
-fn slot_label(slot: usize) -> String {
-    format!("{} (slot {slot})", ew::SLOT_NAMES[slot])
-}
-
-// py: sdk/python/bittensor/intents/emission_weights.py:52-62
+// py: sdk/python/bittensor/intents/emission_weights.py:47-54
+/// `burn 5.00% / owner 18.00% / ...`, omitting a zero burn or recycle.
 fn vector_text(weights: &ew::Weights) -> String {
     ew::ADJUSTABLE_SLOTS
         .into_iter()
-        .chain(
-            [ew::BURN, ew::RECYCLE]
-                .into_iter()
-                .filter(|slot| weights[*slot] != 0),
-        )
+        .filter(|slot| !matches!(*slot, ew::BURN | ew::RECYCLE) || weights[*slot] != 0)
         .map(|slot| {
             format!(
                 "{} {}",
@@ -51,7 +44,7 @@ fn pct(value: f64) -> String {
     format!("{:.4}%", value * 100.0)
 }
 
-// py: sdk/python/bittensor/intents/emission_weights.py:69-88
+// py: sdk/python/bittensor/intents/emission_weights.py:61-80
 fn root_line(root: &ew::RootPreview) -> String {
     let baseline = pct(root.baseline_share);
     let (Some(_), Some(validators_after)) = (root.share_after, root.validators_after) else {
@@ -87,11 +80,12 @@ fn invalid(error: ew::EmissionWeightsError) -> IntentError {
     IntentError::Validation(error.to_string())
 }
 
-// py: sdk/python/bittensor/intents/emission_weights.py:120-140
+// py: sdk/python/bittensor/intents/emission_weights.py:112-126
 /// Normalized `(slot, parts)` updates, in the order given.
 ///
 /// Mirrors Python's constructor checks: slots and values pair up, at least
-/// one slot is named, each slot appears once, and burn and recycle stay zero.
+/// one slot is named and each slot appears once. Burn and recycle may be
+/// nonzero; [`ew::validate`] checks their combined cap.
 pub fn updates(intent: &SetSubnetEmissionWeights) -> Result<Vec<(usize, u64)>, IntentError> {
     if intent.slots.len() != intent.values.len() {
         return Err(IntentError::Validation(format!(
@@ -125,14 +119,6 @@ pub fn updates(intent: &SetSubnetEmissionWeights) -> Result<Vec<(usize, u64)>, I
         .map(ew::parse_share_json)
         .collect::<Result<Vec<_>, _>>()
         .map_err(invalid)?;
-    for (slot, value) in slots.iter().zip(&values) {
-        if matches!(*slot, ew::BURN | ew::RECYCLE) && *value != 0 {
-            return Err(IntentError::Validation(format!(
-                "{} must be 0 in this runtime; it is reserved for a later upgrade",
-                slot_label(*slot)
-            )));
-        }
-    }
     Ok(slots.into_iter().zip(values).collect())
 }
 
@@ -172,7 +158,7 @@ struct Inputs {
     owner: Option<AccountId>,
 }
 
-// py: sdk/python/bittensor/intents/emission_weights.py:164-196
+// py: sdk/python/bittensor/intents/emission_weights.py:150-182
 async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inputs>, IntentError> {
     let snapshot = view.pin().await?;
     let Some(current) = subnet_emission_weights_info(&snapshot, netuid)
@@ -200,7 +186,7 @@ async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inp
 }
 
 impl SetSubnetEmissionWeights {
-    // py: sdk/python/bittensor/intents/emission_weights.py:198-256
+    // py: sdk/python/bittensor/intents/emission_weights.py:201-242
     async fn plan_preview<V: View + ?Sized>(
         &self,
         cx: &PreflightCx<'_, V>,
@@ -284,7 +270,7 @@ impl SetSubnetEmissionWeights {
         })
     }
 
-    // py: sdk/python/bittensor/intents/emission_weights.py:258-267
+    // py: sdk/python/bittensor/intents/emission_weights.py:244-253
     fn effect_lines(&self, preview: &ew::Preview) -> Vec<String> {
         let (before, after) = (&preview.before.weights, &preview.after.weights);
         vec![
@@ -300,7 +286,7 @@ impl SetSubnetEmissionWeights {
 }
 
 impl Intent for SetSubnetEmissionWeights {
-    // py: sdk/python/bittensor/intents/emission_weights.py:275-281
+    // py: sdk/python/bittensor/intents/emission_weights.py:261-267
     fn summary(&self) -> String {
         let parts = match updates(self) {
             Ok(updates) => updates
@@ -324,7 +310,7 @@ impl Intent for SetSubnetEmissionWeights {
         )
     }
 
-    // py: sdk/python/bittensor/intents/emission_weights.py:142-162
+    // py: sdk/python/bittensor/intents/emission_weights.py:128-148
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let updates = updates(self)?;
         let (uids, values): (Vec<u16>, Vec<u64>) = if self.renormalize {

@@ -325,7 +325,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::gamma::GammaDeposit>, crate::ReadError> {
         super::interfaces::gamma_deposit(self.view, netuid, hotkey_ss58).await
     }
 }
@@ -334,7 +334,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
     pub async fn gamma_deposits(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Vec<crate::reads::gamma::GammaDeposit>, crate::ReadError> {
         super::interfaces::gamma_deposits(self.view, coldkey_ss58).await
     }
 }
@@ -582,7 +582,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         amount_tao: f64,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::gamma::MintQuote, crate::ReadError> {
         super::interfaces::quote_mint_gamma(self.view, netuid, amount_tao).await
     }
 }
@@ -592,7 +592,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
         &self,
         netuid: rtao_primitives::NetUid,
         amount_alpha: f64,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::gamma::MintQuote, crate::ReadError> {
         super::interfaces::quote_mint_gamma_with_stake(self.view, netuid, amount_alpha).await
     }
 }
@@ -691,7 +691,10 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
     pub async fn services(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<
+        std::collections::BTreeMap<rtao_primitives::AccountId, crate::reads::gamma::Service>,
+        crate::ReadError,
+    > {
         super::interfaces::services(self.view, netuid).await
     }
 }
@@ -907,7 +910,9 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
     #[doc = "The TAO/USD price oracle, its last feed, and the accepted price at this block.\n\nThe accepted price falls to the feed at once and rises toward it by at most\n0.0066% (66 ppm) of itself per block, and mints value TAO at it. Minting needs a\nfeed at most 300 blocks old, so no new mint succeeds once `blocks_since_last_feed`\nexceeds 300."]
-    pub async fn tao_usd_price(&self) -> Result<serde_json::Value, crate::ReadError> {
+    pub async fn tao_usd_price(
+        &self,
+    ) -> Result<crate::reads::gamma::TaoUsdPrice, crate::ReadError> {
         super::interfaces::tao_usd_price(self.view).await
     }
 }

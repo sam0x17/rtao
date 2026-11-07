@@ -387,6 +387,12 @@ mod tests {
                 json!(true),
                 calls::sudo_set_network_registration_allowed(netuid, true),
             ),
+            // Runtime 487: the per-subnet gamma flag is an owner hyperparameter.
+            (
+                "gamma_enabled",
+                json!(true),
+                calls::sudo_set_subnet_gamma_enabled(netuid, true),
+            ),
             (
                 "epoch_consensus",
                 json!("Null"),

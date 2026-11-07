@@ -206,12 +206,13 @@ fn returned_signatures_authenticate_payload_identity_and_version() {
     let signer = VaultSigner::new(&ed.account().to_string()).unwrap();
     let signature = futures::executor::block_on(ed.sign_raw(payload)).unwrap();
     assert_eq!(signer.crypto_type(), CryptoType::Sr25519);
+    // A versioned scan of another scheme is refused, even when it verifies.
     assert_eq!(
         signer
             .validate_signature(&format!("00{}", hex::encode(signature)), payload)
-            .unwrap()
-            .crypto,
-        CryptoType::Ed25519
+            .unwrap_err()
+            .to_string(),
+        "the scanned signature uses a different crypto type than this signer"
     );
     assert!(
         signer

@@ -579,6 +579,12 @@ pub fn read_state(availability_coldkey: &str) -> Result<FakeState, CoreError> {
     // Supply valid empty/zero native SCALE rather than bypassing the transport.
     for (api, method, value) in [
         ("SubnetInfoRuntimeApi", "get_metagraph", Value::Null),
+        ("GammaRuntimeApi", "get_gamma_deposit", Value::Null),
+        (
+            "GammaRuntimeApi",
+            "get_gamma_deposits_for_coldkey",
+            json!([]),
+        ),
         (
             "SubnetInfoRuntimeApi",
             "get_next_epoch_start_block",

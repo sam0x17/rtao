@@ -646,7 +646,7 @@ impl SyncGamma<'_> {
         &self,
         netuid: rtao_primitives::NetUid,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<Option<rtao_reads::reads::gamma::GammaDeposit>, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::gamma_deposit(&view, netuid, hotkey_ss58).await
         })
@@ -657,7 +657,7 @@ impl SyncGamma<'_> {
     pub fn gamma_deposits(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<Vec<rtao_reads::reads::gamma::GammaDeposit>, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::gamma_deposits(&view, coldkey_ss58).await
         })
@@ -954,7 +954,7 @@ impl SyncGamma<'_> {
         &self,
         netuid: rtao_primitives::NetUid,
         amount_tao: f64,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<rtao_reads::reads::gamma::MintQuote, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::quote_mint_gamma(&view, netuid, amount_tao).await
         })
@@ -966,7 +966,7 @@ impl SyncGamma<'_> {
         &self,
         netuid: rtao_primitives::NetUid,
         amount_alpha: f64,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<rtao_reads::reads::gamma::MintQuote, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::quote_mint_gamma_with_stake(
                 &view,
@@ -1085,7 +1085,10 @@ impl SyncSubnets<'_> {
     pub fn services(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<
+        std::collections::BTreeMap<rtao_primitives::AccountId, rtao_reads::reads::gamma::Service>,
+        super::Error,
+    > {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::services(&view, netuid).await
         })
@@ -1350,7 +1353,7 @@ impl SyncSubnets<'_> {
 }
 impl SyncGamma<'_> {
     #[doc = "The TAO/USD price oracle, its last feed, and the accepted price at this block.\n\nThe accepted price falls to the feed at once and rises toward it by at most\n0.0066% (66 ppm) of itself per block, and mints value TAO at it. Minting needs a\nfeed at most 300 blocks old, so no new mint succeeds once `blocks_since_last_feed`\nexceeds 300."]
-    pub fn tao_usd_price(&self) -> Result<serde_json::Value, super::Error> {
+    pub fn tao_usd_price(&self) -> Result<rtao_reads::reads::gamma::TaoUsdPrice, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::tao_usd_price(&view).await
         })

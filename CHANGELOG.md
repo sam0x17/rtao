@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+### Since `snapshot-2026-11-07`
+
+Not tagged yet; not a versioned release. Each item links to its section
+below.
+
+- v488 hand ports, first batch (D-129 to D-131, issue #12): subnet emission weights allow burn and recycle up to 33% combined; wallet keyfile pairs publish recoverably and an unlock refuses a secret that is not the public companion's key; Polkadot Vault refuses a scan of another scheme; the `services`, `tao_usd_price` and four gamma reads and the `set_service` intent are ported. 22 sources are blessed; 90 remain due.
+- Unchanged: core v478 and its patch, runtime stamps, V15, signing status and extensions, the metadata hash, the commit-reveal path, journal formats. Rollback to `snapshot-2026-11-07` needs no state migration; a wallet written by this revision is the same pair of files.
+
+### v488 hand ports, first batch (D-129 to D-131)
+
+#### rtao-primitives
+
+- Changed: emission weight rules follow runtime 487. Burn and recycle are adjustable slots (`ADJUSTABLE_SLOTS` lists all five) under the combined cap `MAX_BURN_RECYCLE` (33%), reported as `BurnRecycleEmissionAboveMaximum`; `merge` keeps omitted burn and recycle; `renormalize` rescales every unpinned slot and no longer refuses a nonzero burn or recycle; `Rules::table` adds a `burn+recycle` row.
+- New: `gamma` (exact decimal gamma amounts and 10^9 chain units: `gamma_amount`, `gamma_units`, `gamma_from_units`) and `pyfmt::is_printable`.
+
+#### rtao-intents
+
+- Changed: `SetSubnetEmissionWeights` accepts nonzero burn and recycle; its vector text lists slots in order.
+- New: `SetService` (feature `serving`) composes `SubtensorModule.set_service` with Python's checks: at most 256 UTF-8 bytes, an http(s) url with a host, or empty to remove; the hotkey defaults to the wallet's and the spender to the coldkey.
+- `gamma_enabled` plans as an owner hyperparameter (`sudo_set_subnet_gamma_enabled`).
+
+#### rtao-reads
+
+- New: `gamma_deposit`, `gamma_deposits`, `quote_mint_gamma`, `quote_mint_gamma_with_stake`, `tao_usd_price` (the accepted price stepped toward the feed as the chain does) and `services` (unprintable urls as 0x-hex, owner marked only while the owner coldkey owns its hotkey), typed as `reads::gamma::{GammaDeposit, MintQuote, TaoUsdPrice, Service}` with Python's JSON (D-130). They no longer return `NotYetPorted`.
+- New: `ReadError::Chain { name, message }` for a runtime API that answers with a dispatch error (source-breaking for exhaustive matches).
+
+#### rtao-wallet
+
+- Changed: creating or regenerating a key publishes the public companion, then the secret, under an advisory lock on the wallet directory, with backups and rollback of only its own files; a failed write leaves the previous pair instead of a new secret beside an old companion. Public companion regeneration takes the same lock (D-129).
+- Changed: an unlock reads the public companion first and refuses a secret whose account or scheme differs (`WalletError::IdentityMismatch`, "unlocked signing identity does not match the public wallet"); a companion that exists but cannot be read refuses the unlock. A legacy hotkey without `hotkeypub.txt` still unlocks (D-129).
+
+#### rtao-signer
+
+- Changed: `VaultSigner::validate_signature` refuses a versioned scan whose scheme byte is not the signer's ("the scanned signature uses a different crypto type than this signer").
+
+#### rtao-cli
+
+- Changed: `subnets emission set` takes `--burn` and `--recycle` (default 0) and checks that all five shares sum to 100%; `set-value`, `increase` and `decrease` accept every slot; `show` lists burn and recycle with their range and the `burn+recycle` cap; the read-back lists every slot.
+
+#### Parity
+
+- Blessed (22): the admin-utils, serving, subnet, rate-limiting, rpc_info and eco-tests mock pallet sources; `emission_weights.py`, `intents/emission_weights.py`, `cli/commands/subnet_emission.py`, `test_emission_weights.py`, `intents/hyperparameters.py`, `result.py`, `keyfiles.py`, `vault/signer.py`, `intents/serving.py`, `reads/subnets.py`, `reads/__init__.py`, `namespaces.py`, `namespaces.pyi`, `snapshot.py`, `intents/_money.py` and the new `reads/gamma.py`. The pending register keeps 11 intents and no reads.
+- Kept due: `signing.py` and `wallet.py` (their hashed and post-quantum parts), `http_auth.py` and `test_http_auth.py` (the trusted-scheme requirement waits for hashed identities, D-131).
+
 ### Since `snapshot-2026-11-05.2`
 
 Tagged as `snapshot-2026-11-07`; not a versioned release. Each item links to

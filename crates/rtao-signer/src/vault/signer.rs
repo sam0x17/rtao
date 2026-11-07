@@ -257,9 +257,9 @@ impl VaultSigner {
     }
     /// Decode and verify a raw 64-byte or versioned 65-byte signature scan.
     ///
-    /// Python-compatible verification honors a version prefix and the core's
-    /// `<Bytes>` fallback. A versioned scan may therefore select either supported
-    /// scheme independently of the default configured for unversioned scans.
+    /// Python-compatible verification honors the core's `<Bytes>` fallback. A
+    /// versioned scan must name this signer's configured scheme; another
+    /// scheme is refused before verification, as in Python.
     pub fn validate_signature(
         &self,
         scanned: &str,
@@ -276,13 +276,17 @@ impl VaultSigner {
             )));
         }
         let signature = &signature.bytes[..signature.length];
-        let (crypto, raw) = if signature.len() == 65 {
-            (
-                CryptoType::try_from(signature[0]).map_err(|_| self.bad_signature())?,
-                &signature[1..],
-            )
+        let crypto = self.options.crypto_type;
+        let raw = if signature.len() == 65 {
+            // py: sdk/python/bittensor/vault/signer.py:247-250
+            if signature[0] != u8::from(crypto) {
+                return Err(VaultError(
+                    "the scanned signature uses a different crypto type than this signer".into(),
+                ));
+            }
+            &signature[1..]
         } else {
-            (self.options.crypto_type, signature)
+            signature
         };
         if !rtao_core::keys::verify(payload, raw, &self.address, u8::from(crypto)).unwrap_or(false)
         {

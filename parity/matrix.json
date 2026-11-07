@@ -7587,7 +7587,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetService",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -8160,7 +8160,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "08767cbbd2f475c4c0a8b566cadfdab4f3c455fd"
+        "synced_blob": "ff8215891eb40893be3bec92dc7db9613ef7ab52"
       },
       {
         "kind": "n/a",
@@ -8205,7 +8205,7 @@
           "crates/rtao-intents/src/hyperparameters/planner.rs (selective owner current-value and freeze/cooldown planning)",
           "vendor/upstream/extracted/owner_map.json (33 owner names over 32 setters plus four operation policies and source provenance)"
         ],
-        "synced_blob": "59b354eb3208bd12b4b8c24867436da1fdacb2f3"
+        "synced_blob": "cb5f50be2425fadf629dc357448ef0121e1e1ae4"
       },
       {
         "kind": "extracted",
@@ -8297,7 +8297,7 @@
         "rust": [
           "none needed: namespace/package marker only"
         ],
-        "synced_blob": "32f152d05661cb3fe5c216fb1bf591dd0e95b3c9"
+        "synced_blob": "2991a5e44bab8473817deddc218801ba7511b0cc"
       },
       {
         "kind": "extracted",
@@ -8357,7 +8357,7 @@
           "rtao_neuron::publisher::{AxonConfig,AxonPublisher}",
           "rtao_intents::serving::{ServeAxon,ServeAxonTls,ServePrometheus,ResetAxon}"
         ],
-        "synced_blob": "867c497710872a1226ebd6b5a95f111fd02a9ca2"
+        "synced_blob": "a9e5b2ba801dd33defb975b2eefb9c0c5a959f9d"
       },
       {
         "kind": "ported",
@@ -8369,7 +8369,7 @@
           "crates/rtao-neuron/src/owner_ops.rs (registration and activation orchestration)",
           "crates/rtao-tx/src/registration.rs (immediate and queued completion correlation)"
         ],
-        "synced_blob": "256231d7a0041fb61c2f0f260043322dbfa06810"
+        "synced_blob": "326756fd5a792b4c17dce75e3266db822d1a16e7"
       },
       {
         "kind": "ported",
@@ -8407,7 +8407,7 @@
           "vendor/upstream/extracted/owner_map.json (selected owner policy source projection)",
           "vendor/upstream/extracted/chain_rules.json (selected production/fast rate-limit projection)"
         ],
-        "synced_blob": "e6c0a6fec37a86c98e7f7fb0edd657599fcaeb6a"
+        "synced_blob": "7c50fd80383b16eb7c647afb075185e2982cb4db"
       },
       {
         "kind": "extracted",
@@ -9651,7 +9651,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/subnet_emission.rs"
         ],
-        "synced_blob": "afa97fe485d8a118db6370587016f04d09f203f3"
+        "synced_blob": "4744f437d8fb4733398a7beb93155b61227e23db"
       },
       {
         "kind": "ported",
@@ -10006,7 +10006,7 @@
         "rust": [
           "crates/rtao-primitives/src/emission_weights.rs"
         ],
-        "synced_blob": "9d6633e22db5395aa1aa23b89be3947cffeaf182"
+        "synced_blob": "71b2c76d7f04471d6065519e281a1be7753f7239"
       },
       {
         "kind": "generated",
@@ -10793,7 +10793,7 @@
           "rtao_intents::{staking_trades, staking_claims, staking_baskets, collateral, root, lock}",
           "xtask::regen_intents"
         ],
-        "synced_blob": "488ac94eb53fd272ae4618dd8ff22d4fedd49842"
+        "synced_blob": "f45a39a4852703d52d91776ffbc216ed5b9a5dbd"
       },
       {
         "kind": "ported",
@@ -10893,7 +10893,7 @@
         "rust": [
           "crates/rtao-intents/src/emission_weights.rs"
         ],
-        "synced_blob": "16da15aac323c1ca3efd87832f8ea83b077ee3a4"
+        "synced_blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5"
       },
       {
         "kind": "ported",
@@ -10931,7 +10931,7 @@
           "rtao_intents::generated::interfaces",
           "rtao_catalog::owner_map::OWNER_HYPERPARAMETERS"
         ],
-        "synced_blob": "2a67742d9e18497bc1b270827bf3102c2a5fd493"
+        "synced_blob": "898812ed48595a20cb343a80297728d759b5cf2e"
       },
       {
         "kind": "ported",
@@ -11052,7 +11052,7 @@
           "rtao_intents::serving::{ServeAxon, ServeAxonTls, ServePrometheus, ResetAxon} (feature serving)",
           "rtao_intents::generated::interfaces"
         ],
-        "synced_blob": "b2fdd4e42a329b495011878b1ae23771f37b02e3"
+        "synced_blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6"
       },
       {
         "kind": "ported",
@@ -11103,7 +11103,7 @@
         "rust": [
           "`rtao_wallet::Keyfile` and resolve_key_password over core keyfile codecs"
         ],
-        "synced_blob": "3f70e24657a3aa1003b71ef4692dc84f71a38271"
+        "synced_blob": "7ad89c89209ab3bd570ea9a1e81169ef48cfb901"
       },
       {
         "kind": "ported",
@@ -11176,7 +11176,7 @@
           "rtao_reads::Subnets::commitments",
           "rtao_metagraph::SubnetsMetagraphExt::{metagraph, metagraph_with}"
         ],
-        "synced_blob": "4a7cd8f32a776a526e2efbf4d21180ceb289f8ec"
+        "synced_blob": "50e955460ed0413f956398844f94d83dd00092c8"
       },
       {
         "kind": "n/a",
@@ -11187,7 +11187,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "3c504ac6e61fd88fd0dcff62c77ba71ea0d4943a"
+        "synced_blob": "0e0432be5438baff1d199b74b364f8ffb1e5b451"
       },
       {
         "kind": "ported",
@@ -11222,7 +11222,7 @@
         "rust": [
           "`rtao_reads` crate root"
         ],
-        "synced_blob": "ea46bee016c2a51fff7dcdf4eb1edd566c5607e5"
+        "synced_blob": "70894659bc957942e1a6f699380224e25acd06b7"
       },
       {
         "kind": "ported",
@@ -11416,7 +11416,7 @@
           "rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58"
+        "synced_blob": "8cc78cffa8572f583a95cbe81326f702d034f30a"
       },
       {
         "kind": "ported",
@@ -11441,7 +11441,7 @@
           "rtao_tx::{ExtrinsicResult,ChainError,TxError,PolicyError,classify}",
           "rtao_catalog::{errors,py}; rtao_client::{PoolRejection,SubmitFailure}"
         ],
-        "synced_blob": "2f62ffa3c47304ffd8e450fe23fcefa39806d24d"
+        "synced_blob": "8f2d33830bea92232ef7173adad3105a553f9d9d"
       },
       {
         "kind": "extracted",
@@ -11478,7 +11478,7 @@
           "rtao_client::view::{Snapshot,View,ViewExt}",
           "crates/rtao-client/tests/snapshot.rs"
         ],
-        "synced_blob": "3fba1f5a9cf2b3c19aa6e5974384dc0c82a73a7f"
+        "synced_blob": "1df277924db3939470e959c1f3901af035bbf708"
       },
       {
         "kind": "n/a",
@@ -11567,7 +11567,7 @@
         "rust": [
           "rtao_signer::vault::{VaultSigner,VaultOptions}"
         ],
-        "synced_blob": "a253b1c654887a3be70be9d41d995a40ac14cf80"
+        "synced_blob": "e9a5d41dd19aec3cf7288ef4c145e7b7f41d2da7"
       },
       {
         "kind": "vendored",
@@ -11998,7 +11998,7 @@
           "crates/rtao-reads/tests/subnets.rs",
           "crates/rtao-cli/tests/subnet_emission_commands.rs"
         ],
-        "synced_blob": "ca9f33b66bd23c97b066d375897d979d6f3b06e5"
+        "synced_blob": "a5a7a865a9cb315d43ea27c42d8e4e21aa005e7b"
       },
       {
         "kind": "ported",
@@ -12570,14 +12570,15 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/reads/gamma.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-reads/src/reads/gamma.rs",
+          "crates/rtao-reads/tests/gamma.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "90ce64115cd3d6678aec246402eb0d8d7328b400"
       },
       {
         "kind": "ported",
@@ -13731,7 +13732,7 @@
         "name": "set_service",
         "oracle": "missing",
         "python_class": "SetService",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_subnet_emission_enabled",
@@ -14075,12 +14076,12 @@
       {
         "name": "gamma_deposit",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "gamma_deposits",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "hotkey_conviction",
@@ -14220,12 +14221,12 @@
       {
         "name": "quote_mint_gamma",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "quote_mint_gamma_with_stake",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "quote_stake",
@@ -14280,7 +14281,7 @@
       {
         "name": "services",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake",
@@ -14395,7 +14396,7 @@
       {
         "name": "tao_usd_price",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "timelocked_weight_commits",

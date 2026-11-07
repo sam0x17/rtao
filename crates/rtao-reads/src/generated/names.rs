@@ -737,8 +737,8 @@ impl ReadName {
             Self::Difficulty => true,
             Self::EpochStatus => true,
             Self::ExistentialDeposit => true,
-            Self::GammaDeposit => false,
-            Self::GammaDeposits => false,
+            Self::GammaDeposit => true,
+            Self::GammaDeposits => true,
             Self::HotkeyConviction => true,
             Self::HotkeyIdentities => true,
             Self::HotkeyOwner => true,
@@ -766,8 +766,8 @@ impl ReadName {
             Self::Parents => true,
             Self::PendingChildren => true,
             Self::Proxies => true,
-            Self::QuoteMintGamma => false,
-            Self::QuoteMintGammaWithStake => false,
+            Self::QuoteMintGamma => true,
+            Self::QuoteMintGammaWithStake => true,
             Self::QuoteStake => true,
             Self::QuoteUnstake => true,
             Self::RevealPeriod => true,
@@ -778,7 +778,7 @@ impl ReadName {
             Self::RootBasketTotalNav => true,
             Self::RootBaskets => true,
             Self::RootClaimThreshold => true,
-            Self::Services => false,
+            Self::Services => true,
             Self::Stake => true,
             Self::StakeAvailability => true,
             Self::StakeAvailabilityForColdkey => true,
@@ -801,7 +801,7 @@ impl ReadName {
             Self::SubnetStates => true,
             Self::SubnetTaoFlows => true,
             Self::Subnets => true,
-            Self::TaoUsdPrice => false,
+            Self::TaoUsdPrice => true,
             Self::TimelockedWeightCommits => true,
             Self::Timestamp => true,
             Self::TokenSymbols => true,
@@ -1039,14 +1039,15 @@ impl ReadName {
                 output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::GammaDeposit => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::GammaDepositParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Option<crate::reads::gamma::GammaDeposit>>(
+                ),
             },
             Self::GammaDeposits => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::GammaDepositsParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Vec<crate::reads::gamma::GammaDeposit>>(),
             },
             Self::HotkeyConviction => ReadInterfaceMetadata {
                 implemented: true,
@@ -1201,16 +1202,16 @@ impl ReadName {
                 output_type_name: std::any::type_name::<crate::reads::owner::ProxyDelegations>(),
             },
             Self::QuoteMintGamma => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::QuoteMintGammaParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::gamma::MintQuote>(),
             },
             Self::QuoteMintGammaWithStake => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::QuoteMintGammaWithStakeParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::gamma::MintQuote>(),
             },
             Self::QuoteStake => ReadInterfaceMetadata {
                 implemented: true,
@@ -1272,9 +1273,14 @@ impl ReadName {
                 output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::Services => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ServicesParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    std::collections::BTreeMap<
+                        rtao_primitives::AccountId,
+                        crate::reads::gamma::Service,
+                    >,
+                >(),
             },
             Self::Stake => ReadInterfaceMetadata {
                 implemented: true,
@@ -1435,9 +1441,9 @@ impl ReadName {
                 output_type_name: std::any::type_name::<Vec<crate::reads::m6_root::SubnetInfo>>(),
             },
             Self::TaoUsdPrice => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::TaoUsdPriceParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::gamma::TaoUsdPrice>(),
             },
             Self::TimelockedWeightCommits => ReadInterfaceMetadata {
                 implemented: true,

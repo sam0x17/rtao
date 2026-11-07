@@ -38,6 +38,13 @@ pub enum ReadError {
     },
     /// The catalog interface exists but its behavior has not been ported yet.
     NotYetPorted(ReadName),
+    /// The runtime answered with a dispatch error, as a simulated call does.
+    Chain {
+        /// Chain error variant, when the runtime metadata names it.
+        name: Option<String>,
+        /// Python's message: the error's docs, else its name.
+        message: String,
+    },
     /// A hand model no longer agrees with the live metadata.
     SurfaceChanged {
         /// Stable descriptor identity.
@@ -56,6 +63,9 @@ impl ReadError {
                 rtao_catalog::ErrorCode::Internal
             }
             Self::InvalidParam { .. } => rtao_catalog::ErrorCode::InvalidArgument,
+            Self::Chain { name, message } => {
+                rtao_catalog::errors::classify_error(message, name.as_deref())
+            }
         }
     }
 }
@@ -67,6 +77,7 @@ impl fmt::Display for ReadError {
             Self::Commitment(error) => error.fmt(formatter),
             Self::InvalidParam { name, reason } => write!(formatter, "invalid {name}: {reason}"),
             Self::NotYetPorted(name) => write!(formatter, "read not yet ported: {name}"),
+            Self::Chain { message, .. } => formatter.write_str(message),
             Self::SurfaceChanged { descriptor, detail } => {
                 write!(formatter, "surface changed for {descriptor}: {detail}")
             }

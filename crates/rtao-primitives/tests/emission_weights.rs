@@ -1,10 +1,10 @@
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Pure emission weight rules, parsing, renormalisation and previews.
 #![allow(clippy::unwrap_used)] // Test failures identify unexpected fixture values.
 
 use rtao_primitives::emission_weights::{
-    self as ew, BURN, DEFAULT_OWNER, MAX_OWNER, MAX_VALIDATOR, MIN_MINER, MINER, ONE, OWNER,
-    RECYCLE, RootInputs, Rules, ShareInput, VALIDATOR, Weights,
+    self as ew, BURN, DEFAULT_OWNER, MAX_BURN_RECYCLE, MAX_OWNER, MAX_VALIDATOR, MIN_MINER, MINER,
+    ONE, OWNER, RECYCLE, RootInputs, Rules, ShareInput, VALIDATOR, Weights,
 };
 use serde_json::json;
 
@@ -40,6 +40,7 @@ fn approx(actual: f64, expected: f64) {
 fn constants_match_chain() {
     let one = u128::from(ONE);
     assert_eq!(u128::from(MAX_OWNER), one * 33 / 100);
+    assert_eq!(u128::from(MAX_BURN_RECYCLE), one * 33 / 100);
     assert_eq!(u128::from(MAX_VALIDATOR), one * 50 / 100);
     assert_eq!(u128::from(MIN_MINER), one * 33 / 100);
     assert_eq!(u128::from(DEFAULT_OWNER), 11796 * one / 65535);
@@ -48,6 +49,10 @@ fn constants_match_chain() {
     assert_eq!((weights[BURN], weights[RECYCLE]), (0, 0));
     assert_eq!(weights[VALIDATOR], (ONE - DEFAULT_OWNER) / 2);
     assert_eq!(weights[VALIDATOR], ew::DEFAULT_VALIDATOR);
+    assert_eq!(
+        ew::ADJUSTABLE_SLOTS,
+        [BURN, RECYCLE, OWNER, VALIDATOR, MINER]
+    );
 }
 
 #[test]
@@ -197,12 +202,12 @@ fn format_share_rounds_like_python() {
 }
 
 #[test]
-fn merge_zeroes_reserved_slots_and_keeps_the_rest() {
+fn merge_keeps_omitted_slots_including_burn_and_recycle() {
     let current = [7, 9, 10, 20, 30];
-    assert_eq!(ew::merge(&current, &[(OWNER, 11)]), [0, 0, 11, 20, 30]);
+    assert_eq!(ew::merge(&current, &[(OWNER, 11)]), [7, 9, 11, 20, 30]);
     assert_eq!(
         ew::merge(&current, &[(VALIDATOR, 1), (MINER, 2)]),
-        [0, 0, 10, 1, 2]
+        [7, 9, 10, 1, 2]
     );
 }
 
@@ -215,6 +220,7 @@ fn renormalize_scales_untouched_slots_proportionally() {
         u128::from(ONE)
     );
     assert_eq!(out[OWNER], owner);
+    assert_eq!((out[BURN], out[RECYCLE]), (0, 0));
     assert!(out[VALIDATOR].abs_diff(out[MINER]) <= 4);
     assert!(out[VALIDATOR] > default()[VALIDATOR]);
 }
@@ -226,15 +232,33 @@ fn renormalize_keeps_two_pinned_and_fills_the_third() {
 }
 
 #[test]
-fn renormalize_rejects_overflow_and_nonzero_reserved() {
+fn renormalize_rejects_overflow_and_incomplete_pin() {
     let error =
         |fixed: &[(usize, u64)]| ew::renormalize(&default(), fixed).unwrap_err().to_string();
     assert!(error(&[(OWNER, ONE), (VALIDATOR, 1)]).contains("exceed 100%"));
-    assert_eq!(
-        error(&[(BURN, 1)]),
-        "burn (slot 0) must stay 0 in this runtime"
+    assert!(
+        error(&[
+            (BURN, 0),
+            (RECYCLE, 0),
+            (OWNER, 1),
+            (VALIDATOR, 1),
+            (MINER, 1)
+        ])
+        .contains("not 100%")
     );
-    assert!(error(&[(OWNER, 1), (VALIDATOR, 1), (MINER, 1)]).contains("not 100%"));
+}
+
+#[test]
+fn renormalize_accepts_nonzero_burn_and_rescales_the_rest() {
+    let burn = share("10%");
+    let out = ew::renormalize(&default(), &[(BURN, burn)]).unwrap();
+    assert_eq!(
+        out.iter().map(|w| u128::from(*w)).sum::<u128>(),
+        u128::from(ONE)
+    );
+    assert_eq!(out[BURN], burn);
+    assert_eq!(out[RECYCLE], 0);
+    assert_eq!(ew::validate(&out, &Rules::default()), []);
 }
 
 #[test]
@@ -244,7 +268,9 @@ fn renormalize_splits_evenly_when_free_slots_are_zero() {
         out.iter().map(|w| u128::from(*w)).sum::<u128>(),
         u128::from(ONE)
     );
-    assert!(out[VALIDATOR].abs_diff(out[MINER]) <= 1);
+    // Burn, recycle, validator and miner were all zero: remaining is split evenly.
+    let free = [out[BURN], out[RECYCLE], out[VALIDATOR], out[MINER]];
+    assert!(free.iter().max().unwrap() - free.iter().min().unwrap() <= 1);
 }
 
 #[test]
@@ -263,9 +289,36 @@ fn validate_accepts_default_and_names_each_rule() {
     let d = default();
     assert_eq!(
         errors([1, 0, d[2], d[3], d[4]], &rules),
-        ["BurnEmissionMustBeZero", "EmissionWeightsDoNotSumToOne"]
+        ["EmissionWeightsDoNotSumToOne"]
     );
-    assert!(errors([0, 1, d[2], d[3], d[4]], &rules).contains(&"RecycleEmissionMustBeZero"));
+    let over_cap = [
+        MAX_BURN_RECYCLE + 1,
+        0,
+        0,
+        share("34%"),
+        ONE - (MAX_BURN_RECYCLE + 1) - share("34%"),
+    ];
+    assert!(errors(over_cap, &rules).contains(&"BurnRecycleEmissionAboveMaximum"));
+    let split_over = [
+        share("20%"),
+        share("14%"),
+        0,
+        share("33%"),
+        ONE - share("20%") - share("14%") - share("33%"),
+    ];
+    assert!(errors(split_over, &rules).contains(&"BurnRecycleEmissionAboveMaximum"));
+    let at_cap = [
+        share("20%"),
+        share("13%"),
+        0,
+        share("34%"),
+        ONE - share("20%") - share("13%") - share("34%"),
+    ];
+    assert_eq!(ew::validate(&at_cap, &rules), []);
+    assert_eq!(
+        ew::validate(&split_over, &rules)[0].to_string(),
+        "BurnRecycleEmissionAboveMaximum: burn (slot 0) is 20.00% and recycle (slot 1) is 14.00% (34.00% combined); burn + recycle may be at most 33.00%"
+    );
     let renormalized = |slot, text| ew::renormalize(&d, &[(slot, share(text))]).unwrap();
     assert!(errors(renormalized(OWNER, "34%"), &rules).contains(&"OwnerEmissionAboveMaximum"));
     assert!(
@@ -455,12 +508,14 @@ fn rules_limits_and_table_cover_every_slot() {
             .collect()
     };
     let table = rows(&rules);
-    assert_eq!(table["burn"], "= 0%");
-    assert_eq!(table["recycle"], "= 0%");
+    assert_eq!(table["burn"], "0.00% to 33.00%");
+    assert_eq!(table["recycle"], "0.00% to 33.00%");
+    assert_eq!(table["burn+recycle"], "<= 33.00%");
     assert_eq!(table["owner"], "18.00% to 33.00%");
     assert_eq!(table["validator"], "2.2000% to 50.0000%");
     assert_eq!(table["miner"], ">= 33.00%");
     assert_eq!(table["sum"], "= 100%");
+    assert_eq!(limits.burn.max_parts, MAX_BURN_RECYCLE);
     let table = rows(&Rules::default());
     assert_eq!(table["validator"], "<= 50.0000%");
     assert_eq!(table["owner"], "0.00% to 33.00%");

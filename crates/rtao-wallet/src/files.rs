@@ -131,7 +131,17 @@ impl FileState {
         if let Some(signer) = cached.as_ref() {
             return Ok(signer.clone());
         }
+        // Snapshot the public identity before unlocking, as Python's
+        // WalletSigner does: a secret file that decrypts to another key must
+        // not sign for the account the public companion names.
+        let expected = self.expected_identity()?;
         let keypair = self.load_keypair().await?;
+        if let Some(expected) = expected
+            && (AccountId(keypair.public_key_bytes()) != expected.account
+                || keypair.crypto_type() != u8::from(expected.crypto_type))
+        {
+            return Err(WalletError::IdentityMismatch(self.path.clone()));
+        }
         let signer: Arc<dyn Signer> = Arc::new(
             KeypairSigner::new(keypair)
                 .map_err(|error| WalletError::Blocking(error.to_string()))?,
@@ -291,8 +301,11 @@ impl FileState {
                 let _ = password;
                 let public_bytes =
                     Zeroizing::new(keyfile_json::serialized_keypair_to_keyfile_data(&public)?);
-                atomic_write(&path, &bytes, options.overwrite)?;
-                atomic_write(&public_path, &public_bytes, options.overwrite)?;
+                publish_pair(
+                    (&public_path, &public_bytes),
+                    (&path, &bytes),
+                    options.overwrite,
+                )?;
                 Ok::<_, WalletError>(())
             })();
             // Covers success and partial-write errors. If the worker panics,
@@ -314,6 +327,22 @@ impl FileState {
                 public_account(&self.path).map_err(signer_error)
             }
             Err(error) => Err(signer_error(error)),
+        }
+    }
+    // py: sdk/python/bittensor/signing.py:144-167,219-231
+    /// The public identity an unlocked key must match, if one is readable
+    /// without unlocking. A legacy hotkey without `hotkeypub.txt` whose own
+    /// file is encrypted has none: Python unlocks that file for its public
+    /// view, so the comparison is with itself.
+    fn expected_identity(&self) -> Result<Option<PublicKeyInfo>, WalletError> {
+        match self.public_info() {
+            Ok(info) => Ok(Some(info)),
+            Err(WalletError::PublicKeyUnavailable(path))
+                if self.role == SignerRole::Hotkey && path == self.path =>
+            {
+                Ok(None)
+            }
+            Err(error) => Err(error),
         }
     }
     pub(crate) fn public_info(&self) -> Result<PublicKeyInfo, WalletError> {
@@ -686,19 +715,21 @@ impl Drop for TempFile {
         let _ = fs::remove_file(&self.0);
     }
 }
-pub(crate) fn atomic_write(
-    path: &Path,
-    data: &[u8],
-    overwrite: Overwrite,
-) -> Result<(), WalletError> {
+
+fn keyfile_parent(path: &Path) -> Result<&Path, WalletError> {
     let parent = path
         .parent()
         .ok_or_else(|| WalletError::InvalidName("keyfile has no parent directory".into()))?;
-    let parent = if parent.as_os_str().is_empty() {
+    Ok(if parent.as_os_str().is_empty() {
         Path::new(".")
     } else {
         parent
-    };
+    })
+}
+
+/// Refuse symlinked ancestors and create the owner-only parent directories.
+fn prepare_parent(path: &Path) -> Result<&Path, WalletError> {
+    let parent = keyfile_parent(path)?;
     // Check every existing ancestor, including ancestors above the nearest directory.
     for ancestor in parent
         .ancestors()
@@ -709,7 +740,12 @@ pub(crate) fn atomic_write(
         }
     }
     private_dirs(parent)?;
-    preflight(path, overwrite)?;
+    Ok(parent)
+}
+
+// py: sdk/python/bittensor/keyfiles.py:161-185
+/// Write `data` to an exclusive owner-only sibling and sync it.
+fn stage(parent: &Path, data: &[u8]) -> Result<TempFile, WalletError> {
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -735,7 +771,7 @@ pub(crate) fn atomic_write(
     }
     let (temporary, mut file) = created.ok_or_else(|| {
         io_error(
-            path,
+            parent,
             std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
                 "could not allocate keyfile temporary",
@@ -751,9 +787,14 @@ pub(crate) fn atomic_write(
     file.write_all(data)
         .and_then(|()| file.sync_all())
         .map_err(|error| io_error(&temporary.0, error))?;
-    drop(file);
+    Ok(temporary)
+}
+
+// py: sdk/python/bittensor/keyfiles.py:187-210
+/// Publish a staged file: replace when allowed, else link without clobbering.
+fn publish(temporary: &TempFile, path: &Path, overwrite: Overwrite) -> Result<(), WalletError> {
     if overwrite == Overwrite::Yes {
-        fs::rename(&temporary.0, path).map_err(|error| io_error(path, error))?;
+        fs::rename(&temporary.0, path).map_err(|error| io_error(path, error))
     } else {
         fs::hard_link(&temporary.0, path).map_err(|error| {
             if error.kind() == std::io::ErrorKind::AlreadyExists {
@@ -761,15 +802,254 @@ pub(crate) fn atomic_write(
             } else {
                 io_error(path, error)
             }
-        })?;
+        })
     }
+}
+
+fn sync_dir(parent: &Path) -> Result<(), WalletError> {
     #[cfg(unix)]
     {
         File::open(parent)
             .and_then(|file| file.sync_all())
             .map_err(|error| io_error(parent, error))?;
     }
+    #[cfg(not(unix))]
+    let _ = parent;
     Ok(())
+}
+
+pub(crate) fn atomic_write(
+    path: &Path,
+    data: &[u8],
+    overwrite: Overwrite,
+) -> Result<(), WalletError> {
+    let parent = prepare_parent(path)?;
+    preflight(path, overwrite)?;
+    let temporary = stage(parent, data)?;
+    publish(&temporary, path, overwrite)?;
+    sync_dir(parent)
+}
+
+/// [`atomic_write`] under the wallet directory's lock, as Python's public
+/// companion regeneration does.
+pub(crate) fn atomic_write_locked(
+    path: &Path,
+    data: &[u8],
+    overwrite: Overwrite,
+) -> Result<(), WalletError> {
+    prepare_parent(path)?;
+    let _lock = DirectoryLock::acquire(wallet_directory(path)?)?;
+    atomic_write(path, data, overwrite)
+}
+
+/// A keyfile's `(device, inode)`, or `None` when absent.
+fn inode(path: &Path) -> Result<Option<(u64, u64)>, WalletError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::MetadataExt;
+                Ok(Some((metadata.dev(), metadata.ino())))
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = metadata;
+                Ok(Some((0, 0)))
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(io_error(path, error)),
+    }
+}
+
+/// An exclusive advisory lock on a wallet directory, released on drop.
+///
+/// Cooperating writers (this process and others, Python included) serialize
+/// paired publication without adding a lock file to the wallet.
+struct DirectoryLock {
+    #[cfg(unix)]
+    _file: File,
+}
+impl DirectoryLock {
+    fn acquire(directory: &Path) -> Result<Self, WalletError> {
+        #[cfg(unix)]
+        {
+            let file = File::open(directory).map_err(|error| io_error(directory, error))?;
+            rustix::fs::flock(&file, rustix::fs::FlockOperation::LockExclusive)
+                .map_err(|error| io_error(directory, error.into()))?;
+            Ok(Self { _file: file })
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = directory;
+            Ok(Self {})
+        }
+    }
+}
+
+// py: sdk/python/bittensor/wallet.py:31-70
+/// The directory that owns a wallet's files: `<wallet>` for both
+/// `<wallet>/coldkey` and `<wallet>/hotkeys/<name>`, else the file's parent.
+fn wallet_directory(path: &Path) -> Result<&Path, WalletError> {
+    let parent = keyfile_parent(path)?;
+    Ok(
+        match parent
+            .parent()
+            .filter(|_| parent.file_name() == Some("hotkeys".as_ref()))
+        {
+            Some(wallet) if !wallet.as_os_str().is_empty() => wallet,
+            _ => parent,
+        },
+    )
+}
+
+// py: sdk/python/bittensor/wallet.py:73-93
+/// Remove backup links, then the empty backup directory.
+fn cleanup_backups(directory: &Path, backups: &[(PathBuf, PathBuf)]) {
+    for (_, backup) in backups {
+        if fs::remove_file(backup).is_err_and(|error| error.kind() != std::io::ErrorKind::NotFound)
+        {
+            return;
+        }
+    }
+    let _ = fs::remove_dir(directory);
+}
+
+fn changed(path: &Path, what: &str) -> WalletError {
+    io_error(
+        path,
+        std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            format!("wallet keyfile changed {what}"),
+        ),
+    )
+}
+
+// py: sdk/python/bittensor/wallet.py:234-369
+/// Publish a public companion and its secret keyfile as a recoverable pair.
+///
+/// Under the wallet directory's lock both files are staged and synced, any
+/// file being replaced is kept as a hard-linked backup, then the public file
+/// and the secret file are published in that order. If either step fails,
+/// only the files this call published are rolled back (a concurrent
+/// replacement is never overwritten); when rollback itself cannot finish,
+/// the backups stay in their `.wallet-backup.*` directory and the error names
+/// it.
+pub(crate) fn publish_pair(
+    public: (&Path, &[u8]),
+    private: (&Path, &[u8]),
+    overwrite: Overwrite,
+) -> Result<(), WalletError> {
+    let files = [public, private];
+    let parent = prepare_parent(private.0)?;
+    prepare_parent(public.0)?;
+    let _lock = DirectoryLock::acquire(wallet_directory(private.0)?)?;
+    for (path, _) in files {
+        if fs::symlink_metadata(path).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+            return Err(WalletError::Symlink(path.to_owned()));
+        }
+        preflight(path, overwrite)?;
+    }
+    let original = [inode(public.0)?, inode(private.0)?];
+    let staged = [
+        stage(keyfile_parent(public.0)?, public.1)?,
+        stage(keyfile_parent(private.0)?, private.1)?,
+    ];
+    let backup_dir = (0..32)
+        .map(|_| {
+            parent.join(format!(
+                ".wallet-backup.{}-{}",
+                std::process::id(),
+                NEXT_TEMP.fetch_add(1, Ordering::Relaxed)
+            ))
+        })
+        .find_map(|candidate| {
+            let mut builder = fs::DirBuilder::new();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::DirBuilderExt;
+                builder.mode(0o700);
+            }
+            builder.create(&candidate).ok().map(|()| candidate)
+        })
+        .ok_or_else(|| {
+            io_error(
+                parent,
+                std::io::Error::new(
+                    std::io::ErrorKind::AlreadyExists,
+                    "could not allocate a wallet backup directory",
+                ),
+            )
+        })?;
+    let mut backups: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let mut published: Vec<(PathBuf, Option<(u64, u64)>)> = Vec::new();
+    let result = (|| {
+        for (index, (path, _)) in files.iter().enumerate() {
+            let Some(expected) = original[index] else {
+                continue;
+            };
+            if inode(path)? != Some(expected) {
+                return Err(changed(path, "during staging"));
+            }
+            let name = path.file_name().unwrap_or_default();
+            let backup = backup_dir.join(name);
+            fs::hard_link(path, &backup).map_err(|error| io_error(&backup, error))?;
+            backups.push((path.to_path_buf(), backup.clone()));
+            if inode(&backup)? != Some(expected) {
+                return Err(changed(path, "during backup"));
+            }
+        }
+        if [inode(public.0)?, inode(private.0)?] != original {
+            return Err(changed(public.0, "before publication"));
+        }
+        for (index, (path, _)) in files.iter().enumerate() {
+            if index == 1 && inode(path)? != original[1] {
+                return Err(changed(path, "before publication"));
+            }
+            let mode = if original[index].is_some() {
+                overwrite
+            } else {
+                Overwrite::No
+            };
+            let staged_inode = inode(&staged[index].0)?;
+            publish(&staged[index], path, mode)?;
+            published.push((path.to_path_buf(), staged_inode));
+        }
+        sync_dir(parent)?;
+        if keyfile_parent(public.0)? != parent {
+            sync_dir(keyfile_parent(public.0)?)?;
+        }
+        Ok(())
+    })();
+    let Err(error) = result else {
+        drop(staged);
+        cleanup_backups(&backup_dir, &backups);
+        return Ok(());
+    };
+    // Restore only the inodes this call published.
+    for (path, staged_inode) in published.iter().rev() {
+        let restored = (|| {
+            if inode(path)? != *staged_inode {
+                return Err(changed(path, "concurrently"));
+            }
+            match backups.iter().find(|(original, _)| original == path) {
+                Some((_, backup)) => {
+                    fs::rename(backup, path).map_err(|error| io_error(path, error))
+                }
+                None => fs::remove_file(path).map_err(|error| io_error(path, error)),
+            }
+        })();
+        if let Err(rollback) = restored {
+            return Err(WalletError::Blocking(format!(
+                "could not restore wallet keyfile {}; backup remains in {} ({rollback}; publication failed: {error})",
+                path.display(),
+                backup_dir.display()
+            )));
+        }
+    }
+    drop(staged);
+    cleanup_backups(&backup_dir, &backups);
+    Err(error)
 }
 
 #[cfg(test)]
@@ -946,8 +1226,9 @@ mod replacement_tests {
         assert_eq!(public_account(&state.public).unwrap(), signer.account());
     }
 
+    // py: tests/unit/test_wallet_pair_atomicity.py
     #[tokio::test]
-    async fn partial_replacement_failure_discards_the_previous_cached_signer() {
+    async fn failed_pair_replacement_publishes_neither_file_and_discards_the_cached_signer() {
         let root = TempRoot::new();
         let state = state(&root);
         state.store(key("//Alice"), replacement()).await.unwrap();
@@ -955,10 +1236,47 @@ mod replacement_tests {
         fs::remove_file(&state.public).unwrap();
         fs::create_dir(&state.public).unwrap();
         assert!(state.store(key("//Bob"), replacement()).await.is_err());
-        assert_eq!(public_account(&state.path).unwrap(), account("//Bob"));
+        // The public companion is published first; its failure leaves the
+        // secret file as it was, and no staging or backup file remains.
+        assert_eq!(public_account(&state.path).unwrap(), account("//Alice"));
+        let leftovers: Vec<_> = fs::read_dir(root.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with('.'))
+            .collect();
+        assert_eq!(leftovers, Vec::<String>::new());
+        // An unreadable public companion refuses the unlock, as Python's
+        // WalletSigner does before reading the secret.
+        assert!(state.unlock().await.is_err());
+        fs::remove_dir(&state.public).unwrap();
+        state.store(key("//Alice"), replacement()).await.unwrap();
         let fresh = state.unlock().await.unwrap();
-        assert_eq!(fresh.account(), account("//Bob"));
-        assert_ne!(fresh.account(), old.account());
+        assert_eq!(fresh.account(), account("//Alice"));
+        assert!(!Arc::ptr_eq(&fresh, &old));
+    }
+
+    // py: sdk/python/bittensor/signing.py:219-231 (_unlock identity check)
+    #[tokio::test]
+    async fn unlock_refuses_a_secret_that_is_not_the_public_companions_key() {
+        let root = TempRoot::new();
+        let state = state(&root);
+        state.store(key("//Alice"), replacement()).await.unwrap();
+        let bob = Keypair::new(None, Some(&key("//Bob").public_key_bytes()), 1, 42).unwrap();
+        let bytes = keyfile_json::serialized_keypair_to_keyfile_data(&bob).unwrap();
+        atomic_write(&state.public, &bytes, Overwrite::Yes).unwrap();
+        let error = state.unlock().await.err();
+        assert!(
+            matches!(error, Some(WalletError::IdentityMismatch(_))),
+            "{error:?}"
+        );
+        let error = error.unwrap();
+        assert_eq!(
+            error.to_string(),
+            "unlocked signing identity does not match the public wallet"
+        );
+        // A legacy hotkey without a public companion compares with itself.
+        fs::remove_file(&state.public).unwrap();
+        assert_eq!(state.unlock().await.unwrap().account(), account("//Alice"));
     }
 }
 

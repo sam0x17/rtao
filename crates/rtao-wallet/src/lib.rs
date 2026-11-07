@@ -73,6 +73,8 @@ pub enum WalletError {
     PublicKeyUnavailable(PathBuf),
     /// A symlink would redirect a keyfile write.
     Symlink(PathBuf),
+    /// The unlocked secret key is not the key its public companion names.
+    IdentityMismatch(PathBuf),
 }
 impl fmt::Display for WalletError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -99,6 +101,9 @@ impl fmt::Display for WalletError {
             ),
             Self::PublicKeyUnavailable(path) => write!(f, "public key unavailable at {path:?}"),
             Self::Symlink(path) => write!(f, "refusing to write keyfile through symlink {path:?}"),
+            Self::IdentityMismatch(_) => {
+                f.write_str("unlocked signing identity does not match the public wallet")
+            }
         }
     }
 }

@@ -2010,10 +2010,13 @@ pending = "v488 adoption"
 
 [[export]]
 python = "bittensor.intents.SetService"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::SetService"
+reason = "Public typed intent reexport (feature serving), ported 2026-11-07 with Python's url checks and defaults. The catalog sample fixture constructs and plans it against FakeChain. This records the reviewed API home, not an executed oracle comparison."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain",
+  "rtao_intents::serving::tests::set_service_checks_urls_and_names_the_spender",
+]
 
 [[export]]
 python = "bittensor.intents.SpendGamma"

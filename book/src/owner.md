@@ -81,9 +81,12 @@ pruning. Never discard a recovery journal just to repeat a transaction.
 `rtao subnets emission show --netuid <n>` prints how the subnet splits its
 alpha emission as `[burn, recycle, owner, validator, miner]`, what root keeps,
 the allowed range of every slot and the next owner change window. `set`
-writes owner, validator and miner in one go; `set-value`, `increase` and
-`decrease` move one slot and rescale the other two so the vector still sums
-to 100%. Shares are percentages (`41%`), 0..1 fractions (`0.41`) or raw u64
+writes owner, validator and miner (and, with `--burn` and `--recycle`, burn
+and recycle) in one go; `set-value`, `increase` and `decrease` move one slot
+and rescale the others so the vector still sums to 100%. Since runtime 487,
+burn and recycle are adjustable: together they may take at most 33%. Burn
+destroys alpha but still counts toward issuance; recycle removes it from
+issuance. Shares are percentages (`41%`), 0..1 fractions (`0.41`) or raw u64
 parts. Every write is checked against the chain's live rules before signing,
 and `--dry-run` previews the before/after vector without submitting. The
 `owner_emission`, `validator_emission` and `miner_emission` hyperparameters

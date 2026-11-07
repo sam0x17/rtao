@@ -202,6 +202,10 @@ fn all_86_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             // Optional individually, but Python requires one funding target.
             args.insert("target_ss58".into(), json!(address));
         }
+        if spec.name == "set_service" {
+            // Python refuses a url that is not http(s) at construction.
+            args.insert("url".into(), json!("https://example.com/services.json"));
+        }
         if spec.name == "set_subnet_emission_enabled" {
             args.insert("netuids".into(), json!([1]));
         }

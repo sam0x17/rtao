@@ -1534,10 +1534,14 @@ mod tests {
         // independently committed explicit key set supplies its synthetic blobs;
         // `parity check` verifies coverage against the actual imported listing.
         // Rows a runtime adoption added for new upstream files (D-128) are not
-        // part of the documented seed.
+        // part of the documented seed, before or after they are ported.
         let committed = committed
             .into_iter()
-            .filter(|row| !(row.synced_blob == "pending" && row.milestone == "port due"))
+            .filter(|row| {
+                !(row.synced_blob == "pending" && row.milestone == "port due"
+                    || row.notes.starts_with("Added by the ")
+                        && row.notes.contains(" runtime adoption (D-128)"))
+            })
             .collect::<Vec<_>>();
         let listing = committed
             .iter()

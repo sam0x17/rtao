@@ -20,6 +20,26 @@ pub fn string_repr(value: &str) -> String {
     crate::python::string_repr(value)
 }
 
+/// Python's `str.isprintable()`: no control, format, private-use,
+/// surrogate, unassigned or separator characters other than the ASCII space.
+pub fn is_printable(value: &str) -> bool {
+    use unicode_general_category::{GeneralCategory, get_general_category};
+    value.chars().all(|character| {
+        character == ' '
+            || !matches!(
+                get_general_category(character),
+                GeneralCategory::Control
+                    | GeneralCategory::Format
+                    | GeneralCategory::PrivateUse
+                    | GeneralCategory::Surrogate
+                    | GeneralCategory::Unassigned
+                    | GeneralCategory::LineSeparator
+                    | GeneralCategory::ParagraphSeparator
+                    | GeneralCategory::SpaceSeparator
+            )
+    })
+}
+
 // py: sdk/python/bittensor/metagraph.py:459-472 (_text)
 // py: sdk/python/bittensor/metagraph.py:489-510 (_decode_fields)
 /// Decode Python's `bytes.fromhex(text)` syntax, without a `0x` prefix.

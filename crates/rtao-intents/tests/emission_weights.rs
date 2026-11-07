@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Emission weight intents planned through the real executor on FakeChain.
 #![cfg(all(feature = "emission_weights", feature = "staking"))]
 #![allow(clippy::unwrap_used, clippy::panic)] // Assertions must fail when fake-chain fixtures are invalid.
@@ -68,7 +68,7 @@ fn rate_key() -> rtao_core::DynValue {
     emission_weights_rate_limit_key(SUBNET)
 }
 
-// py: tests/unit/test_emission_weights.py:363-372 (_client)
+// py: tests/unit/test_emission_weights.py:395-404 (_client)
 fn state() -> Result<FakeState> {
     let runtime = FakeState::try_default()?.runtime;
     let mut state = intent_state(runtime, "set_subnet_emission_weights")?;
@@ -149,7 +149,6 @@ fn intent_rejects_malformed_input() {
             json!({"slots": ["owner", 2], "values": [1, 2]}),
             "at most once",
         ),
-        (json!({"slots": ["burn"], "values": [1]}), "must be 0"),
         (json!({"slots": ["gamma"], "values": [1]}), "slots are"),
         (
             json!({"slots": ["owner"], "values": [true]}),
@@ -170,6 +169,16 @@ fn intent_rejects_malformed_input() {
         renormalize: false,
     };
     assert!(unchecked.validate().is_err());
+}
+
+// pyt: unit/test_emission_weights.py::test_intent_accepts_nonzero_burn
+#[test]
+fn intent_accepts_nonzero_burn() {
+    let intent =
+        intent(json!({"netuid": 1, "slots": ["burn"], "values": ["10%"], "renormalize": true}));
+    assert_eq!(intent.slots, [json!(0)]);
+    assert_eq!(intent.values, [json!(share("10%"))]);
+    assert!(intent.summary().contains("burn=10.00%"));
 }
 
 // pyt: unit/test_emission_weights.py::test_intent_plan_renormalizes_and_reports_root_baseline

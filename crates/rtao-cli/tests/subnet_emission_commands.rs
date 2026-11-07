@@ -328,10 +328,11 @@ async fn show_json_has_stable_fields_and_human_output_names_every_range() -> Tes
     let default_validator = ew::share_to_float(ew::default_weights(DEFAULT_OWNER)[ew::VALIDATOR]);
     for needle in [
         "Vector".to_owned(),
+        "burn  0.00%".into(),
+        "recycle  0.00%".into(),
         "owner  18.00%".into(),
         "validator  41.00%".into(),
         "miner  41.00%".into(),
-        "reserved, pinned to 0".into(),
         "Root".into(),
         "root share of emission  1.7".into(),
         "paid off the top of the validator slot".into(),
@@ -349,6 +350,7 @@ async fn show_json_has_stable_fields_and_human_output_names_every_range() -> Tes
         "Allowed".into(),
         format!("validator  {lowest} to 50.0000%"),
         "miner  >= 33.00%".into(),
+        "burn+recycle  <= 33.00%".into(),
         "sum  = 100%".into(),
         format!("set-value --netuid {netuid}"),
     ] {
@@ -700,7 +702,7 @@ async fn rule_violations_and_bad_inputs_exit_2_before_planning() -> TestResult {
         ))
     );
 
-    let pinned = run(
+    let over_burn = run(
         &client,
         wallet.path(),
         &[
@@ -712,12 +714,47 @@ async fn rule_violations_and_bad_inputs_exit_2_before_planning() -> TestResult {
             "--slot",
             "burn",
             "--value",
-            "1%",
+            "40%",
         ],
     )
     .await?;
-    assert_eq!(code(&pinned), 2);
-    assert!(pinned.stderr.contains("pinned to 0"));
+    assert_eq!(code(&over_burn), 2, "{}", over_burn.stderr);
+    assert!(
+        over_burn.stderr.contains("BurnRecycleEmissionAboveMaximum"),
+        "{}",
+        over_burn.stderr
+    );
+    assert!(
+        over_burn.stderr.contains("burn+recycle <= 33.00%"),
+        "{}",
+        over_burn.stderr
+    );
+
+    let burn_ok = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "set-value",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "burn",
+            "--value",
+            "10%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&burn_ok), 0, "{}", burn_ok.stderr);
+    let burn_plan: Value = serde_json::from_str(&burn_ok.stdout)?;
+    assert_eq!(burn_plan["ok"], json!(true), "{burn_plan}");
+    assert_eq!(
+        burn_plan["preview"]["after"]["weights"][ew::BURN],
+        json!(ew::parse_share("10%")?)
+    );
 
     let bad = run(
         &client,
@@ -1213,7 +1250,7 @@ async fn read_back_compares_with_the_applied_event_and_reports_a_base_change_apa
     for needle in [
         "result  matches the submitted vector exactly",
         "base  changed before submission",
-        "the change was rebuilt on a newer vector: owner 10.0000%",
+        "the change was rebuilt on a newer vector: burn 0.0000% / recycle 0.0000% / owner 10.0000%",
     ] {
         assert!(human.stdout.contains(needle), "{needle}\n{}", human.stdout);
     }

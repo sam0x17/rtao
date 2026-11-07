@@ -4,7 +4,7 @@
 
 use crate::{
     ColdkeyFile, HotkeyFile, Overwrite, PasswordSources, PublicKeyInfo, WalletError, WriteOptions,
-    files::{atomic_write, public_account},
+    files::{atomic_write_locked, public_account},
     signer_error,
 };
 use rtao_core::keyfile_json::{SecretInput, redacted_derivation_error};
@@ -347,7 +347,7 @@ impl Wallet {
         rtao_core::offload(move || {
             let keypair = Keypair::new(None, Some(&account.0), u8::from(crypto), 42)?;
             let bytes = rtao_core::keyfile_json::serialized_keypair_to_keyfile_data(&keypair)?;
-            atomic_write(&path, &bytes, overwrite)
+            atomic_write_locked(&path, &bytes, overwrite)
         })
         .await
         .map_err(|error| WalletError::Blocking(error.to_string()))?

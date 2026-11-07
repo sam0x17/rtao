@@ -305,9 +305,9 @@ InterfaceMetadata{name:"set_root_claim_threshold",feature:"root",compiled:true,i
 #[cfg(not(feature="root"))]
 InterfaceMetadata{name:"set_root_claim_threshold",feature:"root",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "serving")]
-InterfaceMetadata{name:"set_service",feature:"serving",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetService>()),role:Some(std::any::type_name::<<super::interfaces::SetService as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetService as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_service",feature:"serving",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetService>()),role:Some(std::any::type_name::<<super::interfaces::SetService as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetService as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="serving"))]
-InterfaceMetadata{name:"set_service",feature:"serving",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_service",feature:"serving",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "root")]
 InterfaceMetadata{name:"set_subnet_emission_enabled",feature:"root",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetSubnetEmissionEnabled>()),role:Some(std::any::type_name::<<super::interfaces::SetSubnetEmissionEnabled as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetSubnetEmissionEnabled as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="root"))]

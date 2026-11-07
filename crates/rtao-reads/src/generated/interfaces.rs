@@ -560,13 +560,11 @@ pub struct GammaDepositParams {
 #[doc = "The gamma deposit at a hotkey on a subnet, or None.\n\nIts `netuid`, `hotkey`, `coldkey`, `spender`, and `balance_gamma`,\n`daily_spend_cap_gamma` and `spendable_gamma` as exact decimal strings of\ngamma. A `daily_spend_cap_gamma` of None is no cap, and \"0\" pauses the\ndeposit. `spendable_gamma` is the balance within what its daily spend cap\nallows now."]
 #[doc(alias = "bittensor.reads.gamma_deposit")]
 pub async fn gamma_deposit<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::GammaDeposit,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<Option<crate::reads::gamma::GammaDeposit>, crate::ReadError> {
+    crate::reads::gamma::gamma_deposit(view, netuid, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `gamma_deposits`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -578,12 +576,10 @@ pub struct GammaDepositsParams {
 #[doc = "Every gamma deposit of a coldkey, on every subnet."]
 #[doc(alias = "bittensor.reads.gamma_deposits")]
 pub async fn gamma_deposits<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _coldkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::GammaDeposits,
-    ))
+    view: &V,
+    coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<Vec<crate::reads::gamma::GammaDeposit>, crate::ReadError> {
+    crate::reads::gamma::gamma_deposits(view, coldkey_ss58).await
 }
 #[doc = "Typed parameters for `hotkey_conviction`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1046,13 +1042,11 @@ pub struct QuoteMintGammaParams {
 #[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
 #[doc(alias = "bittensor.reads.quote_mint_gamma")]
 pub async fn quote_mint_gamma<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _amount_tao: f64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::QuoteMintGamma,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    amount_tao: f64,
+) -> Result<crate::reads::gamma::MintQuote, crate::ReadError> {
+    crate::reads::gamma::quote_mint_gamma(view, netuid, amount_tao).await
 }
 #[doc = "Typed parameters for `quote_mint_gamma_with_stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1066,13 +1060,11 @@ pub struct QuoteMintGammaWithStakeParams {
 #[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma_with_stake` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
 #[doc(alias = "bittensor.reads.quote_mint_gamma_with_stake")]
 pub async fn quote_mint_gamma_with_stake<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _amount_alpha: f64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::QuoteMintGammaWithStake,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    amount_alpha: f64,
+) -> Result<crate::reads::gamma::MintQuote, crate::ReadError> {
+    crate::reads::gamma::quote_mint_gamma_with_stake(view, netuid, amount_alpha).await
 }
 #[doc = "Typed parameters for `quote_stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1240,12 +1232,13 @@ pub struct ServicesParams {
 #[doc = "Every service published on a subnet, by hotkey.\n\nEach `url` points to its hotkey's own document of its services and the\npayments they accept; the chain does not check what it says. `spender` is\nthe spender customers name on gamma deposits for the service. `owner`\nmarks the subnet owner's hotkey while the owner owns it, whose spender new\ndeposits name by default. A url that is not printable text is returned as\n0x-hex."]
 #[doc(alias = "bittensor.reads.services")]
 pub async fn services<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::Services,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+) -> Result<
+    std::collections::BTreeMap<rtao_primitives::AccountId, crate::reads::gamma::Service>,
+    crate::ReadError,
+> {
+    crate::reads::gamma::services(view, netuid).await
 }
 #[doc = "Typed parameters for `stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1593,11 +1586,9 @@ pub struct TaoUsdPriceParams {}
 #[doc = "The TAO/USD price oracle, its last feed, and the accepted price at this block.\n\nThe accepted price falls to the feed at once and rises toward it by at most\n0.0066% (66 ppm) of itself per block, and mints value TAO at it. Minting needs a\nfeed at most 300 blocks old, so no new mint succeeds once `blocks_since_last_feed`\nexceeds 300."]
 #[doc(alias = "bittensor.reads.tao_usd_price")]
 pub async fn tao_usd_price<V: rtao_client::View + ?Sized>(
-    _view: &V,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::TaoUsdPrice,
-    ))
+    view: &V,
+) -> Result<crate::reads::gamma::TaoUsdPrice, crate::ReadError> {
+    crate::reads::gamma::tao_usd_price(view).await
 }
 #[doc = "Typed parameters for `timelocked_weight_commits`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
