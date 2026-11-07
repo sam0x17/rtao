@@ -111,6 +111,8 @@ pub mod multisig_adapter;
 #[cfg_attr(docsrs, doc(cfg(feature = "multisig")))]
 pub use multisig_adapter::{MultisigAdapter, MultisigContinuation, MultisigThreshold1Adapter};
 #[cfg(feature = "proxy")]
+mod protected;
+#[cfg(feature = "proxy")]
 #[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
 pub mod proxy;
 #[cfg(feature = "registration")]

@@ -388,6 +388,14 @@ impl MultisigBook {
         let path = self.path.clone();
         rtao::core::offload(move || {
             validate_multisig(&entry)?;
+            // A saved multisig names its derivation; omitted means legacy.
+            match entry.get("account_mode") {
+                None => {}
+                Some(Value::String(mode)) if mode == "legacy" || mode == "safe" => {}
+                Some(_) => {
+                    return Err(ResolveError::new("account_mode must be 'legacy' or 'safe'"));
+                }
+            }
             bounded_public_json(&entry)?;
             let name = entry["name"].as_str().ok_or_else(invalid_multisig)?;
             let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
@@ -1315,6 +1323,20 @@ impl<'a> NameResolver<'a> {
         resolving.active.insert(name.to_owned());
         resolving.heights.push(1);
         let mut derive = || -> Result<String, ResolveError> {
+            // Safe derivation needs the core's safe multisig account (D-133);
+            // never derive the legacy account for a group saved as safe.
+            match entry.get("account_mode") {
+                None => {}
+                Some(Value::String(mode)) if mode == "legacy" => {}
+                Some(Value::String(mode)) if mode == "safe" => {
+                    return Err(ResolveError::new(format!(
+                        "saved multisig {name} uses account_mode 'safe', whose account this build cannot derive yet"
+                    )));
+                }
+                Some(_) => {
+                    return Err(ResolveError::new("account_mode must be 'legacy' or 'safe'"));
+                }
+            }
             let threshold = entry
                 .get("threshold")
                 .and_then(threshold_u16)
@@ -1607,6 +1629,41 @@ mod tests {
                 .lock()
                 .map(|calls| calls.is_empty())
                 .unwrap_or(false)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn saved_safe_multisigs_never_resolve_to_the_legacy_account() -> Result<(), Box<dyn Error>> {
+        let books = Books::from_values(
+            json!([]),
+            json!([]),
+            json!([
+                {"name":"legacy","threshold":2,"signatories":[ALICE,BOB],"account_mode":"legacy"},
+                {"name":"safe","threshold":2,"signatories":[ALICE,BOB],"account_mode":"safe"},
+                {"name":"other","threshold":2,"signatories":[ALICE,BOB],"account_mode":"Safe"},
+            ]),
+        );
+        let lookup = Lookup::default();
+        let names = NameResolver::new(&books, &lookup, "default", "worker");
+        assert_eq!(
+            names.resolve_address_ref("new_coldkey", "legacy")?.address,
+            "5F3QVbS78a4aTYLiRAD8N3czjqVoNyV42L19CXyhqUMCh4Ch"
+        );
+        let error = names
+            .resolve_address_ref("new_coldkey", "safe")
+            .err()
+            .ok_or("a safe group must not resolve")?;
+        assert!(error.to_string().contains("account_mode 'safe'"), "{error}");
+        let error = names
+            .resolve_address_ref("new_coldkey", "other")
+            .err()
+            .ok_or("an unknown mode must not resolve")?;
+        assert!(
+            error
+                .to_string()
+                .contains("account_mode must be 'legacy' or 'safe'"),
+            "{error}"
         );
         Ok(())
     }

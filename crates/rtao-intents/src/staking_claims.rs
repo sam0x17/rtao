@@ -16,11 +16,13 @@ use rtao_runtime::{
     runtime_apis::{beta_basket_runtime_api as basket, stake_info_runtime_api as stake},
     storage::subtensor_module as st,
 };
-use rtao_tx::{BuildCx, Built, FactsTitle, Intent, IntentError, IntentPreflight, PreflightCx};
+use rtao_tx::{
+    BuildCx, Built, FactsTitle, Intent, IntentError, IntentPreflight, PreflightCx, pinned,
+};
 use smallvec::{SmallVec, smallvec};
 
 use crate::staking_trades::{
-    QuoteInput, alpha_price_rao, check_rate_tolerance, limit_price_rao, staked_rao,
+    QuoteInput, check_rate_tolerance, pinned_staked_rao, stake_limit_price_rao, staked_rao,
     swap_limit_price_rao, swap_quote_facts,
 };
 pub use crate::{MoveStake, RemoveStake, RemoveStakeLimit, TransferStake, UnstakeAll};
@@ -70,11 +72,19 @@ async fn unstake_amount<V: View + ?Sized>(
     hotkey: &Ss58Address,
     netuid: NetUid,
     claim: bool,
+    function: &str,
 ) -> Result<(u64, bool), IntentError> {
     let claim_all = claim && netuid == NetUid::ROOT && matches!(amount, Amount::All);
     match amount.resolve(netuid, true)? {
         ResolvedAmount::Exact(amount) => Ok((amount.rao, claim_all)),
         ResolvedAmount::All => {
+            // A later multisig round rebuilding its call keeps round 1's amount.
+            let approved_function = if claim_all { "remove_stake" } else { function };
+            if let Some(approved) =
+                pinned::approved_staking_amount(approved_function, "amount_unstaked")?
+            {
+                return Ok((approved, claim_all));
+            }
             let current = staked_rao(
                 cx.view,
                 cx.coldkey_address()?,
@@ -184,28 +194,39 @@ impl Intent for RemoveStake {
             &self.hotkey_ss58,
             self.netuid,
             self.claim,
+            if self.slippage_protection {
+                "remove_stake_limit"
+            } else {
+                "remove_stake"
+            },
         )
         .await?;
-        let unstake = if self.slippage_protection && !claim_all {
-            calls::remove_stake_limit(
-                self.hotkey_ss58.account(),
-                self.netuid,
-                AlphaBalance(amount),
-                limit_price_rao(
-                    alpha_price_rao(cx.view, self.netuid).await?,
-                    self.rate_tolerance,
-                    false,
-                )?,
-                false,
-            )
-        } else {
-            calls::remove_stake(
-                self.hotkey_ss58.account(),
-                self.netuid,
-                AlphaBalance(amount),
-            )
-        }
-        .compose(cx.runtime)?;
+        let hotkey = self.hotkey_ss58.account();
+        let (netuid, tolerance) = (self.netuid, self.rate_tolerance);
+        let unstake =
+            if self.slippage_protection && !claim_all {
+                pinned::compose_staking_call("remove_stake_limit", |approved| async move {
+                    let limit = pinned::derived_u64(approved.as_ref(), "limit_price", || {
+                        stake_limit_price_rao(cx.view, netuid, tolerance, false)
+                    })
+                    .await?;
+                    Ok(calls::remove_stake_limit(
+                        hotkey,
+                        netuid,
+                        AlphaBalance(amount),
+                        PriceRao(limit),
+                        false,
+                    )
+                    .compose(cx.runtime)?)
+                })
+                .await?
+            } else {
+                pinned::compose_staking_call("remove_stake", |_| async move {
+                    Ok(calls::remove_stake(hotkey, netuid, AlphaBalance(amount))
+                        .compose(cx.runtime)?)
+                })
+                .await?
+            };
         Ok(Built::new(
             optional_claim(
                 cx,
@@ -278,6 +299,7 @@ impl Intent for RemoveStakeLimit {
             &self.hotkey_ss58,
             self.netuid,
             self.claim,
+            "remove_stake_limit",
         )
         .await?;
         let unstake = if claim_all {
@@ -287,21 +309,28 @@ impl Intent for RemoveStakeLimit {
                     self.limit_price_rao
                 )));
             }
-            calls::remove_stake(
-                self.hotkey_ss58.account(),
-                self.netuid,
-                AlphaBalance(amount),
-            )
+            pinned::compose_staking_call("remove_stake", |_| async move {
+                Ok(calls::remove_stake(
+                    self.hotkey_ss58.account(),
+                    self.netuid,
+                    AlphaBalance(amount),
+                )
+                .compose(cx.runtime)?)
+            })
+            .await?
         } else {
-            calls::remove_stake_limit(
-                self.hotkey_ss58.account(),
-                self.netuid,
-                AlphaBalance(amount),
-                PriceRao(self.limit_price_rao),
-                self.allow_partial,
-            )
-        }
-        .compose(cx.runtime)?;
+            pinned::compose_staking_call("remove_stake_limit", |_| async move {
+                Ok(calls::remove_stake_limit(
+                    self.hotkey_ss58.account(),
+                    self.netuid,
+                    AlphaBalance(amount),
+                    PriceRao(self.limit_price_rao),
+                    self.allow_partial,
+                )
+                .compose(cx.runtime)?)
+            })
+            .await?
+        };
         Ok(Built::new(
             optional_claim(
                 cx,
@@ -375,43 +404,60 @@ impl Intent for MoveStake {
             ResolvedAmount::Exact(amount) => amount.rao,
             ResolvedAmount::All if self.claim => u64::MAX,
             ResolvedAmount::All => {
-                staked_rao(
+                pinned_staked_rao(
                     cx.view,
                     cx.coldkey_address()?,
                     &self.origin_hotkey_ss58,
                     self.origin_netuid,
                     "move",
                     false,
+                    if self.slippage_protection && self.origin_netuid != self.dest_netuid {
+                        "move_stake_limit"
+                    } else {
+                        "move_stake"
+                    },
                 )
                 .await?
             }
         };
         let moved = if self.slippage_protection && self.origin_netuid != self.dest_netuid {
-            calls::move_stake_limit(
-                self.origin_hotkey_ss58.account(),
-                self.dest_hotkey_ss58.account(),
-                self.origin_netuid,
-                self.dest_netuid,
-                AlphaBalance(amount),
-                swap_limit_price_rao(
-                    cx.view,
+            pinned::compose_staking_call("move_stake_limit", |approved| async move {
+                let limit = pinned::derived_u64(approved.as_ref(), "limit_price", || async {
+                    Ok(swap_limit_price_rao(
+                        cx.view,
+                        self.origin_netuid,
+                        self.dest_netuid,
+                        self.rate_tolerance,
+                    )
+                    .await?
+                    .0)
+                })
+                .await?;
+                Ok(calls::move_stake_limit(
+                    self.origin_hotkey_ss58.account(),
+                    self.dest_hotkey_ss58.account(),
                     self.origin_netuid,
                     self.dest_netuid,
-                    self.rate_tolerance,
+                    AlphaBalance(amount),
+                    PriceRao(limit),
+                    false,
                 )
-                .await?,
-                false,
-            )
+                .compose(cx.runtime)?)
+            })
+            .await?
         } else {
-            calls::move_stake(
-                self.origin_hotkey_ss58.account(),
-                self.dest_hotkey_ss58.account(),
-                self.origin_netuid,
-                self.dest_netuid,
-                AlphaBalance(amount),
-            )
-        }
-        .compose(cx.runtime)?;
+            pinned::compose_staking_call("move_stake", |_| async move {
+                Ok(calls::move_stake(
+                    self.origin_hotkey_ss58.account(),
+                    self.dest_hotkey_ss58.account(),
+                    self.origin_netuid,
+                    self.dest_netuid,
+                    AlphaBalance(amount),
+                )
+                .compose(cx.runtime)?)
+            })
+            .await?
+        };
         Ok(Built::new(
             optional_claim(
                 cx,
@@ -604,16 +650,22 @@ impl Intent for TransferStake {
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         self.validate()?;
+        let function = if self.changes_hotkey() {
+            "transfer_stake_and_hotkey"
+        } else {
+            "transfer_stake"
+        };
         let amount = match self.amount_alpha.resolve(self.origin_netuid, true)? {
             ResolvedAmount::Exact(amount) => amount.rao,
             ResolvedAmount::All => {
-                staked_rao(
+                pinned_staked_rao(
                     cx.view,
                     cx.coldkey_address()?,
                     &self.hotkey_ss58,
                     self.origin_netuid,
                     "transfer",
                     false,
+                    function,
                 )
                 .await?
             }
@@ -638,7 +690,13 @@ impl Intent for TransferStake {
                 AlphaBalance(amount),
             )
         };
-        Ok(Built::new(call.compose(cx.runtime)?))
+        Ok(Built::new(
+            pinned::compose_staking_call(
+                function,
+                |_| async move { Ok(call.compose(cx.runtime)?) },
+            )
+            .await?,
+        ))
     }
     async fn warnings<V: View + ?Sized>(
         &self,

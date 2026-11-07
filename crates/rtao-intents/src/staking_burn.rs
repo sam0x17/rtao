@@ -55,23 +55,31 @@ impl Intent for StakeBurn {
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         self.validate()?;
         let hotkey = cx.hotkey_address(self.hotkey_ss58.as_ref().map(|key| key.account()))?;
-        let limit = if let Some(limit) = self.limit_price {
-            PriceRao(limit)
-        } else {
-            let price = cx
-                .view
-                .call(&swap_runtime_api::CURRENT_ALPHA_PRICE, (self.netuid,))
-                .await?;
-            derived_limit(price, self.rate_tolerance.get())?
-        };
+        let amount = exact_tao(&self.amount_tao)?.to_wire();
         Ok(Built::new(
-            subtensor_module::add_stake_burn(
-                hotkey,
-                self.netuid,
-                exact_tao(&self.amount_tao)?.to_wire(),
-                Some(limit),
-            )
-            .compose(cx.runtime)?,
+            rtao_tx::pinned::compose_staking_call("add_stake_burn", |approved| async move {
+                // An explicit limit is the intent's own argument; only a
+                // derived one comes from round 1 when a later multisig round
+                // rebuilds its call.
+                let limit = match self.limit_price {
+                    Some(limit) => PriceRao(limit),
+                    None => PriceRao(
+                        rtao_tx::pinned::derived_u64(approved.as_ref(), "limit", || async {
+                            let price = cx
+                                .view
+                                .call(&swap_runtime_api::CURRENT_ALPHA_PRICE, (self.netuid,))
+                                .await?;
+                            Ok(derived_limit(price, self.rate_tolerance.get())?.0)
+                        })
+                        .await?,
+                    ),
+                };
+                Ok(
+                    subtensor_module::add_stake_burn(hotkey, self.netuid, amount, Some(limit))
+                        .compose(cx.runtime)?,
+                )
+            })
+            .await?,
         ))
     }
 

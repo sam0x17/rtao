@@ -106,6 +106,8 @@ struct Probe<M> {
     build_origins: Arc<Mutex<Vec<AccountId>>>,
     preflight_inputs: Arc<Mutex<Vec<PreviewInput>>>,
     changing_bytes: bool,
+    rebuild_for_policy: bool,
+    pinned_builds: Arc<AtomicUsize>,
     blocked: bool,
     all_subnets: bool,
     state_safety: bool,
@@ -119,6 +121,8 @@ impl<M> Default for Probe<M> {
             build_origins: Arc::new(Mutex::new(Vec::new())),
             preflight_inputs: Arc::new(Mutex::new(Vec::new())),
             changing_bytes: false,
+            rebuild_for_policy: false,
+            pinned_builds: Arc::new(AtomicUsize::new(0)),
             blocked: false,
             all_subnets: false,
             state_safety: false,
@@ -150,6 +154,9 @@ impl<M: ProbeKind> Intent for Probe<M> {
     fn affects_all_subnets(&self) -> bool {
         self.all_subnets
     }
+    fn requires_build_for_policy(&self) -> bool {
+        self.rebuild_for_policy
+    }
     async fn safety_at<V: View + ?Sized>(
         &self,
         cx: &BuildCx<'_, V>,
@@ -174,6 +181,9 @@ impl<M: ProbeKind> Intent for Probe<M> {
             cx.coldkey_address()?
         };
         self.build_origins.lock().unwrap().push(origin);
+        if rtao_tx::pinned::is_active() {
+            self.pinned_builds.fetch_add(1, Ordering::SeqCst);
+        }
         let build = self.builds.fetch_add(1, Ordering::SeqCst);
         let data = if self.changing_bytes {
             vec![u8::try_from(build).unwrap()]
@@ -962,6 +972,71 @@ async fn pending_timepoint_and_immutable_later_round_call_prevent_semantic_rebui
         &json!({"height": 12, "index": 3})
     );
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn later_rounds_needing_their_build_rebuild_under_pinned_inputs_and_must_match() {
+    for changing_bytes in [false, true] {
+        let (executor, fake, keys) = fixture(1_000_000_000).await;
+        let semantic = Probe::<Cold> {
+            rebuild_for_policy: true,
+            changing_bytes,
+            ..Default::default()
+        };
+        let group = group(&executor, &keys, 2).await;
+        let first = MultisigAdapter::new(
+            semantic.clone(),
+            executor.client(),
+            group.clone(),
+            keys.signer.account(),
+            CryptoType::Ed25519,
+            None,
+        )
+        .await
+        .unwrap();
+        let (first_plan, proof) = first
+            .review(&executor, &keys, &PlanOptions::default())
+            .await
+            .unwrap();
+        assert_eq!(semantic.pinned_builds.load(Ordering::SeqCst), 0);
+        let inner = first.reviewed_inner_call().unwrap().unwrap();
+        pending(&fake, &group, &inner, AccountId([9; 32]));
+        let later = MultisigAdapter::new(
+            semantic.clone(),
+            executor.client(),
+            group.clone(),
+            keys.signer.account(),
+            CryptoType::Ed25519,
+            Some(proof),
+        )
+        .await
+        .unwrap()
+        .with_opening_timepoint(MultisigTimepoint {
+            height: 12,
+            index: 3,
+        });
+        let result = executor
+            .plan_dyn(&later, &keys, &PlanOptions::default())
+            .await;
+        // The later round rebuilds the semantic call with round 1's inputs.
+        assert_eq!(semantic.builds.load(Ordering::SeqCst), 2);
+        assert_eq!(semantic.pinned_builds.load(Ordering::SeqCst), 1);
+        if changing_bytes {
+            let error = result.err().unwrap().to_string();
+            assert!(
+                error.contains("imported multisig call bytes do not match"),
+                "{error}"
+            );
+        } else {
+            let plan = result.unwrap();
+            assert_eq!(plan.extras["semantic_extra"], "preserved");
+            assert_eq!(
+                plan.extras["multisig_call_hash"],
+                first_plan.extras["multisig_call_hash"]
+            );
+        }
+        assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
+    }
 }
 
 #[tokio::test]

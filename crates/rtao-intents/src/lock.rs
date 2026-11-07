@@ -4,7 +4,7 @@
 
 use rtao_client::{View, ViewExt};
 use rtao_core::{codec::Value, value_ext::ValueExt};
-use rtao_primitives::{AlphaBalance, Amount, NetUid, ResolvedAmount, UnitError};
+use rtao_primitives::{AlphaBalance, Amount, NetUid, ResolvedAmount, Ss58Address, UnitError};
 use rtao_runtime::runtime_apis::stake_info_runtime_api;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, PreflightCx};
 
@@ -86,7 +86,26 @@ impl Intent for LockStake {
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         self.validate()?;
-        crate::generated::passthrough::lock_stake(self, cx).await
+        let hotkey = cx.hotkey_address(self.hotkey_ss58.as_ref().map(Ss58Address::account))?;
+        // A later multisig round rebuilding its call keeps round 1's `all` amount.
+        let amount = match self.amount_alpha.resolve(self.netuid, true)? {
+            ResolvedAmount::All => {
+                match rtao_tx::pinned::approved_staking_amount("lock_stake", "amount")? {
+                    Some(amount) => AlphaBalance(amount),
+                    None => lockable_amount(self, cx).await?,
+                }
+            }
+            ResolvedAmount::Exact(_) => lockable_amount(self, cx).await?,
+        };
+        Ok(Built::new(
+            rtao_tx::pinned::compose_staking_call("lock_stake", |_| async move {
+                Ok(
+                    rtao_runtime::calls::subtensor_module::lock_stake(hotkey, self.netuid, amount)
+                        .compose(cx.runtime)?,
+                )
+            })
+            .await?,
+        ))
     }
 
     async fn warnings<V: View + ?Sized>(

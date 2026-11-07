@@ -102,54 +102,6 @@ pub(crate) async fn clear_coldkey_swap_announcement<V: rtao_client::View + ?Size
         extras: serde_json::Map::new(),
     })
 }
-#[cfg(feature = "crowdloan")]
-pub(crate) async fn contribute_crowdloan<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::ContributeCrowdloan,
-    cx: &rtao_tx::BuildCx<'_, V>,
-) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-    let call = rtao_runtime::calls::crowdloan::contribute(
-        intent.crowdloan_id,
-        crate::crowdloan::stakeable_amount(intent, cx).await?,
-    );
-    Ok(rtao_tx::Built {
-        call: call.compose(cx.runtime)?,
-        extras: serde_json::Map::new(),
-    })
-}
-#[cfg(feature = "proxy")]
-pub(crate) async fn create_pure_proxy<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::CreatePureProxy,
-    cx: &rtao_tx::BuildCx<'_, V>,
-) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-    let call = rtao_runtime::calls::proxy::create_pure(
-        serde_json::from_value(serde_json::Value::String(intent.proxy_type.clone()))?,
-        intent.delay,
-        intent.index,
-    );
-    Ok(rtao_tx::Built {
-        call: call.compose(cx.runtime)?,
-        extras: serde_json::Map::new(),
-    })
-}
-#[cfg(feature = "children")]
-pub(crate) async fn decrease_take<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::DecreaseTake,
-    cx: &rtao_tx::BuildCx<'_, V>,
-) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-    let call = rtao_runtime::calls::subtensor_module::decrease_take(
-        cx.hotkey_address(
-            intent
-                .hotkey_ss58
-                .as_ref()
-                .map(rtao_primitives::Ss58Address::account),
-        )?,
-        crate::arguments::take(&intent.take)?,
-    );
-    Ok(rtao_tx::Built {
-        call: call.compose(cx.runtime)?,
-        extras: serde_json::Map::new(),
-    })
-}
 #[cfg(feature = "coldkey")]
 pub(crate) async fn dispute_coldkey_swap<V: rtao_client::View + ?Sized>(
     _intent: &super::interfaces::DisputeColdkeySwap,
@@ -178,62 +130,6 @@ pub(crate) async fn finalize_crowdloan<V: rtao_client::View + ?Sized>(
     cx: &rtao_tx::BuildCx<'_, V>,
 ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
     let call = rtao_runtime::calls::crowdloan::finalize(intent.crowdloan_id);
-    Ok(rtao_tx::Built {
-        call: call.compose(cx.runtime)?,
-        extras: serde_json::Map::new(),
-    })
-}
-#[cfg(feature = "children")]
-pub(crate) async fn increase_take<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::IncreaseTake,
-    cx: &rtao_tx::BuildCx<'_, V>,
-) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-    let call = rtao_runtime::calls::subtensor_module::increase_take(
-        cx.hotkey_address(
-            intent
-                .hotkey_ss58
-                .as_ref()
-                .map(rtao_primitives::Ss58Address::account),
-        )?,
-        crate::arguments::take(&intent.take)?,
-    );
-    Ok(rtao_tx::Built {
-        call: call.compose(cx.runtime)?,
-        extras: serde_json::Map::new(),
-    })
-}
-#[cfg(feature = "proxy")]
-pub(crate) async fn kill_pure_proxy<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::KillPureProxy,
-    cx: &rtao_tx::BuildCx<'_, V>,
-) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-    let call = rtao_runtime::calls::proxy::kill_pure(
-        crate::account_argument(intent.spawner_ss58.account()),
-        serde_json::from_value(serde_json::Value::String(intent.proxy_type.clone()))?,
-        intent.index,
-        intent.height,
-        intent.ext_index,
-    );
-    Ok(rtao_tx::Built {
-        call: call.compose(cx.runtime)?,
-        extras: serde_json::Map::new(),
-    })
-}
-#[cfg(feature = "lock")]
-pub(crate) async fn lock_stake<V: rtao_client::View + ?Sized>(
-    intent: &super::interfaces::LockStake,
-    cx: &rtao_tx::BuildCx<'_, V>,
-) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-    let call = rtao_runtime::calls::subtensor_module::lock_stake(
-        cx.hotkey_address(
-            intent
-                .hotkey_ss58
-                .as_ref()
-                .map(rtao_primitives::Ss58Address::account),
-        )?,
-        intent.netuid,
-        crate::lock::lockable_amount(intent, cx).await?,
-    );
     Ok(rtao_tx::Built {
         call: call.compose(cx.runtime)?,
         extras: serde_json::Map::new(),

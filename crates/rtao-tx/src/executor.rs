@@ -479,12 +479,27 @@ impl Executor {
                 )],
             }));
         }
-        let mut built = if let Some(call) = intent.inner_call_data_dyn() {
+        let pinned = intent.inner_call_data_dyn();
+        // Later multisig rounds approve round 1's exact bytes. A rebuild is not
+        // always stable (timelock commits, `ALL` balances), so the pinned bytes
+        // are reused unless the semantic intent needs its build for policy
+        // metadata; then it is rebuilt with the approved dynamic inputs and
+        // must reproduce the pinned bytes exactly.
+        let verify_pinned = pinned.is_some() && semantic.requires_build_for_policy_dyn();
+        let mut built = if let Some(call) = pinned.filter(|_| !verify_pinned) {
             call.ensure_runtime(&runtime)
                 .map_err(rtao_client::ClientError::from)?;
             intent.wrap_call_dyn(&cx, call.clone()).await?
         } else {
-            let mut built = semantic.build_dyn(&cx).await?;
+            let mut built = match pinned {
+                Some(call) => {
+                    call.ensure_runtime(&runtime)
+                        .map_err(rtao_client::ClientError::from)?;
+                    let inputs = crate::pinned::PinnedInputs::decode(call, &runtime)?;
+                    crate::pinned::scope(inputs, semantic.build_dyn(&cx)).await?
+                }
+                None => semantic.build_dyn(&cx).await?,
+            };
             if semantic.spec().origin == "root" && !is_sudo(&runtime, &built.call)? {
                 built.call = rtao_runtime::calls::sudo::sudo(built.call)
                     .compose(&runtime)
@@ -499,9 +514,18 @@ impl Executor {
                 .compose(&runtime)
                 .map_err(IntentError::from)?;
             }
+            if let Some(pinned) = pinned
+                && built.call.as_bytes() != pinned.as_bytes()
+            {
+                return Err(IntentError::validation(
+                    "imported multisig call bytes do not match the verified recipient payment and guards or account creation; use the same receiving address, amount and origin as the opening approval",
+                )
+                .into());
+            }
             let wrapped = intent.wrap_call_dyn(&cx, built.call).await?;
             built.call = wrapped.call;
-            built.extras.extend(wrapped.extras);
+            built.extras =
+                crate::multisig::merge_approval_metadata(&[&built.extras, &wrapped.extras]);
             built
         };
         if let Some(real) = opts.proxy_for {
@@ -1757,6 +1781,57 @@ fn coldkey_pays(runtime: &rtao_runtime::RuntimeHandle, call: &CallBytes) -> Resu
         }
     }
     Ok(walk(&decoded))
+}
+
+/// Compose a nested intent the way a direct submission composes it.
+///
+/// The nested intent builds against `origin` (the account that will dispatch
+/// it: the proxied real account, the multisig, the crowdloan creator), then
+/// gains the sudo wrapper a root-origin operation needs and its own execution
+/// adapter. Its extras are returned for the enclosing dispatch to propagate.
+/// `wrapper` names the enclosing dispatch in refusals.
+#[doc(alias = "bittensor.executor._compose_nested_intent_call")]
+pub async fn compose_nested_intent_call(
+    cx: &BuildCx<'_, dyn rtao_client::DynView + '_>,
+    intent: &dyn DynIntent,
+    origin: OriginView<'_>,
+    wrapper: &str,
+) -> Result<crate::Built, IntentError> {
+    let semantic = intent.semantic_intent_dyn();
+    let origin = intent.origin_view_dyn(&origin);
+    let inner_cx = BuildCx {
+        view: cx.view,
+        origin,
+        runtime: cx.runtime,
+        clock: cx.clock,
+        spec: semantic.spec(),
+    };
+    let mut built = semantic.build_dyn(&inner_cx).await?;
+    if built.extras.contains_key("hashed_registration") {
+        return Err(IntentError::validation(format!(
+            "register the hashed recipient first using a direct sponsor wallet; initial registration cannot be wrapped in {wrapper}"
+        )));
+    }
+    if semantic.spec().origin == "root"
+        && !is_sudo(cx.runtime, &built.call).map_err(|error| match error {
+            TxError::Intent(error) => error,
+            error => IntentError::validation(error.to_string()),
+        })?
+    {
+        built.call = rtao_runtime::calls::sudo::sudo(built.call).compose(cx.runtime)?;
+    }
+    let wrap_cx = BuildCx {
+        view: cx.view,
+        origin,
+        runtime: cx.runtime,
+        clock: cx.clock,
+        spec: intent.spec(),
+    };
+    let wrapped = intent.wrap_call_dyn(&wrap_cx, built.call).await?;
+    Ok(crate::Built {
+        call: wrapped.call,
+        extras: crate::multisig::merge_approval_metadata(&[&built.extras, &wrapped.extras]),
+    })
 }
 
 #[cfg(test)]

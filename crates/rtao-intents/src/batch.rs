@@ -206,7 +206,13 @@ async fn build_children<V: View + ?Sized>(
         // Semantic build only: Python does not run each child's executor sudo,
         // proxy or transport adapter while composing this one extrinsic.
         let built = child.build_dyn(&child_cx).await?;
+        if built.extras.contains_key("hashed_registration_guards") {
+            return Err(IntentError::validation(
+                "this guarded account payment must be submitted directly, not inside a batch",
+            ));
+        }
         calls.push(built.call);
+        aggregate_reserves(&mut extras, &built.extras)?;
         for (key, value) in built.extras {
             extras.insert(format!("{index}:{}.{key}", child.spec().name), value);
         }
@@ -215,6 +221,59 @@ async fn build_children<V: View + ?Sized>(
         call: utility::batch_all(calls).compose(cx.runtime)?,
         extras,
     })
+}
+
+/// Sum each child's pure-account reserves into the batch's own metadata.
+///
+/// Each pure account needs its own reserve, even when every creation shares
+/// a sponsor, so totals are never deduplicated by payer. Nested approval
+/// obligations are collected in order.
+fn aggregate_reserves(
+    extras: &mut serde_json::Map<String, Value>,
+    child: &serde_json::Map<String, Value>,
+) -> Result<(), IntentError> {
+    let overflow = || IntentError::from(rtao_primitives::UnitError::Overflow);
+    let integer = |value: &Value| value.as_u64().ok_or_else(overflow);
+    for key in [
+        "protected_pure_registration_deposit_rao",
+        "pure_proxy_deposit_rao",
+    ] {
+        if let Some(value) = child.get(key) {
+            let total = extras
+                .get(key)
+                .map_or(Ok(0), integer)?
+                .checked_add(integer(value)?)
+                .ok_or_else(overflow)?;
+            extras.insert(key.into(), Value::from(total));
+        }
+    }
+    if let Some(Value::Object(reserves)) = child.get("pure_proxy_reserves") {
+        let mut totals = match extras.remove("pure_proxy_reserves") {
+            Some(Value::Object(totals)) => totals,
+            _ => serde_json::Map::new(),
+        };
+        for (payer, reserve) in reserves {
+            let total = totals
+                .get(payer)
+                .map_or(Ok(0), integer)?
+                .checked_add(integer(reserve)?)
+                .ok_or_else(overflow)?;
+            totals.insert(payer.clone(), Value::from(total));
+        }
+        extras.insert("pure_proxy_reserves".into(), Value::Object(totals));
+    }
+    if let Some(Value::Array(approvals)) = child.get("multisig_approvals")
+        && !approvals.is_empty()
+    {
+        match extras
+            .entry("multisig_approvals")
+            .or_insert_with(|| Value::Array(Vec::new()))
+        {
+            Value::Array(all) => all.extend(approvals.iter().cloned()),
+            other => *other = Value::Array(approvals.clone()),
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Copy)]
@@ -359,6 +418,14 @@ impl Intent for Batch {
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         build_children(&refs(&children(self)?), cx).await
+    }
+
+    fn requires_build_for_policy(&self) -> bool {
+        children(self).is_ok_and(|children| {
+            children
+                .iter()
+                .any(|child| child.as_dyn().requires_build_for_policy_dyn())
+        })
     }
 
     async fn effects<V: View + ?Sized>(

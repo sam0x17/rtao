@@ -55,6 +55,13 @@ impl Intent for AddCollateral {
         let hotkey = cx.hotkey_address(self.hotkey_ss58.as_ref().map(|key| key.account()))?;
         let alpha = match self.amount_alpha.resolve(self.netuid, true)? {
             ResolvedAmount::Exact(amount) => amount.rao,
+            // A later multisig round rebuilding its call keeps round 1's amount.
+            ResolvedAmount::All
+                if let Some(approved) =
+                    rtao_tx::pinned::approved_staking_amount("add_collateral", "alpha")? =>
+            {
+                approved
+            }
             ResolvedAmount::All => {
                 let coldkey = cx.coldkey_address()?;
                 let snapshot = cx.view.pin().await?;
@@ -79,23 +86,31 @@ impl Intent for AddCollateral {
                 })?
             }
         };
-        let price = cx
-            .view
-            .call(
-                &runtime_apis::swap_runtime_api::CURRENT_ALPHA_PRICE,
-                (self.netuid,),
-            )
-            .await?;
         Ok(Built::new(
-            subtensor_module::add_collateral(
-                self.netuid,
-                hotkey,
-                // Root operations retain TAO's netuid-zero denomination, but
-                // the call's wire newtype remains AlphaBalance.
-                AlphaBalance(alpha),
-                limit_price(price, self.rate_tolerance.get())?,
-            )
-            .compose(cx.runtime)?,
+            rtao_tx::pinned::compose_staking_call("add_collateral", |approved| async move {
+                let limit =
+                    rtao_tx::pinned::derived_u64(approved.as_ref(), "limit_price", || async {
+                        let price = cx
+                            .view
+                            .call(
+                                &runtime_apis::swap_runtime_api::CURRENT_ALPHA_PRICE,
+                                (self.netuid,),
+                            )
+                            .await?;
+                        Ok(limit_price(price, self.rate_tolerance.get())?.0)
+                    })
+                    .await?;
+                Ok(subtensor_module::add_collateral(
+                    self.netuid,
+                    hotkey,
+                    // Root operations retain TAO's netuid-zero denomination, but
+                    // the call's wire newtype remains AlphaBalance.
+                    AlphaBalance(alpha),
+                    PriceRao(limit),
+                )
+                .compose(cx.runtime)?)
+            })
+            .await?,
         ))
     }
 

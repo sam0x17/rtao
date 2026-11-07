@@ -963,18 +963,18 @@ upstream_report = "Authored regression source was independently reviewed; hosted
 [[divergences]]
 id = "D-020"
 upstream_symbol = "execute_proxy_announced"
-python_behavior = "builds the inner intent against the signing wallet ([R] A1 §10 item 6)"
-rtao_behavior = "Builds the inner semantic intent with the caller's public wallet, effective origin and pinned view, without substituting the real proxy account or applying executor wrappers."
-rationale = "Preserve the pinned wallet-default behavior while keeping execution adapters outside the nested semantic call."
+python_behavior = "since v488, composes the announced inner call against the real account, as a direct submission from it would be, with its sudo wrapper and adapters (executor._compose_nested_intent_call); until v486 it built the inner intent against the signing wallet ([R] A1 §10 item 6)"
+rtao_behavior = "Follows v488 (D-133): rtao_tx::compose_nested_intent_call builds the inner semantic intent against the real account at the pinned view, adds the sudo wrapper a root-origin operation needs and the inner adapter, and propagates the inner extras."
+rationale = "Keep Python's nested composition, so a defaulted hotkey never comes from the caller's wallet and a root operation dispatches through Sudo as it would directly."
 status = "active"
 class = "kept"
 milestone = "M5"
 pinning_tests = [
-  "rtao_intents::proxy::tests::announced_proxy_inner_defaults_keep_callers_wallet_not_real_origin",
+  "rtao_intents::proxy::tests::announced_proxy_inner_builds_against_the_real_account_not_the_callers_wallet",
   "rtao_intents::proxy::tests::announced_proxy_nests_exact_calls_and_optional_type_without_side_effects",
-  "rtao_intents::proxy::tests::announced_root_inner_remains_unwrapped_semantic_call",
+  "rtao_intents::proxy::tests::announced_root_inner_gains_its_sudo_wrapper",
 ]
-upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/intents/proxy.py"
+upstream_link = "https://github.com/RaoFoundation/subtensor/blob/b6a81d144078eac18bd25c3af7cb31579bb670f3/sdk/python/bittensor/intents/proxy.py"
 upstream_report = "Kept behavior; no defect alleged or filing made. Fake-transport fixture source is present; hosted execution and acceptance remain pending."
 
 [[divergences]]

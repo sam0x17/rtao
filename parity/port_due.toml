@@ -405,14 +405,6 @@ tag = "v488"
 symbols = ["bittensor.client.Balances", "bittensor.client.Chain", "bittensor.client.Client", "bittensor.client.Client.__init__", "bittensor.client.Client.estimate_shielded_carrier_fee", "bittensor.client.Client.execute", "bittensor.client.Client.multisig", "bittensor.client.Client.preflight", "bittensor.client.Client.prepare_mldsa_call", "bittensor.client.Client.prepare_pq_call", "bittensor.client.Client.register_wallet", "bittensor.client.Client.submit_call", "bittensor.client.Client.submit_shielded", "bittensor.client.Collateral", "bittensor.client.DEFAULT_ERA_PERIOD", "bittensor.client.DEFAULT_NETWORK", "bittensor.client.Delegation", "bittensor.client.Epochs", "bittensor.client.Gamma", "bittensor.client.Hyperparameters", "bittensor.client.Identity", "bittensor.client.Leasing", "bittensor.client.LimitOrders", "bittensor.client.Locks", "bittensor.client.MEV_SHIELD_ERA_PERIOD", "bittensor.client.Neurons", "bittensor.client.Prices", "bittensor.client.Staking", "bittensor.client.Subnets", "bittensor.client.Weights", "bittensor.client.default_archive_endpoints", "bittensor.client.default_fallback_endpoints", "bittensor.client.explorer_block_url", "bittensor.client.resolve_endpoint"]
 
 [[file]]
-py = "sdk/python/bittensor/config.py"
-kind = "ported"
-from = "2958b5d1b8036388354204f0a718f809756cf23a"
-to = "4c4a26ae8ca1be99c9ee834c7fb6184c89d888b8"
-tag = "v488"
-symbols = ["bittensor.config.add_multisig"]
-
-[[file]]
 py = "sdk/python/bittensor/evm/__init__.py"
 kind = "n/a"
 from = "e73671b64f25c4a5ab33bdc9c144bf6626ce3caf"
@@ -485,28 +477,12 @@ tag = "v488"
 symbols = ["bittensor.intents.batch.Batch", "bittensor.intents.batch.Batch.build", "bittensor.intents.batch.Batch.preflight", "bittensor.intents.batch.Batch.requires_build_for_policy"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/children.py"
-kind = "ported"
-from = "0dd6874119b12211ee566b5a53bab05e9128c8e9"
-to = "42392f29c930b80fc79c6c7d8a216a0ad01d5b93"
-tag = "v488"
-symbols = ["bittensor.intents.children.DecreaseTake", "bittensor.intents.children.DecreaseTake.build", "bittensor.intents.children.IncreaseTake", "bittensor.intents.children.IncreaseTake.build", "bittensor.intents.children.SetTake", "bittensor.intents.children.SetTake.build", "bittensor.intents.children.approved_function", "bittensor.intents.children.compose_staking_call"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/coldkey.py"
 kind = "ported"
 from = "98ee9b926b96bf9dabe4a01ad3c19f8dd6d4c914"
 to = "d2882ffce64baa07576b6a0d0dafbeeb815b98aa"
 tag = "v488"
 symbols = ["bittensor.intents.coldkey.AnnounceColdkeySwap", "bittensor.intents.coldkey.AnnounceColdkeySwap.hashed_descriptor", "bittensor.intents.coldkey.Any", "bittensor.intents.coldkey.Optional"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/collateral.py"
-kind = "ported"
-from = "93f4a53ec22db5cebd2723626b6096646f170ba3"
-to = "08fb440799bf16dbfb3552133512a7dfaa54db4c"
-tag = "v488"
-symbols = ["bittensor.intents.collateral.AddCollateral", "bittensor.intents.collateral.AddCollateral.build", "bittensor.intents.collateral.DEFAULT_RATE_TOLERANCE", "bittensor.intents.collateral.RATE_TOLERANCE_HELP", "bittensor.intents.collateral._alpha_price_rao", "bittensor.intents.collateral._check_rate_tolerance", "bittensor.intents.collateral._stake_limit_price_rao", "bittensor.intents.collateral.approved_staking_amount", "bittensor.intents.collateral.calls", "bittensor.intents.collateral.compose_staking_call", "bittensor.intents.collateral.partial"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/crowdloan.py"
@@ -523,22 +499,6 @@ from = "62274b85ee0d003ae650099b83bb1e73dba37533"
 to = "c6b3ea2027049a41c8ff00eba419637e0e3929bc"
 tag = "v488"
 symbols = ["bittensor.intents.evm.BuiltCall", "bittensor.intents.evm.Call", "bittensor.intents.evm.EvmWithdraw", "bittensor.intents.evm.EvmWithdraw.build", "bittensor.intents.evm.FundEvmKey", "bittensor.intents.evm.FundEvmKey.build", "bittensor.intents.evm.FundEvmKey.effects", "bittensor.intents.evm.FundEvmKey.mirror_ss58", "bittensor.intents.evm.FundEvmKey.summary", "bittensor.intents.evm.FundEvmKey.warnings", "bittensor.intents.evm.FundEvmKey.wraps", "bittensor.intents.evm.Intent", "bittensor.intents.evm.approved_amount", "bittensor.intents.evm.calls", "bittensor.intents.evm.compose_pinned_call", "bittensor.intents.evm.h160_to_ss58", "bittensor.intents.evm.normalize_h160", "bittensor.intents.evm.resolve_evm_deposit", "bittensor.intents.evm.resolve_evm_funding_recipient", "bittensor.intents.evm.resolve_evm_recipient", "bittensor.intents.evm.ss58_to_h160_truncated"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/governance.py"
-kind = "ported"
-from = "9a8423befd567aeba394dbcbd694b5aa73210e7e"
-to = "16aa92faf0386a65aa9f58ad51dca09042339f26"
-tag = "v488"
-symbols = ["bittensor.intents.governance.DEFAULT_RATE_TOLERANCE", "bittensor.intents.governance.StakeBurn", "bittensor.intents.governance.StakeBurn.build", "bittensor.intents.governance._alpha_price_rao", "bittensor.intents.governance._check_rate_tolerance", "bittensor.intents.governance._stake_limit_price_rao", "bittensor.intents.governance.compose_staking_call", "bittensor.intents.governance.partial"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/lock.py"
-kind = "ported"
-from = "f3ff3300f9029885fc1a82f1944f9c70cafbc82a"
-to = "05c03b46d80f556a6bbc08b963f15248e69c19d2"
-tag = "v488"
-symbols = ["bittensor.intents.lock.LockStake", "bittensor.intents.lock.LockStake.build", "bittensor.intents.lock.approved_staking_amount", "bittensor.intents.lock.compose_staking_call"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/multisig.py"
@@ -563,14 +523,6 @@ from = "30b4e4d42f161e970e1bacdad9ad2175ce6318da"
 to = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
 tag = "v488"
 symbols = ["bittensor.intents.proxy.BuiltCall", "bittensor.intents.proxy.CreatePureProxy", "bittensor.intents.proxy.CreatePureProxy.account_mode", "bittensor.intents.proxy.CreatePureProxy.build", "bittensor.intents.proxy.CreatePureProxy.requires_build_for_policy", "bittensor.intents.proxy.CreatePureProxy.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.Intent", "bittensor.intents.proxy.KillPureProxy", "bittensor.intents.proxy.KillPureProxy.account_mode", "bittensor.intents.proxy.KillPureProxy.build", "bittensor.intents.proxy.KillPureProxy.wraps", "bittensor.intents.proxy.PROXY_TYPES"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/staking.py"
-kind = "ported"
-from = "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c"
-to = "ebbef6a1d24c000b5d4a0b003addfba8a8d1e0b8"
-tag = "v488"
-symbols = ["bittensor.intents.staking.AddStake", "bittensor.intents.staking.AddStake.build", "bittensor.intents.staking.AddStakeLimit", "bittensor.intents.staking.AddStakeLimit.build", "bittensor.intents.staking.MoveStake", "bittensor.intents.staking.MoveStake.build", "bittensor.intents.staking.MoveSwapStake", "bittensor.intents.staking.MoveSwapStake.build", "bittensor.intents.staking.RemoveStake", "bittensor.intents.staking.RemoveStake.build", "bittensor.intents.staking.RemoveStakeLimit", "bittensor.intents.staking.RemoveStakeLimit.build", "bittensor.intents.staking.StakeIntoBasket", "bittensor.intents.staking.StakeIntoBasket.build", "bittensor.intents.staking.SwapBasket", "bittensor.intents.staking.SwapBasket.build", "bittensor.intents.staking.SwapStake", "bittensor.intents.staking.SwapStake.build", "bittensor.intents.staking.TransferStake", "bittensor.intents.staking.TransferStake.build", "bittensor.intents.staking._check_rate_tolerance", "bittensor.intents.staking._compose_move_then_swap", "bittensor.intents.staking._compose_swap_stake", "bittensor.intents.staking._resolve_move_amount", "bittensor.intents.staking._resolve_unstake_amount", "bittensor.intents.staking._stake_limit_price_rao", "bittensor.intents.staking._stakeable_rao", "bittensor.intents.staking._staked_rao", "bittensor.intents.staking.approved_staking_amount", "bittensor.intents.staking.compose_staking_call", "bittensor.intents.staking.partial"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/transfer.py"

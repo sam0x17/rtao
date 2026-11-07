@@ -12,7 +12,9 @@ use rtao_runtime::{
     calls::{subtensor_module as calls, utility},
     runtime_apis::{stake_info_runtime_api as stake_api, swap_runtime_api as swap_api},
 };
-use rtao_tx::{BuildCx, Built, FactsTitle, Intent, IntentError, IntentPreflight, PreflightCx};
+use rtao_tx::{
+    BuildCx, Built, FactsTitle, Intent, IntentError, IntentPreflight, PreflightCx, pinned,
+};
 use smallvec::{SmallVec, smallvec};
 
 pub use crate::{AddStake, AddStakeLimit, MoveSwapStake, SwapStake};
@@ -259,19 +261,62 @@ pub(crate) async fn compose_swap_stake<V: View + ?Sized>(
     protected: bool,
     tolerance: Ratio,
 ) -> Result<CallBytes, IntentError> {
-    let call = if protected {
-        calls::swap_stake_limit(
-            hotkey,
-            origin,
-            destination,
-            AlphaBalance(amount),
-            swap_limit_price_rao(cx.view, origin, destination, tolerance).await?,
-            false,
+    if protected {
+        return pinned::compose_staking_call("swap_stake_limit", |approved| async move {
+            let limit = pinned::derived_u64(approved.as_ref(), "limit_price", || async {
+                Ok(
+                    swap_limit_price_rao(cx.view, origin, destination, tolerance)
+                        .await?
+                        .0,
+                )
+            })
+            .await?;
+            Ok(calls::swap_stake_limit(
+                hotkey,
+                origin,
+                destination,
+                AlphaBalance(amount),
+                PriceRao(limit),
+                false,
+            )
+            .compose(cx.runtime)?)
+        })
+        .await;
+    }
+    pinned::compose_staking_call("swap_stake", |_| async move {
+        Ok(
+            calls::swap_stake(hotkey, origin, destination, AlphaBalance(amount))
+                .compose(cx.runtime)?,
         )
-    } else {
-        calls::swap_stake(hotkey, origin, destination, AlphaBalance(amount))
-    };
-    Ok(call.compose(cx.runtime)?)
+    })
+    .await
+}
+
+/// [`staked_rao`], or the amount approved for `function` while a later
+/// multisig round rebuilds its call.
+pub(crate) async fn pinned_staked_rao<V: View + ?Sized>(
+    view: &V,
+    coldkey: AccountId,
+    hotkey: &Ss58Address,
+    netuid: NetUid,
+    action: &str,
+    allow_empty: bool,
+    function: &str,
+) -> Result<u64, IntentError> {
+    if let Some(approved) = pinned::approved_staking_amount(function, "alpha_amount")? {
+        return Ok(approved);
+    }
+    staked_rao(view, coldkey, hotkey, netuid, action, allow_empty).await
+}
+
+/// Python's `_stake_limit_price_rao`: the spot price times `1 +/- tolerance`.
+pub(crate) async fn stake_limit_price_rao<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+    tolerance: Ratio,
+    increase: bool,
+) -> Result<u64, IntentError> {
+    Ok(limit_price_rao(alpha_price_rao(view, netuid).await?, tolerance, increase)?.0)
 }
 
 impl Intent for AddStake {
@@ -287,23 +332,34 @@ impl Intent for AddStake {
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         self.validate()?;
-        let amount = crate::arguments::stakeable_amount(&self.amount_tao, cx).await?;
-        let call = if self.slippage_protection {
-            calls::add_stake_limit(
-                self.hotkey_ss58.account(),
-                self.netuid,
-                amount,
-                limit_price_rao(
-                    alpha_price_rao(cx.view, self.netuid).await?,
-                    self.rate_tolerance,
-                    true,
-                )?,
-                false,
-            )
+        let function = if self.slippage_protection {
+            "add_stake_limit"
         } else {
-            calls::add_stake(self.hotkey_ss58.account(), self.netuid, amount)
+            "add_stake"
         };
-        Ok(Built::new(call.compose(cx.runtime)?))
+        let amount =
+            crate::arguments::stakeable_amount(&self.amount_tao, cx, Some(function)).await?;
+        let hotkey = self.hotkey_ss58.account();
+        let (netuid, tolerance) = (self.netuid, self.rate_tolerance);
+        let call = if self.slippage_protection {
+            pinned::compose_staking_call(function, |approved| async move {
+                let limit = pinned::derived_u64(approved.as_ref(), "limit_price", || {
+                    stake_limit_price_rao(cx.view, netuid, tolerance, true)
+                })
+                .await?;
+                Ok(
+                    calls::add_stake_limit(hotkey, netuid, amount, PriceRao(limit), false)
+                        .compose(cx.runtime)?,
+                )
+            })
+            .await?
+        } else {
+            pinned::compose_staking_call(function, |_| async move {
+                Ok(calls::add_stake(hotkey, netuid, amount).compose(cx.runtime)?)
+            })
+            .await?
+        };
+        Ok(Built::new(call))
     }
 
     async fn warnings<V: View + ?Sized>(
@@ -361,16 +417,21 @@ impl Intent for AddStakeLimit {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        let amount = crate::arguments::stakeable_amount(&self.amount_tao, cx).await?;
+        let amount =
+            crate::arguments::stakeable_amount(&self.amount_tao, cx, Some("add_stake_limit"))
+                .await?;
         Ok(Built::new(
-            calls::add_stake_limit(
-                self.hotkey_ss58.account(),
-                self.netuid,
-                amount,
-                PriceRao(self.limit_price_rao),
-                self.allow_partial,
-            )
-            .compose(cx.runtime)?,
+            pinned::compose_staking_call("add_stake_limit", |_| async move {
+                Ok(calls::add_stake_limit(
+                    self.hotkey_ss58.account(),
+                    self.netuid,
+                    amount,
+                    PriceRao(self.limit_price_rao),
+                    self.allow_partial,
+                )
+                .compose(cx.runtime)?)
+            })
+            .await?,
         ))
     }
 
@@ -412,13 +473,18 @@ impl Intent for SwapStake {
         let amount = match self.amount_alpha.resolve(self.origin_netuid, true)? {
             ResolvedAmount::Exact(amount) => amount.rao,
             ResolvedAmount::All => {
-                staked_rao(
+                pinned_staked_rao(
                     cx.view,
                     cx.coldkey_address()?,
                     &self.hotkey_ss58,
                     self.origin_netuid,
                     "swap",
                     false,
+                    if self.slippage_protection {
+                        "swap_stake_limit"
+                    } else {
+                        "swap_stake"
+                    },
                 )
                 .await?
             }
@@ -476,25 +542,29 @@ impl Intent for MoveSwapStake {
         let amount = match self.amount_alpha.resolve(self.origin_netuid, true)? {
             ResolvedAmount::Exact(amount) => amount.rao,
             ResolvedAmount::All => {
-                staked_rao(
+                pinned_staked_rao(
                     cx.view,
                     cx.coldkey_address()?,
                     &self.origin_hotkey_ss58,
                     self.origin_netuid,
                     "move",
                     false,
+                    "move_stake",
                 )
                 .await?
             }
         };
-        let moved = calls::move_stake(
-            self.origin_hotkey_ss58.account(),
-            self.dest_hotkey_ss58.account(),
-            self.origin_netuid,
-            self.origin_netuid,
-            AlphaBalance(amount),
-        )
-        .compose(cx.runtime)?;
+        let moved = pinned::compose_staking_call("move_stake", |_| async move {
+            Ok(calls::move_stake(
+                self.origin_hotkey_ss58.account(),
+                self.dest_hotkey_ss58.account(),
+                self.origin_netuid,
+                self.origin_netuid,
+                AlphaBalance(amount),
+            )
+            .compose(cx.runtime)?)
+        })
+        .await?;
         let swap_amount = amount.checked_sub(1).filter(|amount| *amount > 0).ok_or_else(|| {
             IntentError::validation(format!(
                 "cannot move-then-swap {amount} rao: same-subnet move_stake can lose 1 rao to share-pool rounding, leaving nothing to swap. Move a larger amount, or change only the hotkey or only the subnet"

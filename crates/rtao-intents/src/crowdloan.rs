@@ -6,7 +6,7 @@ use crate::arguments::check_nested_json as check_call_budget;
 use crate::nested_json::{MAX_CALL_DEPTH, check_call_limits, inspect_call_limits};
 use rtao_client::{DynView, View, ViewExt};
 use rtao_core::{codec::Value as CoreValue, value_ext::ValueExt};
-use rtao_primitives::{Amount, Balance, DynBalance, NetUid, Spend, TaoBalance};
+use rtao_primitives::{Amount, Balance, DynBalance, NetUid, ResolvedAmount, Spend, TaoBalance};
 use rtao_runtime::{
     CallBytes, calls::crowdloan, models::CrowdloanCall, storage::crowdloan::CROWDLOANS,
 };
@@ -644,16 +644,25 @@ impl Intent for CreateCrowdloan {
         let inner = if let Some(call) = self.call.as_ref().filter(|value| truthy(value)) {
             let intent = child_intent(call)?;
             let borrowed = cx.view;
-            let inner_cx = BuildCx {
+            let outer_cx = BuildCx {
                 view: &borrowed as &dyn rtao_client::DynView,
                 origin: cx.origin,
                 runtime: cx.runtime,
                 clock: cx.clock,
-                spec: intent.spec(),
+                spec: Self::SPEC,
             };
-            // Python invokes the nested semantic build directly. Executor
-            // sudo/proxy adapters and nested build extras do not enter create.
-            let inner = intent.as_dyn().build_dyn(&inner_cx).await?.call;
+            // Finalization dispatches the stored call as this same creator, so
+            // it is composed as the creator's direct submission would be (its
+            // sudo wrapper included). Creation stores it without dispatching
+            // it, so its extras do not enter create.
+            let inner = rtao_tx::compose_nested_intent_call(
+                &outer_cx,
+                intent.as_dyn(),
+                rtao_tx::OriginView::Account(cx.coldkey_address()?),
+                "crowdloan",
+            )
+            .await?
+            .call;
             let decoded = cx
                 .runtime
                 .core()
@@ -715,7 +724,7 @@ pub(crate) async fn stakeable_amount<V: View + ?Sized>(
     intent: &ContributeCrowdloan,
     cx: &BuildCx<'_, V>,
 ) -> Result<TaoBalance, IntentError> {
-    crate::arguments::stakeable_amount(&intent.amount_tao, cx).await
+    crate::arguments::stakeable_amount(&intent.amount_tao, cx, None).await
 }
 
 impl Intent for ContributeCrowdloan {
@@ -729,7 +738,29 @@ impl Intent for ContributeCrowdloan {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::generated::passthrough::contribute_crowdloan(self, cx).await
+        // An `all` contribution is derived from mutable state, so a later
+        // multisig round rebuilding its call keeps round 1's amount; an exact
+        // amount is the intent's own argument.
+        let all = matches!(
+            self.amount_tao.resolve(NetUid::ROOT, true)?,
+            ResolvedAmount::All
+        );
+        let call =
+            rtao_tx::pinned::compose_pinned("Crowdloan", "contribute", |approved| async move {
+                let amount = if all {
+                    TaoBalance(
+                        rtao_tx::pinned::derived_u64(approved.as_ref(), "amount", || async {
+                            Ok(stakeable_amount(self, cx).await?.0)
+                        })
+                        .await?,
+                    )
+                } else {
+                    stakeable_amount(self, cx).await?
+                };
+                Ok(crowdloan::contribute(self.crowdloan_id, amount).compose(cx.runtime)?)
+            })
+            .await?;
+        Ok(Built::new(call))
     }
 
     async fn warnings<V: View + ?Sized>(

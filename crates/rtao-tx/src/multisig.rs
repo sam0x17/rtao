@@ -461,3 +461,78 @@ fn tao_ceil(rao: u128) -> String {
     let text = format!("{}.{:03}", units / 1000, units % 1000);
     format!("τ{}", text.trim_end_matches('0').trim_end_matches('.'))
 }
+
+/// Merge composed-call extras without losing nested approval obligations.
+///
+/// Later parts overwrite earlier keys. A part that defers its inner call (an
+/// approval that does not dispatch it) drops the approvals collected so far
+/// and empties `pure_proxy_reserves`: the eventual permanent spend stays in the
+/// metadata, but this approval does not create the pure account.
+#[doc(alias = "bittensor.multisig.merge_approval_metadata")]
+pub fn merge_approval_metadata(
+    parts: &[&serde_json::Map<String, serde_json::Value>],
+) -> serde_json::Map<String, serde_json::Value> {
+    use serde_json::Value;
+    let mut merged = serde_json::Map::new();
+    let mut approvals = Vec::new();
+    for part in parts {
+        merged.extend(part.iter().map(|(key, value)| (key.clone(), value.clone())));
+        if part
+            .get("multisig_defers_inner")
+            .is_some_and(|value| value.as_bool().unwrap_or(!value.is_null()))
+        {
+            approvals.clear();
+            if merged.contains_key("pure_proxy_reserves") {
+                merged.insert(
+                    "pure_proxy_reserves".into(),
+                    Value::Object(serde_json::Map::new()),
+                );
+            }
+        }
+        if let Some(Value::Array(items)) = part.get("multisig_approvals") {
+            approvals.extend(items.iter().cloned());
+        }
+    }
+    if !approvals.is_empty() {
+        merged.insert("multisig_approvals".into(), Value::Array(approvals));
+    }
+    merged
+}
+
+#[cfg(test)]
+mod merge_tests {
+    use super::merge_approval_metadata;
+    use serde_json::{Map, Value, json};
+
+    fn map(value: Value) -> Map<String, Value> {
+        value.as_object().cloned().unwrap_or_default()
+    }
+
+    #[test]
+    fn deferring_approvals_drop_inner_obligations_and_keep_their_own() {
+        let inner = map(json!({
+            "pure_proxy_reserves": {"a": 5},
+            "multisig_approvals": [{"payer": "inner"}],
+            "proxy_for": "x",
+        }));
+        let outer = map(json!({
+            "multisig_defers_inner": true,
+            "multisig_approvals": [{"payer": "outer"}],
+        }));
+        let merged = merge_approval_metadata(&[&inner, &outer]);
+        assert_eq!(merged["pure_proxy_reserves"], json!({}));
+        assert_eq!(merged["multisig_approvals"], json!([{"payer": "outer"}]));
+        assert_eq!(merged["proxy_for"], "x");
+        let executing = map(json!({
+            "multisig_defers_inner": false,
+            "multisig_approvals": [{"payer": "outer"}],
+        }));
+        let merged = merge_approval_metadata(&[&inner, &executing]);
+        assert_eq!(merged["pure_proxy_reserves"], json!({"a": 5}));
+        assert_eq!(
+            merged["multisig_approvals"],
+            json!([{"payer": "inner"}, {"payer": "outer"}])
+        );
+        assert!(merge_approval_metadata(&[]).is_empty());
+    }
+}

@@ -177,6 +177,7 @@ pub(crate) fn weights_json(
 pub(crate) async fn stakeable_amount<V: rtao_client::View + ?Sized>(
     amount: &rtao_primitives::Amount,
     cx: &rtao_tx::BuildCx<'_, V>,
+    function: Option<&str>,
 ) -> Result<rtao_primitives::TaoBalance, rtao_tx::IntentError> {
     use rtao_client::ViewExt;
     use rtao_primitives::{DynBalance, NetUid, ResolvedAmount, TaoBalance};
@@ -185,6 +186,13 @@ pub(crate) async fn stakeable_amount<V: rtao_client::View + ?Sized>(
     match amount.resolve(NetUid::ROOT, true)? {
         ResolvedAmount::Exact(amount) => Ok(amount.tao()?.to_wire()),
         ResolvedAmount::All => {
+            // A later multisig round rebuilding its call keeps round 1's amount.
+            if let Some(function) = function
+                && let Some(approved) =
+                    rtao_tx::pinned::approved_staking_amount(function, "amount_staked")?
+            {
+                return Ok(TaoBalance(approved));
+            }
             let free = rtao_tx::multisig::free_balance(cx.view, cx.coldkey_address()?).await?;
             let deposit = cx
                 .view

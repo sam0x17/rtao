@@ -93,9 +93,15 @@ impl Intent for StakeIntoBasket {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        let amount = crate::arguments::stakeable_amount(&self.amount_tao, cx).await?;
+        let amount =
+            crate::arguments::stakeable_amount(&self.amount_tao, cx, Some("stake_into_basket"))
+                .await?;
         Ok(Built::new(
-            calls::stake_into_basket(self.hotkey_ss58.account(), amount).compose(cx.runtime)?,
+            rtao_tx::pinned::compose_staking_call("stake_into_basket", |_| async move {
+                Ok(calls::stake_into_basket(self.hotkey_ss58.account(), amount)
+                    .compose(cx.runtime)?)
+            })
+            .await?,
         ))
     }
 
@@ -144,14 +150,17 @@ impl Intent for SwapBasket {
         let amount = match self.amount.resolve(self.origin_netuid, true)? {
             ResolvedAmount::Exact(amount) => amount.rao,
             ResolvedAmount::All => {
-                let rows = cx
-                    .view
-                    .call(&api::GET_VALIDATOR_BASKET, (self.hotkey_ss58.account(),))
-                    .await?;
-                let amount = rows
-                    .into_iter()
-                    .find(|(netuid, _, _)| *netuid == self.origin_netuid)
-                    .map_or(0, |(_, amount, _)| amount.0);
+                let amount =
+                    match rtao_tx::pinned::approved_staking_amount("swap_basket", "amount")? {
+                        Some(amount) => amount,
+                        None => cx
+                            .view
+                            .call(&api::GET_VALIDATOR_BASKET, (self.hotkey_ss58.account(),))
+                            .await?
+                            .into_iter()
+                            .find(|(netuid, _, _)| *netuid == self.origin_netuid)
+                            .map_or(0, |(_, amount, _)| amount.0),
+                    };
                 if amount == 0 {
                     return Err(IntentError::validation(format!(
                         "nothing to sell: {}'s basket holds nothing on netuid {}",
@@ -161,15 +170,19 @@ impl Intent for SwapBasket {
                 amount
             }
         };
+        let min_amount_out = exact_rao(&self.min_amount_out, self.dest_netuid)?;
         Ok(Built::new(
-            calls::swap_basket(
-                self.hotkey_ss58.account(),
-                self.origin_netuid,
-                self.dest_netuid,
-                AlphaBalance(amount),
-                exact_rao(&self.min_amount_out, self.dest_netuid)?,
-            )
-            .compose(cx.runtime)?,
+            rtao_tx::pinned::compose_staking_call("swap_basket", |_| async move {
+                Ok(calls::swap_basket(
+                    self.hotkey_ss58.account(),
+                    self.origin_netuid,
+                    self.dest_netuid,
+                    AlphaBalance(amount),
+                    min_amount_out,
+                )
+                .compose(cx.runtime)?)
+            })
+            .await?,
         ))
     }
 

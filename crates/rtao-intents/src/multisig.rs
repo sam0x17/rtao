@@ -201,26 +201,33 @@ async fn inner_safety_at<V: View + ?Sized>(
     Ok(safety)
 }
 
+/// Compose the inner call as a direct submission from the multisig would be:
+/// its recipient checks, its sudo wrapper and adapters, with its extras.
 async fn compose_inner<V: View + ?Sized>(
     cx: &BuildCx<'_, V>,
     account: AccountId,
     call: &Value,
-) -> Result<CallBytes, IntentError> {
+) -> Result<Built, IntentError> {
     let intent = inner_intent(call)?;
     let borrowed = cx.view;
-    let inner = intent
-        .as_dyn()
-        .build_dyn(&BuildCx {
+    rtao_tx::compose_nested_intent_call(
+        &BuildCx {
             view: &borrowed as &dyn rtao_client::DynView,
-            origin: OriginView::Account(account),
+            origin: cx.origin,
             runtime: cx.runtime,
             clock: cx.clock,
             spec: intent.spec(),
-        })
-        .await?;
-    // Raw registered multisig intents call only the semantic child's build.
-    // Python discards its extras and adds no executor sudo/proxy/adapters.
-    Ok(inner.call)
+        },
+        intent.as_dyn(),
+        OriginView::Account(account),
+        "multisig",
+    )
+    .await
+}
+
+/// Whether the inner operation needs its build for policy in a later round.
+fn inner_requires_build_for_policy(call: &Value) -> bool {
+    inner_intent(call).is_ok_and(|intent| intent.as_dyn().requires_build_for_policy_dyn())
 }
 
 fn timepoint(value: Option<&Value>) -> Result<Option<MultisigTimepoint>, IntentError> {
@@ -314,7 +321,10 @@ async fn build_approval<V: View + ?Sized>(
         validate_multisig(threshold, others, signer)?;
     }
     let account = group_account(cx.runtime, signer, threshold, others)?;
-    let inner = compose_inner(cx, account, call).await?;
+    let Built {
+        call: inner,
+        extras: nested,
+    } = compose_inner(cx, account, call).await?;
     if matches!(dispatch, Dispatch::Execute) {
         validate_multisig(threshold, others, signer)?;
     }
@@ -356,9 +366,17 @@ async fn build_approval<V: View + ?Sized>(
     )
     .await
     .map_err(intent_error)?;
+    // An approval records the call without dispatching it, so only an
+    // executing dispatch carries the inner call's extras.
+    let extras = match dispatch {
+        Dispatch::Execute => {
+            rtao_tx::multisig::merge_approval_metadata(&[&nested, &inner_extras(&inner)])
+        }
+        Dispatch::Approve => inner_extras(&inner),
+    };
     Ok(Built {
         call: outer,
-        extras: inner_extras(&inner),
+        extras,
     })
 }
 
@@ -505,6 +523,10 @@ impl Intent for MultisigExecute {
             self.timepoint.as_ref(),
         )
         .await
+    }
+
+    fn requires_build_for_policy(&self) -> bool {
+        inner_requires_build_for_policy(&self.call)
     }
 
     async fn warnings<V: View + ?Sized>(
@@ -704,10 +726,18 @@ impl Intent for MultisigThreshold1 {
         let signer = cx.coldkey_address()?;
         let account = group_account(cx.runtime, signer, 1, &self.other_signatories)?;
         let inner = compose_inner(cx, account, &self.call).await?;
-        Ok(Built::new(
-            multisig::as_multi_threshold_1(sorted_others(&self.other_signatories)?, inner)
-                .compose(cx.runtime)?,
-        ))
+        Ok(Built {
+            call: multisig::as_multi_threshold_1(
+                sorted_others(&self.other_signatories)?,
+                inner.call,
+            )
+            .compose(cx.runtime)?,
+            extras: inner.extras,
+        })
+    }
+
+    fn requires_build_for_policy(&self) -> bool {
+        inner_requires_build_for_policy(&self.call)
     }
 
     fn validate(&self) -> Result<(), IntentError> {
@@ -732,7 +762,7 @@ impl Intent for MultisigCancel {
         check_inputs(&self.other_signatories, &self.call, Some(&self.timepoint))?;
         let signer = cx.coldkey_address()?;
         let account = group_account(cx.runtime, signer, self.threshold, &self.other_signatories)?;
-        let inner = compose_inner(cx, account, &self.call).await?;
+        let inner = compose_inner(cx, account, &self.call).await?.call;
         let when = timepoint(Some(&self.timepoint))?
             .ok_or_else(|| IntentError::validation("multisig cancellation requires a timepoint"))?;
         Ok(Built::new(
@@ -1637,7 +1667,8 @@ mod tests {
 
     #[cfg(feature = "root")]
     #[tokio::test]
-    async fn raw_multisig_child_policy_propagates_without_adding_sudo() -> anyhow::Result<()> {
+    async fn raw_multisig_child_policy_propagates_and_root_children_gain_sudo() -> anyhow::Result<()>
+    {
         let (_chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let intent = MultisigThreshold1 {
@@ -1668,6 +1699,11 @@ mod tests {
             .and_then(|args| args.iter().find(|arg| arg["name"] == "call"))
             .map(|arg| &arg["value"])
             .ok_or_else(|| anyhow::anyhow!("missing inner"))?;
+        // The inner call is composed as the multisig's direct submission
+        // would be, so a root operation gains its Sudo.sudo wrapper.
+        assert_eq!(inner["call_module"], "Sudo");
+        assert_eq!(inner["call_function"], "sudo");
+        let inner = &inner["call_args"][0]["value"];
         assert_eq!(inner["call_module"], "AdminUtils");
         assert_eq!(inner["call_function"], "sudo_set_subnet_emission_enabled");
         assert_eq!(intent.spend(), rtao_primitives::Spend::None);

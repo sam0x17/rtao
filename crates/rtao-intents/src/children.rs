@@ -311,7 +311,14 @@ impl Intent for IncreaseTake {
         )
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::generated::passthrough::increase_take(self, cx).await
+        let hotkey = cx.hotkey_address(self.hotkey_ss58.as_ref().map(Ss58Address::account))?;
+        let take = take(&self.take)?;
+        Ok(Built::new(
+            rtao_tx::pinned::compose_staking_call("increase_take", |_| async move {
+                Ok(subtensor_module::increase_take(hotkey, take).compose(cx.runtime)?)
+            })
+            .await?,
+        ))
     }
     fn validate(&self) -> Result<(), IntentError> {
         take(&self.take)?;
@@ -327,7 +334,14 @@ impl Intent for DecreaseTake {
         )
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::generated::passthrough::decrease_take(self, cx).await
+        let hotkey = cx.hotkey_address(self.hotkey_ss58.as_ref().map(Ss58Address::account))?;
+        let take = take(&self.take)?;
+        Ok(Built::new(
+            rtao_tx::pinned::compose_staking_call("decrease_take", |_| async move {
+                Ok(subtensor_module::decrease_take(hotkey, take).compose(cx.runtime)?)
+            })
+            .await?,
+        ))
     }
     fn validate(&self) -> Result<(), IntentError> {
         take(&self.take)?;
@@ -349,19 +363,38 @@ impl Intent for SetTake {
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let target = take(&self.take)?;
         let hotkey = cx.hotkey_address(self.hotkey_ss58.as_ref().map(Ss58Address::account))?;
-        let current = cx.view.storage(&st::DELEGATES, (hotkey,)).await?;
-        if target == current {
-            return Err(IntentError::validation(format!(
-                "delegate take is already {}/65535; nothing to change",
-                current.0
-            )));
-        }
-        let call = if target < current {
-            subtensor_module::decrease_take(hotkey, target)
-        } else {
-            subtensor_module::increase_take(hotkey, target)
+        // A later multisig round rebuilding its call keeps round 1's branch.
+        let function = match rtao_tx::pinned::approved_function(
+            "SubtensorModule",
+            &["increase_take", "decrease_take"],
+        )? {
+            Some(function) => function,
+            None => {
+                let current = cx.view.storage(&st::DELEGATES, (hotkey,)).await?;
+                if target == current {
+                    return Err(IntentError::validation(format!(
+                        "delegate take is already {}/65535; nothing to change",
+                        current.0
+                    )));
+                }
+                if target < current {
+                    "decrease_take"
+                } else {
+                    "increase_take"
+                }
+            }
         };
-        Ok(Built::new(call.compose(cx.runtime)?))
+        Ok(Built::new(
+            rtao_tx::pinned::compose_staking_call(function, |_| async move {
+                let call = if function == "decrease_take" {
+                    subtensor_module::decrease_take(hotkey, target)
+                } else {
+                    subtensor_module::increase_take(hotkey, target)
+                };
+                Ok(call.compose(cx.runtime)?)
+            })
+            .await?,
+        ))
     }
     fn validate(&self) -> Result<(), IntentError> {
         take(&self.take)?;

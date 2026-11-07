@@ -29,20 +29,6 @@ call = "claim_root_with_hotkey"
 pallet = "SubtensorModule"
 call = "clear_coldkey_swap_announcement"
 
-[passthrough.contribute_crowdloan]
-pallet = "Crowdloan"
-call = "contribute"
-[passthrough.contribute_crowdloan.args]
-amount = "amount_tao"
-
-[passthrough.create_pure_proxy]
-pallet = "Proxy"
-call = "create_pure"
-
-[passthrough.decrease_take]
-pallet = "SubtensorModule"
-call = "decrease_take"
-
 [passthrough.dispute_coldkey_swap]
 pallet = "SubtensorModule"
 call = "dispute_coldkey_swap"
@@ -54,20 +40,6 @@ call = "dissolve"
 [passthrough.finalize_crowdloan]
 pallet = "Crowdloan"
 call = "finalize"
-
-[passthrough.increase_take]
-pallet = "SubtensorModule"
-call = "increase_take"
-
-[passthrough.kill_pure_proxy]
-pallet = "Proxy"
-call = "kill_pure"
-
-[passthrough.lock_stake]
-pallet = "SubtensorModule"
-call = "lock_stake"
-[passthrough.lock_stake.args]
-amount = "amount_alpha"
 
 [passthrough.move_lock]
 pallet = "SubtensorModule"
@@ -193,8 +165,3 @@ call = "update_symbol"
 pallet = "Crowdloan"
 call = "withdraw"
 
-[passthrough.contribute_crowdloan.resolvers]
-amount_tao = "stakeable_amount"
-
-[passthrough.lock_stake.resolvers]
-amount_alpha = "lockable_amount"

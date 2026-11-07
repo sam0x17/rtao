@@ -360,6 +360,13 @@ pub trait Intent: IntentInterface + Sized {
     fn inner_call_data(&self) -> Option<&CallBytes> {
         None
     }
+    /// Whether a later approval round must rebuild the call (under the pinned
+    /// dynamic inputs) to recover spending metadata, rather than reuse the
+    /// pinned bytes unchecked.
+    #[doc(alias = "bittensor.intents.base.Intent.requires_build_for_policy")]
+    fn requires_build_for_policy(&self) -> bool {
+        false
+    }
 }
 
 /// Object-safe behavior twin for CLI and tool dispatch.
@@ -410,6 +417,10 @@ pub trait DynIntent: crate::PolicySubject + Send + Sync {
     fn semantic_intent_dyn(&self) -> &dyn DynIntent;
     /// Adapter's pinned call.
     fn inner_call_data_dyn(&self) -> Option<&CallBytes>;
+    /// Whether a pinned later round must rebuild and compare the call.
+    fn requires_build_for_policy_dyn(&self) -> bool {
+        false
+    }
     /// Public dispatch origin.
     fn origin_view_dyn<'a>(&'a self, keys: &'a dyn KeyView) -> OriginView<'a>;
     /// Dynamic build hook.
@@ -486,6 +497,9 @@ impl<I: Intent> DynIntent for I {
     }
     fn inner_call_data_dyn(&self) -> Option<&CallBytes> {
         self.inner_call_data()
+    }
+    fn requires_build_for_policy_dyn(&self) -> bool {
+        self.requires_build_for_policy()
     }
     fn origin_view_dyn<'a>(&'a self, keys: &'a dyn KeyView) -> OriginView<'a> {
         self.origin_view(keys)

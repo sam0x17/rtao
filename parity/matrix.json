@@ -2786,9 +2786,9 @@
         "oracle": "unverified",
         "rtao": "active",
         "tests": [
-          "rtao_intents::proxy::tests::announced_proxy_inner_defaults_keep_callers_wallet_not_real_origin",
+          "rtao_intents::proxy::tests::announced_proxy_inner_builds_against_the_real_account_not_the_callers_wallet",
           "rtao_intents::proxy::tests::announced_proxy_nests_exact_calls_and_optional_type_without_side_effects",
-          "rtao_intents::proxy::tests::announced_root_inner_remains_unwrapped_semantic_call"
+          "rtao_intents::proxy::tests::announced_root_inner_gains_its_sudo_wrapper"
         ]
       },
       {
@@ -9995,7 +9995,7 @@
           "rtao_cli::books::{Books,AddressBook,ProxyBook,MultisigBook}",
           "rtao_cli::call::{FsRawCallCache,RawCallCache}"
         ],
-        "synced_blob": "2958b5d1b8036388354204f0a718f809756cf23a"
+        "synced_blob": "4c4a26ae8ca1be99c9ee834c7fb6184c89d888b8"
       },
       {
         "kind": "ported",
@@ -10849,7 +10849,7 @@
         "rust": [
           "`rtao_intents::children` (feature `children`)"
         ],
-        "synced_blob": "0dd6874119b12211ee566b5a53bab05e9128c8e9"
+        "synced_blob": "42392f29c930b80fc79c6c7d8a216a0ad01d5b93"
       },
       {
         "kind": "ported",
@@ -10871,7 +10871,7 @@
         "rust": [
           "`rtao_intents::collateral` (feature `collateral`)"
         ],
-        "synced_blob": "93f4a53ec22db5cebd2723626b6096646f170ba3"
+        "synced_blob": "08fb440799bf16dbfb3552133512a7dfaa54db4c"
       },
       {
         "kind": "ported",
@@ -10918,7 +10918,7 @@
           "rtao_intents::staking_burn::StakeBurn",
           "rtao_intents::generated::{interfaces, passthrough}"
         ],
-        "synced_blob": "9a8423befd567aeba394dbcbd694b5aa73210e7e"
+        "synced_blob": "16aa92faf0386a65aa9f58ad51dca09042339f26"
       },
       {
         "kind": "ported",
@@ -10968,7 +10968,7 @@
           "rtao_intents::lock::{LockStake, MoveLock, SetPerpetualLock, SetRejectLockedAlpha}",
           "rtao_intents::generated::{interfaces, passthrough}"
         ],
-        "synced_blob": "f3ff3300f9029885fc1a82f1944f9c70cafbc82a"
+        "synced_blob": "05c03b46d80f556a6bbc08b963f15248e69c19d2"
       },
       {
         "kind": "ported",
@@ -11067,7 +11067,7 @@
           "crates/rtao-intents/src/lock.rs",
           "crates/rtao-intents/src/arguments.rs"
         ],
-        "synced_blob": "2e28f9b85f3ff25e18c02554cf0c15b70b1f748c"
+        "synced_blob": "ebbef6a1d24c000b5d4a0b003addfba8a8d1e0b8"
       },
       {
         "kind": "ported",
@@ -12438,14 +12438,15 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/_pinned.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-tx/src/pinned.rs",
+          "crates/rtao-intents/tests/pinned_inputs.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "6f4277d738ee03fe5e73ec31d680dcffba08c234"
       },
       {
         "kind": "ported",

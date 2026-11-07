@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Since `snapshot-2026-11-07.2`
+
+Not a versioned release. Each item links to its section below.
+
+- v488 hand ports, third batch (D-133, issue #12): a later multisig round that must rebuild its call keeps round 1's dynamic inputs and must reproduce its bytes; pure proxies take `account_mode` and quantum-resistant payers create protected pure proxies; nested multisig, announced-proxy and crowdloan calls compose against their real origin with their sudo wrapper. 6 more sources are blessed (84 due).
+- Unchanged: core v478 and its patch, runtime stamps, V15, signing status and extensions, the metadata hash, the commit-reveal path, journal formats.
+
+### v488 hand ports, third batch: pinned rebuilds and pure-proxy modes (D-133)
+
+#### rtao-tx
+
+- New: `pinned` (`PinnedInputs`, `scope`, `compose_pinned`, `compose_staking_call`, `derived_u64`, `approved_amount`, `approved_staking_amount`, `approved_function`, `current`, `advance`, `is_active`), Python's `_pinned` module.
+- New: `Intent::requires_build_for_policy` and `DynIntent::requires_build_for_policy_dyn` (default false).
+- Changed: a later multisig round whose semantic intent requires its build for policy is rebuilt under the pinned inputs and refused unless the rebuilt call equals the pinned bytes ("imported multisig call bytes do not match ..."); other later rounds reuse the pinned bytes as before. Their extras now merge through `multisig::merge_approval_metadata`.
+- New: `compose_nested_intent_call`, composing a nested intent as a direct submission from its real origin would be (sudo wrapper for root operations, inner adapter, extras).
+- New: `multisig::merge_approval_metadata`.
+
+#### rtao-intents
+
+- Changed: staking, lock, collateral, take, stake-burn and crowdloan-contribution builds take their `ALL` amounts, derived limit prices and the take branch from the approval while rebuilding; `increase_take`, `decrease_take`, `lock_stake`, `contribute_crowdloan`, `create_pure_proxy` and `kill_pure_proxy` are hand builds (no longer generated pass-throughs).
+- Changed: `CreatePureProxy` accepts `account_mode` `safe` (`Proxy.create_safe_pure`, extras `pure_proxy_account_mode`); a payer registered as an ML-DSA account or derived authority composes `create_protected_pure` behind `HashedAccounts.check_registration_deposit` and reports its reserves. `KillPureProxy` composes `kill_safe_pure` for `safe`. Unknown modes refuse when building ("account_mode must be 'legacy' or 'safe'") instead of at validation.
+- Changed (behavior): `MultisigExecute`, `MultisigApprove`, `MultisigCancel`, `MultisigThreshold1`, `ExecuteProxyAnnounced` and `CreateCrowdloan` compose their inner call against the dispatching account with its sudo wrapper; an announced inner call no longer defaults its hotkey from the caller's wallet. Executing dispatches carry the inner extras.
+- Changed: `Batch` sums its children's `protected_pure_registration_deposit_rao`, `pure_proxy_deposit_rao` and `pure_proxy_reserves` and collects `multisig_approvals`.
+
+#### rtao-cli
+
+- Changed: saving a multisig refuses an `account_mode` other than `legacy` or `safe`; a saved group with `account_mode` `safe` refuses to resolve until its derivation is supported, rather than resolving to the legacy account.
+
 ### Since `snapshot-2026-11-07`
 
 Tagged as `snapshot-2026-11-07.2`; not a versioned release. Each item links
