@@ -258,7 +258,10 @@ pub(super) fn values(resolver: &mut Resolver<'_>, names: &[&str]) -> Result<Valu
         }
     }
     ensure!(imports.iter().map(String::as_str).eq([
-        "from:0:__future__:annotations", "import:asyncio", "import:pytest",
+        // v488 adds AsyncMock and CallBytes for new tests outside both
+        // parameter tables; neither name appears in a table.
+        "from:0:__future__:annotations", "import:asyncio",
+        "from:0:unittest.mock:AsyncMock", "import:pytest",
         "from:0:websockets.datastructures:Headers",
         "from:0:websockets.exceptions:ConnectionClosedError,InvalidStatus",
         "from:0:websockets.frames:Close", "from:0:websockets.http11:Response",
@@ -266,6 +269,7 @@ pub(super) fn values(resolver: &mut Resolver<'_>, names: &[&str]) -> Result<Valu
         "from:0:bittensor:RpcPolicyError=PublicRpcPolicyError",
         "from:0:bittensor._substrate:RpcSubstrate",
         "from:0:bittensor._transport:rpc",
+        "from:0:bittensor._transport.contract:CallBytes",
         "from:0:bittensor._transport.errors:MaxRetriesExceeded,RpcPolicyRejection,StateDiscardedError,SubstrateRequestException",
         "from:0:bittensor._transport.rpc:RpcSession",
         "from:0:tests.harness.fake_node:FakeNode",

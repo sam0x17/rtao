@@ -161,10 +161,14 @@ const NAMED_TABLES: &[(&str, &[&str])] = &[
         "sdk/python/bittensor/executor.py",
         &[
             "_TRANSIENT_SUBSTRINGS",
-            "_MAX_SHIELDED_CIPHERTEXT_BYTES",
             "_SHIELDED_POLL_ATTEMPTS_PER_BLOCK",
             "_SHIELDED_FINALITY_RPC_RETRIES",
         ],
+    ),
+    // v488 moved the carrier bound out of executor.py (which imports it).
+    (
+        "sdk/python/bittensor/_transport/extrinsics.py",
+        &["MAX_SHIELDED_CIPHERTEXT_BYTES"],
     ),
     ("sdk/python/bittensor/multisig.py", &["_FEE_ALLOWANCE_RAO"]),
     (
@@ -338,16 +342,25 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
             }
             ast::Expr::List(value) => sequence(&value.elts, depth + 1),
             ast::Expr::Tuple(value) => sequence(&value.elts, depth + 1),
+            ast::Expr::Starred(value) => expression(&value.value, depth + 1),
             ast::Expr::Set(value) => sequence(&value.elts, depth + 1),
             ast::Expr::Dict(value) => {
-                for key in &value.keys {
-                    expression(
-                        key.as_ref()
-                            .context("sample producer dictionary expansion")?,
-                        depth + 1,
-                    )?;
+                // A `**` expansion has no key; its value is checked below
+                // like any other value (v488 samples expand a sample entry).
+                for key in value.keys.iter().flatten() {
+                    expression(key, depth + 1)?;
                 }
                 sequence(&value.values, depth + 1)
+            }
+            // `TABLE["key"]` reads an earlier inert declaration.
+            ast::Expr::Subscript(value) => {
+                ensure!(
+                    matches!(&*value.value, ast::Expr::Name(_))
+                        && matches!(&*value.slice, ast::Expr::Constant(key)
+                            if matches!(&key.value, ast::Constant::Str(_))),
+                    "sample producer reads an unsupported subscript"
+                );
+                Ok(())
             }
             ast::Expr::BinOp(_) | ast::Expr::UnaryOp(_) => literal_arithmetic(value, depth + 1),
             ast::Expr::Call(call)
@@ -470,6 +483,18 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                         "sample producer class value declarations require review"
                     );
                     for target in &assign.targets {
+                        // `TABLE["key"] = value` stores into an earlier
+                        // module table (v488 samples); the name rules below
+                        // apply to that table.
+                        let target = match target {
+                            ast::Expr::Subscript(subscript)
+                                if matches!(&*subscript.slice, ast::Expr::Constant(key)
+                                    if matches!(&key.value, ast::Constant::Str(_))) =>
+                            {
+                                &*subscript.value
+                            }
+                            target => target,
+                        };
                         let ast::Expr::Name(name) = target else {
                             bail!("sample producer writes an unsupported assignment target")
                         };
@@ -630,6 +655,78 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                 }
                 ast::Stmt::Expr(value) if matches!(&*value.value, ast::Expr::Constant(value) if matches!(&value.value, ast::Constant::Str(_))) =>
                     {}
+                // `TABLE.update(<inert expression>)` on a module table (v488
+                // samples). The resolver merges it or refuses the table.
+                ast::Stmt::Expr(value)
+                    if !class_body
+                        && matches!(&*value.value, ast::Expr::Call(call)
+                            if call.args.len() == 1
+                                && call.keywords.is_empty()
+                                && matches!(&*call.func, ast::Expr::Attribute(method)
+                                    if method.attr.as_str() == "update"
+                                        && matches!(&*method.value, ast::Expr::Name(_)))) =>
+                {
+                    declarations = true;
+                    let ast::Expr::Call(call) = &*value.value else {
+                        bail!("sample producer update changed while checking")
+                    };
+                    let ast::Expr::Attribute(method) = &*call.func else {
+                        bail!("sample producer update changed while checking")
+                    };
+                    let ast::Expr::Name(name) = &*method.value else {
+                        bail!("sample producer update changed while checking")
+                    };
+                    callback_dependency(path, class_body, name.id.as_str())?;
+                    ensure!(
+                        !matches!(name.id.as_str(), "Keypair" | "_backend" | "__all__")
+                            && !(name.id.as_str().starts_with("__")
+                                && name.id.as_str().ends_with("__")),
+                        "sample producer updates an unsupported binding"
+                    );
+                    expression(&call.args[0], 0)?;
+                }
+                // sp_core.py (v488): backend constants assigned inside a try
+                // whose only handler re-raises AttributeError as ImportError.
+                ast::Stmt::Try(block)
+                    if !class_body
+                        && path == "sdk/python/bittensor/sp_core.py"
+                        && block.orelse.is_empty()
+                        && block.finalbody.is_empty()
+                        && block.handlers.len() == 1 =>
+                {
+                    let ast::ExceptHandler::ExceptHandler(handler) = &block.handlers[0];
+                    ensure!(
+                        handler
+                            .type_
+                            .as_deref()
+                            .and_then(expression_path)
+                            .as_deref()
+                            == Some("AttributeError")
+                            && !handler.body.is_empty()
+                            && handler
+                                .body
+                                .iter()
+                                .all(|statement| matches!(statement, ast::Stmt::Raise(_))),
+                        "sample producer exception handler requires review"
+                    );
+                    ensure!(
+                        block.body.iter().all(|statement| matches!(statement,
+                            ast::Stmt::Assign(assign) if assign.targets.len() == 1
+                                && matches!(&*assign.value, ast::Expr::Attribute(attribute)
+                                    if matches!(&*attribute.value, ast::Expr::Name(base) if base.id.as_str() == "_backend")))),
+                        "sample producer guarded block requires review"
+                    );
+                    body(
+                        path,
+                        source,
+                        &block.body,
+                        keypair_exports,
+                        imports,
+                        class_body,
+                        depth + 1,
+                    )?;
+                    declarations = true;
+                }
                 ast::Stmt::Pass(_) => {}
                 _ => bail!("sample producer executes an unsupported statement"),
             }
@@ -643,11 +740,16 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
             "from:0:types:SimpleNamespace",
             "from:0:bittensor.keyfiles:Keypair",
         ],
+        // v488 adds the standard-library errno, tempfile and typing.Callable,
+        // used only inside Keyfile's write methods.
         "sdk/python/bittensor/keyfiles.py" => &[
             "from:0:__future__:annotations",
+            "import:errno",
             "import:os",
             "import:sys",
+            "import:tempfile",
             "from:0:pathlib:Path",
+            "from:0:typing:Callable",
             "from:1:_live:pause_live_display",
             "from:1:masked_input:masked_input",
             "from:1:sp_core:KeyfileError,Keypair,WrongPasswordError,decrypt_keyfile_data,deserialize_keypair_from_keyfile_data,encrypt_keyfile_data,get_password_from_environment,keyfile_data_is_encrypted,save_password_to_environment,serialized_keypair_to_keyfile_data",
@@ -691,6 +793,9 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
     );
     Ok(())
 }
+
+/// The refusal reason of an accepted opaque backend constant table.
+const OPAQUE_BACKEND_TABLE: &str = "opaque backend constant table";
 
 struct Module {
     bindings: Bindings,
@@ -1125,8 +1230,46 @@ impl<'a> Resolver<'a> {
                     Self::invalidate_block(&mut module, &block.body);
                     Self::invalidate_block(&mut module, &block.orelse);
                 }
+                // A try whose every handler only raises cannot finish
+                // without running its whole body, so when the module imports
+                // at all its body's plain assignments are straight-line
+                // declarations (v488 sp_core.py guards its backend constants
+                // this way). Anything else stays a conditional block.
+                ast::Stmt::Try(block)
+                    if block.orelse.is_empty()
+                        && block.finalbody.is_empty()
+                        && !block.handlers.is_empty()
+                        && block.handlers.iter().all(|handler| {
+                            let ast::ExceptHandler::ExceptHandler(handler) = handler;
+                            !handler.body.is_empty()
+                                && handler
+                                    .body
+                                    .iter()
+                                    .all(|statement| matches!(statement, ast::Stmt::Raise(_)))
+                        })
+                        && block.body.iter().all(|statement| {
+                            matches!(statement, ast::Stmt::Assign(assign)
+                                if assign.targets.len() == 1
+                                    && matches!(assign.targets[0], ast::Expr::Name(_)))
+                        }) =>
+                {
+                    for statement in &block.body {
+                        if let ast::Stmt::Assign(assign) = statement {
+                            self.assign(
+                                &mut module,
+                                &assign.targets[0],
+                                &assign.value,
+                                statement,
+                                &source,
+                                path,
+                            )?;
+                        }
+                    }
+                }
                 ast::Stmt::Expr(expr) => {
-                    self.apply_effects(&mut module, &expr.value, None)?;
+                    if !self.dictionary_update(&mut module, &expr.value, stmt, &source, path)? {
+                        self.apply_effects(&mut module, &expr.value, None)?;
+                    }
                 }
                 _ => Self::invalidate_block(&mut module, std::slice::from_ref(stmt)),
             }
@@ -1187,6 +1330,68 @@ impl<'a> Resolver<'a> {
             .with_context(|| format!("{path}: imported name {name} absent from {module_path}"))
     }
 
+    /// A module declaration in sample producer mode. Besides what
+    /// `sample_binding` accepts, sp_core.py may declare tables built only from
+    /// backend `CRYPTO_*` constants, literals and earlier such tables (v488's
+    /// `PQ_CRYPTO_TYPES`, `PQ_PROFILES`, ...). They run no code, cannot name
+    /// `Keypair` and stay unresolved, so no sample can read them. Returns
+    /// whether the declaration is such an opaque table.
+    fn sample_declaration(
+        &self,
+        evaluated: &Result<Binding>,
+        expr: &ast::Expr,
+        bindings: &Bindings,
+        path: &str,
+    ) -> Result<bool> {
+        fn opaque(expr: &ast::Expr, bindings: &Bindings, depth: usize) -> bool {
+            if depth >= MAX_DEPTH {
+                return false;
+            }
+            let all = |values: &[ast::Expr]| {
+                values
+                    .iter()
+                    .all(|value| opaque(value, bindings, depth + 1))
+            };
+            match expr {
+                ast::Expr::Constant(_) => true,
+                ast::Expr::Name(name) => match bindings.get(name.id.as_str()) {
+                    Some(Binding::Symbol(symbol)) => symbol
+                        .strip_prefix("bittensor_core.CRYPTO_")
+                        .is_some_and(|rest| {
+                            !rest.is_empty()
+                                && rest.bytes().all(|b| {
+                                    b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_'
+                                })
+                        }),
+                    Some(Binding::Refused(reason)) => reason == OPAQUE_BACKEND_TABLE,
+                    Some(Binding::Value(_)) => true,
+                    _ => false,
+                },
+                ast::Expr::Tuple(value) => all(&value.elts),
+                ast::Expr::List(value) => all(&value.elts),
+                ast::Expr::Set(value) => all(&value.elts),
+                ast::Expr::Starred(value) => opaque(&value.value, bindings, depth + 1),
+                ast::Expr::Dict(value) => {
+                    value
+                        .keys
+                        .iter()
+                        .flatten()
+                        .all(|key| opaque(key, bindings, depth + 1))
+                        && all(&value.values)
+                }
+                _ => false,
+            }
+        }
+        if self.sample_producer_mode
+            && path == "sdk/python/bittensor/sp_core.py"
+            && evaluated.is_err()
+            && opaque(expr, bindings, 0)
+        {
+            return Ok(true);
+        }
+        self.sample_binding(evaluated, path).map(|()| false)
+    }
+
     fn sample_binding(&self, evaluated: &Result<Binding>, path: &str) -> Result<()> {
         if !self.sample_producer_mode
             || !matches!(
@@ -1213,6 +1418,19 @@ impl<'a> Resolver<'a> {
                 Some(
                     "CRYPTO_ED25519"
                         | "CRYPTO_SR25519"
+                        // v488 post-quantum and hashed account constants and
+                        // receiving-address codecs of the pinned backend.
+                        | "CRYPTO_HASHED"
+                        | "CRYPTO_HASHED_ED25519"
+                        | "CRYPTO_MLDSA65"
+                        | "CRYPTO_MLDSA65_FIXED"
+                        | "CRYPTO_FALCON512"
+                        | "CRYPTO_FALCON512_HASHED"
+                        | "CRYPTO_FALCON1024"
+                        | "CRYPTO_FALCON1024_HASHED"
+                        | "decode_hashed_receiving_address"
+                        | "decode_mldsa_receiving_address"
+                        | "encode_mldsa_receiving_address"
                         | "Keypair"
                         | "Keypair.create_from_uri"
                         | "KeyfileError"
@@ -1257,9 +1475,14 @@ impl<'a> Resolver<'a> {
         );
         self.apply_effects(module, expr, None)?;
         let evaluated = self.eval_binding(expr, &module.bindings, path, 0);
-        self.sample_binding(&evaluated, path)?;
-        let evaluated = evaluated
-            .unwrap_or_else(|error| Binding::Refused(format!("{path}:{}: {error:#}", span.0)));
+        let opaque = self.sample_declaration(&evaluated, expr, &module.bindings, path)?;
+        let evaluated = evaluated.unwrap_or_else(|error| {
+            Binding::Refused(if opaque {
+                OPAQUE_BACKEND_TABLE.to_owned()
+            } else {
+                format!("{path}:{}: {error:#}", span.0)
+            })
+        });
         match target {
             ast::Expr::Name(name) => {
                 let dependencies = dependencies(expr, &module.bindings)?;
@@ -1348,6 +1571,96 @@ impl<'a> Resolver<'a> {
             _ => Self::invalidate_target(module, target, "unpacking requires a hand port"),
         }
         Ok(())
+    }
+
+    /// `TABLE.update(<expression>)` on an unaliased module dictionary, as
+    /// upstream v488's test samples extend `INTENT_SAMPLES`. The argument is
+    /// resolved like an assigned value and merged with Python's semantics
+    /// (existing keys keep their position). Returns false when the statement
+    /// is not that form, so the caller treats it as an opaque effect.
+    fn dictionary_update(
+        &mut self,
+        module: &mut Module,
+        expr: &ast::Expr,
+        stmt: &ast::Stmt,
+        source: &str,
+        path: &str,
+    ) -> Result<bool> {
+        let ast::Expr::Call(call) = expr else {
+            return Ok(false);
+        };
+        let ast::Expr::Attribute(method) = &*call.func else {
+            return Ok(false);
+        };
+        let ast::Expr::Name(name) = &*method.value else {
+            return Ok(false);
+        };
+        let table = name.id.as_str();
+        if method.attr.as_str() != "update"
+            || call.args.len() != 1
+            || !call.keywords.is_empty()
+            || !matches!(
+                module.bindings.get(table),
+                Some(Binding::Value(Literal::Dict(_)))
+            )
+        {
+            return Ok(false);
+        }
+        let line_number = line(source, stmt.range().start().to_usize());
+        if module.aliases.contains_key(table)
+            || module.aliases.values().any(|alias| alias == table)
+            || module
+                .escaped
+                .iter()
+                .any(|(dependent, names)| dependent != table && names.contains(table))
+        {
+            Self::invalidate_target(
+                module,
+                &method.value,
+                "mutation of an aliased table requires a hand port",
+            );
+            return Ok(true);
+        }
+        let argument = &call.args[0];
+        self.apply_effects(module, argument, None)?;
+        let evaluated = self.eval_binding(argument, &module.bindings, path, 0);
+        self.sample_binding(&evaluated, path)?;
+        let Ok(Binding::Value(Literal::Dict(additions))) = evaluated else {
+            Self::invalidate_target(
+                module,
+                &method.value,
+                "mutation value cannot be statically resolved",
+            );
+            return Ok(true);
+        };
+        let dependencies = dependencies(argument, &module.bindings)?;
+        let Some(Binding::Value(Literal::Dict(entries))) = module.bindings.get_mut(table) else {
+            bail!("{path}:{line_number}: updated table changed while resolving its argument");
+        };
+        for (key, value) in additions {
+            spend(
+                &self.budget,
+                key.allocation_units(0)?
+                    .saturating_add(value.allocation_units(0)?),
+            )?;
+            insert_entry(entries, key, value);
+        }
+        ensure!(
+            entries.len() <= MAX_CONTAINER_ITEMS,
+            "{path}:{line_number}: mutated dictionary exceeds item limit"
+        );
+        if let Some(binding) = module.bindings.get(table) {
+            binding.units(0)?;
+        }
+        module
+            .escaped
+            .entry(table.to_owned())
+            .or_default()
+            .extend(dependencies);
+        if let Some(location) = module.locations.get_mut(table) {
+            location.1 = line(source, stmt.range().end().to_usize());
+        }
+        Ok(true)
     }
 
     fn invalidate_target(module: &mut Module, target: &ast::Expr, reason: &str) {
@@ -1854,13 +2167,23 @@ impl<'a> Resolver<'a> {
                 );
                 let mut entries = Vec::new();
                 for (key, value) in value.keys.iter().zip(&value.values) {
-                    let key = self.eval(
-                        key.as_ref()
-                            .context("dictionary unpacking requires a hand port")?,
-                        bindings,
-                        path,
-                        next,
-                    )?;
+                    let Some(key) = key else {
+                        // `{**table, ...}`: a resolved dictionary's entries in
+                        // its order, later keys replacing earlier ones in place.
+                        let Literal::Dict(expanded) = self.eval(value, bindings, path, next)?
+                        else {
+                            bail!("dictionary unpacking of a non-dictionary requires a hand port");
+                        };
+                        for (key, value) in expanded {
+                            insert_entry(&mut entries, key, value);
+                        }
+                        ensure!(
+                            entries.len() <= MAX_CONTAINER_ITEMS,
+                            "dictionary exceeds item limit"
+                        );
+                        continue;
+                    };
+                    let key = self.eval(key, bindings, path, next)?;
                     ensure!(key.hashable(), "dictionary key is not hashable");
                     insert_entry(&mut entries, key, self.eval(value, bindings, path, next)?);
                 }
@@ -3795,7 +4118,7 @@ mod tests {
             bail!("derived wraps missing");
         };
         let wraps = wraps.json()?;
-        assert_eq!(wraps["tuple"].as_array().context("wraps tuple")?.len(), 32);
+        assert_eq!(wraps["tuple"].as_array().context("wraps tuple")?.len(), 33);
         assert_eq!(
             wraps["tuple"][0],
             json!({"tuple":["AdminUtils","sudo_set_epoch_consensus"]})

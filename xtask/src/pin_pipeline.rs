@@ -204,6 +204,7 @@ pub(crate) fn run(
     force: bool,
     plan_only: bool,
     dry_run: bool,
+    core_bump: bool,
     github_output: Option<&Path>,
 ) -> Result<()> {
     if plan_only {
@@ -250,6 +251,7 @@ pub(crate) fn run(
             .env("RTAO_TEMP_ROOT", &task)
             .env("RTAO_UPSTREAM_CACHE", cache)
             .env("RTAO_PIN_CANDIDATE", "1")
+            .env("RTAO_PIN_CORE_BUMP", if core_bump { "1" } else { "0" })
             .env("CARGO_TARGET_DIR", task.join("build"))
             .env("TMPDIR", task.join("tmp"))
             .env("RTAO_PIN_STAGE_FILE", &status_path)

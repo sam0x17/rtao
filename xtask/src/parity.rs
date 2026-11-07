@@ -93,6 +93,7 @@ pub fn run(args: &[String]) -> Result<()> {
     let root = repository_root()?;
     match args.first().map(String::as_str) {
         Some("report") => report::run(&root, &args[1..]),
+        Some("pending") => report::pending_sync(&root, &args[1..]),
         Some("bless") => {
             ensure!(
                 args.len() > 1,
@@ -1532,6 +1533,12 @@ mod tests {
         // This seed regression test remains runnable before import-upstream. The
         // independently committed explicit key set supplies its synthetic blobs;
         // `parity check` verifies coverage against the actual imported listing.
+        // Rows a runtime adoption added for new upstream files (D-128) are not
+        // part of the documented seed.
+        let committed = committed
+            .into_iter()
+            .filter(|row| !(row.synced_blob == "pending" && row.milestone == "port due"))
+            .collect::<Vec<_>>();
         let listing = committed
             .iter()
             .map(|row| self::listing(&row.py))

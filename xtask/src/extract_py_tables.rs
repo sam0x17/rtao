@@ -67,8 +67,8 @@ pub(super) fn render(tables: &Value) -> Result<String> {
     out.push_str("];\n\n");
     for (path, source, name) in [
         (
-            "sdk/python/bittensor/executor.py",
-            "_MAX_SHIELDED_CIPHERTEXT_BYTES",
+            "sdk/python/bittensor/_transport/extrinsics.py",
+            "MAX_SHIELDED_CIPHERTEXT_BYTES",
             "MAX_SHIELDED_CIPHERTEXT_BYTES",
         ),
         (
@@ -92,7 +92,12 @@ pub(super) fn render(tables: &Value) -> Result<String> {
         let number = row["value"]
             .as_u64()
             .context("execution bound must fit u64")?;
-        out.push_str(&format!("/// Python `{source}`.\n#[doc(alias = \"bittensor.{}.{source}\")]\npub const {name}: u64 = {number};\n\n",if path.contains("executor") {"executor"} else {"multisig"}));
+        let module = path
+            .strip_prefix("sdk/python/")
+            .and_then(|path| path.strip_suffix(".py"))
+            .context("execution bound outside the Python package")?
+            .replace('/', ".");
+        out.push_str(&format!("/// Python `{source}`.\n#[doc(alias = \"{module}.{source}\")]\npub const {name}: u64 = {number};\n\n"));
     }
     let transient = declaration(
         tables,

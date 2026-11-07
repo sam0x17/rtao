@@ -327,11 +327,21 @@ impl<'a> Inputs<'a> {
             return Ok(());
         }
         let document = self.git.document(&format!("{path}/Cargo.toml"))?;
-        ensure!(
-            document.get("workspace").is_none(),
-            "nested workspace at {path} makes root inheritance ambiguous"
-        );
-        let mut ancestor = path;
+        // A vendored package may declare its own empty `[workspace]` so that
+        // it builds outside the monorepo's workspace (upstream v488's
+        // `vendor/fips204`). It is then its own workspace root: Cargo never
+        // consults an ancestor for it, so the only ambiguity left is a key
+        // inherited from that own workspace, which the root tables cannot
+        // resolve. Such a package must inherit nothing; its manifest blob,
+        // `[workspace]` table included, is a fingerprint input as usual.
+        let self_rooted = document.get("workspace").is_some();
+        if self_rooted {
+            ensure!(
+                !inherits(document.as_item()),
+                "nested workspace at {path} makes root inheritance ambiguous"
+            );
+        }
+        let mut ancestor = if self_rooted { "" } else { path };
         while let Some((parent, _)) = ancestor.rsplit_once('/') {
             let manifest = format!("{parent}/Cargo.toml");
             if self.git.object(&manifest, "blob", false)?.is_some() {
@@ -809,6 +819,7 @@ impl Projection {
         }
         let mut manifest = inputs.git.document(&format!("{path}/Cargo.toml"))?;
         strip_dev_tables(manifest.as_item_mut())?;
+        prune_dev_feature_references(&mut manifest)?;
         manifest.as_table_mut().remove("workspace");
         for key in ["test", "bench", "example", "bin"] {
             manifest.as_table_mut().remove(key);
@@ -907,6 +918,73 @@ fn strip_dev_tables(item: &mut Item) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Drop feature entries that name a dependency the projection no longer has.
+///
+/// Cargo lets a feature enable a dev-dependency's feature (upstream v488's
+/// `subtensor-hashed`: `std = ["hex/std", ...]` with `hex` dev-only). Once the
+/// dev tables are stripped such an entry no longer parses. Dev-dependencies
+/// are never part of the normal/build graph, so dropping the entries changes
+/// no resolution; entries naming a remaining dependency are kept as they are.
+fn prune_dev_feature_references(manifest: &mut DocumentMut) -> Result<()> {
+    let mut tables = Vec::new();
+    collect_dependency_tables(manifest.as_item(), &mut tables)?;
+    let mut aliases = BTreeSet::new();
+    for table in tables {
+        for (alias, _) in table
+            .as_table_like()
+            .context("dependency table malformed")?
+            .iter()
+        {
+            aliases.insert(alias.to_owned());
+        }
+    }
+    let Some(features) = manifest.get_mut("features") else {
+        return Ok(());
+    };
+    for (_, entries) in features
+        .as_table_like_mut()
+        .context("features must be a table")?
+        .iter_mut()
+    {
+        let entries = entries
+            .as_array_mut()
+            .context("a feature must be an array")?;
+        entries.retain(|entry| {
+            let Some(entry) = entry.as_str() else {
+                return true;
+            };
+            let named = match entry.split_once('/') {
+                Some((dependency, _)) => Some(dependency.trim_end_matches('?')),
+                None => entry.strip_prefix("dep:"),
+            };
+            named.is_none_or(|dependency| aliases.contains(dependency))
+        });
+    }
+    Ok(())
+}
+
+/// Whether a manifest inherits anything from a workspace: `package.workspace`
+/// or any `workspace = true` key outside its own `[workspace]` table.
+fn inherits(manifest: &Item) -> bool {
+    fn marked(item: &Item) -> bool {
+        let Some(table) = item.as_table_like() else {
+            return false;
+        };
+        table.iter().any(|(key, value)| {
+            (key == "workspace" && value.as_bool() == Some(true)) || marked(value)
+        })
+    }
+    let Some(table) = manifest.as_table_like() else {
+        return false;
+    };
+    manifest
+        .get("package")
+        .is_some_and(|package| package.get("workspace").is_some())
+        || table
+            .iter()
+            .any(|(key, value)| key != "workspace" && marked(value))
 }
 
 fn collect_dependency_tables<'a>(item: &'a Item, out: &mut Vec<&'a Item>) -> Result<()> {
@@ -1347,6 +1425,68 @@ version = "1.0.0"
         fixture.write("support/extra/src/lib.rs", "pub fn another() {}\n")?;
         fixture.commit()?;
         assert_ne!(fixture.hash()?, before_source);
+        Ok(())
+    }
+
+    #[test]
+    fn self_rooted_vendored_path_dependencies_join_without_inheritance() -> Result<()> {
+        // Upstream v488 shape: primitives/hashed -> vendor/fips204, whose
+        // manifest declares its own empty [workspace].
+        let fixture = Fixture::new()?;
+        let initial = fixture.hash()?;
+        let helper = fs::read_to_string(fixture.path.join("support/helper/Cargo.toml"))?;
+        fixture.write(
+            "support/helper/Cargo.toml",
+            &format!("{helper}rooted = {{ path = '../../vendor/rooted' }}\n"),
+        )?;
+        // As upstream's subtensor-hashed does, a feature also names a
+        // dev-only dependency, which the projection strips.
+        let rooted = "[package]\nname='rooted'\nversion='0.4.6'\nedition='2021'\n\n[workspace]\n\n[dependencies]\nwire='1'\n\n[dev-dependencies]\nhex='1'\n\n[features]\ndefault=['std']\nstd=['hex/std']\n";
+        fixture.write("vendor/rooted/Cargo.toml", rooted)?;
+        fixture.write("vendor/rooted/src/lib.rs", "pub fn rooted() {}\n")?;
+        fixture.replace(
+            "Cargo.lock",
+            "name = \"helper\"\nversion = \"0.1.0\"\ndependencies = [\"wire\"]",
+            "name = \"helper\"\nversion = \"0.1.0\"\ndependencies = [\"rooted\", \"wire\"]",
+        )?;
+        let lock = fs::read_to_string(fixture.path.join("Cargo.lock"))?;
+        fixture.write(
+            "Cargo.lock",
+            &format!(
+                "{lock}\n[[package]]\nname='rooted'\nversion='0.4.6'\ndependencies = [\"wire\"]\n"
+            ),
+        )?;
+        fixture.commit()?;
+        let joined = fixture.hash()?;
+        assert_ne!(joined, initial);
+        assert!(
+            resolved_graph(&fixture.path, "HEAD")?
+                .iter()
+                .any(|p| p.name == "rooted")
+        );
+        fixture.write("vendor/rooted/src/lib.rs", "pub fn changed() {}\n")?;
+        fixture.commit()?;
+        assert_ne!(fixture.hash()?, joined);
+        // Inheriting from its own workspace stays ambiguous and is refused.
+        fixture.replace(
+            "vendor/rooted/Cargo.toml",
+            "edition='2021'",
+            "edition.workspace = true",
+        )?;
+        fixture.commit()?;
+        assert!(fixture.hash().is_err());
+        fixture.replace(
+            "vendor/rooted/Cargo.toml",
+            "edition.workspace = true",
+            "edition='2021'",
+        )?;
+        fixture.replace(
+            "vendor/rooted/Cargo.toml",
+            "wire='1'",
+            "wire={workspace=true}",
+        )?;
+        fixture.commit()?;
+        assert!(fixture.hash().is_err());
         Ok(())
     }
 

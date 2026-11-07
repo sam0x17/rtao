@@ -311,10 +311,12 @@ mod tests {
     fn proxy_codec_rejects_index_order_conversion_and_unknown_fallback_drift() -> Result<()> {
         let source = source()?;
         let actual = proxy_types(&source)?;
-        assert_eq!(actual.len(), 21);
+        assert_eq!(actual.len(), 23);
         assert_eq!(actual[18], (18, "BasketTrading".into()));
         assert_eq!(actual[19], (19, "Validate".into()));
         assert_eq!(actual[20], (20, "Weights".into()));
+        assert_eq!(actual[21], (21, "Lock".into()));
+        assert_eq!(actual[22], (22, "GammaSpend".into()));
         for changed in [
             format!(
                 "const value: u8 = 0;\n{}",
@@ -338,7 +340,7 @@ mod tests {
             ),
             source.replace("            _ => Err(())", "            _ => Ok(Self::Any)"),
             source.replace("    BasketTrading,", "    BasketTrading = 42,"),
-            source.replace("    Weights,\n}", "    #[cfg(test)]\n    Weights,\n}"),
+            source.replace("    GammaSpend,\n}", "    #[cfg(test)]\n    GammaSpend,\n}"),
             source.replace(
                 "    Owner,\n    NonCritical,",
                 "    NonCritical,\n    Owner,",
@@ -370,7 +372,7 @@ mod tests {
                 .as_array()
                 .context("variants missing")?
                 .len(),
-            21
+            23
         );
         let mut changed = tables.clone();
         changed[PYTHON]["values"]["PROXY_TYPES"]["value"]["tuple"][0] = json!("Other");

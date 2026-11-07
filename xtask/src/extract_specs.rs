@@ -17,7 +17,8 @@ use toml_edit::DocumentMut;
 
 use super::{Binding, Resolver, call_path, header, line, pretty, rust_string, rustfmt};
 
-use crate::extract::{INTENT_COUNT, READ_COUNT};
+#[cfg(test)]
+use crate::extract::INTENT_COUNT;
 
 const INTENTS: &str = "vendor/upstream/catalog/intents.json";
 const READS: &str = "vendor/upstream/catalog/reads.json";
@@ -156,10 +157,9 @@ fn intent_documents(
     let rows = catalog
         .as_array()
         .context("intent catalog must be an array")?;
-    ensure!(
-        rows.len() == INTENT_COUNT,
-        "intent catalog count changed; review the complete generated surface"
-    );
+    // The pinned catalog defines the generated surface, including operations
+    // a pin bump adds (they are pending ports, D-128).
+    ensure!(!rows.is_empty(), "intent catalog is empty");
     let mut fields = Vec::new();
     let mut variables = Vec::new();
     let mut names = BTreeSet::new();
@@ -378,7 +378,8 @@ fn render_specs(
             Ok(format!("ParamSpec {{ name:{}, annotation:{}, json_type:{}, required:{}, own_key:{}, default_json:{}, default_factory:{}, provenance_json:{} }}",str_at(item,"name")?,opt(&item["annotation"])?,if read {opt(&item["json_type"])?} else {"None".into()},item["required"].as_bool().context("requiredness missing")?,item["own_key"].as_bool().unwrap_or(false),if present {format!("Some({})",rust_string(&compact(&default["value"])?))} else {"None".into()},default["factory"].as_bool().unwrap_or(false),rust_string(&compact(&item["provenance"])?)))
         }).collect::<Result<Vec<_>>>()?.join(", ")))
     };
-    out.push_str(&format!("/// The complete pinned catalog of {INTENT_COUNT} intents.\npub static INTENTS: [IntentSpec; {INTENT_COUNT}] = [\n"));
+    let intent_count = intents.as_array().context("intent rows missing")?.len();
+    out.push_str(&format!("/// The complete pinned catalog of {intent_count} intents.\npub static INTENTS: [IntentSpec; {intent_count}] = [\n"));
     for row in intents.as_array().context("intent rows missing")? {
         let name = row["name"].as_str().context("intent name missing")?;
         let field = fields["intents"]
@@ -408,13 +409,14 @@ fn render_specs(
             .join(", ");
         out.push_str(&format!("    IntentSpec {{ name:{}, summary:{}, description:{}, python_class:{}, signer:{}, origin:{}, verify:{}, wraps:&[{wraps}], fields:{}, all_amount_fields:{}, mev_shield_default:{}, mev_shield_required:{}, catalog_json:{}, class_vars_json:{} }},\n",str_at(row,"name")?,str_at(row,"summary")?,str_at(row,"description")?,str_at(row,"python_class")?,str_at(row,"signer")?,str_at(row,"origin")?,opt(&row["verify"])?,params(field["fields"].as_array().context("field list missing")?,false)?,string_slice(&vars["all_amount_fields"]["value"]["tuple"] )?,vars["mev_shield_default"]["value"].as_bool().context("shield default missing")?,vars["mev_shield_required"]["value"].as_bool().context("shield required missing")?,rust_string(&compact(row)?),rust_string(&compact(vars)?)));
     }
-    out.push_str(&format!("];\n\n/// The complete pinned catalog of {READ_COUNT} reads.\npub static READS: [ReadSpec; {READ_COUNT}] = [\n"));
+    let read_count = reads.as_array().context("read rows missing")?.len();
+    out.push_str(&format!("];\n\n/// The complete pinned catalog of {read_count} reads.\npub static READS: [ReadSpec; {read_count}] = [\n"));
     let read_params = read_params["reads"]
         .as_array()
         .context("read parameter records missing")?;
     ensure!(
-        reads.as_array().context("read rows missing")?.len() == READ_COUNT,
-        "read catalog count changed"
+        read_params.len() == read_count,
+        "read parameter records and catalog differ in count"
     );
     // The upstream metagraph row deliberately omits its public expression.
     // Derive its namespace from the other authenticated rows in its category.

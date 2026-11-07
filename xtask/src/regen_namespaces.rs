@@ -405,7 +405,7 @@ mod tests {
         let source = String::from_utf8(input(&root, &pins, PYTHON)?)?;
         let catalog = serde_json::from_slice(&input(&root, &pins, CATALOG)?)?;
         let namespaces = discover(&source, &catalog)?;
-        ensure!(namespaces.len() == 14);
+        ensure!(namespaces.len() == 15);
         let output = super::super::format_rust(&render(&namespaces, "commit"))?;
         ensure!(output.contains("fn subnets(") && output.contains("fn balances("));
         Ok(())

@@ -11,12 +11,13 @@ use serde_json::{Value, json};
 use sha1::{Digest, Sha1};
 use toml_edit::DocumentMut;
 
-/// Intents in the pinned upstream catalog; a change requires review of the
-/// complete generated surface.
-pub(crate) const INTENT_COUNT: usize = 86;
-/// Reads in the pinned upstream catalog; a change requires review of the
-/// complete generated surface.
-pub(crate) const READ_COUNT: usize = 105;
+/// Intents in the compiled catalog that the last `extract` generated from the
+/// pinned upstream catalog. Not a gate: a pin bump that adds operations
+/// regenerates it, and new operations are pending ports until reviewed
+/// (D-128).
+pub(crate) const INTENT_COUNT: usize = rtao_catalog::INTENTS.len();
+/// Reads in the compiled catalog (see [`INTENT_COUNT`]).
+pub(crate) const READ_COUNT: usize = rtao_catalog::READS.len();
 
 #[path = "extract_resolved.rs"]
 mod resolved;

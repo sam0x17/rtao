@@ -509,6 +509,31 @@ fn rate_kinds(source: &str) -> Result<BTreeMap<String, Value>> {
     Ok(result)
 }
 
+/// The subtensor storage map an owner setter writes its value argument to:
+/// exactly one `pallet_subtensor::Item::<T>::insert(netuid, value)`.
+fn setter_storage(method: &syn::ImplItemFn, value: &str) -> Result<String> {
+    let body = tokens(&method.block);
+    let suffix = format!(" :: < T > :: insert (netuid , {value})");
+    let items = body
+        .match_indices("pallet_subtensor :: ")
+        .filter_map(|(start, prefix)| {
+            let rest = &body[start + prefix.len()..];
+            let end = rest.find(' ')?;
+            let item = &rest[..end];
+            (rest[end..].starts_with(&suffix)
+                && item
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_'))
+            .then(|| item.to_owned())
+        })
+        .collect::<BTreeSet<_>>();
+    ensure!(
+        items.len() == 1,
+        "owner setter must write its value to exactly one subtensor map"
+    );
+    items.into_iter().next().context("owner setter storage")
+}
+
 fn getter_storage(method: &syn::ImplItemFn) -> Result<String> {
     let [syn::Stmt::Expr(syn::Expr::Call(call), None)] = method.block.stmts.as_slice() else {
         bail!("owner current getter changed");
@@ -811,12 +836,20 @@ fn document(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<Value> {
                 params.len() == 1,
                 "ordinary owner setter must have one value argument"
             );
-            let current = storage.get(name).context("owner current storage missing")?;
-            let ident = current["value_type_ident"]
+            // Python reads most owner values through STORAGE_ITEMS. A newer
+            // setter it lists only in HYPERPARAMS (v488's gamma_enabled)
+            // names its storage by the one map the setter writes.
+            let current = match storage.get(name) {
+                Some(current) => current.clone(),
+                None => json!({
+                    "pallet": "SubtensorModule",
+                    "item": setter_storage(method, &params[0])
+                        .with_context(|| format!("owner current storage missing for {name}"))?,
+                }),
+            };
+            let kind = current["value_type_ident"]
                 .as_str()
-                .context("owner storage identity missing")?;
-            let kind = ident_kinds
-                .get(ident)
+                .and_then(|ident| ident_kinds.get(ident))
                 .and_then(Value::as_str)
                 .or_else(|| units.get(name).and_then(|u| u["fields"]["kind"].as_str()))
                 .context("owner unit kind missing")?;
@@ -850,7 +883,7 @@ fn document(root: &Path, pins: &DocumentMut, tables: &Value) -> Result<Value> {
         rows.push(json!({"name":name,"setter":setter,"params":params,"current":current,"shape":shape,"cooldown":policy,"setter_signature":tokens(&method.sig),"setter_body":tokens(&method.block)}));
     }
     ensure!(
-        owners.len() == 33 && setters.len() == 32 && alpha.len() == 2,
+        owners.len() == 34 && setters.len() == 33 && alpha.len() == 2,
         "owner allowlist coverage changed: {} owners, {} setters, {} alpha",
         owners.len(),
         setters.len(),
@@ -1181,7 +1214,7 @@ mod tests {
             };
             policies.insert(name.clone(), complete_policy(policy, &codes, &rates)?);
         }
-        assert_eq!(policies.len(), 33);
+        assert_eq!(policies.len(), 34);
         for (name, variant) in [
             ("commit_reveal_period", "WeightCommitInterval"),
             ("commit_reveal_weights_enabled", "CommitRevealEnabled"),

@@ -1,6 +1,6 @@
 //! Offline pin-bump reports, with conservative evidence for cosmetic reconciliation.
 
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result, bail, ensure};
 use rustpython_parser::{Mode, lexer};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -297,6 +297,116 @@ fn reconcile_pending(
     ))
 }
 
+/// D-128: public exports and e2e keys new upstream get pending rows, which
+/// strict parity names until they are ported. Vanished ones still fail.
+fn adopt_pending_exports_and_e2e(
+    root: &Path,
+    index: &super::symbols::Index,
+    tag: &str,
+    added: &mut Vec<String>,
+) -> Result<()> {
+    let missing = super::state::unmapped_exports(root, index)?;
+    if !missing.is_empty() {
+        let path = root.join("parity/exports_extra.toml");
+        let mut extra = fs::read_to_string(&path)?.parse::<DocumentMut>()?;
+        let rows = extra["export"]
+            .as_array_of_tables_mut()
+            .context("export rows absent")?;
+        for (symbol, source) in missing {
+            let mut row = toml_edit::Table::new();
+            row["python"] = value(symbol.as_str());
+            row["home"] = value(format!("pending: new public export at {tag}"));
+            row["reason"] = value(format!(
+                "Added by the {tag} runtime adoption (D-128); no Rust counterpart is reviewed yet."
+            ));
+            row["source"] = value(source.as_str());
+            row["pending"] = value(format!("{tag} adoption"));
+            rows.push(row);
+            added.push(symbol);
+        }
+        fs::write(&path, extra.to_string())?;
+    }
+    let expected = super::state::e2e_keys(root)?;
+    let path = root.join("parity/e2e_map.toml");
+    let mut map = fs::read_to_string(&path)?.parse::<DocumentMut>()?;
+    let tests = map["tests"]
+        .as_table_mut()
+        .context("e2e tests map missing")?;
+    let mut changed = false;
+    // A key upstream dropped leaves the map when it carried no rtao binding
+    // (n/a or pending); a vanished key bound to an rtao test needs review.
+    let vanished = tests
+        .iter()
+        .filter(|(key, row)| {
+            !expected.contains(*key) && (row.get("na").is_some() || row.get("pending").is_some())
+        })
+        .map(|(key, _)| key.to_owned())
+        .collect::<Vec<_>>();
+    for key in vanished {
+        tests.remove(&key);
+        changed = true;
+    }
+    for key in expected {
+        if !tests.contains_key(&key) {
+            let mut row = toml_edit::Table::new();
+            row["pending"] = value("M9");
+            tests.insert(&key, Item::Table(row));
+            added.push(key);
+            changed = true;
+        }
+    }
+    if changed {
+        fs::write(&path, map.to_string())?;
+    }
+    Ok(())
+}
+
+/// `parity pending --base <workspace>`: reconcile only the pending register
+/// with the catalog deltas of a parity pin bump (D-128), as `report --adopt`
+/// does, so regeneration can run before the report. Operations new to the
+/// catalog become pending (their generated entry points are stubs until
+/// ported), removed ones leave it; implemented operations never become
+/// pending, and nothing changes without a parity pin move.
+pub(super) fn pending_sync(root: &Path, args: &[String]) -> Result<()> {
+    let base = match args {
+        [flag, base] if flag == "--base" => PathBuf::from(base),
+        _ => bail!("usage: cargo xtask parity pending --base <workspace>"),
+    };
+    ensure!(
+        base.join("upstream.toml").is_file() && base.canonicalize()? != root.canonicalize()?,
+        "pending baseline must be another workspace"
+    );
+    let mut pending =
+        fs::read_to_string(root.join("parity/pending.toml"))?.parse::<DocumentMut>()?;
+    let mut changed = false;
+    for family in ["intents", "reads"] {
+        let path = format!("website/apps/bittensor-website/public/catalog/{family}.json");
+        let before = names(&base, &path)?;
+        let after = names(root, &path)?;
+        if before == after {
+            continue;
+        }
+        let old = fs::read_to_string(base.join("upstream.toml"))?.parse::<DocumentMut>()?;
+        let new = fs::read_to_string(root.join("upstream.toml"))?.parse::<DocumentMut>()?;
+        ensure!(
+            old["parity"]["commit"].as_str() != new["parity"]["commit"].as_str(),
+            "new or vanished catalog operations require a parity pin bump"
+        );
+        let (merged, delta) = reconcile_pending(&before, &after, &pending[family])?;
+        let mut array = toml_edit::Array::new();
+        for name in &merged {
+            array.push(name.as_str());
+        }
+        pending[family] = value(array);
+        changed = true;
+        println!("{family}: {delta}");
+    }
+    if changed {
+        fs::write(root.join("parity/pending.toml"), pending.to_string())?;
+    }
+    Ok(())
+}
+
 pub(super) fn run(root: &Path, args: &[String]) -> Result<()> {
     let mut base = None;
     let mut out = None;
@@ -381,6 +491,7 @@ pub(super) fn run(root: &Path, args: &[String]) -> Result<()> {
         super::required_string(&pins["parity"], "tag")?.to_owned()
     };
     let mut due = super::port_due::read(root)?;
+    let mut added_rows: Vec<String> = Vec::new();
     let mut changes = Vec::new();
     let mut blessed = BTreeSet::new();
     let mut rederived = BTreeSet::new();
@@ -504,9 +615,42 @@ pub(super) fn run(root: &Path, args: &[String]) -> Result<()> {
                 row["synced_tag"] = value(tag.as_str());
             }
         }
+        if adopt {
+            // D-128: a file new upstream is not held against the runtime. It
+            // gets a pending row (unclassified, nothing ported), which strict
+            // parity names until a maintainer classifies and ports it.
+            let mapped = super::read_map(&map.to_string())?
+                .into_iter()
+                .map(|row| row.py)
+                .collect::<BTreeSet<_>>();
+            let rows = map["file"]
+                .as_array_of_tables_mut()
+                .context("parity map rows absent")?;
+            for path in after.keys().filter(|path| !mapped.contains(*path)) {
+                let mut row = toml_edit::Table::new();
+                row["py"] = value(path.as_str());
+                let mut homes = toml_edit::Array::new();
+                homes.push(format!(
+                    "pending: new upstream file at {tag}, not yet classified or ported"
+                ));
+                row["rs"] = value(homes);
+                row["kind"] = value("ported");
+                row["synced_blob"] = value("pending");
+                row["synced_tag"] = value(tag.as_str());
+                row["milestone"] = value("port due");
+                row["notes"] = value(format!(
+                    "Added by the {tag} runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+                ));
+                rows.push(row);
+                added_rows.push(path.clone());
+            }
+        }
+        if adopt {
+            adopt_pending_exports_and_e2e(root, &index, &tag, &mut added_rows)?;
+        }
         let proposed = super::read_map(&map.to_string())?;
         if adopt {
-            // Unmapped or removed upstream files still fail: they need a decision.
+            // Removed upstream files still fail: they need a decision.
             super::check_files_with(&proposed, &after, false, &due)?;
         } else {
             super::check_files(&proposed, &after, false)?;
@@ -520,7 +664,7 @@ pub(super) fn run(root: &Path, args: &[String]) -> Result<()> {
     if autobless {
         fs::write(root.join("parity/pending.toml"), pending.to_string())?;
     }
-    let report = json!({"schema":1,"changed":changes.len(),"changes":changes,"extraction":{"unchanged":extraction_unchanged,"error":extraction_error},"oracle":{"unchanged":oracle_unchanged,"error":oracle_error},"auto_blessed":blessed,"rederived":rederived,"port_due":due.values().map(|entry|json!({"path":entry.py,"kind":entry.kind,"from":entry.from,"to":entry.to,"tag":entry.tag,"symbols":entry.symbols})).collect::<Vec<_>>(),"catalog_deltas":catalog_deltas,"pending_intents":pending["intents"].as_array().context("pending intents absent")?.len(),"pending_reads":pending["reads"].as_array().context("pending reads absent")?.len(),"proof_policy":"Only previously reconciled non-vendored files qualify; unchanged symbols, complete extracted behavior and authenticated passing oracle evidence (or no committed oracle output on either side under Q30, reported as unverified) are required. Under --adopt, generated, extracted and vendored rows are re-derived and checked in the same run, and other changed reconciled files are listed as port due, never blessed. This report never marks a pending file implemented."});
+    let report = json!({"schema":1,"changed":changes.len(),"changes":changes,"extraction":{"unchanged":extraction_unchanged,"error":extraction_error},"oracle":{"unchanged":oracle_unchanged,"error":oracle_error},"auto_blessed":blessed,"rederived":rederived,"port_due":due.values().map(|entry|json!({"path":entry.py,"kind":entry.kind,"from":entry.from,"to":entry.to,"tag":entry.tag,"symbols":entry.symbols})).collect::<Vec<_>>(),"catalog_deltas":catalog_deltas,"pending_rows_added":added_rows,"pending_intents":pending["intents"].as_array().context("pending intents absent")?.len(),"pending_reads":pending["reads"].as_array().context("pending reads absent")?.len(),"proof_policy":"Only previously reconciled non-vendored files qualify; unchanged symbols, complete extracted behavior and authenticated passing oracle evidence (or no committed oracle output on either side under Q30, reported as unverified) are required. Under --adopt, generated, extracted and vendored rows are re-derived and checked in the same run, and other changed reconciled files are listed as port due, never blessed. This report never marks a pending file implemented."});
     if let Some(parent) = out.parent() {
         fs::create_dir_all(parent)?;
     }
