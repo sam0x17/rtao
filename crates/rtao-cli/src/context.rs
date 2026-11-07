@@ -9,7 +9,7 @@ use crate::{
     prompt::Terminal,
 };
 use rtao::{
-    client::{Client, ClientConfig},
+    client::{CallBytes, Client, ClientConfig},
     primitives::AccountId,
     signer::{DynKeySource, SignerRole},
     tx::{DynIntent, ExecuteOptions, PlanOptions, ShieldOptions},
@@ -362,12 +362,26 @@ impl AppContext {
     }
     /// Best-effort carrier warning, including Python's second balance probe
     /// after a balance or fee failure. A known zero balance is sufficient.
-    pub async fn shield_fee_shortfall(&self, client: &Client, payer: AccountId) -> Option<String> {
+    /// The carrier is quoted for the actual composed `call`; without one (or
+    /// when it cannot be composed) only the zero-balance warning remains.
+    pub async fn shield_fee_shortfall(
+        &self,
+        client: &Client,
+        payer: AccountId,
+        call: Option<&CallBytes>,
+    ) -> Option<String> {
         let pair = async {
             let free = rtao::reads::generated::interfaces::balance(client, payer)
                 .await
                 .ok()?;
-            let fee = client.estimate_shielded_carrier_fee(payer).await.ok()?;
+            let fee = client
+                .estimate_shielded_carrier_fee(
+                    payer,
+                    call?.clone(),
+                    rtao_catalog::py::MEV_SHIELD_ERA_PERIOD,
+                )
+                .await
+                .ok()?;
             Some((free, fee))
         }
         .await;
@@ -391,11 +405,17 @@ impl AppContext {
         &self,
         client: &Client,
         payer: AccountId,
+        call: Option<&CallBytes>,
         mut choice: ShieldChoice,
         required: bool,
         op: &str,
     ) -> Result<ShieldChoice, CliError> {
-        if choice.enabled && self.shield_fee_shortfall(client, payer).await.is_some() {
+        if choice.enabled
+            && self
+                .shield_fee_shortfall(client, payer, call)
+                .await
+                .is_some()
+        {
             if choice.forced || required {
                 return Err(CliError::input("MEV-shielded submission needs free TAO for the outer carrier fee").with_help(if required {format!("{op} cannot submit unshielded")} else {"pass --no-mev-shield to submit unshielded (alpha fees work on the bare call), or fund the signing account with free TAO".into()}));
             }
@@ -747,8 +767,34 @@ impl AppContext {
         .or_else(|error| keys.bare_signer_account().ok_or(error))
         .map_err(|e| CliError::failure(e.to_string()))?;
         if !self.globals.uses_external_signer() {
+            // Python plans the intent to quote the carrier for its actual call;
+            // a plan that cannot be composed leaves only the zero-balance check.
+            let call = if choice.enabled {
+                executor
+                    .plan_dyn(
+                        intent,
+                        keys,
+                        &PlanOptions {
+                            proxy_for,
+                            force_proxy_type,
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                    .ok()
+                    .map(|plan| plan.call().clone())
+            } else {
+                None
+            };
             choice = self
-                .preflight_shield_fee(client, payer, choice, required_shield, spec.name)
+                .preflight_shield_fee(
+                    client,
+                    payer,
+                    call.as_ref(),
+                    choice,
+                    required_shield,
+                    spec.name,
+                )
                 .await?;
         }
         if control.period.is_some() || (!self.globals.dry_run && control.execution.is_some()) {
@@ -811,7 +857,9 @@ impl AppContext {
         if self.globals.dry_run {
             if choice.enabled {
                 plan.effects.push("submitted MEV-shielded: the call stays encrypted in the mempool until the block author decrypts and executes it".into());
-                if let Some(warning) = self.shield_fee_shortfall(client, plan.signer_address).await
+                if let Some(warning) = self
+                    .shield_fee_shortfall(client, plan.signer_address, Some(plan.call()))
+                    .await
                 {
                     plan.warnings.push(warning);
                 }
@@ -849,7 +897,10 @@ impl AppContext {
         // acquisition; previews keep their warning-only behavior above.
         if choice.enabled
             && self.globals.uses_external_signer()
-            && self.shield_fee_shortfall(client, payer).await.is_some()
+            && self
+                .shield_fee_shortfall(client, payer, Some(plan.call()))
+                .await
+                .is_some()
         {
             if choice.forced || required_shield {
                 return Err(CliError::failure(

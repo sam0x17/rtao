@@ -409,12 +409,17 @@ impl Executor {
             ));
         }
         plan.warnings = warnings;
+        let reserve = crate::policy::setup_reserve(&built.extras);
         if let Some(policy) = opts.policy.as_ref().or(self.policy.as_ref()) {
-            plan.violations = policy.check(&safety, plan.fee);
+            plan.violations = policy.check_with_setup_reserve(&safety, plan.fee, reserve);
         }
         plan.violations.extend(preview.blocks.clone());
         plan.extras = std::mem::take(&mut built.extras);
-        plan.spend = safety.spend;
+        plan.spend = if reserve.rao() == 0 {
+            safety.spend
+        } else {
+            crate::policy::with_setup_reserve(safety.spend, reserve)
+        };
         plan.args = intent.to_json_dyn();
         if let Some(args) = plan.args.as_object_mut() {
             args.remove("op");
@@ -551,6 +556,14 @@ impl Executor {
             call: &built.call,
         };
         let mut preview = intent.preflight_dyn(&pfcx).await?;
+        self.account_reserve_preview(
+            &snapshot,
+            &pfcx,
+            &built.extras,
+            semantic.spend_dyn(),
+            &mut preview,
+        )
+        .await;
         let mut warnings = preview.warnings.clone();
         warnings.extend(surface_warnings);
         let role: SignerRole = intent.signer_role_dyn()?;
@@ -561,53 +574,105 @@ impl Executor {
         {
             warnings.push(rtao_catalog::py::COLDKEY_FEE_WARNING.into());
         }
-        let active_policy = opts.policy.as_ref().or(self.policy.as_ref());
-        if preview.estimated_fee.is_none()
-            && (!shielded || active_policy.is_some_and(|policy| policy.max_fee.is_some()))
-        {
-            match pfcx.estimate_fee().await {
-                Ok(fee) => preview.estimated_fee = Some(fee),
-                Err(error) if shielded => {
-                    return Err(TxError::Policy(PolicyError {
-                        violations: vec![format!(
-                            "could not estimate fee to enforce max_fee_tao: {error}"
-                        )],
-                    }));
+        // Python's `_quote_submission`: price both signed transactions of the
+        // selected route before approval, without opening keys. A required
+        // Shield route is the route even when planning.
+        let quote_shielded = shielded || declared_safety.mev_shield_required;
+        let inner_fee = match preview.estimated_fee {
+            Some(fee) => Some(fee),
+            None => match pfcx.estimate_fee().await {
+                Ok(fee) => Some(fee),
+                Err(error) => {
+                    warnings.push(format!("could not estimate fee: {error}"));
+                    None
                 }
-                Err(error) => warnings.push(format!("could not estimate fee: {error}")),
-            }
-        }
-        if shielded && let Some(required) = preview.required_free {
-            let funds = async {
-                let free = match preview.available_free {
-                    Some(free) => free,
-                    None => crate::multisig::free_balance(&snapshot, signer_address).await?,
-                };
-                let carrier = self
-                    .client
-                    .estimate_shielded_carrier_fee(signer_address)
-                    .await?;
-                Ok::<_, rtao_client::ClientError>((free, carrier))
-            }
-            .await;
-            match funds {
-                Ok((free, carrier)) => {
-                    let combined = u128::from(required.rao()) + u128::from(carrier.rao());
-                    if required.rao() <= free.rao() && u128::from(free.rao()) < combined {
-                        let combined = u64::try_from(combined)
-                            .map(|rao| rtao_primitives::DynBalance::from(Balance::<Tao>::from_rao(rao)).to_string())
-                            .unwrap_or_else(|_| format!("{} rao", combined));
+            },
+        };
+        if quote_shielded {
+            let carrier = self
+                .client
+                .estimate_shielded_carrier_fee(
+                    signer_address,
+                    built.call.clone(),
+                    rtao_catalog::py::MEV_SHIELD_ERA_PERIOD,
+                )
+                .await;
+            let carrier = match carrier {
+                Err(error) => {
+                    warnings.push(format!(
+                        "could not estimate MEV-shield carrier fee: {error}"
+                    ));
+                    if preview.required_free.is_some() {
                         preview.blocks.push(format!(
-                            "free TAO ({}) covers the inner claim reserve ({}) but not that reserve plus the MEV-shield carrier fee (~{combined})",
-                            rtao_primitives::DynBalance::from(free),
-                            rtao_primitives::DynBalance::from(required),
+                            "could not verify free TAO for the shielded call plus its carrier fee; refusing to risk a post-carrier reserve shortfall ({error})"
                         ));
                     }
+                    None
                 }
-                Err(error) => preview.blocks.push(format!(
-                    "could not verify free TAO for the shielded call plus its carrier fee; refusing to risk a post-carrier reserve shortfall ({error})"
+                Ok(carrier) => {
+                    if let Some(required) = preview.required_free {
+                        let available = match preview.available_free {
+                            Some(free) => Some(free),
+                            None => crate::multisig::free_balance(&snapshot, signer_address)
+                                .await
+                                .ok(),
+                        };
+                        let combined = required
+                            .rao()
+                            .checked_add(carrier.rao())
+                            .ok_or(rtao_primitives::UnitError::Overflow)
+                            .map_err(IntentError::from)?;
+                        let combined = Balance::<Tao>::from_rao(combined);
+                        match available {
+                            Some(free) => {
+                                preview.available_free = Some(free);
+                                if required.rao() <= free.rao() && free.rao() < combined.rao() {
+                                    preview.blocks.push(format!(
+                                        "free TAO ({}) covers the inner call reserve ({}) but not that reserve plus the MEV-shield carrier fee (~{})",
+                                        rtao_primitives::DynBalance::from(free),
+                                        rtao_primitives::DynBalance::from(required),
+                                        rtao_primitives::DynBalance::from(combined),
+                                    ));
+                                }
+                            }
+                            None => preview.blocks.push(
+                                "could not verify free TAO for the shielded call plus its carrier fee; refusing to risk a post-carrier reserve shortfall".into(),
+                            ),
+                        }
+                        preview.required_free = Some(combined);
+                    }
+                    Some(carrier)
+                }
+            };
+            preview.estimated_fee = match (inner_fee, carrier) {
+                (Some(inner), Some(carrier)) => Some(Balance::from_rao(
+                    inner
+                        .rao()
+                        .checked_add(carrier.rao())
+                        .ok_or(rtao_primitives::UnitError::Overflow)
+                        .map_err(IntentError::from)?,
                 )),
-            }
+                _ => None,
+            };
+            let text = |fee: Option<Balance<Tao>>| {
+                fee.map_or_else(
+                    || "unavailable".to_owned(),
+                    |fee| rtao_primitives::DynBalance::from(fee).to_string(),
+                )
+            };
+            preview.facts.extend([
+                (
+                    "Inner transaction fee (estimated)".to_owned(),
+                    text(inner_fee),
+                ),
+                ("Shield carrier fee (estimated)".to_owned(), text(carrier)),
+                (
+                    "Total transaction fee (estimated)".to_owned(),
+                    text(preview.estimated_fee),
+                ),
+            ]);
+        } else {
+            preview.estimated_fee = inner_fee;
         }
         Ok(ReviewedIntent {
             built,
@@ -616,6 +681,154 @@ impl Executor {
             warnings,
             role,
         })
+    }
+
+    /// Python's account-reserve preview for calls that create a protected
+    /// pure proxy or carry multisig approval obligations: the permanent and
+    /// refundable reserves are shown, and every account that pays a reserve,
+    /// the outer fee or the payment must hold it above its retained balance
+    /// (existential deposit or freeze).
+    async fn account_reserve_preview(
+        &self,
+        view: &rtao_client::Snapshot,
+        pfcx: &PreflightCx<'_, dyn rtao_client::DynView + '_>,
+        extras: &Map<String, Value>,
+        spend: rtao_primitives::Spend,
+        preview: &mut IntentPreflight,
+    ) {
+        use rtao_client::ViewExt;
+        let rao = |key: &str| extras.get(key).and_then(Value::as_u64);
+        let protected = rao("protected_pure_registration_deposit_rao");
+        if let Some(deposit) = protected {
+            let deposit = rtao_primitives::DynBalance::from(Balance::<Tao>::from_rao(deposit));
+            let refundable = rtao_primitives::DynBalance::from(Balance::<Tao>::from_rao(
+                rao("pure_proxy_deposit_rao").unwrap_or_default(),
+            ));
+            preview.effects.push(format!(
+                "authorize a permanent reserve of {deposit} when protected pure-proxy creation executes; killing the proxy does not refund this registration reserve"
+            ));
+            preview.facts.extend([
+                (
+                    "Authorized pure-proxy registration reserve (permanent)".into(),
+                    deposit.to_string(),
+                ),
+                (
+                    "Authorized pure-proxy deposit (refundable on kill)".into(),
+                    refundable.to_string(),
+                ),
+            ]);
+        }
+        let approvals = extras
+            .get("multisig_approvals")
+            .and_then(Value::as_array)
+            .filter(|approvals| !approvals.is_empty());
+        if protected.is_none() && approvals.is_none() {
+            return;
+        }
+        let maximum = rao("hashed_registration_max_deposit_rao").unwrap_or_default();
+        let checked = async {
+            let fee = pfcx.estimate_fee().await?.rao();
+            let minimum = view
+                .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
+                .await
+                .map_err(IntentError::from)?
+                .0;
+            let mut reserves: Vec<(AccountId, u128)> = Vec::new();
+            let mut add = |payer: AccountId, reserve: u128| {
+                match reserves.iter_mut().find(|(account, _)| *account == payer) {
+                    Some((_, total)) => *total += reserve,
+                    None => reserves.push((payer, reserve)),
+                }
+            };
+            let invalid = |what: &str| IntentError::validation(format!("invalid {what}"));
+            if let Some(Value::Object(payers)) = extras.get("pure_proxy_reserves") {
+                for (payer, reserve) in payers {
+                    let payer: AccountId = payer.parse().map_err(|_| invalid("reserve payer"))?;
+                    add(payer, u128::from(reserve.as_u64().ok_or_else(|| invalid("reserve"))?));
+                }
+            }
+            let mut approval_deposit = 0u128;
+            for approval in approvals.into_iter().flatten() {
+                let payer: AccountId = approval["payer"]
+                    .as_str()
+                    .and_then(|payer| payer.parse().ok())
+                    .ok_or_else(|| invalid("approval payer"))?;
+                let threshold = approval["threshold"]
+                    .as_u64()
+                    .and_then(|threshold| u16::try_from(threshold).ok())
+                    .ok_or_else(|| invalid("approval threshold"))?;
+                let reserve = if approval["opening"].as_bool() == Some(true) && threshold >= 2 {
+                    u128::from(crate::multisig::multisig_deposit(view, threshold).await?.rao())
+                } else {
+                    0
+                };
+                approval_deposit += reserve;
+                add(payer, reserve);
+            }
+            if approval_deposit != 0 {
+                preview.facts.push((
+                    "Multisig approval reserve (refundable)".into(),
+                    u64::try_from(approval_deposit).map_or_else(
+                        |_| format!("{approval_deposit} rao"),
+                        |rao| {
+                            rtao_primitives::DynBalance::from(Balance::<Tao>::from_rao(rao))
+                                .to_string()
+                        },
+                    ),
+                ));
+            }
+            add(pfcx.fee_payer, 0);
+            let spent = match spend {
+                rtao_primitives::Spend::Bounded(spend) => u128::from(spend.rao()),
+                _ => 0,
+            };
+            for (payer, reserve) in reserves {
+                let account = view
+                    .storage(&rtao_runtime::storage::system::ACCOUNT, (payer,))
+                    .await
+                    .map_err(IntentError::from)?;
+                let data = account.as_core().field("data");
+                let read = |name: &str| {
+                    data.and_then(|data| data.field(name))
+                        .and_then(ValueExt::as_u128)
+                        .unwrap_or_default()
+                };
+                let free = read("free");
+                let mut required = reserve + read("frozen").max(u128::from(minimum));
+                if payer == pfcx.fee_payer {
+                    required += u128::from(fee);
+                }
+                if payer == pfcx.dispatch_origin {
+                    required += spent + u128::from(maximum);
+                }
+                if payer == pfcx.fee_payer {
+                    let required = Balance::<Tao>::from_rao(
+                        u64::try_from(required).map_err(|_| rtao_primitives::UnitError::Overflow)?,
+                    );
+                    preview.required_free = Some(match preview.required_free {
+                        Some(existing) if existing.rao() > required.rao() => existing,
+                        _ => required,
+                    });
+                    preview.available_free = Some(Balance::from_rao(
+                        u64::try_from(free).map_err(|_| rtao_primitives::UnitError::Overflow)?,
+                    ));
+                }
+                if free < required {
+                    preview.blocks.push(
+                        "insufficient spendable balance for account reserves, payment and transaction fee"
+                            .into(),
+                    );
+                }
+            }
+            preview.estimated_fee = Some(Balance::from_rao(fee));
+            Ok::<_, IntentError>(())
+        }
+        .await;
+        if let Err(error) = checked {
+            preview.blocks.push(format!(
+                "could not quote account reserves and transaction fee: {error}"
+            ));
+        }
     }
 
     /// Typed execution, restricted to the interface's compile-time signing role.
@@ -995,7 +1208,11 @@ impl Executor {
                 )
                 .await?;
             let mut violations = active_policy.as_ref().map_or_else(Vec::new, |policy| {
-                policy.check(&reviewed.safety, reviewed.preview.estimated_fee)
+                policy.check_with_setup_reserve(
+                    &reviewed.safety,
+                    reviewed.preview.estimated_fee,
+                    crate::policy::setup_reserve(&reviewed.built.extras),
+                )
             });
             violations.extend(reviewed.preview.blocks);
             if !violations.is_empty() {
@@ -1065,9 +1282,7 @@ impl Executor {
                     .await?;
                 continue;
             }
-            // Python's explicit shield path keeps creation coordinates in the
-            // receipt; only ordinary execute enriches pure-proxy result data.
-            let result = match (&opts.execute.journal, result) {
+            let mut result = match (&opts.execute.journal, result) {
                 (Some(binding), Ok(report)) => self.restore_journal_result(
                     binding,
                     report,
@@ -1076,6 +1291,11 @@ impl Executor {
                 )?,
                 (_, result) => self.lift_submission(result, reviewed.built.extras)?,
             };
+            // Python's shield path adds the same operation data after the
+            // carrier's metadata (v488).
+            if result.success {
+                semantic_result_data(intent.semantic_intent_dyn().spec().name, &mut result);
+            }
             if opts.execute.journal.is_none()
                 && opts.execute.replan_owner_rate_limit
                 && owner_rate_replan(intent, &result)
@@ -1415,9 +1635,7 @@ impl Executor {
                         continue;
                     }
                     if result.success {
-                        if intent.semantic_intent_dyn().spec().name == "create_pure_proxy" {
-                            pure_created_data(&mut result);
-                        }
+                        semantic_result_data(intent.semantic_intent_dyn().spec().name, &mut result);
                         result.data.extend(plan.extras);
                     }
                     return self
@@ -1548,6 +1766,179 @@ impl Executor {
             }
         }
         Err(TxError::Rpc(rtao_rpc::RpcError::SubscriptionLost))
+    }
+}
+
+/// Python's `Balance.decimal` formatted with `"f"`: only significant fraction digits.
+fn decimal_text(rao: u128) -> String {
+    let integer = rao / 1_000_000_000;
+    let fraction = rao % 1_000_000_000;
+    let text = format!("{integer}.{fraction:09}");
+    text.trim_end_matches('0').trim_end_matches('.').to_owned()
+}
+
+/// `reason.name or reason.message` of Python's `chain_error_from_dispatch`.
+fn dispatch_reason(error: &Value) -> String {
+    if let Some(module) = error.get("Module") {
+        let pallet = module.get("index").and_then(Value::as_u64);
+        let index = match module.get("error") {
+            Some(Value::String(raw)) => {
+                let raw = raw.strip_prefix("0x").unwrap_or(raw);
+                u64::from_str_radix(raw.get(..2).unwrap_or("0"), 16).ok()
+            }
+            Some(Value::Array(raw)) => raw.first().and_then(Value::as_u64),
+            Some(raw) => raw.as_u64(),
+            None => Some(0),
+        };
+        if let (Some(pallet), Some(index)) = (pallet, index)
+            && let Some(info) = rtao_runtime::errors::MODULE_ERRORS.iter().find(|info| {
+                u64::from(info.pallet_index) == pallet && u64::from(info.error_index) == index
+            })
+        {
+            return info.name.to_owned();
+        }
+        return format!(
+            "module error {}/{}",
+            pallet.map_or_else(|| "-1".into(), |value| value.to_string()),
+            index.map_or_else(|| "0".into(), |value| value.to_string())
+        );
+    }
+    if let Value::Object(error) = error {
+        for wrapper in [
+            "BadOrigin",
+            "CannotLookup",
+            "Other",
+            "Token",
+            "Arithmetic",
+            "Transactional",
+            "Exhausted",
+            "Corruption",
+            "Unavailable",
+            "RootNotAllowed",
+        ] {
+            let Some(variant) = error.get(wrapper) else {
+                continue;
+            };
+            if matches!(wrapper, "Token" | "Arithmetic" | "Transactional")
+                && let Some(name) = variant
+                    .as_object()
+                    .and_then(|variant| variant.keys().next())
+            {
+                return name.clone();
+            }
+            return wrapper.to_owned();
+        }
+    }
+    match error {
+        Value::String(name) => name.clone(),
+        other => other.to_string(),
+    }
+}
+
+fn reference_text(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    }
+}
+
+/// What each gamma spend entry did, in order (Python's `_gamma_spent_data`).
+///
+/// Nothing while the spend has not run: submitted without waiting, or a
+/// multisig approval short of its threshold.
+fn gamma_spent_data(result: &mut ExtrinsicResult) {
+    if result.events.is_empty()
+        || result.events.iter().any(|event| {
+            event.matches("Multisig", "NewMultisig")
+                || event.matches("Multisig", "MultisigApproval")
+        })
+    {
+        return;
+    }
+    let mut spent = Vec::new();
+    let mut skipped = Vec::new();
+    for event in &result.events {
+        let skip = event.matches("SubtensorModule", "GammaSpendSkipped");
+        if !skip && !event.matches("SubtensorModule", "GammaSpent") {
+            continue;
+        }
+        let attributes = rtao_core::codec::value::to_corpus_json(&event.attributes);
+        let mut entry = Map::new();
+        entry.insert(
+            "hotkey_ss58".into(),
+            json!(reference_text(&attributes["hotkey"])),
+        );
+        entry.insert(
+            "amount_gamma".into(),
+            json!(rtao_primitives::gamma::gamma_from_units(
+                attributes["amount"]
+                    .as_u64()
+                    .map(u128::from)
+                    .or_else(|| attributes["amount"].to_string().parse().ok())
+                    .unwrap_or_default()
+            )),
+        );
+        entry.insert(
+            "reference".into(),
+            json!(reference_text(&attributes["reference"])),
+        );
+        if skip {
+            entry.insert(
+                "reason".into(),
+                json!(dispatch_reason(&attributes["reason"])),
+            );
+            skipped.push(Value::Object(entry));
+        } else {
+            spent.push(Value::Object(entry));
+        }
+    }
+    result.data.insert("spent".into(), Value::Array(spent));
+    result.data.insert("skipped".into(), Value::Array(skipped));
+}
+
+/// What a gamma mint credited, from its `GammaMinted` event (Python's `_gamma_minted_data`).
+fn gamma_minted_data(result: &mut ExtrinsicResult) {
+    let Some(event) = result
+        .events
+        .iter()
+        .find(|event| event.matches("SubtensorModule", "GammaMinted"))
+    else {
+        return;
+    };
+    let attributes = rtao_core::codec::value::to_corpus_json(&event.attributes);
+    let units = |value: &Value| {
+        value
+            .as_u64()
+            .map(u128::from)
+            .or_else(|| value.to_string().parse().ok())
+            .unwrap_or_default()
+    };
+    let cap = &attributes["daily_spend_cap"];
+    result.data.insert(
+        "minted".into(),
+        json!({
+            "hotkey_ss58": reference_text(&attributes["hotkey"]),
+            "spender_ss58": reference_text(&attributes["spender"]),
+            "daily_spend_cap_gamma": if cap.is_null() {
+                Value::Null
+            } else {
+                json!(rtao_primitives::gamma::gamma_from_units(units(cap)))
+            },
+            "alpha_burned": decimal_text(units(&attributes["alpha"])),
+            "tao_value": decimal_text(units(&attributes["value"])),
+            "gamma": rtao_primitives::gamma::gamma_from_units(units(&attributes["gamma"])),
+        }),
+    );
+}
+
+/// Receipt data an operation's own events add (pure proxy coordinates,
+/// gamma spends and mints), as Python's executor attaches it.
+fn semantic_result_data(op: &str, result: &mut ExtrinsicResult) {
+    match op {
+        "create_pure_proxy" => pure_created_data(result),
+        "spend_gamma" => gamma_spent_data(result),
+        "mint_gamma" | "mint_gamma_with_stake" => gamma_minted_data(result),
+        _ => {}
     }
 }
 
@@ -1848,6 +2239,48 @@ mod tests {
         Mutex,
         atomic::{AtomicUsize, Ordering},
     };
+
+    #[test]
+    fn gamma_receipt_amounts_and_skip_reasons_follow_python() {
+        // Python's Balance.decimal formatted with "f".
+        assert_eq!(decimal_text(0), "0");
+        assert_eq!(decimal_text(1), "0.000000001");
+        assert_eq!(decimal_text(1_500_000_000), "1.5");
+        assert_eq!(decimal_text(10_000_000_000), "10");
+        // chain_error_from_dispatch: catalog name, unknown module, wrappers.
+        let known = rtao_runtime::errors::MODULE_ERRORS
+            .iter()
+            .find(|error| error.pallet == "SubtensorModule" && error.name == "GammaDisabled")
+            .expect("generated error");
+        assert_eq!(
+            dispatch_reason(&json!({"Module": {
+                "index": known.pallet_index,
+                "error": [known.error_index, 0, 0, 0],
+            }})),
+            "GammaDisabled"
+        );
+        assert_eq!(
+            dispatch_reason(&json!({"Module": {
+                "index": known.pallet_index,
+                "error": format!("0x{:02x}000000", known.error_index),
+            }})),
+            "GammaDisabled"
+        );
+        assert_eq!(
+            dispatch_reason(&json!({"Module": {"index": 250, "error": [7, 0, 0, 0]}})),
+            "module error 250/7"
+        );
+        assert_eq!(
+            dispatch_reason(&json!({"Token": {"FundsUnavailable": null}})),
+            "FundsUnavailable"
+        );
+        assert_eq!(
+            dispatch_reason(&json!({"Token": "FundsUnavailable"})),
+            "Token"
+        );
+        assert_eq!(dispatch_reason(&json!({"BadOrigin": null})), "BadOrigin");
+        assert_eq!(dispatch_reason(&json!("BadOrigin")), "BadOrigin");
+    }
 
     type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 

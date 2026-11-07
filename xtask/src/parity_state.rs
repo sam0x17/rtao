@@ -912,7 +912,7 @@ const CLIENT_E2E_FIXTURES: &[ClientE2eFixture] = &[
             "plan_dyn",
             "execute_dyn",
             "assert_policy",
-            "assert_fee_probe",
+            "assert_fee_probes",
             "assert_no_private_or_submit",
             "assert_eq",
         ],

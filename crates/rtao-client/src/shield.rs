@@ -17,6 +17,23 @@ use std::{
     time::Duration,
 };
 
+/// Bytes ML-KEM-768 sealing adds to a signed inner transaction.
+#[doc(alias = "bittensor._transport.extrinsics.SHIELD_ENCRYPTION_OVERHEAD")]
+pub const SHIELD_ENCRYPTION_OVERHEAD: usize = 16 + 2 + 1088 + 24 + 16;
+
+/// Ciphertext size for a signed inner transaction of `extrinsic_size` bytes.
+#[doc(alias = "bittensor._transport.extrinsics.shielded_ciphertext_size")]
+pub fn shielded_ciphertext_size(extrinsic_size: usize) -> Result<usize, ClientError> {
+    let maximum = rtao_catalog::py::MAX_SHIELDED_CIPHERTEXT_BYTES;
+    let size = extrinsic_size.saturating_add(SHIELD_ENCRYPTION_OVERHEAD);
+    if u64::try_from(size).map_or(true, |size| size > maximum) {
+        return Err(ClientError::Protocol(format!(
+            "encrypted transaction exceeds the {maximum}-byte carrier limit"
+        )));
+    }
+    Ok(size)
+}
+
 /// The only mortal periods accepted by the runtime's shield mortality check.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ShieldPeriod {
@@ -239,20 +256,77 @@ fn recovered_call_result(
 }
 
 impl Client {
-    /// Price the maximum-size carrier with public identity and a fresh nonce.
+    /// Quote the carrier for `call` without signing or disclosing it.
+    ///
+    /// The inner transaction is sized as it would be signed: a zero
+    /// signature in the complete envelope at the next nonce plus one, with a
+    /// mortal era of `period` blocks; the carrier holds a zero ciphertext of
+    /// that size plus [`SHIELD_ENCRYPTION_OVERHEAD`] and is priced at the next
+    /// nonce with the same era. A call whose encrypted size would exceed the
+    /// runtime's ciphertext bound is refused, as its submission would be.
+    #[doc(alias = "bittensor.executor.estimate_shielded_carrier_fee")]
     pub async fn estimate_shielded_carrier_fee(
         &self,
         payer: AccountId,
+        call: CallBytes,
+        period: u64,
     ) -> Result<Balance<Tao>, ClientError> {
+        self.ensure_signing().await?;
         let runtime = self.refresh_runtime().await?;
-        let length = usize::try_from(rtao_catalog::py::MAX_SHIELDED_CIPHERTEXT_BYTES)
-            .map_err(|_| ClientError::Protocol("shield ciphertext bound exceeds usize".into()))?;
-        let call = rtao_runtime::calls::mev_shield::submit_encrypted(vec![0; length])
+        call.ensure_runtime(&runtime).map_err(ClientError::from)?;
+        let nonce = self.nonces().reported(&payer).await?;
+        let genesis = self.genesis().0;
+        let params = |nonce| rtao_core::extrinsic::TxParams {
+            // Only the encoded length matters for the quote: a mortal era is
+            // always two bytes, whatever its phase.
+            era: rtao_core::codec::Value::record(vec![
+                (
+                    "period".into(),
+                    rtao_core::codec::Value::Uint(period.into()),
+                ),
+                ("current".into(), rtao_core::codec::Value::Uint(0)),
+            ]),
+            nonce,
+            tip: 0,
+            tip_asset_id: None,
+            genesis_hash: genesis,
+            era_block_hash: genesis,
+            metadata_hash: None,
+        };
+        let version = u8::from(CryptoType::Sr25519);
+        let (inner, _) = runtime
+            .core()
+            .encode_signed_extrinsic(
+                call.as_bytes(),
+                payer.0,
+                &[0; 64],
+                version,
+                &params(nonce + 1),
+            )
+            .map_err(CoreError::from)?;
+        let size = shielded_ciphertext_size(inner.len())?;
+        let carrier = rtao_runtime::calls::mev_shield::submit_encrypted(vec![0; size])
             .compose(&runtime)
             .map_err(ClientError::from)?;
-        let fee = self
-            .estimate_weight(call, payer, CryptoType::Sr25519)
+        let (outer, _) = runtime
+            .core()
+            .encode_signed_extrinsic(
+                carrier.as_bytes(),
+                payer.0,
+                &[0; 64],
+                version,
+                &params(nonce),
+            )
+            .map_err(CoreError::from)?;
+        let request = rtao_core::ops::fee::request(&outer, None).map_err(CoreError::from)?;
+        let response: serde_json::Value = self
+            .submit_client()
+            .await?
+            .request(request.method, request.params)
             .await?;
+        let fee = rtao_core::ops::fee::decode(runtime.core(), &response)
+            .map_err(CoreError::from)
+            .map_err(ClientError::from)?;
         Ok(Balance::from_rao(fee.partial_fee))
     }
 

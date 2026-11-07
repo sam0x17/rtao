@@ -1667,8 +1667,10 @@ async fn transient_balance_failure_reprobes_known_zero_before_carrier_decision()
             detail: "fixture failure".into(),
         })),
     );
+    let call =
+        rtao_runtime::calls::system::remark(vec![1]).compose(&client.refresh_runtime().await?)?;
     let warning = ctx
-        .shield_fee_shortfall(&client, keys.key.account())
+        .shield_fee_shortfall(&client, keys.key.account(), Some(&call))
         .await
         .ok_or("fallback zero balance")?;
     assert_eq!(

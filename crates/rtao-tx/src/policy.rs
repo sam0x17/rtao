@@ -121,6 +121,18 @@ pub struct Policy {
 impl Policy {
     /// Check exact native rao and preserve Python's violation order and wording.
     pub fn check(&self, subject: &dyn PolicySubject, fee: Option<Balance<Tao>>) -> Vec<String> {
+        self.check_with_setup_reserve(subject, fee, Balance::from_rao(0))
+    }
+
+    /// [`Self::check`] with a permanent account-setup reserve (a protected
+    /// pure proxy's registration reserve) counted as spend.
+    #[doc(alias = "bittensor.intents.plan.Policy.check")]
+    pub fn check_with_setup_reserve(
+        &self,
+        subject: &dyn PolicySubject,
+        fee: Option<Balance<Tao>>,
+        reserve: Balance<Tao>,
+    ) -> Vec<String> {
         if subject.is_raw() {
             return self.check_raw_call();
         }
@@ -144,7 +156,7 @@ impl Policy {
         }
         if let Some(max) = self.max_spend {
             let max_label = rtao_primitives::DynBalance::from(max);
-            match subject.spend() {
+            match with_setup_reserve(subject.spend(), reserve) {
             Spend::Unbounded=>violations.push(format!("{} spends an amount that cannot be bounded before execution; max_spend_tao {max_label} blocks it",subject.op())),
             Spend::Bounded(spend) if spend.rao()>max.rao()=>violations.push(format!("spend {} exceeds max_spend_tao {max_label}",rtao_primitives::DynBalance::from(spend))),
             Spend::None|Spend::Bounded(_)=>{}
@@ -183,9 +195,85 @@ impl Policy {
     }
 }
 
+/// A bounded spend plus a permanent setup reserve; an unbounded spend stays
+/// unbounded, and a spend of nothing becomes the reserve (Python's
+/// `(spend or Balance(0)) + additional_spend`).
+pub(crate) fn with_setup_reserve(spend: Spend, reserve: Balance<Tao>) -> Spend {
+    match spend {
+        Spend::Unbounded => Spend::Unbounded,
+        Spend::None if reserve.rao() == 0 => Spend::None,
+        Spend::None => Spend::Bounded(reserve),
+        Spend::Bounded(spend) => spend
+            .rao()
+            .checked_add(reserve.rao())
+            .map_or(Spend::Unbounded, |rao| {
+                Spend::Bounded(Balance::from_rao(rao))
+            }),
+    }
+}
+
+/// The permanent setup reserve recorded in a composed call's extras.
+pub(crate) fn setup_reserve(extras: &serde_json::Map<String, serde_json::Value>) -> Balance<Tao> {
+    let rao = |key: &str| {
+        extras
+            .get(key)
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or_default()
+    };
+    Balance::from_rao(
+        rao("hashed_registration_max_deposit_rao")
+            .saturating_add(rao("protected_pure_registration_deposit_rao")),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn setup_reserves_count_as_spend_unless_the_spend_is_unbounded() {
+        let reserve = Balance::from_rao(5);
+        assert_eq!(
+            with_setup_reserve(Spend::None, Balance::from_rao(0)),
+            Spend::None
+        );
+        assert_eq!(
+            with_setup_reserve(Spend::None, reserve),
+            Spend::Bounded(reserve)
+        );
+        assert_eq!(
+            with_setup_reserve(Spend::Bounded(Balance::from_rao(7)), reserve),
+            Spend::Bounded(Balance::from_rao(12))
+        );
+        assert_eq!(
+            with_setup_reserve(Spend::Unbounded, reserve),
+            Spend::Unbounded
+        );
+        let extras = serde_json::json!({
+            "protected_pure_registration_deposit_rao": 3,
+            "hashed_registration_max_deposit_rao": 4,
+            "pure_proxy_deposit_rao": 100,
+        });
+        let extras = extras.as_object().cloned().unwrap_or_default();
+        assert_eq!(setup_reserve(&extras).rao(), 7);
+        let policy = Policy {
+            max_spend: Some(Balance::from_rao(10)),
+            ..Default::default()
+        };
+        let subject = IntentSafety {
+            op: "create_pure_proxy",
+            spend: Spend::Bounded(Balance::from_rao(8)),
+            netuids: SmallVec::new(),
+            affects_all_subnets: false,
+            contains_raw_calls: false,
+            mev_shield_required: false,
+        };
+        assert!(policy.check(&subject, None).is_empty());
+        assert_eq!(
+            policy.check_with_setup_reserve(&subject, None, reserve),
+            ["spend τ0.000000013 exceeds max_spend_tao τ0.000000010"]
+        );
+    }
 
     #[test]
     fn raw_children_keep_known_sibling_caps_and_mandatory_transport_requirements() {

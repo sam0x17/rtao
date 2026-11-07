@@ -215,12 +215,26 @@ async fn pure_proxy_clear_and_explicit_shield_receipts_preserve_python_data_shap
                 .unwrap()
         };
         assert_receipt(&shielded, &fake, &signer, 1);
+        // Since v488 the shield path adds the same creation data as a clear
+        // execution, taken from the inner receipt.
         let expected_shield = json!({
             "shielded": true,
             "inner_extrinsic_hash": format!("0x{}", hex::encode(inner_hash.0)),
+            "pure_proxy": PURE,
+            "spawner": signer.account(),
+            "height": 101,
+            "ext_index": 1,
         });
         assert_eq!(Value::Object(shielded.data.clone()), expected_shield);
         assert_eq!(shielded.to_json()["data"], expected_shield);
-        assert_eq!(shielded.output, PureCreated::default());
+        assert_eq!(
+            shielded.output,
+            PureCreated {
+                pure: Some(PURE),
+                spawner: Some(signer.account()),
+                height: Some(101),
+                ext_index: Some(1),
+            }
+        );
     }
 }

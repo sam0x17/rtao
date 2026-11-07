@@ -250,9 +250,15 @@ async fn plan_case(
         if extra.is_none() {
             // Match the ordinary Python table's exact FakeSubstrate fee.
             // Supplemental seeds have their own reviewed runtime overrides.
+            // Required Shield routes pay for both signed transactions (v488).
+            let expected_fee = if intent.as_dyn().semantic_intent_dyn().spec().mev_shield_required {
+                248_828
+            } else {
+                124_414
+            };
             ensure!(
-                plan.fee.map(|fee| fee.rao()) == Some(124_414),
-                "ordinary catalog plan fee differs from 124414 rao: {:?}",
+                plan.fee.map(|fee| fee.rao()) == Some(expected_fee),
+                "ordinary catalog plan fee differs from {expected_fee} rao: {:?}",
                 plan.fee
             );
         }

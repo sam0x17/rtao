@@ -192,6 +192,18 @@ async fn assert_fee_probe(
     since: usize,
     expected: &CallBytes,
 ) -> Result<()> {
+    assert_fee_probes(executor, chain, since, expected, 1).await
+}
+
+/// The first of `count` fee probes prices `expected`; a Shield route's second
+/// prices its carrier.
+async fn assert_fee_probes(
+    executor: &Executor,
+    chain: &FakeChain,
+    since: usize,
+    expected: &CallBytes,
+    count: usize,
+) -> Result<()> {
     let requests = chain.requests();
     let fees = requests[since..]
         .iter()
@@ -200,7 +212,7 @@ async fn assert_fee_probe(
                 && request.params[0] == "TransactionPaymentApi_query_info"
         })
         .collect::<Vec<_>>();
-    assert_eq!(fees.len(), 1);
+    assert_eq!(fees.len(), count);
     assert!(fees[0].params[2].is_null());
     let encoded = fees[0].params[1].as_str().context("fee input")?;
     let input = hex::decode(encoded.strip_prefix("0x").context("hex fee input")?)?;
@@ -426,8 +438,14 @@ async fn client_subnet_allowlist_refuses_destination_and_global_unstake() -> Res
         assert_eq!(plan.call(), &expected);
         assert!(!plan.ok());
         assert_eq!(plan.violations, [violation]);
-        assert_eq!(plan.fee.map(|fee| fee.rao()), Some(FEE));
-        assert_fee_probe(&executor, &chain, start, &expected).await?;
+        // A required Shield route quotes both signed transactions (v488).
+        let shielded = intent.spec().mev_shield_required;
+        let probes = if shielded { 2 } else { 1 };
+        assert_eq!(
+            plan.fee.map(|fee| fee.rao()),
+            Some(FEE * u64::try_from(probes)?)
+        );
+        assert_fee_probes(&executor, &chain, start, &expected, probes).await?;
         let start = chain.requests().len();
         let error = executor
             .execute_dyn(
@@ -503,8 +521,14 @@ async fn client_spend_cap_refuses_all_three_unbounded_value_movers() -> Result<(
         assert_eq!(plan.spend, Spend::Unbounded);
         assert!(!plan.ok());
         assert_eq!(plan.violations, [violation.as_str()]);
-        assert_eq!(plan.fee.map(|fee| fee.rao()), Some(FEE));
-        assert_fee_probe(&executor, &chain, start, &expected).await?;
+        // A required Shield route quotes both signed transactions (v488).
+        let shielded = intent.spec().mev_shield_required;
+        let probes = if shielded { 2 } else { 1 };
+        assert_eq!(
+            plan.fee.map(|fee| fee.rao()),
+            Some(FEE * u64::try_from(probes)?)
+        );
+        assert_fee_probes(&executor, &chain, start, &expected, probes).await?;
         let start = chain.requests().len();
         let error = executor
             .execute_dyn(
@@ -519,18 +543,10 @@ async fn client_spend_cap_refuses_all_three_unbounded_value_movers() -> Result<(
             .err()
             .context("unbounded spend")?;
         assert_policy(error, &[violation.as_str()])?;
-        if operation == "burned_register" {
-            // Python requires the shield for this intent. Its semantic spend
-            // check refuses before either signature or a carrier fee probe.
-            assert!(
-                !chain.requests()[start..]
-                    .iter()
-                    .any(|request| request.method == "state_call"
-                        && request.params[0] == "TransactionPaymentApi_query_info")
-            );
-        } else {
-            assert_fee_probe(&executor, &chain, start, &expected).await?;
-        }
+        // Python requires the shield for burned_register. Since v488 its
+        // shielded path quotes both transactions, then the semantic spend
+        // check refuses before either signature.
+        assert_fee_probes(&executor, &chain, start, &expected, probes).await?;
         assert_no_private_or_submit(&executor, &chain, &keys).await;
     }
     executor.client().close().await;

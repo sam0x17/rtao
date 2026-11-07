@@ -874,13 +874,17 @@ impl SyncClient {
         })
     }
 
-    /// Estimate the outer MEV shield carrier's fee.
+    /// Quote the MEV shield carrier for `call` at a `period`-block era.
     pub fn estimate_shielded_carrier_fee(
         &self,
         fee_payer: AccountId,
+        call: rtao_client::CallBytes,
+        period: u64,
     ) -> Result<rtao_primitives::Balance<rtao_primitives::Tao>, Error> {
         self.view.with_view(move |view| async move {
-            view.client().estimate_shielded_carrier_fee(fee_payer).await
+            view.client()
+                .estimate_shielded_carrier_fee(fee_payer, call, period)
+                .await
         })
     }
 

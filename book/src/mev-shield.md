@@ -75,12 +75,14 @@ before signing and again during preparation. Excess lag produces
 the short era even when an ordinary transaction would remain valid.
 
 The signing account needs free TAO for the outer carrier fee. Alpha-fee
-support for an unshielded inner call does not pay that fee. `max_fee` on the
-transaction-layer shield options caps the inner fee; it is not a total
-carrier-plus-inner cap. The executor also checks an intent's required free
+support for an unshielded inner call does not pay that fee. A Shield route's
+estimated fee is the inner fee plus the carrier fee, so `max_fee` on the
+transaction-layer shield options (or a policy) caps their total, and an
+unavailable quote refuses. The executor also checks an intent's required free
 reserve with carrier overhead where its preflight supplies that reserve.
-`Client::estimate_shielded_carrier_fee` uses a conservative maximum-size
-carrier probe with public identity and does not reserve a nonce.
+`Client::estimate_shielded_carrier_fee` sizes the carrier from the actual
+inner call as it would be signed, with public identity and without reserving
+a nonce, and refuses a call whose ciphertext would exceed the runtime bound.
 
 ## CLI routing
 

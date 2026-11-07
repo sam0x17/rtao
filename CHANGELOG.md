@@ -6,8 +6,29 @@
 
 Not a versioned release. Each item links to its section below.
 
+- v488 hand ports, fourth batch (D-134, D-135, issue #12): the shield carrier is quoted from the actual inner call (the earlier maximum-size quote overstated it about fourfold after the v488 bound change), Shield routes report and check both fees, protected pure-proxy reserves count as spend, and gamma receipts carry `spent`/`skipped`/`minted`. The core bump and the hashed/ML-DSA surface wait on a hosted pipeline run (D-135).
 - v488 hand ports, third batch (D-133, issue #12): a later multisig round that must rebuild its call keeps round 1's dynamic inputs and must reproduce its bytes; pure proxies take `account_mode` and quantum-resistant payers create protected pure proxies; nested multisig, announced-proxy and crowdloan calls compose against their real origin with their sudo wrapper. 6 more sources are blessed (84 due).
 - Unchanged: core v478 and its patch, runtime stamps, V15, signing status and extensions, the metadata hash, the commit-reveal path, journal formats.
+
+### v488 hand ports, fourth batch: shield quotes, reserves and gamma receipts (D-134)
+
+#### rtao-client
+
+- Changed (source-breaking): `Client::estimate_shielded_carrier_fee(payer, call, period)` quotes the carrier for the actual inner call at a mortal era of `period` blocks, and refuses a call whose ciphertext would exceed the runtime bound. New: `SHIELD_ENCRYPTION_OVERHEAD`, `shielded_ciphertext_size`.
+
+#### rtao-tx
+
+- Changed: a Shield route (a required-Shield intent, or `submit_shielded`) quotes the inner and carrier fees; `IntentPreflight::estimated_fee` and `Plan::fee` are their sum, the preview lists both and the total, and `required_free` includes the carrier. A `max_fee` policy refuses an unavailable total ("max_fee_tao … is configured but the fee could not be estimated") instead of the former shield-specific message.
+- New: `Policy::check_with_setup_reserve`; a protected pure proxy's permanent registration reserve counts toward `max_spend` and `Plan::spend`, and its reserves, deposit and every payer's balance are previewed (also for `multisig_approvals` extras).
+- New: receipts of `spend_gamma` carry `spent` and `skipped` (with the skip reason), and of `mint_gamma`/`mint_gamma_with_stake` carry `minted`, as Python's executor attaches them; the shield path adds the same operation data and pure-proxy creation coordinates as a clear execution (D-132 resolved).
+
+#### rtao
+
+- Changed (source-breaking): `SyncClient::estimate_shielded_carrier_fee(fee_payer, call, period)`.
+
+#### rtao-cli
+
+- Changed: the shield carrier warning and preflight quote the planned call.
 
 ### v488 hand ports, third batch: pinned rebuilds and pure-proxy modes (D-133)
 
@@ -44,7 +65,7 @@ to its section below.
 #### rtao-intents
 
 - New (feature `gamma`): `MintGamma`, `MintGammaWithStake`, `MoveGamma`, `CloseGammaDeposit`, `SetGammaDepositSpender`, `SetGammaDepositDailySpendCap` and `SpendGamma`, with Python's constructor checks (one spender or service, one cap choice, a rate tolerance in [0, 1) that cannot be disabled, 1 to 512 spend entries with 32-byte references, gamma amounts with at most 9 decimals), mint quotes from `sim_mint_gamma(_with_stake)` (a refused quote is the chain error), the minimum out as the quote less the tolerance, stake mints quoted at the stake held, mint previews (`Quote` facts and the `preview` record), deposit blocks and warnings, and spend contracts (TAO for `mint_gamma`, unbounded otherwise). `SpendGamma` stores its entries normalized, as Python does.
-- Not yet: the receipt's `data["minted"]`, `data["spent"]` and `data["skipped"]` from Python's executor (D-132).
+- The receipt's `data["minted"]`, `data["spent"]` and `data["skipped"]` landed with the fourth batch (D-134).
 
 #### rtao-reads
 

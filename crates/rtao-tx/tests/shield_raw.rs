@@ -526,11 +526,15 @@ async fn required_shield_routes_before_plan_and_preserves_extras() {
     assert!(result.success);
     assert_eq!(result.data["reviewed"], true);
     assert_eq!(intent.builds.load(Ordering::SeqCst), 1);
-    assert!(
-        !fake
-            .requests()
+    // The required route quotes both signed transactions before approval (v488).
+    assert_eq!(
+        fake.requests()
             .iter()
-            .any(|r| r.method == "state_call" && r.params[0] == "TransactionPaymentApi_query_info")
+            .filter(
+                |r| r.method == "state_call" && r.params[0] == "TransactionPaymentApi_query_info"
+            )
+            .count(),
+        2
     );
     assert_eq!(
         keys.signer.requests.lock().unwrap()[0].0,
@@ -570,8 +574,10 @@ async fn shield_semantic_policy_and_carrier_funds_fail_before_unlock() {
     for failed_probe in [false, true] {
         let (ex, fake, keys) = fixture().await;
         if failed_probe {
+            // Both quotes fail: the inner fee only warns, the carrier refuses.
             fake.mutate_state(|s| {
-                s.queue_reply("state_call", Reply::error(-32603, "unavailable", None))
+                s.queue_reply("state_call", Reply::error(-32603, "unavailable", None));
+                s.queue_reply("state_call", Reply::error(-32603, "unavailable", None));
             });
         }
         let intent = Required {
@@ -750,10 +756,12 @@ async fn shield_unavailable_inner_fee_is_a_policy_error_before_unlock() {
         .await
         .unwrap_err();
     assert!(matches!(error, TxError::Policy(_)));
+    // The policy refuses an unavailable total fee rather than failing open.
     assert!(
         error
             .to_string()
-            .contains("could not estimate fee to enforce max_fee_tao")
+            .contains("is configured but the fee could not be estimated"),
+        "{error}"
     );
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     assert!(fake.state().lock().unwrap().submissions.is_empty());

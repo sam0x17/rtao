@@ -256,25 +256,13 @@ async fn pool_transmits_only_signed_carrier_and_preserves_pair_nonce_and_anchor(
     next.settle();
 }
 
-#[tokio::test]
-async fn conservative_carrier_probe_is_public_bounded_and_does_not_mutate_nonce() {
-    let (client, fake, signer) = fixture().await;
-    client.nonces().pin(&signer.account(), 44);
-    let fee = client
-        .estimate_shielded_carrier_fee(signer.account())
-        .await
-        .unwrap();
-    assert_eq!(fee.rao(), fake.state().lock().unwrap().fee);
-    assert_eq!(
-        client.nonces().cached(&signer.account().to_string()).await,
-        Some(44)
-    );
-    assert!(signer.signed.lock().unwrap().is_empty());
-    assert!(fake.state().lock().unwrap().submissions.is_empty());
+/// Ciphertext length of the carrier in the `index`-th fee probe.
+fn probed_ciphertext_length(fake: &FakeChain, index: usize) -> usize {
     let request = fake
         .requests()
         .into_iter()
-        .find(|r| r.method == "state_call" && r.params[0] == "TransactionPaymentApi_query_info")
+        .filter(|r| r.method == "state_call" && r.params[0] == "TransactionPaymentApi_query_info")
+        .nth(index)
         .unwrap();
     let args = hex::decode(request.params[1].as_str().unwrap().trim_start_matches("0x")).unwrap();
     let probe = &args[..args.len() - 4];
@@ -282,21 +270,63 @@ async fn conservative_carrier_probe_is_public_bounded_and_does_not_mutate_nonce(
     let state = state.lock().unwrap();
     let decoded = state.runtime.decode_extrinsic(probe, true).unwrap();
     let call = decoded.field("call").unwrap();
+    assert_eq!(
+        call.field("call_module").and_then(|v| v.as_str()),
+        Some("MevShield")
+    );
     let Value::List(args) = call.field("call_args").unwrap() else {
         panic!("call args are not a list");
     };
-    let ciphertext = args[0].field("value").unwrap();
-    let length = match ciphertext {
+    match args[0].field("value").unwrap() {
         Value::Bytes(bytes) => bytes.len(),
         Value::List(bytes) => bytes.len(),
+        // Zero bytes decode as a (valid UTF-8) string of NUL characters.
         Value::Str(bytes) => bytes.len(),
         other => panic!("unexpected ciphertext {other:?}"),
-    };
-    // The carrier bound follows the pinned Python (v488: 32768, the runtime's
-    // `MaxEncryptedCarrier`).
+    }
+}
+
+// pyt: unit/test_root_claim_fee.py::test_affordable_small_shielded_claim_is_not_rejected_by_large_tier_quote
+#[tokio::test]
+async fn carrier_probe_is_sized_from_the_actual_inner_call_and_does_not_mutate_nonce() {
+    let (client, fake, signer) = fixture().await;
+    client.nonces().pin(&signer.account(), 44);
+    let mut lengths = Vec::new();
+    for (index, size) in [10usize, 1_010].into_iter().enumerate() {
+        let fee = client
+            .estimate_shielded_carrier_fee(signer.account(), call(&client, size).await, 8)
+            .await
+            .unwrap();
+        assert_eq!(fee.rao(), fake.state().lock().unwrap().fee);
+        lengths.push(probed_ciphertext_length(&fake, index));
+    }
+    // The carrier holds the signed inner transaction plus the sealing
+    // overhead, never the runtime's whole ciphertext bound.
+    assert!(lengths[0] > 10 + rtao_client::SHIELD_ENCRYPTION_OVERHEAD);
+    assert!(lengths[0] < 8_192);
+    assert_eq!(lengths[1] - lengths[0], 1_000 + 1);
     assert_eq!(
-        length,
-        usize::try_from(rtao_catalog::py::MAX_SHIELDED_CIPHERTEXT_BYTES).unwrap()
+        client.nonces().cached(&signer.account().to_string()).await,
+        Some(44)
+    );
+    assert!(signer.signed.lock().unwrap().is_empty());
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+
+    // A call whose encrypted size exceeds the bound is refused, as its
+    // submission would be.
+    let maximum = usize::try_from(rtao_catalog::py::MAX_SHIELDED_CIPHERTEXT_BYTES).unwrap();
+    let error = client
+        .estimate_shielded_carrier_fee(signer.account(), call(&client, maximum).await, 8)
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        format!("encrypted transaction exceeds the {maximum}-byte carrier limit")
+    );
+    assert_eq!(
+        rtao_client::shielded_ciphertext_size(maximum - rtao_client::SHIELD_ENCRYPTION_OVERHEAD)
+            .unwrap(),
+        maximum
     );
 }
 

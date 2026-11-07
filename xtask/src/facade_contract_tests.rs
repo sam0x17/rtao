@@ -123,10 +123,9 @@ fn python_surface(source: &str, class_name: &str) -> Result<BTreeMap<String, Vec
 
 /// Python `Client` methods added or changed by runtime 487/488 and not ported:
 /// `register_wallet`, `prepare_mldsa_call` and `prepare_pq_call` are new;
-/// `estimate_shielded_carrier_fee` gained `call` and `period`, `preflight`
-/// gained `shielded` and `period`, and `multisig` gained `account_mode`.
+/// `preflight` gained `shielded` and `period`, and `multisig` gained
+/// `account_mode`.
 const PENDING_CLIENT_METHODS: &[&str] = &[
-    "estimate_shielded_carrier_fee",
     "multisig",
     "preflight",
     "prepare_mldsa_call",
