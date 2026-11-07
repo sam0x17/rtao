@@ -152,6 +152,43 @@ pub struct MintQuote {
     pub tao_value: DynBalance,
     /// Gamma minted, as an exact decimal string.
     pub gamma: String,
+    /// Gamma minted, in chain units.
+    #[serde(skip)]
+    pub gamma_units: u128,
+}
+
+/// Simulate a mint at the view: `(alpha burned, TAO value, gamma)` in chain
+/// units, or the chain error that stops it. `with_stake` selects
+/// `sim_mint_gamma_with_stake` (an alpha amount) over `sim_mint_gamma` (TAO).
+// py: sdk/python/bittensor/intents/gamma.py:61-66
+pub async fn sim_mint<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+    with_stake: bool,
+    amount: u64,
+) -> Result<(u64, u64, u128), ReadError> {
+    let snapshot = view.pin().await?;
+    let quote = if with_stake {
+        snapshot
+            .call(
+                &api::gamma_runtime_api::SIM_MINT_GAMMA_WITH_STAKE,
+                (netuid, AlphaBalance(amount)),
+            )
+            .await?
+    } else {
+        snapshot
+            .call(
+                &api::gamma_runtime_api::SIM_MINT_GAMMA,
+                (netuid, TaoBalance(amount)),
+            )
+            .await?
+    };
+    let quote = mint_quote(&snapshot, &quote, netuid).await?;
+    Ok((
+        quote.alpha_burned.rao,
+        quote.tao_value.rao,
+        quote.gamma_units,
+    ))
 }
 
 // py: sdk/python/bittensor/reads/gamma.py:33-43
@@ -199,6 +236,7 @@ async fn mint_quote(
         alpha_burned: alpha,
         tao_value: tao,
         gamma: gamma_from_units(units(2, "gamma")?),
+        gamma_units: units(2, "gamma")?,
     })
 }
 

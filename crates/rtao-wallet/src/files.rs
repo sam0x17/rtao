@@ -333,12 +333,19 @@ impl FileState {
     /// The public identity an unlocked key must match, if one is readable
     /// without unlocking. A legacy hotkey without `hotkeypub.txt` whose own
     /// file is encrypted has none: Python unlocks that file for its public
-    /// view, so the comparison is with itself.
+    /// view, so the comparison is with itself. A standalone keyfile with no
+    /// companion at all (a remote-signer client key) has nothing to compare;
+    /// Python refuses a wallet coldkey without `coldkeypub.txt` (D-129).
     fn expected_identity(&self) -> Result<Option<PublicKeyInfo>, WalletError> {
         match self.public_info() {
             Ok(info) => Ok(Some(info)),
             Err(WalletError::PublicKeyUnavailable(path))
                 if self.role == SignerRole::Hotkey && path == self.path =>
+            {
+                Ok(None)
+            }
+            Err(WalletError::Io { path, error })
+                if path == self.public && error.kind() == std::io::ErrorKind::NotFound =>
             {
                 Ok(None)
             }

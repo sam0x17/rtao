@@ -7233,7 +7233,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.CloseGammaDeposit",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7341,13 +7341,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MintGamma",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MintGammaWithStake",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7359,7 +7359,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.MoveGamma",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7527,13 +7527,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetGammaDepositDailySpendCap",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetGammaDepositSpender",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7629,7 +7629,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SpendGamma",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -12515,14 +12515,15 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/gamma.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/gamma.rs",
+          "crates/rtao-intents/tests/gamma.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "906b8730f526cbe2691655f6086a991787974b88"
       },
       {
         "kind": "ported",
@@ -13396,7 +13397,7 @@
         "name": "close_gamma_deposit",
         "oracle": "missing",
         "python_class": "CloseGammaDeposit",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "commit_weights",
@@ -13498,19 +13499,19 @@
         "name": "mint_gamma",
         "oracle": "missing",
         "python_class": "MintGamma",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "mint_gamma_with_stake",
         "oracle": "missing",
         "python_class": "MintGammaWithStake",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "move_gamma",
         "oracle": "missing",
         "python_class": "MoveGamma",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "move_lock",
@@ -13672,13 +13673,13 @@
         "name": "set_gamma_deposit_daily_spend_cap",
         "oracle": "missing",
         "python_class": "SetGammaDepositDailySpendCap",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_gamma_deposit_spender",
         "oracle": "missing",
         "python_class": "SetGammaDepositSpender",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_hyperparameter",
@@ -13768,7 +13769,7 @@
         "name": "spend_gamma",
         "oracle": "missing",
         "python_class": "SpendGamma",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "stake_burn",

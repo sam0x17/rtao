@@ -3441,12 +3441,12 @@ notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/bittensor/intents/gamma.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["crates/rtao-intents/src/gamma.rs", "crates/rtao-intents/tests/gamma.rs"]
 kind = "ported"
-synced_blob = "pending"
+synced_blob = "906b8730f526cbe2691655f6086a991787974b88"
 synced_tag = "v488"
-milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+milestone = "v488"
+notes = "Added by the v488 runtime adoption (D-128). Ported 2026-11-07 (feature gamma): MintGamma, MintGammaWithStake, MoveGamma, CloseGammaDeposit, SetGammaDepositSpender, SetGammaDepositDailySpendCap and SpendGamma with Python's constructor checks (exactly-one spender/cap choices, a non-disableable rate tolerance, 1..512 spend entries with 32-byte references, normalized spends), quotes from sim_mint_gamma(_with_stake) (a refusal is the chain error), the minimum out as the quote less tolerance, the stake mint quoted at the stake held and sent as requested or u64::MAX, mint previews (facts and the preview record), deposit blocks and warnings, and spend contracts (TAO for mint_gamma, unbounded otherwise). The executor's GammaSpent/GammaMinted result data lives in executor.py, which stays due (D-132). No oracle/runtime claim."
 
 [[file]]
 py = "sdk/python/bittensor/intents/limit_orders.py"

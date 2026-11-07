@@ -1280,7 +1280,8 @@ impl AnyIntent {
                         "Intent arguments must be a JSON object.".into(),
                     ));
                 }
-                let intent: super::interfaces::SpendGamma = serde_json::from_value(args)?;
+                let mut intent: super::interfaces::SpendGamma = serde_json::from_value(args)?;
+                crate::gamma::canonicalize(&mut intent)?;
                 rtao_tx::Intent::validate(&intent)?;
                 Ok(Self::SpendGamma(intent))
             }

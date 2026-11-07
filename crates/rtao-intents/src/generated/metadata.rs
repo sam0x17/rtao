@@ -81,9 +81,9 @@ InterfaceMetadata{name:"clear_coldkey_swap_announcement",feature:"coldkey",compi
 #[cfg(not(feature="coldkey"))]
 InterfaceMetadata{name:"clear_coldkey_swap_announcement",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "gamma")]
-InterfaceMetadata{name:"close_gamma_deposit",feature:"gamma",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::CloseGammaDeposit>()),role:Some(std::any::type_name::<<super::interfaces::CloseGammaDeposit as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CloseGammaDeposit as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"close_gamma_deposit",feature:"gamma",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CloseGammaDeposit>()),role:Some(std::any::type_name::<<super::interfaces::CloseGammaDeposit as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CloseGammaDeposit as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="gamma"))]
-InterfaceMetadata{name:"close_gamma_deposit",feature:"gamma",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"close_gamma_deposit",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "weights")]
 InterfaceMetadata{name:"commit_weights",feature:"weights",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CommitWeights>()),role:Some(std::any::type_name::<<super::interfaces::CommitWeights as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CommitWeights as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="weights"))]
@@ -149,17 +149,17 @@ InterfaceMetadata{name:"lock_stake",feature:"lock",compiled:true,implemented:tru
 #[cfg(not(feature="lock"))]
 InterfaceMetadata{name:"lock_stake",feature:"lock",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "gamma")]
-InterfaceMetadata{name:"mint_gamma",feature:"gamma",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::MintGamma>()),role:Some(std::any::type_name::<<super::interfaces::MintGamma as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MintGamma as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"mint_gamma",feature:"gamma",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::MintGamma>()),role:Some(std::any::type_name::<<super::interfaces::MintGamma as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MintGamma as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="gamma"))]
-InterfaceMetadata{name:"mint_gamma",feature:"gamma",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"mint_gamma",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "gamma")]
-InterfaceMetadata{name:"mint_gamma_with_stake",feature:"gamma",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::MintGammaWithStake>()),role:Some(std::any::type_name::<<super::interfaces::MintGammaWithStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MintGammaWithStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"mint_gamma_with_stake",feature:"gamma",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::MintGammaWithStake>()),role:Some(std::any::type_name::<<super::interfaces::MintGammaWithStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MintGammaWithStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="gamma"))]
-InterfaceMetadata{name:"mint_gamma_with_stake",feature:"gamma",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"mint_gamma_with_stake",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "gamma")]
-InterfaceMetadata{name:"move_gamma",feature:"gamma",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::MoveGamma>()),role:Some(std::any::type_name::<<super::interfaces::MoveGamma as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MoveGamma as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"move_gamma",feature:"gamma",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::MoveGamma>()),role:Some(std::any::type_name::<<super::interfaces::MoveGamma as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MoveGamma as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="gamma"))]
-InterfaceMetadata{name:"move_gamma",feature:"gamma",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"move_gamma",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "lock")]
 InterfaceMetadata{name:"move_lock",feature:"lock",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::MoveLock>()),role:Some(std::any::type_name::<<super::interfaces::MoveLock as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::MoveLock as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="lock"))]
@@ -265,13 +265,13 @@ InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",comp
 #[cfg(not(feature="crowdloan"))]
 InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "gamma")]
-InterfaceMetadata{name:"set_gamma_deposit_daily_spend_cap",feature:"gamma",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetGammaDepositDailySpendCap>()),role:Some(std::any::type_name::<<super::interfaces::SetGammaDepositDailySpendCap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetGammaDepositDailySpendCap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_gamma_deposit_daily_spend_cap",feature:"gamma",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetGammaDepositDailySpendCap>()),role:Some(std::any::type_name::<<super::interfaces::SetGammaDepositDailySpendCap as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetGammaDepositDailySpendCap as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="gamma"))]
-InterfaceMetadata{name:"set_gamma_deposit_daily_spend_cap",feature:"gamma",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_gamma_deposit_daily_spend_cap",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "gamma")]
-InterfaceMetadata{name:"set_gamma_deposit_spender",feature:"gamma",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetGammaDepositSpender>()),role:Some(std::any::type_name::<<super::interfaces::SetGammaDepositSpender as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetGammaDepositSpender as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_gamma_deposit_spender",feature:"gamma",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetGammaDepositSpender>()),role:Some(std::any::type_name::<<super::interfaces::SetGammaDepositSpender as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetGammaDepositSpender as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="gamma"))]
-InterfaceMetadata{name:"set_gamma_deposit_spender",feature:"gamma",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_gamma_deposit_spender",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "hyperparameters")]
 InterfaceMetadata{name:"set_hyperparameter",feature:"hyperparameters",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetHyperparameter>()),role:Some(std::any::type_name::<<super::interfaces::SetHyperparameter as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetHyperparameter as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="hyperparameters"))]
@@ -329,9 +329,9 @@ InterfaceMetadata{name:"set_weights",feature:"weights",compiled:true,implemented
 #[cfg(not(feature="weights"))]
 InterfaceMetadata{name:"set_weights",feature:"weights",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "gamma")]
-InterfaceMetadata{name:"spend_gamma",feature:"gamma",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SpendGamma>()),role:Some(std::any::type_name::<<super::interfaces::SpendGamma as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SpendGamma as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"spend_gamma",feature:"gamma",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SpendGamma>()),role:Some(std::any::type_name::<<super::interfaces::SpendGamma as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SpendGamma as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="gamma"))]
-InterfaceMetadata{name:"spend_gamma",feature:"gamma",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"spend_gamma",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "governance")]
 InterfaceMetadata{name:"stake_burn",feature:"governance",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::StakeBurn>()),role:Some(std::any::type_name::<<super::interfaces::StakeBurn as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::StakeBurn as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="governance"))]

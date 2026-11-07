@@ -180,6 +180,7 @@ async fn transfer_plan_uses_public_keys_without_signing() -> anyhow::Result<()> 
         dest_ss58: AccountId([9; 32]).into(),
         amount_tao: amount.into(),
         keep_alive: true,
+        hashed_descriptor: None,
     };
     let result = Executor::new(client.clone())
         .plan(&intent, &keys, &PlanOptions::default())

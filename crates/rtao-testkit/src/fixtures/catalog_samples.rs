@@ -118,6 +118,10 @@ pub fn intent_args(op: &str, original: &Value) -> Result<Value, CoreError> {
     if op == "move_swap_stake" {
         args["dest_hotkey_ss58"] = json!(OTHER_HOT.to_string());
     }
+    // ALICE_HOT and BOB_HOT both adapt to HOT; a move needs two deposits.
+    if op == "move_gamma" {
+        args["destination_hotkey_ss58"] = json!(OTHER_HOT.to_string());
+    }
     Ok(args)
 }
 
@@ -445,6 +449,25 @@ pub fn intent_state(runtime: Arc<Runtime>, op: &str) -> Result<FakeState, CoreEr
         emission_weights_info(SUBNET),
     )?;
     seed_availability(&mut state)?;
+    // py: sdk/python/tests/harness/samples.py:419-425 (seed_gamma)
+    if op.contains("gamma") {
+        // Deposits owned and spent by the signer: the sample hotkey holds one
+        // gamma (empty for the close sample, so it can close) and the move
+        // destination is empty.
+        let held = if op == "close_gamma_deposit" {
+            0
+        } else {
+            1_000_000_000u64
+        };
+        for (hotkey, balance) in [(HOT, held), (OTHER_HOT, 0)] {
+            state.seed_python(
+                "SubtensorModule",
+                "GammaDeposits",
+                &[json!(SUBNET.0), json!(hotkey.to_string())],
+                json!({"coldkey": COLD.to_string(), "spender": COLD.to_string(), "balance": balance, "daily_spend_cap": null}),
+            )?;
+        }
+    }
     if op == "finalize_crowdloan" {
         // The sample finalizes ID 0. Its target-only contract is explicit;
         // absence or an opaque callback no longer inherits a no-spend label.

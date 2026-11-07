@@ -320,6 +320,7 @@ fn core_oracle_m2_actual_intent_policy_violation_sets() -> TestResult {
                     dest_ss58: destination.into(),
                     amount_tao: Balance::<Tao>::from_rao(amount).into(),
                     keep_alive,
+                    hashed_descriptor: None,
                 }),
             ));
         }
@@ -331,6 +332,7 @@ fn core_oracle_m2_actual_intent_policy_violation_sets() -> TestResult {
             Box::new(TransferAll {
                 dest_ss58: destination.into(),
                 keep_alive,
+                hashed_descriptor: None,
             }),
         ));
         pairs.push((
@@ -340,6 +342,7 @@ fn core_oracle_m2_actual_intent_policy_violation_sets() -> TestResult {
                 dest_ss58: destination.into(),
                 amount_tao: Amount::All,
                 keep_alive,
+                hashed_descriptor: None,
             }),
         ));
     }

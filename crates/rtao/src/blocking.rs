@@ -1720,8 +1720,9 @@ mod tests {
     fn sync_client_has_all_namespaces() {
         let (client, chain, starts) = setup();
         inspect_all_namespaces(&client);
-        assert_eq!(client.reads().len(), 103);
-        assert_eq!(client.tools().unwrap().len(), 86);
+        // Every catalog read and tool, at the pinned catalog's counts.
+        assert_eq!(client.reads().len(), rtao_catalog::READS.len());
+        assert_eq!(client.tools().unwrap().len(), rtao_catalog::INTENTS.len());
         assert!(format!("{client:?}").contains("started: false"));
         assert_eq!(starts.load(Ordering::SeqCst), 0);
         assert!(chain.requests().is_empty());
@@ -2257,6 +2258,7 @@ mod tests {
             dest_ss58: OTHER.into(),
             amount_tao: Balance::<Tao>::from_rao(42).into(),
             keep_alive: true,
+            hashed_descriptor: None,
         };
         let plan = client
             .plan(intent.clone(), keys.clone(), PlanOptions::default())

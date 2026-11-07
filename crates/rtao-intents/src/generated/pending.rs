@@ -31,21 +31,6 @@ impl rtao_tx::Intent for super::interfaces::CancelOrder {
         self
     }
 }
-#[cfg(feature = "gamma")]
-impl rtao_tx::Intent for super::interfaces::CloseGammaDeposit {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("close_gamma_deposit"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
 #[cfg(feature = "limit_orders")]
 impl rtao_tx::Intent for super::interfaces::ExecuteBatchedOrders {
     fn summary(&self) -> String {
@@ -71,100 +56,6 @@ impl rtao_tx::Intent for super::interfaces::ExecuteOrders {
         _cx: &rtao_tx::BuildCx<'_, V>,
     ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
         Err(rtao_tx::IntentError::NotYetPorted("execute_orders"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "gamma")]
-impl rtao_tx::Intent for super::interfaces::MintGamma {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("mint_gamma"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "gamma")]
-impl rtao_tx::Intent for super::interfaces::MintGammaWithStake {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("mint_gamma_with_stake"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "gamma")]
-impl rtao_tx::Intent for super::interfaces::MoveGamma {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("move_gamma"))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "gamma")]
-impl rtao_tx::Intent for super::interfaces::SetGammaDepositDailySpendCap {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "set_gamma_deposit_daily_spend_cap",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "gamma")]
-impl rtao_tx::Intent for super::interfaces::SetGammaDepositSpender {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "set_gamma_deposit_spender",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}
-#[cfg(feature = "gamma")]
-impl rtao_tx::Intent for super::interfaces::SpendGamma {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted("spend_gamma"))
     }
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self

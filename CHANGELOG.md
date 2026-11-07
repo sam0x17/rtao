@@ -4,11 +4,35 @@
 
 ### Since `snapshot-2026-11-07`
 
-Not tagged yet; not a versioned release. Each item links to its section
-below.
+Tagged as `snapshot-2026-11-07.2`; not a versioned release. Each item links
+to its section below.
 
 - v488 hand ports, first batch (D-129 to D-131, issue #12): subnet emission weights allow burn and recycle up to 33% combined; wallet keyfile pairs publish recoverably and an unlock refuses a secret that is not the public companion's key; Polkadot Vault refuses a scan of another scheme; the `services`, `tao_usd_price` and four gamma reads and the `set_service` intent are ported. 22 sources are blessed; 90 remain due.
+- v488 hand ports, second batch (D-132): the seven gamma intents (`mint_gamma`, `mint_gamma_with_stake`, `move_gamma`, `close_gamma_deposit`, `set_gamma_deposit_spender`, `set_gamma_deposit_daily_spend_cap`, `spend_gamma`) replace `NotYetPorted`; the pending register keeps the four limit-order intents.
 - Unchanged: core v478 and its patch, runtime stamps, V15, signing status and extensions, the metadata hash, the commit-reveal path, journal formats. Rollback to `snapshot-2026-11-07` needs no state migration; a wallet written by this revision is the same pair of files.
+
+### v488 hand ports, second batch: gamma intents (D-132)
+
+#### rtao-intents
+
+- New (feature `gamma`): `MintGamma`, `MintGammaWithStake`, `MoveGamma`, `CloseGammaDeposit`, `SetGammaDepositSpender`, `SetGammaDepositDailySpendCap` and `SpendGamma`, with Python's constructor checks (one spender or service, one cap choice, a rate tolerance in [0, 1) that cannot be disabled, 1 to 512 spend entries with 32-byte references, gamma amounts with at most 9 decimals), mint quotes from `sim_mint_gamma(_with_stake)` (a refused quote is the chain error), the minimum out as the quote less the tolerance, stake mints quoted at the stake held, mint previews (`Quote` facts and the `preview` record), deposit blocks and warnings, and spend contracts (TAO for `mint_gamma`, unbounded otherwise). `SpendGamma` stores its entries normalized, as Python does.
+- Not yet: the receipt's `data["minted"]`, `data["spent"]` and `data["skipped"]` from Python's executor (D-132).
+
+#### rtao-reads
+
+- New: `reads::gamma::sim_mint`, the shared mint simulation; `MintQuote` carries `gamma_units` (not serialized).
+
+#### rtao-wallet
+
+- Fixed (first batch): an unlock no longer requires a public companion that does not exist; a standalone keyfile such as a remote-signer client key unlocks as before, and an existing companion is still compared (D-129).
+
+#### Tests
+
+- All-features builds of the `rtao` and `rtao-testkit` tests name `Transfer::hashed_descriptor`; the blocking client's namespace test takes its read and tool counts from the pinned catalog.
+
+#### rtao-testkit
+
+- Catalog intent states for gamma operations seed deposits owned and spent by the sample coldkey, as Python's `seed_gamma` does; `move_gamma` samples move to a second hotkey.
 
 ### v488 hand ports, first batch (D-129 to D-131)
 
@@ -31,7 +55,7 @@ below.
 #### rtao-wallet
 
 - Changed: creating or regenerating a key publishes the public companion, then the secret, under an advisory lock on the wallet directory, with backups and rollback of only its own files; a failed write leaves the previous pair instead of a new secret beside an old companion. Public companion regeneration takes the same lock (D-129).
-- Changed: an unlock reads the public companion first and refuses a secret whose account or scheme differs (`WalletError::IdentityMismatch`, "unlocked signing identity does not match the public wallet"); a companion that exists but cannot be read refuses the unlock. A legacy hotkey without `hotkeypub.txt` still unlocks (D-129).
+- Changed: an unlock reads the public companion first and refuses a secret whose account or scheme differs (`WalletError::IdentityMismatch`, "unlocked signing identity does not match the public wallet"); a companion that exists but cannot be read refuses the unlock. A key with no companion (a legacy hotkey without `hotkeypub.txt`, a standalone or remote-signer client key) still unlocks (D-129).
 
 #### rtao-signer
 

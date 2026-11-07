@@ -1,5 +1,5 @@
 # Operations awaiting behavior ports. The set only shrinks, except that a
 # parity pin bump adds operations new to the upstream catalog (D-128).
-intents = ["authorize_order", "cancel_order", "close_gamma_deposit", "execute_batched_orders", "execute_orders", "mint_gamma", "mint_gamma_with_stake", "move_gamma", "set_gamma_deposit_daily_spend_cap", "set_gamma_deposit_spender", "spend_gamma"]
+intents = ["authorize_order", "cancel_order", "execute_batched_orders", "execute_orders"]
 
 reads = []

@@ -885,6 +885,10 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             format!(
                 "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::hyperparameters::canonicalize(&mut intent)?;"
             )
+        } else if spec.name == "spend_gamma" {
+            format!(
+                "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::gamma::canonicalize(&mut intent)?;"
+            )
         } else if spec.name == "set_subnet_emission_weights" {
             format!(
                 "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::emission_weights::canonicalize(&mut intent)?;"

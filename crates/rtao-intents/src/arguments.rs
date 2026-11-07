@@ -22,7 +22,12 @@ pub(crate) use crate::nested_json::check_items_budget as check_nested_items;
 pub(crate) use crate::staking_baskets::legs as basket_legs;
 
 /// Resolve an exact TAO field without permitting alpha currencies or `all`.
-#[cfg(any(feature = "crowdloan", feature = "root", feature = "staking"))]
+#[cfg(any(
+    feature = "crowdloan",
+    feature = "gamma",
+    feature = "root",
+    feature = "staking"
+))]
 pub(crate) fn tao_amount(
     amount: &rtao_primitives::Amount,
 ) -> Result<rtao_primitives::Balance<rtao_primitives::Tao>, rtao_tx::IntentError> {

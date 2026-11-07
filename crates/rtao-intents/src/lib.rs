@@ -38,6 +38,9 @@ impl rtao_tx::IntentRegistry for Registry {
     }
 }
 
+#[cfg(feature = "gamma")]
+#[cfg_attr(docsrs, doc(cfg(feature = "gamma")))]
+pub mod gamma;
 #[cfg(feature = "serving")]
 #[cfg_attr(docsrs, doc(cfg(feature = "serving")))]
 pub mod serving;
