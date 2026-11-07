@@ -30,6 +30,13 @@
 #                   snapshot with a changelog entry.
 #   record-testnet  Testnet finalized a runtime its index lacks: record it
 #                   with `drift --network testnet --apply` and check.
+#   core-bump       Only when a dispatch asks for it (core_bump): the core is
+#                   held at an older tag while the parity pin's core inputs
+#                   moved ([parity] core_fingerprint, D-127) and Finney runs
+#                   the parity runtime. Pin the parity source again with the
+#                   core bump (core-patch rebase onto the parity tag, every
+#                   downstream core reference, the lock), then check it like
+#                   an adoption and commit, push and tag it (D-136).
 #   blocked         Something only a maintainer can decide (same spec with
 #                   new :code, no upstream source for a new spec, a pin ahead
 #                   of its network, endpoints that disagree about the
@@ -317,10 +324,11 @@ observe() {
     --argjson branches "$branches" --argjson sources "$sources" \
     --arg inputs "$(adopt_inputs)" --argjson previous "$(previous_state)" \
     --argjson force "$([[ "${RTAO_ADOPT_FORCE:-}" == true || "${RTAO_ADOPT_FORCE:-}" == 1 ]] && echo true || echo false)" \
+    --argjson core_bump "$([[ "${RTAO_ADOPT_CORE_BUMP:-}" == true || "${RTAO_ADOPT_CORE_BUMP:-}" == 1 ]] && echo true || echo false)" \
     '{schema: 1, observed_at: $at, finney: $finney, testnet: $testnet, upstream: {branches: $branches, sources: $sources},
-      inputs: $inputs, previous: $previous, force: $force}' >"$out"
+      inputs: $inputs, previous: $previous, force: $force, core_bump: $core_bump}' >"$out"
   jq -c '{finney: (.finney | {spec, code, number, error, witnesses: ((.witnesses // []) | map({endpoint, spec, code, error}))}),
-          testnet: (.testnet | {spec, code, number, error}), upstream: .upstream.branches, inputs, previous, force}' "$out"
+          testnet: (.testnet | {spec, code, number, error}), upstream: .upstream.branches, inputs, previous, force, core_bump}' "$out"
 }
 
 # ── decide ────────────────────────────────────────────────────────────
@@ -330,16 +338,26 @@ decide() {
   local out=${2:?decide <observed.json> <decision.json> [<pins-root>]}
   local base=${3:-$root}
   local pins=$base/upstream.toml
-  local parity_spec parity_tag parity_network finney_spec finney_code
+  local parity_spec parity_tag parity_network finney_spec finney_code core_tag core_held core_source
   parity_spec=$(toml_get "$pins" parity spec_version)
   parity_tag=$(toml_get "$pins" parity tag)
   parity_network=$(toml_get "$pins" parity network || echo finney)
+  core_tag=$(toml_get "$pins" core tag)
+  # Present only while the core is held behind the parity pin (D-127).
+  core_held=$(toml_get "$pins" parity core_fingerprint || true)
+  # The core bump re-pins the parity pin's own source.
+  if [[ "$(toml_get "$pins" parity release || true)" == unreleased ]]; then
+    core_source="branch:$(toml_get "$pins" parity source_branch)@$(toml_get "$pins" parity commit)"
+  else
+    core_source=$parity_tag
+  fi
   finney_spec=$(toml_get "$pins" networks.finney.metadata spec)
   finney_code=$(toml_get "$pins" networks.finney.metadata code_hash)
   jq -n \
     --slurpfile observed "$observed" \
     --argjson parity_spec "$parity_spec" --arg parity_tag "$parity_tag" --arg parity_network "$parity_network" \
     --argjson finney_spec "$finney_spec" --arg finney_code "$finney_code" \
+    --arg core_tag "$core_tag" --arg core_held "$core_held" --arg core_source "$core_source" \
     --argjson finney_rows "$(index_rows "$base/vendor/metadata/finney/index.toml")" \
     --argjson testnet_rows "$(index_rows "$base/vendor/metadata/testnet/index.toml")" \
     -f /dev/stdin >"$out" <<'JQ'
@@ -381,7 +399,7 @@ decide() {
   # attempt, less five minutes of slack. A blocked report is no attempt.
   def backoff:
     (($o.previous // {})[.id] // null) as $p
-    | if (.action == "adopt-finney" or .action == "record-testnet")
+    | if (.action == "adopt-finney" or .action == "record-testnet" or .action == "core-bump")
        and (($o.force // false) | not)
        and $p != null and ($p.attempted_at // null) != null and ($p.failures // 1) >= 1
        and ($p.inputs // null) == ($o.inputs // null)
@@ -430,13 +448,28 @@ decide() {
 | ([$finney_raw, $testnet_raw] | map(select(. != null and .wait != null) | .wait)) as $waits
 | (if ($finney_raw.wait // null) != null then null else $finney_raw end | if . == null then null else backoff end) as $finney
 | (if ($testnet_raw.wait // null) != null then null else $testnet_raw end | if . == null then null else backoff end) as $testnet
+# A requested core bump runs only while the core is held and Finney runs the
+# parity runtime, so the live evidence reads the pinned runtime (D-136).
+| (if ($o.core_bump // false) != true or $core_held == "" then null
+   elif ($f.error // null) != null or $finney_raw != null then null
+   else result("core-bump"; "finney"; $parity_spec; $finney_code;
+          "a dispatch requested the core bump: the core is held at \($core_tag) while \($parity_tag)'s core inputs moved (D-127)")
+        + {id: "core-\($parity_tag)-\($core_held | ltrimstr("b3:") | .[0:10])", source: $core_source,
+           core: {from: $core_tag, to: $parity_tag, fingerprint: $core_held}}
+     | backoff end) as $core
+| (if ($o.core_bump // false) != true then null
+   elif $core != null then "requested"
+   elif $core_held == "" then "requested, but none is due: the core already matches the parity pin's core inputs"
+   else "requested, but it waits until Finney is observed on the parity runtime" end) as $core_note
 | ([$f.spec, $t.spec, $parity_spec] | map(select(. != null)) | max) as $running
 | ($o.upstream.branches // {} | to_entries
    | map(select(.value.spec != null and .value.spec > $running)
          | {branch: .key, head: .value.head, spec: .value.spec})) as $upcoming
-| ([$finney, $testnet] | map(select(. != null))) as $wanted
-# Progress first: a blocked network never holds up the other's adoption.
-| ($wanted | map(select(.action == "adopt-finney")) + map(select(.action == "record-testnet"))
+| ([$finney, $testnet, $core] | map(select(. != null))) as $wanted
+# Progress first: a blocked network never holds up the other's adoption. A
+# requested core bump goes before a testnet record (the next run records it).
+| ($wanted | map(select(.action == "adopt-finney")) + map(select(.action == "core-bump"))
+   + map(select(.action == "record-testnet"))
    + map(select(.action == "blocked")) + map(select(.action == "backoff"))) as $ordered
 | ($ordered[0] // result("none"; null; null; null; "Finney and testnet run indexed runtimes"))
 | . + {deferred: ($ordered[1:] | map({action, network, spec, id, reason})),
@@ -447,9 +480,9 @@ decide() {
        observed: {finney: ($f | {spec, code, number, finalized, endpoint, error, witnesses}),
                   testnet: ($t | {spec, code, number, finalized, endpoint, error, witnesses})},
        inputs: ($o.inputs // null), previous: ($o.previous // null),
-       observed_at: $o.observed_at}
+       core_bump: $core_note, observed_at: $o.observed_at}
 JQ
-  jq -c '{action, network, spec, source, id, reason, retry_at, deferred: (.deferred | map(.id)), upcoming: (.upcoming | map("\(.branch)=\(.spec)")), unobserved}' "$out"
+  jq -c '{action, network, spec, source, id, reason, retry_at, deferred: (.deferred | map(.id)), upcoming: (.upcoming | map("\(.branch)=\(.spec)")), unobserved, core_bump}' "$out"
 }
 
 # ── adopt (hosted runner) ─────────────────────────────────────────────
@@ -768,6 +801,108 @@ adopt() {
       record_adoption "$decision" "$old_spec" "$class" "$evidence"
       stage_done
       ;;
+    core-bump)
+      # The explicit core bump of D-127, run through the same isolated
+      # candidate as an adoption (D-136). The parity pin, the runtime and
+      # its metadata stay as they are; only the core moves to the parity tag.
+      [[ -n "$source" ]] || die "core-bump without a pin source"
+      local core_tag fingerprint
+      core_tag=$(jq -r .core.to "$decision")
+      fingerprint=$(jq -r .core.fingerprint "$decision")
+      [[ "$(toml_get upstream.toml parity core_fingerprint || true)" == "$fingerprint" ]] ||
+        die "the parity pin no longer records the decided core inputs $fingerprint"
+      stage provenance
+      # pin rebases the reviewed core patch onto the parity tag and adopts
+      # the fork branch rtao-core-patch/<tag> when it carries exactly that
+      # tree, rewrites every downstream core reference and moves [core]. With
+      # no such branch it retains a publication candidate and stops: the
+      # fork is published with existing authorized access (hosted CI never
+      # pushes it) and the dispatch is repeated.
+      if ! RTAO_PIN_CANDIDATE=1 RTAO_PIN_CORE_BUMP=1 xtask pin --parity "$source" --prepare-candidate; then
+        if [[ -d "$RTAO_TEMP_ROOT/core-patch/candidate" ]]; then
+          cp -R "$RTAO_TEMP_ROOT/core-patch/candidate" "$evidence/core-patch-candidate"
+        fi
+        die "the core bump's pin failed (see the log; a core-patch publication candidate, when one was prepared, is in the evidence under core-patch-candidate)"
+      fi
+      stage_done
+      stage core
+      [[ "$(toml_get upstream.toml core tag)" == "$core_tag" ]] ||
+        die "pin left the core at $(toml_get upstream.toml core tag), not $core_tag"
+      [[ "$(toml_get upstream.toml core fingerprint)" == "$fingerprint" ]] ||
+        die "the moved core's fingerprint is not the parity pin's recorded core inputs"
+      ! toml_get upstream.toml parity core_fingerprint >/dev/null ||
+        die "the parity pin still records held core inputs after the bump"
+      local key
+      for key in tag commit spec_version; do
+        [[ "$(toml_get upstream.toml parity "$key")" == "$(toml_get "$root/upstream.toml" parity "$key")" ]] ||
+          die "the core bump moved the parity pin's $key"
+      done
+      for key in spec code_hash v15_sha256 v16_sha256; do
+        [[ "$(toml_get upstream.toml networks.finney.metadata "$key")" == "$(toml_get "$root/upstream.toml" networks.finney.metadata "$key")" ]] ||
+          die "the core bump changed the pinned Finney runtime's $key"
+      done
+      stage_done
+      stage evidence
+      live_evidence "$decision" "$evidence"
+      stage_done
+      stage import
+      "$CARGO_TARGET_DIR/debug/xtask" import-upstream
+      stage_done
+      stage lock
+      # The moved core sources resolve again; nothing else is updated.
+      cargo update --workspace
+      stage_done
+      stage core-surface
+      xtask core-surface
+      stage_done
+      stage extract
+      xtask extract
+      stage_done
+      stage regen
+      xtask parity pending --base "$root"
+      xtask regen
+      stage_done
+      stage compat
+      xtask compat --measure-build-weight --build-target aarch64-apple-darwin
+      xtask compat
+      stage_done
+      stage parity
+      xtask parity report --base "$root" --out "$evidence/porting-report.json" --adopt
+      xtask parity matrix >/dev/null
+      xtask parity check >"$evidence/parity.json"
+      xtask parity check --strict >/dev/null 2>"$evidence/parity-strict.txt" || true
+      if [[ -f parity/port_due.toml ]]; then
+        cp parity/port_due.toml "$evidence/port_due.toml"
+      fi
+      : >"$evidence/port_due.checked"
+      stage_done
+      stage checks
+      # Full pin verification on the hosted runner: the patched and
+      # unpatched core API build probes, the patch's review identity and its
+      # Ed25519 erasure check, the manifests and the lock.
+      xtask pin --check --prepare-cache
+      xtask import-upstream --verify-only
+      xtask core-surface --check
+      xtask extract --check
+      xtask regen --check
+      xtask compat --check
+      xtask probe pins --check
+      xtask drift --network finney --check
+      cargo fmt --all --check
+      stage_done
+      stage build
+      cargo build --locked --workspace --all-targets
+      stage_done
+      stage tests
+      cargo test --locked -p rtao-core -p rtao-runtime -p rtao-reads -p rtao-intents -p rtao-client -p rtao-signer -p rtao-wallet
+      stage_done
+      stage live
+      live_read "$evidence"
+      stage_done
+      stage record
+      record_core_bump "$decision" "$evidence"
+      stage_done
+      ;;
     record-testnet)
       stage drift
       xtask drift --network testnet --apply --out "$evidence/drift"
@@ -862,6 +997,30 @@ $rederived re-derived and checked. $due_text $core_text The validated range
 is unchanged. Workflow run: <$run>."
 }
 
+record_core_bump() {
+  local decision=$1 evidence=$2 from to fingerprint tag rev run today due due_text
+  from=$(jq -r .core.from "$decision")
+  to=$(toml_get upstream.toml core tag)
+  fingerprint=$(toml_get upstream.toml core fingerprint)
+  tag=$(toml_get upstream.toml parity tag)
+  rev=$(toml_get upstream.toml core.patch rev || echo none)
+  run=${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-local}/actions/runs/${GITHUB_RUN_ID:-local}
+  today=$(date -u +%Y-%m-%d)
+  due=$(jq -r '.port_due | length' "$evidence/porting-report.json")
+  due_text="$due hand port(s) remain listed in \`parity/port_due.toml\`."
+  changelog_entry "### Core bumped from $from to $to (D-127, D-136)
+
+- \`bittensor-core\` and its companions move from $from to $to, the parity pin's core (\`$fingerprint\`); \`[parity] core_fingerprint\` is gone. The reviewed core patch is carried onto $to (fork revision \`$rev\`), and every downstream \`[patch]\` line names $to: applications that copy rtao's patch set must update theirs.
+- The parity pin ($tag) and the runtime are unchanged. $due_text
+- Checked by the hosted runtime-adopt workflow ([run]($run)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution."
+  upstream_log_entry "## $today: core bumped from $from to $to
+
+A dispatched runtime-adopt run moved the held core from $from to $to, the core
+of the parity pin \`$tag\` (D-127, D-136), carrying the reviewed core patch to
+fork revision \`$rev\`. The parity pin and the runtime are unchanged.
+Workflow run: <$run>."
+}
+
 record_testnet() {
   local decision=$1 evidence=$2 spec code number run class
   spec=$(jq -r .spec "$decision")
@@ -888,9 +1047,21 @@ bot() {
 # was not produced by the pipeline as checked: refuse it, here and again in
 # the push job, which trusts nothing the adopt job built.
 tooling_paths='^(\.github/|ci/|xtask/|\.cargo/|\.config/|patches/|rust-toolchain\.toml$|deny\.toml$|clippy\.toml$|AGENTS\.md$)|(^|/)(Cargo\.toml|Cargo\.lock|build\.rs)$'
+# A core bump (D-136) must move the core's references in manifests and
+# locks; every changed manifest line must be one of those references.
+core_bump_paths='(^|/)Cargo\.(toml|lock)$'
+core_reference='^[-+]([A-Za-z0-9_-]+ = \{ git = "https://github\.com/(RaoFoundation|sam0x17)/subtensor\.git", (tag = "v[0-9]+"|rev = "[0-9a-f]{40}")(, [^{}]*)? \}|\[patch\."https://github\.com/(RaoFoundation|sam0x17)/subtensor\.git"\]|)$'
 check_paths() {
-  local touched
+  local touched manifest stray
   touched=$(git diff --name-only "$1" "$2" | grep -E "$tooling_paths" || true)
+  if [[ "${3:-}" == core-bump ]]; then
+    for manifest in $(grep -E '(^|/)Cargo\.toml$' <<<"$touched" || true); do
+      stray=$(git diff --no-color --no-ext-diff -U0 "$1" "$2" -- "$manifest" |
+        grep -E '^[-+]' | grep -Ev '^(\+\+\+|---) ' | grep -Ev "$core_reference" || true)
+      [[ -z "$stray" ]] || die "the core bump changes $manifest beyond the core references: $stray"
+    done
+    touched=$(grep -Ev "$core_bump_paths" <<<"$touched" || true)
+  fi
   [[ -z "$touched" ]] || die "the adoption commit changes its own tooling, which the pipeline never writes: $(tr '\n' ' ' <<<"$touched")"
 }
 
@@ -916,11 +1087,17 @@ book/src/upstream-log.md)."
       body="Testnet finalized spec $spec; its metadata is indexed with
 drift --apply and the probe pins regenerated."
       ;;
+    core-bump)
+      title="Bump the core from $(jq -r .core.from "$decision") to $(toml_get upstream.toml core tag) (D-127)"
+      body="A dispatched runtime-adopt run moved the held core to the parity pin's
+core, carried the reviewed core patch and checked every stage (see
+CHANGELOG.md and book/src/upstream-log.md)."
+      ;;
     *) die "nothing to commit for action $action" ;;
   esac
   git add -A
   bot commit -q -m "$title [skip ci]" -m "$body"
-  check_paths HEAD~1 HEAD
+  check_paths HEAD~1 HEAD "$action"
   git bundle create -q "$bundle" HEAD~1..HEAD
   git rev-parse HEAD
 }
@@ -936,19 +1113,19 @@ push() {
   action=$(jq -r .action "$decision")
   spec=$(jq -r .spec "$decision")
   network=$(jq -r .network "$decision")
-  case "$action" in adopt-finney | record-testnet) ;; *) die "nothing to push for action $action" ;; esac
+  case "$action" in adopt-finney | record-testnet | core-bump) ;; *) die "nothing to push for action $action" ;; esac
   git bundle verify -q "$bundle" >/dev/null 2>&1 || die "the bundle does not apply to this checkout"
   git fetch -q "$bundle" HEAD
   commit=$(git rev-parse FETCH_HEAD)
   [[ "$(git rev-list --count --no-walk=unsorted "$commit^@")" == 1 ]] || die "the bundle's commit is not a single-parent commit"
   parent=$(git rev-parse "$commit^")
-  check_paths "$parent" "$commit"
+  check_paths "$parent" "$commit" "$action"
   git fetch -q origin main
   if [[ "$(git rev-parse origin/main)" != "$parent" ]]; then
     echo "superseded: main moved from $parent during the run; the next scheduled run starts again from the new main"
     return 0
   fi
-  if [[ "$action" == adopt-finney ]]; then
+  if [[ "$action" == adopt-finney || "$action" == core-bump ]]; then
     today=$(date -u +%Y-%m-%d)
     git fetch -q --tags origin
     tag=snapshot-$today
@@ -957,7 +1134,13 @@ push() {
       n=$((n + 1))
       tag=snapshot-$today.$n
     done
-    bot tag -a "$tag" -m "Snapshot of main: Finney runtime $spec adopted automatically ($(git show "$commit:upstream.toml" | toml_get /dev/stdin parity tag)). Not a versioned release; see CHANGELOG.md (Unreleased)." "$commit"
+    local what
+    if [[ "$action" == core-bump ]]; then
+      what="core bumped to $(git show "$commit:upstream.toml" | toml_get /dev/stdin core tag)"
+    else
+      what="Finney runtime $spec adopted automatically ($(git show "$commit:upstream.toml" | toml_get /dev/stdin parity tag))"
+    fi
+    bot tag -a "$tag" -m "Snapshot of main: $what. Not a versioned release; see CHANGELOG.md (Unreleased)." "$commit"
     if [[ "${RTAO_ADOPT_DRY_RUN:-}" == 1 ]]; then
       echo "dry run: would push $commit to main and tag $tag"
       return 0
@@ -1198,6 +1381,8 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
       if [[ "$action" == blocked ]]; then
         title="Runtime adoption blocked: $network spec $spec"
         stage=decide
+      elif [[ "$action" == core-bump ]]; then
+        title="Core bump failed: $(jq -r '"\(.core.from) to \(.core.to)"' "$decision") at stage $stage"
       else
         title="Runtime adoption failed: $network spec $spec at stage $stage"
       fi

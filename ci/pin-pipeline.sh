@@ -59,7 +59,9 @@ else
 fi
 stage core-bump
 if ! cmp -s "$baseline/Cargo.toml" Cargo.toml; then
-  cargo update -p bittensor-core -p w3f-bls -p subtensor-macros -p subtensor-linting
+  # Only the moved core sources resolve again (`-p w3f-bls` is ambiguous:
+  # the git companion and the crates.io package share the name).
+  cargo update --workspace
 fi
 stage extract
 xtask extract

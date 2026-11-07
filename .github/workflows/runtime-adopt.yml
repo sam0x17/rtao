@@ -20,6 +20,9 @@ name: runtime-adopt
 # forces it. A bundle that changes the tooling that validated it is refused.
 # Upstream branches ahead of every network keep one informational issue for
 # pre-staging, and due hand ports another; neither alerts.
+# A dispatch with core_bump also moves a core held behind the parity pin
+# (D-127) to the parity pin's core, through the same adopt and push jobs and
+# checks (D-136); scheduled runs never bump the core.
 on:
   schedule:
     - cron: '41 * * * *'
@@ -35,6 +38,10 @@ on:
         default: ''
       force:
         description: Attempt the adoption even while a failed one is backing off
+        type: boolean
+        default: false
+      core_bump:
+        description: Move a held core to the parity pin's core (D-127) when Finney runs the parity runtime (core-patch rebase, references, lock)
         type: boolean
         default: false
 permissions: {}
@@ -66,11 +73,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SIMULATE: ${{ inputs.simulate }}
           RTAO_ADOPT_FORCE: ${{ inputs.force }}
+          RTAO_ADOPT_CORE_BUMP: ${{ inputs.core_bump }}
         run: |
           out="$RUNNER_TEMP/decision"
           mkdir -p "$out"
           if [ -n "$SIMULATE" ]; then
-            printf '%s\n' "$SIMULATE" > "$out/observed.json"
+            printf '%s\n' "$SIMULATE" | jq --argjson bump "${RTAO_ADOPT_CORE_BUMP:-false}" \
+              '.core_bump = (.core_bump // $bump)' > "$out/observed.json"
           else
             timeout 300s ci/runtime-adopt.sh observe "$out/observed.json"
           fi
@@ -86,7 +95,7 @@ jobs:
 
   adopt:
     needs: decide
-    if: needs.decide.outputs.action == 'adopt-finney' || needs.decide.outputs.action == 'record-testnet'
+    if: needs.decide.outputs.action == 'adopt-finney' || needs.decide.outputs.action == 'record-testnet' || needs.decide.outputs.action == 'core-bump'
     runs-on: ubuntu-latest
     timeout-minutes: 150
     # Read-only: this job compiles and runs code, so its token cannot push.

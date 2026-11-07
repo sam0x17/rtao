@@ -150,6 +150,111 @@ shared=$(jq -cn --argjson f "$(state 3 1)" --argjson t "$(state 1 5 abc "testnet
 expect backoff-with-another-network-recorded "$(retry "$shared" | jq -c --arg c "$other" '.testnet.code = $c')" \
   '.action == "blocked" and .network == "testnet" and (.deferred | map(.action)) == ["backoff"]'
 
+# ── core bump (D-136) ─────────────────────────────────────────────────
+# Two pins roots: the core held behind the parity pin, and not held.
+held_root=$work/core-held
+free_root=$work/core-free
+mkdir -p "$held_root" "$free_root"
+for pins_root in "$held_root" "$free_root"; do
+  ln -s "$root/vendor" "$pins_root/vendor"
+done
+held_fp=b3:$(printf '%064d' 5)
+awk -v fp="$held_fp" '
+  /^\[/ { inside = ($0 == "[parity]") }
+  inside && $1 == "core_fingerprint" { next }
+  { print }
+  inside && $1 == "spec_version" { print "core_fingerprint = \"" fp "\"" }
+' "$root/upstream.toml" >"$held_root/upstream.toml"
+grep -v '^core_fingerprint = ' "$root/upstream.toml" >"$free_root/upstream.toml"
+parity_tag=$(toml_get "$root/upstream.toml" parity tag)
+core_tag=$(toml_get "$root/upstream.toml" core tag)
+core_id=core-$parity_tag-${held_fp:3:10}
+# expect_pins <name> <pins root> <observation json> <jq predicate>
+expect_pins() {
+  local name=$1 observed=$work/$1.observed.json decision=$work/$1.decision.json
+  printf '%s\n' "$3" >"$observed"
+  bash "$script" decide "$observed" "$decision" "$2" >/dev/null
+  if jq -e "$4" "$decision" >/dev/null; then
+    echo "ok   $name: $(jq -c '{action, source, id, deferred: (.deferred | map(.action)), core_bump}' "$decision")"
+  else
+    echo "FAIL $name: $(jq -c . "$decision")"
+    failures=$((failures + 1))
+  fi
+}
+bump() { jq -c '.core_bump = true' <<<"$1"; }
+current=$(observation "$spec" "$code" "$testnet_spec" "$testnet_code")
+expect_pins core-bump-not-requested "$held_root" "$current" '.action == "none" and .core_bump == null'
+expect_pins core-bump-requested "$held_root" "$(bump "$current")" \
+  ".action == \"core-bump\" and .network == \"finney\" and .spec == $spec and .code == \"$code\" and .id == \"$core_id\"
+   and .core == {from: \"$core_tag\", to: \"$parity_tag\", fingerprint: \"$held_fp\"} and .source == \"$parity_tag\" and .core_bump == \"requested\""
+expect_pins core-bump-not-due "$free_root" "$(bump "$current")" '.action == "none" and (.core_bump | test("none is due"))'
+expect_pins core-bump-waits-for-an-adoption "$held_root" "$(bump "$(observation "$next" "$other" "$testnet_spec" "$testnet_code" "$release")")" \
+  '.action == "adopt-finney" and .deferred == [] and (.core_bump | test("waits"))'
+expect_pins core-bump-waits-for-a-blocked-finney "$held_root" "$(bump "$(observation "$spec" "$other" "$testnet_spec" "$testnet_code")")" \
+  '.action == "blocked" and .network == "finney" and (.core_bump | test("waits"))'
+expect_pins core-bump-waits-for-an-unobserved-finney "$held_root" "$(bump "$(observation null "" "$testnet_spec" "$testnet_code")")" \
+  '.action == "none" and (.core_bump | test("waits"))'
+expect_pins core-bump-before-testnet "$held_root" "$(bump "$(observation "$spec" "$code" "$next" "$other")")" \
+  '.action == "core-bump" and (.deferred | map(.action)) == ["record-testnet"]'
+core_retry() { jq -c --argjson p "$1" --argjson force "${2:-false}" '.previous = $p | .inputs = "abc" | .force = $force' <<<"$(bump "$current")"; }
+expect_pins core-bump-backs-off "$held_root" "$(core_retry "$(previous 1 0.5 abc "$core_id" lock)")" \
+  '.action == "backoff" and .wanted == "core-bump"'
+expect_pins core-bump-forced "$held_root" "$(core_retry "$(previous 1 0.5 abc "$core_id" lock)" true)" '.action == "core-bump"'
+unreleased_root=$work/core-unreleased
+mkdir -p "$unreleased_root"
+ln -s "$root/vendor" "$unreleased_root/vendor"
+parity_commit=$(toml_get "$root/upstream.toml" parity commit)
+awk '{ print } /^\[/ { inside = ($0 == "[parity]") } inside && $1 == "core_fingerprint" { print "release = \"unreleased\""; print "source_branch = \"main\"" }' \
+  "$held_root/upstream.toml" >"$unreleased_root/upstream.toml"
+expect_pins core-bump-unreleased-source "$unreleased_root" "$(bump "$current")" \
+  ".action == \"core-bump\" and .source == \"branch:main@$parity_commit\""
+
+# The commit guard: a core bump may change manifests and locks, and in a
+# manifest only the core's references; everything else stays refused.
+sed -n -e '/^die() {/,/^}/p' -e '/^tooling_paths=/p' -e '/^core_bump_paths=/p' -e '/^core_reference=/p' \
+  -e '/^check_paths() {/,/^}/p' "$script" >"$work/paths.sh"
+# shellcheck disable=SC1091
+source "$work/paths.sh"
+guard=$work/guard
+git init -q "$guard"
+upstream_url=https://github.com/RaoFoundation/subtensor.git
+fork_url=https://github.com/sam0x17/subtensor.git
+mkdir -p "$guard/ci/probe" "$guard/xtask"
+cat >"$guard/Cargo.toml" <<TOML
+[workspace.dependencies]
+bittensor-core = { git = "$upstream_url", tag = "v478", default-features = false }
+serde = "1"
+
+[patch."$upstream_url"]
+bittensor-core = { git = "$fork_url", rev = "$(printf '%040d' 1)" }
+TOML
+printf 'w3f-bls = { git = "%s", tag = "v478" }\n' "$upstream_url" >"$guard/ci/probe/Cargo.toml"
+printf 'lock v478\n' >"$guard/Cargo.lock"
+printf 'fn main() {}\n' >"$guard/xtask/main.rs"
+guarded() { git -C "$guard" -c user.name=t -c user.email=t@invalid "$@"; }
+guarded add -A
+guarded commit -q -m base
+base_commit=$(guarded rev-parse HEAD)
+# guard_case <name> <expected: pass|refuse> <action> <edit command>
+guard_case() {
+  guarded checkout -q --detach "$base_commit"
+  (cd "$guard" && eval "$4")
+  guarded commit -q -am "$1"
+  if (cd "$guard" && check_paths "$base_commit" HEAD "$3") >/dev/null 2>&1; then got=pass; else got=refuse; fi
+  if [[ "$got" == "$2" ]]; then
+    echo "ok   guard $1: $got"
+  else
+    echo "FAIL guard $1: expected $2, got $got"
+    failures=$((failures + 1))
+  fi
+}
+moved="sed -i 's/tag = \"v478\"/tag = \"v488\"/; s/rev = \"0*1\"/rev = \"$(printf '%040d' 2)\"/' Cargo.toml ci/probe/Cargo.toml && echo 'lock v488' >Cargo.lock"
+guard_case core-references-move pass core-bump "$moved"
+guard_case adoption-refuses-manifests refuse adopt-finney "$moved"
+guard_case core-bump-refuses-other-manifest-lines refuse core-bump "$moved && sed -i 's/serde = \"1\"/serde = \"2\"/' Cargo.toml"
+guard_case core-bump-refuses-tooling refuse core-bump "$moved && echo '// x' >>xtask/main.rs"
+guard_case core-bump-refuses-another-repository refuse core-bump "sed -i 's|$fork_url|https://github.com/attacker/subtensor.git|' Cargo.toml"
+
 # ── live-evidence verdict ─────────────────────────────────────────────
 v15=$(toml_get "$root/upstream.toml" networks.finney.metadata v15_sha256)
 v16=$(toml_get "$root/upstream.toml" networks.finney.metadata v16_sha256)

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Since `snapshot-2026-11-07.3`
+
+Not a versioned release. Each item links to its section below.
+
+- The core bump can run on GitHub's hosted runners: `runtime-adopt` takes a `core_bump` dispatch input (D-136, issue #12).
+
+### Core bump through runtime-adopt (D-136)
+
+#### Automation
+
+- New: `runtime-adopt` dispatch input `core_bump` (default false; scheduled runs never bump the core). While the core is held behind the parity pin (`[parity] core_fingerprint`, D-127) and Finney runs the parity runtime, the decision is the new action `core-bump`: the adopt job re-pins the parity source with `RTAO_PIN_CORE_BUMP=1` (core-patch rebase onto the parity tag, downstream core references), checks that only `[core]` moved and the runtime pins did not, gathers live evidence for the pinned runtime, re-resolves the lock, regenerates the core surface and runs the adoption's checks plus full `pin --check` (patch review identity, Ed25519 erasure check, patched and unpatched API probes) and the core, signer and wallet tests; the push job pushes it with a snapshot tag. Backoff, issue and alert handling are an adoption's. When no fork branch carries the rebased patch yet, the run retains the publication candidate in its evidence and stops.
+- Changed: the commit guard allows a core bump to change manifests and locks, and in a manifest only the core's `git`/`tag`/`rev` references and their `[patch]` headers; every other tooling path stays refused for every action.
+- Fixed: the candidate pipeline's core lock update used `cargo update -p w3f-bls`, which is ambiguous (the git companion and the crates.io package share the name); it is `cargo update --workspace` now.
+- Changed: `core-patch` rebase refuses to offer for publication a carried tree that fails the Ed25519 erasure check, and refuses an existing fork branch that fails it, instead of failing later at `pin --check`.
+
 ### Since `snapshot-2026-11-07.2`
 
 Not a versioned release. Each item links to its section below.

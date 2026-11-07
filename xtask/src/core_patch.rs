@@ -1035,6 +1035,9 @@ pub(crate) fn rebase_candidate(
         }
         let entry = entry_for(remote)?;
         if verify_review(&repo, &entry).is_ok() {
+            verify_security_source(&repo, remote).with_context(|| {
+                format!("core-patch-security: the published patch branch {branch} fails the Ed25519 erasure check")
+            })?;
             // This includes the initial v478 branch, which can point directly
             // at the already reviewed combined commit. Hosted CI only reads the fork.
             let mut prepared = next.clone();
@@ -1141,6 +1144,14 @@ pub(crate) fn rebase_candidate(
     verify_diff(&directory, &base, &rev)?;
     let entry = entry_for(&rev)?;
     verify_review(&directory, &entry)?;
+    // A carried tree that pin --check would refuse is never offered for
+    // publication: the new core's own sources must pass the erasure check.
+    verify_security_source(&directory, &rev).with_context(|| {
+        format!(
+            "core-patch-security: the reviewed patch carried onto {target} fails the Ed25519 erasure check; the patch must be extended and reviewed for the new core before publication (retained {})",
+            directory.display()
+        )
+    })?;
     write_candidate(&temporary, &directory, &base, start, &rev, &entry)?;
     git(
         &repo,
