@@ -768,20 +768,20 @@ async fn proxy_events_with_new_proxy_types_are_read_by_name() -> anyhow::Result<
             if let Some(ty) = proxy_type
                 && let scale_info::TypeDef::Variant(variants) = &mut ty.ty.type_def
             {
-                for (name, index) in [("Lock", 21), ("GammaSpend", 22)] {
-                    variants.variants.push(scale_info::Variant {
-                        name: name.into(),
-                        fields: vec![],
-                        index,
-                        docs: vec![],
-                    });
-                }
+                // A variant newer than the pinned runtime (488 pins Lock 21
+                // and GammaSpend 22, which 487 added this way).
+                variants.variants.push(scale_info::Variant {
+                    name: "FutureProxyType".into(),
+                    fields: vec![],
+                    index: 23,
+                    docs: vec![],
+                });
             }
         })?;
         let hash = state.block_hash(100).ok_or_else(|| anyhow::anyhow!("block"))?;
         state.seed_events(hash, json!([
             {"phase":{"Initialization":null}, "event":{"Proxy":{"ProxyAdded":{"delegator":CHALLENGER.to_string(),"delegatee":DELEGATE.to_string(),"proxy_type":"Lock","delay":0}}}, "topics":[]},
-            {"phase":{"Initialization":null}, "event":{"Proxy":{"ProxyAdded":{"delegator":OWNER.to_string(),"delegatee":DELEGATE.to_string(),"proxy_type":"GammaSpend","delay":5}}}, "topics":[]},
+            {"phase":{"Initialization":null}, "event":{"Proxy":{"ProxyAdded":{"delegator":OWNER.to_string(),"delegatee":DELEGATE.to_string(),"proxy_type":"FutureProxyType","delay":5}}}, "topics":[]},
             {"phase":{"Initialization":null}, "event":{"Proxy":{"ProxyRemoved":{"delegator":OWNER.to_string(),"delegatee":DELEGATE.to_string(),"proxy_type":"Owner","delay":5}}}, "topics":[]},
         ]))?;
         Ok(())

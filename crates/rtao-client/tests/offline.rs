@@ -106,7 +106,12 @@ async fn python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_s
             );
             assert_eq!(value["era"], "00");
             assert_eq!(value["payload_json"]["nonce"], "0x00000003");
-            assert_eq!(value["payload_json"]["specVersion"], "0x000001e2");
+            // The fake chain serves the pinned metadata; its spec follows pin bumps.
+            let spec = client.refresh_runtime().await.unwrap().spec_version();
+            assert_eq!(
+                value["payload_json"]["specVersion"],
+                format!("0x{}", hex::encode(spec.to_be_bytes()))
+            );
             assert_eq!(value["payload_json"]["transactionVersion"], "0x00000001");
             assert_eq!(
                 value["payload_json"]["tip"],

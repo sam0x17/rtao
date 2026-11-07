@@ -58,6 +58,7 @@ struct Options {
     resolve_only: bool,
     prepare_cache: bool,
     source_only: bool,
+    core_bump: bool,
 }
 
 fn options(args: Vec<String>) -> Result<Options> {
@@ -96,9 +97,13 @@ fn options(args: Vec<String>) -> Result<Options> {
             "--prepare-candidate" if !result.prepare_candidate => result.prepare_candidate = true,
             "--resolve-only" if !result.resolve_only => result.resolve_only = true,
             "--prepare-cache" if !result.prepare_cache => result.prepare_cache = true,
+            "--core-bump" if !result.core_bump => result.core_bump = true,
             _ => bail!("unknown pin argument {arg:?}"),
         }
     }
+    // The candidate pipeline runs `pin --prepare-candidate` in a child
+    // process; the request reaches it through the environment (D-127).
+    result.core_bump |= std::env::var("RTAO_PIN_CORE_BUMP").as_deref() == Ok("1");
     ensure!(
         result.check
             || result.parity.is_some()
@@ -139,6 +144,10 @@ fn options(args: Vec<String>) -> Result<Options> {
     ensure!(
         !result.prepare_candidate || (!result.force && !result.plan && !result.dry_run),
         "--prepare-candidate cannot be combined with replay, plan, or dry-run"
+    );
+    ensure!(
+        !result.core_bump || (result.parity.is_some() && !result.check && !result.networks),
+        "--core-bump moves the core with a parity pin: it needs --parity and excludes checking modes"
     );
     ensure!(
         !result.resolve_only || (result.check && result.parity.is_some()),
@@ -205,6 +214,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             opts.force,
             opts.plan,
             opts.dry_run,
+            opts.core_bump,
             opts.github_output.as_deref(),
         );
     }
@@ -279,10 +289,18 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
         // ordinary --check performs no network resolution beyond cached Git.
         crate::fingerprint::prepare_source_cache(&repo, &proof.commit)?;
         let fingerprint = crate::fingerprint::fingerprint(&repo, &proof.commit)?;
-        let core_moved = current
+        let inputs_moved = current
             .as_ref()
             .map(|d| d["core"]["fingerprint"].as_str() != Some(&fingerprint))
             .unwrap_or(true);
+        // D-127: a parity pin whose core inputs moved holds the core at its
+        // pinned tag unless the core bump is requested. A core bump rebases
+        // the reviewed core patch, publishes it to the fork and changes every
+        // downstream patch line, which is a maintainer step; the runtime does
+        // not wait for it. The parity's own core-input fingerprint is recorded
+        // exactly ([parity] core_fingerprint) and verified like the core's.
+        let core_held = inputs_moved && current.is_some() && !opts.core_bump;
+        let core_moved = inputs_moved && !core_held;
         if opts.resolve_only {
             if let Some(output) = opts.github_output {
                 let newer = current
@@ -294,7 +312,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
                         .create(true)
                         .append(true)
                         .open(output)?,
-                    "tag={}\ndigest={}\nnew={newer}\ncore_bump={core_moved}",
+                    "tag={}\ndigest={}\nnew={newer}\ncore_bump={core_moved}\ncore_due={core_held}",
                     proof.tag,
                     proof.digest
                 )?;
@@ -302,7 +320,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             println!(
                 "{}",
                 serde_json::to_string_pretty(
-                    &json!({"tag":proof.tag,"commit":proof.commit,"digest":proof.digest,"core_bump":core_moved,"pins_modified":false})
+                    &json!({"tag":proof.tag,"commit":proof.commit,"digest":proof.digest,"core_bump":core_moved,"core_due":core_held,"pins_modified":false})
                 )?
             );
             return Ok(());
@@ -320,12 +338,17 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
                 next["core"]["tag"] = value(&proof.tag);
                 next["core"]["commit"] = value(&proof.commit);
                 next["core"]["toolchain"] = value(toolchain(&repo, &proof.commit)?);
-                next["core"]["fingerprint"] = value(fingerprint);
+                next["core"]["fingerprint"] = value(&fingerprint);
             }
             next["parity"]["tag"] = value(&proof.tag);
             next["parity"]["commit"] = value(&proof.commit);
             next["parity"]["spec_version"] = value(i64::from(proof.spec));
             next["parity"]["python_package_version"] = value(python_version(&repo, &proof.commit)?);
+            if core_held {
+                next["parity"]["core_fingerprint"] = value(&fingerprint);
+            } else if let Some(parity) = next["parity"].as_table_mut() {
+                parity.remove("core_fingerprint");
+            }
             match &proof.branch {
                 Some(branch) => {
                     next["parity"]["release"] = value("unreleased");
@@ -450,7 +473,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
                 .open(output)?;
             writeln!(
                 file,
-                "tag={}\ndigest={}\nnew={newer}\ncore_bump={core_moved}",
+                "tag={}\ndigest={}\nnew={newer}\ncore_bump={core_moved}\ncore_due={core_held}",
                 proof.tag, proof.digest
             )?;
         }
@@ -1378,6 +1401,24 @@ fn verify_schema(pins: &DocumentMut) -> Result<()> {
     Ok(())
 }
 
+/// The core-input fingerprint the parity commit must reproduce (D-127): the
+/// core's own while they agree, else the separately recorded one of a held
+/// core, which exists only while it differs.
+fn parity_core_fingerprint(pins: &DocumentMut) -> Result<&str> {
+    let core = pin_string(pins, "core", "fingerprint")?;
+    let Some(item) = pins["parity"].get("core_fingerprint") else {
+        return Ok(core);
+    };
+    let recorded = item
+        .as_str()
+        .context("parity.core_fingerprint must be a string")?;
+    ensure!(
+        recorded.starts_with("b3:") && recorded.len() == 67 && recorded != core,
+        "parity.core_fingerprint is a BLAKE3 fingerprint recorded only while it differs from core.fingerprint"
+    );
+    Ok(recorded)
+}
+
 fn verify_pin_identity(repo: &Path, pins: &DocumentMut) -> Result<()> {
     verify_schema(pins)?;
     ensure!(
@@ -1406,8 +1447,8 @@ fn verify_pin_identity(repo: &Path, pins: &DocumentMut) -> Result<()> {
     );
     let parity = pin_string(pins, "parity", "commit")?;
     ensure!(
-        crate::fingerprint::fingerprint(repo, parity)? == pin_string(pins, "core", "fingerprint")?,
-        "parity core inputs differ from core pin; move core.tag"
+        crate::fingerprint::fingerprint(repo, parity)? == parity_core_fingerprint(pins)?,
+        "parity core inputs differ from the recorded core inputs; re-pin parity (the core is held and the bump recorded as due) or move core.tag with --core-bump"
     );
     ensure!(
         python_version(repo, parity)? == pin_string(pins, "parity", "python_package_version")?,
@@ -1741,6 +1782,46 @@ mod tests {
             vec!["--prepare-cache", "--check", "--prepare-cache"],
         ] {
             assert!(options(arguments.into_iter().map(str::to_owned).collect()).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn a_core_bump_is_explicit_and_a_held_core_records_the_parity_inputs() -> Result<()> {
+        let bump = options(vec![
+            "--parity".into(),
+            "v488".into(),
+            "--prepare-candidate".into(),
+            "--core-bump".into(),
+        ])?;
+        assert!(bump.core_bump && bump.prepare_candidate);
+        assert!(!options(vec!["--parity".into(), "v488".into()])?.core_bump);
+        for arguments in [
+            vec!["--core-bump"],
+            vec!["--check", "--core-bump"],
+            vec!["--parity", "v488", "--check", "--core-bump"],
+        ] {
+            assert!(options(arguments.into_iter().map(str::to_owned).collect()).is_err());
+        }
+        let core = format!("b3:{}", "a".repeat(64));
+        let parity = format!("b3:{}", "b".repeat(64));
+        let pins = |extra: &str| -> Result<DocumentMut> {
+            Ok(
+                format!("[core]\nfingerprint = '{core}'\n[parity]\ntag = 'v488'\n{extra}")
+                    .parse()?,
+            )
+        };
+        assert_eq!(parity_core_fingerprint(&pins("")?)?, core);
+        assert_eq!(
+            parity_core_fingerprint(&pins(&format!("core_fingerprint = '{parity}'\n"))?)?,
+            parity
+        );
+        for bad in [
+            format!("core_fingerprint = '{core}'\n"),
+            "core_fingerprint = 'b3:short'\n".to_owned(),
+            "core_fingerprint = 7\n".to_owned(),
+        ] {
+            assert!(parity_core_fingerprint(&pins(&bad)?).is_err());
         }
         Ok(())
     }

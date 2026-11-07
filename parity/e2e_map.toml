@@ -157,9 +157,6 @@ rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_cha
 [tests."intent_set_perpetual_lock"]
 rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
-[tests."intent_set_root_claim_type"]
-na = "Retired core constructor absent from the pinned runtime and Python catalog."
-
 [tests."intent_set_subnet_identity"]
 rtao = "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain"
 
@@ -386,3 +383,180 @@ na = "Q30 defers this live-runtime scenario; implemented client behavior is cove
 
 [tests."test_unsettable_hyperparameter_rejected_at_construction"]
 na = "The core test rejects tempo, but pinned Python intents/hyperparameters.py:33 permits it and the runtime's do_set_tempo accepts subnet owners. Follow Python behavior: retain tempo and reject actual unsettable names."
+
+[tests."pyt:e2e/test_falcon_fund_safety.py::test_activation_preserves_all_four_wallets_and_classical_signing"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_fund_safety.py::test_prefunding_atomic_failure_and_recovery_for_all_four_types"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_fund_safety.py::test_shield_compact_nonce_and_ciphertext_tier_boundaries_for_all_four_types"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_announced_proxy_delay_regrant_and_revocation"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_classical_proxy_grants_follow_fixed_and_rotating_policy"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_contracts_upload_remove_instantiate_and_call"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_crowdloan_finalize_withdraw_refund_and_dissolve"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_order_execution_cancellation_and_approval"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_restricted_proxy_cannot_escalate_through_evm_dispatch"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_safe_mixed_multisig_quorums_cancellation_nested_proxy_and_pure"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_staking_children_serving_identity_locks_and_hotkey_swap"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_utility_failures_and_preimage_deposit_refunds"]
+pending = "M9"
+
+[tests."pyt:e2e/test_falcon_release.py::test_validator_plain_null_and_commit_reveal_weights"]
+pending = "M9"
+
+[tests."pyt:e2e/test_hashed_activation.py::test_sudo_activation_is_live_and_root_only"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mixed_multisig.py::test_cli_mixed_two_of_three_all_pairs_and_orders"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mixed_multisig.py::test_direct_sdk_multisig_receiving_transfer"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mixed_multisig.py::test_direct_sdk_receiving_signatories_approve_execute_and_cancel"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mixed_multisig.py::test_vault_adapter_co_signs_hashed_both_orders"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_cli_regressions.py::test_encrypted_cli_sender_retains_local_ms_registration"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_extended.py::test_proxy_receiving_sponsorship_denial_and_revocation"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_extended.py::test_three_of_four_sr_ed_ms_hashed_ms_receiving_and_all_member_cancellations"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_localnet.py::test_mixed_protected_multisig_cancellation_failure_and_quorum"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_localnet.py::test_offline_replay_native_evm_and_derived_accounts"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_localnet.py::test_original_limit_order_execution_cancellation_and_approval"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_localnet.py::test_standard_ms_bare_funding_spending_replay_and_shield"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_localnet.py::test_standard_ms_separate_evm_wallet_round_trip"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_localnet.py::test_two_of_three_all_mixed_quorums_and_runtime_rejection_of_weak_quorum"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_multisig_costs.py::test_ms_multisig_opening_budgets_deposit_and_both_shield_fees"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_nested_authority.py::test_multisig_as_proxy_and_proxy_for_multisig"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_operation_families.py::test_contracts_upload_remove_instantiate_and_call"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_operation_families.py::test_crowdloan_finalize_withdraw_refund_and_dissolve"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_operation_families.py::test_staking_locks_children_identity_serving_and_hotkey_swap"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_operation_families.py::test_utility_branches_and_preimage_deposits"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_proxy_boundaries.py::test_ms_classical_delegation_matches_the_account_policy"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_proxy_boundaries.py::test_ms_delayed_proxy_regrant_preserves_the_accounts_policy"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_proxy_boundaries.py::test_restricted_ms_proxy_cannot_escalate_through_evm_dispatch"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release.py::test_failed_registration_payment_batch_preserves_funds_and_next_authority"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release.py::test_master_gate_preserves_funds_and_resumes_all_registered_authorities"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release.py::test_mldsa_sudo_authority_can_dispatch_and_restore_root"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release.py::test_prefunded_bare_account_can_register_and_spend_recovered_balance"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release.py::test_shield_nonce_boundary_quote_matches_real_carrier_and_executes"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release.py::test_wrong_chain_and_payload_proofs_cannot_change_authority_or_balance"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release_costs.py::test_automatic_and_explicit_shield_total_fee_caps_and_receipts"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release_costs.py::test_protected_pure_reserves_policy_and_kill_lifecycle"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release_costs.py::test_proxy_delegate_must_afford_both_fees_independently_of_reserve_owner"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_release_costs.py::test_shield_actual_fees_match_cli_and_failed_transfer_balance_deltas"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_root_cli.py::test_root_cli_moves_selected_ms_wallet_without_touching_configured_wallet"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_sponsorship_live.py::test_sponsored_transfer_all_reserve_boundaries_and_seed_recovery"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_validator_paths.py::test_ms_validator_weights_and_commitments"]
+pending = "M9"
+
+[tests."pyt:e2e/test_mldsa_validator_proxy.py::test_restricted_ms_proxy_sets_weights_and_revocation_invalidates_authority"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_approval_lifecycle.py::test_full_approval_record_atomicity_rotation_recovery_and_reclamation"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_parity.py::test_cli_wallet_parity"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_shield.py::test_cross_validator_shield_and_external_nonce_advancement"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_swap_release.py::test_classical_owner_hotkey_upgrade_policy"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_swap_release.py::test_coldkey_swap_direction"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_swap_release.py::test_hotkey_swap_direction"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_swap_release.py::test_multi_subnet_swap_preserves_delegation"]
+pending = "M9"
+
+[tests."pyt:e2e/test_wallet_types.py::test_composable_wallet_lifecycle"]
+pending = "M9"
+
+[tests.test_gamma_lifecycle]
+pending = "M9"

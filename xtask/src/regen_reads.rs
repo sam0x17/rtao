@@ -159,13 +159,14 @@ impl Hit {\n/// Match an access observed by the client at any block.\npub fn mat
 /// Signature defaults and CLI metadata for one read argument.\n#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub struct ParamSpec {\n/// Python argument name.\npub name:&'static str,\n/// Catalog JSON kind.\npub json_type:JsonType,\n/// Catalog argument documentation.\npub doc:&'static str,\n/// Whether the query CLI requires an explicit value.\npub required:bool,\n/// Exact Python signature default as a JSON literal.\npub default:Option<&'static str>,\n/// Whether the CLI may obtain the argument from the selected wallet.\npub own_key:bool,}\n\
 /// State identity policy required by the read.\n#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub enum Pinning {\n/// One descriptor access, with the underlying view's identity policy.\nSingle,\n/// Multiple state accesses or a map scan use one immutable identity.\nPinned,}\n\
 /// Catalog rendering shape extracted from the Python read registration.\n#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub enum RenderHint{\n/// Rows grouped by one record field.\nGrouped{\n/// Grouping field.\nkey:&'static str},\n/// Sparse rows indexed by a matrix's two coordinates.\nMatrix{\n/// Row label.\nrow:&'static str,\n/// Column label.\ncol:&'static str,\n/// Numeric value label.\nvalue:&'static str},}\n\
-/// The fourteen public read categories.\n#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub enum Category {\n",
+/// The public read categories of the pinned catalog.\n#[derive(Clone,Copy,Debug,PartialEq,Eq)]\npub enum Category {\n",
     );
     let categories: BTreeMap<_, _> = rtao_catalog::READS
         .iter()
         .map(|spec| (spec.namespace, spec.category))
         .collect();
-    ensure!(categories.len() == 14, "expected14read categories");
+    // The catalog's own namespaces (v488 adds Gamma); each has an accessor.
+    ensure!(!categories.is_empty(), "read catalog has no categories");
     for (namespace, category) in &categories {
         out.push_str(&format!("#[doc={category:?}]\n{},\n", pascal(namespace)));
     }

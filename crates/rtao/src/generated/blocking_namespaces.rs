@@ -85,6 +85,23 @@ impl super::SyncSnapshot {
         SyncEpochs { view: &self.view }
     }
 }
+/// Blocking reads in the `gamma` namespace.
+#[derive(Clone, Copy)]
+pub struct SyncGamma<'a> {
+    pub(super) view: &'a super::SyncView,
+}
+impl super::SyncClient {
+    /// Bind the `gamma` namespace without connecting.
+    pub fn gamma(&self) -> SyncGamma<'_> {
+        SyncGamma { view: &self.view }
+    }
+}
+impl super::SyncSnapshot {
+    /// Bind the `gamma` namespace without connecting.
+    pub fn gamma(&self) -> SyncGamma<'_> {
+        SyncGamma { view: &self.view }
+    }
+}
 /// Blocking reads in the `hyperparameters` namespace.
 #[derive(Clone, Copy)]
 pub struct SyncHyperparameters<'a> {
@@ -623,6 +640,29 @@ impl SyncBalances<'_> {
         })
     }
 }
+impl SyncGamma<'_> {
+    #[doc = "The gamma deposit at a hotkey on a subnet, or None.\n\nIts `netuid`, `hotkey`, `coldkey`, `spender`, and `balance_gamma`,\n`daily_spend_cap_gamma` and `spendable_gamma` as exact decimal strings of\ngamma. A `daily_spend_cap_gamma` of None is no cap, and \"0\" pauses the\ndeposit. `spendable_gamma` is the balance within what its daily spend cap\nallows now."]
+    pub fn gamma_deposit(
+        &self,
+        netuid: rtao_primitives::NetUid,
+        hotkey_ss58: rtao_primitives::AccountId,
+    ) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::gamma_deposit(&view, netuid, hotkey_ss58).await
+        })
+    }
+}
+impl SyncGamma<'_> {
+    #[doc = "Every gamma deposit of a coldkey, on every subnet."]
+    pub fn gamma_deposits(
+        &self,
+        coldkey_ss58: rtao_primitives::AccountId,
+    ) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::gamma_deposits(&view, coldkey_ss58).await
+        })
+    }
+}
 impl SyncLocks<'_> {
     #[doc = "Conviction metrics for a hotkey on a subnet.\n\nReturns `conviction_alpha` denominated in the subnet's alpha, rolled\nforward to the current block."]
     pub fn hotkey_conviction(
@@ -908,6 +948,35 @@ impl SyncBalances<'_> {
         })
     }
 }
+impl SyncGamma<'_> {
+    #[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
+    pub fn quote_mint_gamma(
+        &self,
+        netuid: rtao_primitives::NetUid,
+        amount_tao: f64,
+    ) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::quote_mint_gamma(&view, netuid, amount_tao).await
+        })
+    }
+}
+impl SyncGamma<'_> {
+    #[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma_with_stake` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
+    pub fn quote_mint_gamma_with_stake(
+        &self,
+        netuid: rtao_primitives::NetUid,
+        amount_alpha: f64,
+    ) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::quote_mint_gamma_with_stake(
+                &view,
+                netuid,
+                amount_alpha,
+            )
+            .await
+        })
+    }
+}
 impl SyncPrices<'_> {
     #[doc = "Simulate staking `amount_tao` TAO into a subnet: alpha out, fee, and slippage.\n\nUse this to compute a safe `limit_price_rao` for the `add_stake_limit` intent."]
     pub fn quote_stake(
@@ -1008,6 +1077,17 @@ impl SyncStaking<'_> {
     pub fn root_claim_threshold(&self) -> Result<rtao_primitives::DynBalance, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::root_claim_threshold(&view).await
+        })
+    }
+}
+impl SyncSubnets<'_> {
+    #[doc = "Every service published on a subnet, by hotkey.\n\nEach `url` points to its hotkey's own document of its services and the\npayments they accept; the chain does not check what it says. `spender` is\nthe spender customers name on gamma deposits for the service. `owner`\nmarks the subnet owner's hotkey while the owner owns it, whose spender new\ndeposits name by default. A url that is not printable text is returned as\n0x-hex."]
+    pub fn services(
+        &self,
+        netuid: rtao_primitives::NetUid,
+    ) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::services(&view, netuid).await
         })
     }
 }
@@ -1265,6 +1345,14 @@ impl SyncSubnets<'_> {
     pub fn subnets(&self) -> Result<Vec<rtao_reads::reads::m6_root::SubnetInfo>, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::subnets(&view).await
+        })
+    }
+}
+impl SyncGamma<'_> {
+    #[doc = "The TAO/USD price oracle, its last feed, and the accepted price at this block.\n\nThe accepted price falls to the feed at once and rises toward it by at most\n0.0066% (66 ppm) of itself per block, and mints value TAO at it. Minting needs a\nfeed at most 300 blocks old, so no new mint succeeds once `blocks_since_last_feed`\nexceeds 300."]
+    pub fn tao_usd_price(&self) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::tao_usd_price(&view).await
         })
     }
 }

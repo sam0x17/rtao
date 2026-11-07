@@ -74,7 +74,7 @@ fn all_406_named_errors_have_exact_classification_description_remediation_and_js
     let overrides = fixture.string_dict(RESULT, "_NAME_HELP_OVERRIDES")?;
     let explanations = fixture.string_dict(RESULT, "EXPLANATIONS")?;
     let names = fixture.dict(ERROR_MAP, "NAME_TO_CODE")?;
-    assert_eq!(names.len(), 406);
+    assert_eq!(names.len(), 441);
     for row in names {
         let name = text(&row[0])?;
         let token = text(&row[1])?;
@@ -312,7 +312,7 @@ fn pool_watch_standard_and_unknown_diagnostics_use_python_messages() -> TestResu
             "InvalidSignature".into()
         ))
         .message,
-        "The provided signature does not match the order payload and signer."
+        "The signature does not authorize this account and complete transaction."
     );
     assert_eq!(
         ChainError::from_pool(&PoolRejection::InvalidTransaction(

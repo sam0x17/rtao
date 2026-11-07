@@ -15,7 +15,7 @@ pub use crate::{
 
 /// Runtime proxy type names, in the Python choice and on-chain variant order.
 #[doc(alias = "bittensor.intents.proxy.PROXY_TYPES")]
-pub const PROXY_TYPES: [&str; 21] = [
+pub const PROXY_TYPES: [&str; 23] = [
     "Any",
     "Owner",
     "NonCritical",
@@ -37,6 +37,8 @@ pub const PROXY_TYPES: [&str; 21] = [
     "BasketTrading",
     "Validate",
     "Weights",
+    "Lock",
+    "GammaSpend",
 ];
 
 /// Validate an exact Python proxy choice without normalizing its spelling.
@@ -185,11 +187,19 @@ impl Intent for CreatePureProxy {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "create_pure_proxy",
+            self.account_mode.as_deref(),
+        )?;
         self.validate()?;
         crate::generated::passthrough::create_pure_proxy(self, cx).await
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "create_pure_proxy",
+            self.account_mode.as_deref(),
+        )?;
         check_proxy_type(&self.proxy_type)?;
         Ok(())
     }
@@ -204,11 +214,19 @@ impl Intent for KillPureProxy {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "kill_pure_proxy",
+            Some(self.account_mode.as_str()),
+        )?;
         self.validate()?;
         crate::generated::passthrough::kill_pure_proxy(self, cx).await
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "kill_pure_proxy",
+            Some(self.account_mode.as_str()),
+        )?;
         check_proxy_type(&self.proxy_type)?;
         Ok(())
     }
@@ -375,7 +393,7 @@ mod tests {
 
     #[test]
     fn proxy_choices_validate_exact_spelling_with_python_diagnostic() -> anyhow::Result<()> {
-        assert_eq!(PROXY_TYPES.len(), 21);
+        assert_eq!(PROXY_TYPES.len(), 23);
         for name in PROXY_TYPES {
             assert_eq!(check_proxy_type(name)?, name);
         }
@@ -385,7 +403,7 @@ mod tests {
                     .expect_err("invalid choice")
                     .to_string(),
                 format!(
-                    "unknown proxy type {}; expected one of: Any, Owner, NonCritical, NonTransfer, Senate, NonFungible, Triumvirate, Governance, Staking, Registration, Transfer, SmallTransfer, RootWeights, ChildKeys, SudoUncheckedSetCode, SwapHotkey, SubnetLeaseBeneficiary, RootClaim, BasketTrading, Validate, Weights",
+                    "unknown proxy type {}; expected one of: Any, Owner, NonCritical, NonTransfer, Senate, NonFungible, Triumvirate, Governance, Staking, Registration, Transfer, SmallTransfer, RootWeights, ChildKeys, SudoUncheckedSetCode, SwapHotkey, SubnetLeaseBeneficiary, RootClaim, BasketTrading, Validate, Weights, Lock, GammaSpend",
                     rtao_primitives::pyfmt::string_repr(name)
                 )
             );
@@ -413,11 +431,13 @@ mod tests {
                 delay: 0,
             };
             let create = CreatePureProxy {
+                account_mode: None,
                 proxy_type: name.into(),
                 delay: u32::MAX,
                 index: u16::MAX,
             };
             let kill = KillPureProxy {
+                account_mode: "legacy".to_owned(),
                 spawner_ss58: REAL.into(),
                 proxy_type: name.into(),
                 index: u16::MAX,

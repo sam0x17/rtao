@@ -492,6 +492,10 @@ impl Intent for MultisigExecute {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_execute",
+            Some(self.account_mode.as_str()),
+        )?;
         build_approval(
             cx,
             Dispatch::Execute,
@@ -518,6 +522,10 @@ impl Intent for MultisigExecute {
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_execute",
+            Some(self.account_mode.as_str()),
+        )?;
         check_inputs(&self.other_signatories, &self.call, self.timepoint.as_ref())
     }
 }
@@ -570,6 +578,10 @@ impl Intent for MultisigApprove {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_approve",
+            Some(self.account_mode.as_str()),
+        )?;
         build_approval(
             cx,
             Dispatch::Approve,
@@ -635,6 +647,10 @@ impl Intent for MultisigApprove {
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_approve",
+            Some(self.account_mode.as_str()),
+        )?;
         check_inputs(&self.other_signatories, &self.call, self.timepoint.as_ref())
     }
 }
@@ -680,6 +696,10 @@ impl Intent for MultisigThreshold1 {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_threshold_1",
+            Some(self.account_mode.as_str()),
+        )?;
         check_inputs(&self.other_signatories, &self.call, None)?;
         let signer = cx.coldkey_address()?;
         let account = group_account(cx.runtime, signer, 1, &self.other_signatories)?;
@@ -691,6 +711,10 @@ impl Intent for MultisigThreshold1 {
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_threshold_1",
+            Some(self.account_mode.as_str()),
+        )?;
         check_inputs(&self.other_signatories, &self.call, None)
     }
 }
@@ -701,6 +725,10 @@ impl Intent for MultisigCancel {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_cancel",
+            Some(self.account_mode.as_str()),
+        )?;
         check_inputs(&self.other_signatories, &self.call, Some(&self.timepoint))?;
         let signer = cx.coldkey_address()?;
         let account = group_account(cx.runtime, signer, self.threshold, &self.other_signatories)?;
@@ -719,6 +747,10 @@ impl Intent for MultisigCancel {
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "multisig_cancel",
+            Some(self.account_mode.as_str()),
+        )?;
         check_inputs(&self.other_signatories, &self.call, Some(&self.timepoint))
     }
 }
@@ -806,12 +838,14 @@ mod tests {
         let inner_bytes = transfer_bytes();
         let inner = CallBytes::decode(&inner_bytes, runtime)?;
         let execute = MultisigExecute {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
             timepoint: None,
         };
         let approve = MultisigApprove {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
@@ -826,12 +860,14 @@ mod tests {
             ..execute.clone()
         };
         let cancel = MultisigCancel {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
             timepoint: json!({"height":12,"index":3}),
         };
         let immediate = MultisigThreshold1 {
+            account_mode: "legacy".to_owned(),
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
         };
@@ -926,6 +962,7 @@ mod tests {
         chain.mutate_state(|state|state.seed_python("Multisig","Multisigs",&[json!(account),json!(format!("0x{}",hex::encode(inner.hash())))],json!({"when":{"height":12,"index":3},"deposit":120,"depositor":MEMBER,"approvals":[MEMBER]})))?;
         let recorded = RecordingView::new(snapshot.clone());
         let intent = MultisigExecute {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
@@ -961,6 +998,7 @@ mod tests {
         let (_chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let intent = MultisigThreshold1 {
+            account_mode: "legacy".to_owned(),
             other_signatories: vec![json!(OTHER)],
             call: json!({"op":"evm_withdraw","amount_tao":"0.000000001"}),
         };
@@ -997,6 +1035,7 @@ mod tests {
         ] {
             let (chain, client, snapshot) = fixture(free).await?;
             let intent = MultisigApprove {
+                account_mode: "legacy".to_owned(),
                 threshold: 2,
                 other_signatories: vec![json!(OTHER)],
                 call: transfer(),
@@ -1059,6 +1098,7 @@ mod tests {
         let runtime = &snapshot.block().runtime;
         let call = rtao_runtime::calls::system::remark(vec![]).compose(runtime)?;
         let open = MultisigExecute {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
@@ -1116,6 +1156,7 @@ mod tests {
             let (chain, client, snapshot) = fixture(1_000).await?;
             let runtime = &snapshot.block().runtime;
             let intent = MultisigApprove {
+                account_mode: "legacy".to_owned(),
                 threshold: 3,
                 other_signatories: vec![json!(OTHER), json!(third)],
                 call: transfer(),
@@ -1176,6 +1217,7 @@ mod tests {
         let (chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let intent = MultisigApprove {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
@@ -1270,6 +1312,7 @@ mod tests {
         let (chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let ordinary = MultisigApprove {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
@@ -1321,6 +1364,7 @@ mod tests {
         let (chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let intent = MultisigApprove {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
@@ -1372,6 +1416,7 @@ mod tests {
         let (chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let intent = MultisigApprove {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
@@ -1430,7 +1475,7 @@ mod tests {
             (3,vec![json!(OTHER)],"multisig threshold 3 exceeds the signatory count 2 (signer plus other_signatories)".into()),
             (2,vec![json!(MEMBER)],format!("other_signatories must not include the signer's own account ({MEMBER}); list only the other members")),
         ] {
-            let intent=MultisigApprove{threshold,other_signatories:others,call:json!({}),timepoint:None};
+            let intent=MultisigApprove{ account_mode: "legacy".to_owned(),threshold,other_signatories:others,call:json!({}),timepoint:None};
             intent.validate()?;
             let error=intent.build(&BuildCx{view:&snapshot,origin:OriginView::Account(MEMBER),runtime,clock:&SystemClock,spec:MultisigApprove::SPEC}).await.expect_err("invalid group");
             assert_eq!(error.to_string(),message);
@@ -1443,6 +1488,7 @@ mod tests {
             assert!(group_account(runtime, MEMBER, 1, &others).is_err());
         }
         let intent = MultisigExecute {
+            account_mode: "legacy".to_owned(),
             threshold: 1,
             other_signatories: vec![json!(OTHER)],
             call: json!({}),
@@ -1483,6 +1529,7 @@ mod tests {
         let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
         let snapshot = client.at(BlockRef::Finalized).await?;
         let intent = MultisigThreshold1 {
+            account_mode: "legacy".to_owned(),
             other_signatories: vec![json!(OTHER), json!(AccountId([9; 32]))],
             call: json!({}),
         };
@@ -1557,6 +1604,7 @@ mod tests {
         }
         assert!(check_inputs(&[json!(OTHER)], &deep, None).is_err());
         let invalid = MultisigThreshold1 {
+            account_mode: "legacy".to_owned(),
             other_signatories: vec![json!(OTHER)],
             call: deep,
         };
@@ -1593,6 +1641,7 @@ mod tests {
         let (_chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
         let intent = MultisigThreshold1 {
+            account_mode: "legacy".to_owned(),
             other_signatories: vec![json!(OTHER)],
             call: json!({"op":"set_subnet_emission_enabled","netuids":[3],"enabled":true}),
         };
@@ -1669,6 +1718,7 @@ mod tests {
             );
         });
         let intent = MultisigApprove {
+            account_mode: "legacy".to_owned(),
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),

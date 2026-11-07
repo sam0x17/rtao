@@ -322,6 +322,9 @@ sed -n -e '/^adopt_marker=/p' -e '/^open_issue() {/,/^}/p' -e '/^previous_state(
 # shellcheck disable=SC1091
 source "$work/issue-state.sh"
 loop() {
+  # The simulated loop must not see the checkout's own due ports, which a
+  # real adoption leaves in parity/port_due.toml (one informational issue).
+  RTAO_ADOPT_PORT_DUE=$work/no-port-due.toml \
   FAKE_GH=$fake/issues PATH=$fake/bin:$PATH GITHUB_REPOSITORY=owner/repo GH_TOKEN=x \
     RUNTIME_ALERT_URL=https://alerts.invalid RUNTIME_ALERT_TOKEN=x "$@"
 }

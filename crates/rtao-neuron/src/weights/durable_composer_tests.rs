@@ -722,8 +722,8 @@ mod encoder_validation {
 
     fn pinned() -> Runtime {
         Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/finney/486.v15.scale"),
-            486,
+            include_bytes!("../../../../vendor/metadata/finney/488.v15.scale"),
+            488,
             1,
             42,
         )
@@ -1024,7 +1024,7 @@ mod encoder_validation {
         // name resolution refuses fails the build unsigned, and the encoder
         // that supplies it composes.
         let mut core = pinned();
-        core.spec_version = 488;
+        core.spec_version = 489;
         let calls_type = core.pallet("SubtensorModule").unwrap().calls_type.unwrap();
         let u64 = core
             .types
@@ -1065,7 +1065,7 @@ mod encoder_validation {
             .for_runtime(&plan, &changed)
             .unwrap_err();
         assert!(
-            refused.to_string().contains("signing runtime (spec 488)")
+            refused.to_string().contains("signing runtime (spec 489)")
                 && refused.to_string().contains("extra"),
             "{refused}"
         );

@@ -1870,7 +1870,7 @@ mod tests {
 
     impl IntentInterface for InstanceHotkey {
         // Batch is cataloged as coldkey but adopts its children's instance role.
-        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[7];
+        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[8];
         type Role = Coldkey;
         type Origin = Signed;
         type Output = ();

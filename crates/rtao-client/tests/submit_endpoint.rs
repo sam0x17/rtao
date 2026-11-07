@@ -454,7 +454,7 @@ const DEFAULT_METHODS: &[&str] = &[
     "chain_getHeader",
     "author_submitExtrinsic",
 ];
-const DEFAULT_DIGEST: &str = "c791690a113abc1925ac0b02399b6b7e3d76141791a4df273fd77526e85f161f";
+const DEFAULT_DIGEST: &str = "38dc4f5bd9a3153f00ef911a3cf8c04c1cf889663e7f9c912e78afc63716cce5";
 
 /// An encoded 1184-byte ML-KEM-768 encapsulation key accepted by the core.
 fn shield_key(fill: u8) -> Vec<u8> {

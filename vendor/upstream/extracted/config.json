@@ -24,8 +24,8 @@
     "MULTISIG_CACHE_ENV_VAR": {
       "default": "DEFAULT_MULTISIG_CACHE_PATH",
       "empty_is_unset": true,
-      "end_line": 327,
-      "line": 327,
+      "end_line": 330,
+      "line": 330,
       "value": "BTCLI_MULTISIG_CACHE"
     },
     "PROXIES_ENV_VAR": {
@@ -38,24 +38,24 @@
     "SUBNET_NAMES_ENV_VAR": {
       "default": "DEFAULT_SUBNET_NAMES_PATH",
       "empty_is_unset": true,
-      "end_line": 355,
-      "line": 355,
+      "end_line": 358,
+      "line": 358,
       "value": "BTCLI_SUBNET_NAMES_CACHE"
     },
     "TOKEN_SYMBOLS_ENV_VAR": {
       "default": "DEFAULT_TOKEN_SYMBOLS_PATH",
       "empty_is_unset": true,
-      "end_line": 416,
-      "line": 416,
+      "end_line": 419,
+      "line": 419,
       "value": "BTCLI_TOKEN_SYMBOLS_CACHE"
     }
   },
   "format": 1,
   "provenance": {
-    "blob": "2958b5d1b8036388354204f0a718f809756cf23a",
-    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+    "blob": "4c4a26ae8ca1be99c9ee834c7fb6184c89d888b8",
+    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
     "path": "sdk/python/bittensor/config.py",
-    "tag": "v486"
+    "tag": "v488"
   },
   "values": {
     "DEFAULT_ADDRESSES_PATH": {

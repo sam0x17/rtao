@@ -25,6 +25,7 @@ const QUERY: &str = "sdk/python/bittensor/cli/query.py";
 const HYPER: &str = "sdk/python/bittensor/reads/hyperparameters.py";
 const CATALOG: &str = "vendor/upstream/catalog/reads.json";
 const OUTPUT: &str = "vendor/upstream/extracted/read_params.json";
+#[cfg(test)]
 use crate::extract::READ_COUNT;
 
 struct Source {
@@ -818,7 +819,7 @@ fn catalog(root: &Path, pins: &DocumentMut) -> Result<(Value, Value)> {
     );
     Ok((
         serde_json::from_slice(&bytes)?,
-        json!({"path":path,"sha256":expected,"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str(),"count":READ_COUNT}),
+        json!({"path":path,"sha256":expected,"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str()}),
     ))
 }
 
@@ -827,8 +828,10 @@ fn compare_catalog(reads: &BTreeMap<String, Value>, catalog: &Value) -> Result<(
         .as_array()
         .context("read catalog must be an array")?;
     ensure!(
-        rows.len() == READ_COUNT && reads.len() == READ_COUNT,
-        "source and catalog must each declare {READ_COUNT} reads"
+        !rows.is_empty() && rows.len() == reads.len(),
+        "source and catalog must declare the same reads ({} in source, {} in catalog)",
+        reads.len(),
+        rows.len()
     );
     let mut names = BTreeSet::new();
     for row in rows {

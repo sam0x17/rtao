@@ -691,6 +691,8 @@ adopt() {
       "$CARGO_TARGET_DIR/debug/xtask" import-upstream
       stage_done
       stage core
+      # pin holds the core when its inputs moved (D-127) and records the
+      # bump as due; the core itself must therefore never move here.
       if ! cmp -s "$root/Cargo.toml" Cargo.toml ||
         [[ "$(toml_get "$root/upstream.toml" core commit)" != "$(toml_get upstream.toml core commit)" ]]; then
         die "the core input moved with spec $spec: a core bump (core-patch rebase, lock update, core-surface) needs a maintainer"
@@ -700,6 +702,9 @@ adopt() {
       xtask extract
       stage_done
       stage regen
+      # Operations new to the catalog are pending ports, not a regeneration
+      # failure (D-128); the parity report below lists what is due.
+      xtask parity pending --base "$root"
       xtask regen
       stage_done
       stage compat
@@ -727,9 +732,15 @@ adopt() {
         --old-v16 "vendor/metadata/finney/$(index_blob "$index" "$old_spec" v16)" \
         --new-v16 "vendor/metadata/finney/$(index_blob "$index" "$spec" v16)" \
         --out "$evidence/drift" >"$evidence/drift.json"
-      local class
+      local class envelope
       class=$(jq -r .classification "$evidence/drift.json")
-      [[ "$class" != breaking ]] || die "metadata drift $old_spec -> $spec is breaking; see the drift report"
+      # A breaking call, storage, event or model shape is what regeneration
+      # absorbs (checked below by regen --check, the build and the tests) and
+      # is listed in the changelog. A breaking extrinsic envelope (versions,
+      # signed extensions) or runtime identity (spec name, transaction
+      # version) needs a signing port first and still stops here (D-128).
+      envelope=$(jq -r '[.changes[] | select(.class == "breaking" and ((.surface | startswith("extrinsic/")) or .surface == "System.Version")) | .surface] | join(", ")' "$evidence/drift.json")
+      [[ -z "$envelope" ]] || die "metadata drift $old_spec -> $spec breaks the signing envelope ($envelope); see the drift report"
       stage_done
       stage probe
       xtask probe pins
@@ -806,7 +817,7 @@ upstream_log_entry() {
 
 record_adoption() {
   local decision=$1 old_spec=$2 class=$3 evidence=$4
-  local spec code number finalized source tag commit run blessed rederived due changed today agreeing release due_text
+  local spec code number finalized source tag commit run blessed rederived due changed today agreeing release due_text core_text breaking_text
   spec=$(jq -r .spec "$decision")
   code=$(jq -r .code "$decision")
   number=$(jq -r .observed.finney.number "$decision")
@@ -827,11 +838,18 @@ record_adoption() {
   else
     due_text="No hand port is due."
   fi
+  breaking_text=$(jq -r '[.changes[] | select(.class == "breaking") | "`\(.surface)`"] | if length == 0 then "" else " Breaking shapes, regenerated: " + join(", ") + "." end' "$evidence/drift.json")
+  if [[ -n "$(toml_get upstream.toml parity core_fingerprint || true)" ]]; then
+    core_text="The core's inputs differ at $tag; the core stays at $(toml_get upstream.toml core tag) and its bump is due (\`[parity] core_fingerprint\`, D-127)."
+  else
+    core_text="Core and its patch are unchanged."
+  fi
   changelog_entry "### Finney runtime $spec adopted automatically
 
 - The parity pin moves from spec $old_spec to $tag (\`$commit\`, pinned as \`$source\`), the runtime Finney finalized at block $number with \`:code\` \`$code\`.
 - Live evidence: $agreeing public endpoints agree at the pinned block on genesis, spec, the \`:code\` hash (and the BLAKE2b-256 of its bytes) and the V15/V16 metadata digests; release wasm: $release.
-- Metadata drift $old_spec -> $spec: \`$class\`. Code generation, extracted tables and catalogs are regenerated from the pinned sources; watched sources changed: $changed, of which $blessed were reconciled automatically and $rederived re-derived and checked. $due_text
+- Metadata drift $old_spec -> $spec: \`$class\`.$breaking_text Code generation, extracted tables and catalogs are regenerated from the pinned sources; watched sources changed: $changed, of which $blessed were reconciled automatically and $rederived re-derived and checked. $due_text
+- $core_text
 - Checked by the hosted runtime-adopt workflow ([run]($run)): pin source identity, live evidence, imports, extraction, regeneration, compatibility, probe pins, drift, parity, formatting, a workspace build, the runtime, reads, intents and client tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution; the validated range is unchanged."
   upstream_log_entry "## $today: Finney runtime $spec adopted automatically
 
@@ -840,8 +858,8 @@ $number (\`$finalized\`), \`:code\` \`$code\`, confirmed it from $agreeing publi
 endpoints (release wasm: $release), and advanced parity from spec $old_spec to
 \`$tag\` (\`$commit\`, pin source \`$source\`). Metadata drift is \`$class\`. The
 porting report lists $changed changed watched sources: $blessed auto-blessed,
-$rederived re-derived and checked. $due_text Core, its patch and the validated
-range are unchanged. Workflow run: <$run>."
+$rederived re-derived and checked. $due_text $core_text The validated range
+is unchanged. Workflow run: <$run>."
 }
 
 record_testnet() {
@@ -1121,7 +1139,7 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
   if [[ "$outcome" == success && -n "$evidence" && -f "$evidence/port_due.checked" ]]; then
     notify_port_due "$evidence/port_due.toml"
   else
-    notify_port_due "$root/parity/port_due.toml"
+    notify_port_due "${RTAO_ADOPT_PORT_DUE:-$root/parity/port_due.toml}"
   fi
 
   number=$(open_issue "$adopt_marker")

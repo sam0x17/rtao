@@ -306,7 +306,11 @@ pub(super) fn outputs(
     }
     use sha2::Digest;
     ensure!(
-        reads.len() == crate::extract::READ_COUNT,
+        reads.len()
+            == params["reads"]
+                .as_array()
+                .context("read parameter records")?
+                .len(),
         "expected every read hit record"
     );
     let document = json!({"format":1,"parity":{"tag":pins["parity"]["tag"].as_str(),"commit":pins["parity"]["commit"].as_str()},"reads":reads});

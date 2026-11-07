@@ -255,6 +255,7 @@ async fn exercise_running(
     };
     let intent = CountingTransfer {
         inner: Transfer {
+            hashed_descriptor: None,
             dest_ss58: slot.hotkey.account().into(),
             amount_tao: Balance::<Tao>::from_rao(1_000_000).into(),
             keep_alive: true,

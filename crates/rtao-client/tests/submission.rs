@@ -115,7 +115,12 @@ async fn preparation_anchors_finalized_era_and_does_not_reserve_nonce() {
         client.at(BlockRef::Number(90)).await.unwrap().block().hash
     );
     assert_eq!(prepared.payload_json()["nonce"], json!("0x00000000"));
-    assert_eq!(prepared.payload_json()["specVersion"], json!("0x000001e2"));
+    // The fake chain serves the pinned metadata; its spec follows pin bumps.
+    let spec = client.refresh_runtime().await.unwrap().spec_version();
+    assert_eq!(
+        prepared.payload_json()["specVersion"],
+        json!(format!("0x{}", hex::encode(spec.to_be_bytes())))
+    );
     assert_eq!(
         prepared.payload_json()["transactionVersion"],
         json!("0x00000001")

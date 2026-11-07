@@ -2,6 +2,46 @@
 
 ## Unreleased
 
+### Since `snapshot-2026-11-05.2`
+
+Tagged as `snapshot-2026-11-07`; not a versioned release. Each item links to
+its section below.
+
+- Runtime 488: the parity pin moves from v486 to v488, the runtime Finney finalized at block 9,442,816 (`:code` `0x3147daab…`); testnet runs the same code and is recorded. Generated descriptors, extracted tables and catalogs follow; new upstream reads and intents are generated as pending entry points.
+- D-125: `ProxyType::Lock` (21) and `ProxyType::GammaSpend` (22).
+- D-126 to D-128 (repository maintenance): the runtime-adopt failures behind issues #10 and #11 are fixed, the core is held at v478 when a parity pin moves the core inputs (core bump recorded as due), and new upstream operations, files, exports and e2e keys become pending ports instead of failing adoption.
+- Unchanged: core v478 and its patch, runtime stamps, V15, signing status and extensions, the metadata hash, the commit-reveal path, journal formats. Rollback to `snapshot-2026-11-05.2` needs no state migration.
+
+### Runtime 488 (parity v488)
+
+- Parity moves from v486 (`72323e13`) to v488 (`b6a81d14`). Finney finalized spec 488 at block 9,442,816; four public endpoints agree at the pinned block on genesis, spec, the `:code` hash and the V15/V16 metadata digests, and the release `subtensor.wasm` hashes to the same `:code`. Testnet runs the same code; its 488 row is recorded under `vendor/metadata/testnet/`.
+- Runtime 488 contains 487 ("Gamma and quantum-resistant wallets"): new pallet `HashedAccounts` (now in the codegen scope, as upstream covers it), gamma deposits in `SubtensorModule` (`mint_gamma`, `mint_gamma_with_stake`, `move_gamma`, `spend_gamma`, deposit spender and daily-cap calls, `GammaRuntimeApi`), the TAO/USD price feed, service URLs (`set_service`), `LimitOrders` order authorization, safe/protected `Utility`, `Multisig` and `Proxy` calls. Typed descriptors for all of these are regenerated from the pinned metadata; see `docs/compat/v488-upgrade.md` for the metadata drift.
+- The upstream catalog grows from 86 to 98 intents and from 105 to 111 reads. The new ones (`mint_gamma`, `mint_gamma_with_stake`, `move_gamma`, `close_gamma_deposit`, `set_gamma_deposit_spender`, `set_gamma_deposit_daily_spend_cap`, `spend_gamma`, `set_service`, `authorize_order`, `cancel_order`, `execute_orders`, `execute_batched_orders`; reads `gamma_deposit`, `gamma_deposits`, `quote_mint_gamma`, `quote_mint_gamma_with_stake`, `tao_usd_price`, `services`) have generated typed inputs and return `NotYetPorted` until ported; `rtao_runtime::compose_by_name` and `rtao call` compose their calls today. Gamma amounts are `rtao_primitives::Amount` (exact decimal or `"all"`) until a gamma unit is ported.
+- `rtao-intents` gains features `gamma` and `limit_orders` (both in `all`).
+- `rtao-client`: the shielded carrier bound follows the pinned Python, now 32768 bytes (runtime 488's `MevShield` `MaxEncryptedCarrier`; it was 8192), so larger inner extrinsics shield instead of refusing locally.
+- `rtao-cli`: a hand-written command that does not offer an intent field (such as `wallet transfer` and the new `hashed_descriptor`) passes the field's catalog default instead of panicking.
+- Changed (source-breaking for struct literals): the generated `Transfer`, `TransferAll` and `AnnounceColdkeySwap` gain `hashed_descriptor: Option<String>` (default `None`), `MultisigApprove`, `MultisigCancel`, `MultisigExecute`, `MultisigThreshold1` and `KillPureProxy` gain `account_mode: String` (default `"legacy"`) and `CreatePureProxy` gains `account_mode: Option<String>`, as upstream's intents do. JSON and defaults are unchanged for existing callers. A hashed destination or a non-legacy account mode is refused with `IntentError::InvalidArgument` until its behavior is ported, so no intent silently derives a different account.
+- Not ported yet (listed as due): Python `Client.register_wallet`, `prepare_mldsa_call`, `prepare_pq_call`, the call-dependent `estimate_shielded_carrier_fee`, `preflight(shielded=…, period=…)` and `multisig(account_mode=…)`.
+- Parity: 111 changed hand-ported sources are listed in `parity/port_due.toml`, 84 new upstream files have pending map rows, new public exports and e2e keys have pending rows; strict parity names them.
+
+### Runtime 487 `ProxyType` variants (D-125)
+
+#### rtao-runtime
+
+- New: `ProxyType::Lock` and `ProxyType::GammaSpend` (runtime 487, part of 488). Composing either under an earlier runtime refuses that call, since the live enum has no such variant.
+
+#### rtao-intents
+
+- `PROXY_TYPES` lists `Lock` and `GammaSpend`.
+
+### Runtime adoption fixes (D-126 to D-128, repository maintenance)
+
+- Finney adoption failed at stage provenance: the core-input fingerprint refused upstream's vendored `vendor/fips204`, which declares its own empty `[workspace]`. A self-rooted path package that inherits nothing is now accepted (inheriting from its own workspace still refuses), and the source-free Cargo projection drops feature entries naming a stripped dev-dependency (`subtensor-hashed`'s `hex/std`) (D-126).
+- Testnet recording failed at stage drift: the drift self-test created its scratch directory under `$RTAO_TEMP_ROOT/tmp`, which a fresh runner does not have; and a testnet row recorded for the parity runtime now carries the parity tag and commit that the probe pins need (D-126).
+- `pin --parity` holds the core when the parity commit's core inputs differ, records `[parity] core_fingerprint` (verified exactly by `pin --check`) and leaves the core bump to `pin --parity vN --core-bump`; before, the pin tried to rebase and publish the core patch and the adoption's core stage refused (D-127).
+- Catalog counts and read categories derive from the pinned catalog; `parity pending --base` (run before regen in runtime-adopt) adds new operations to the pending register; `parity report --adopt` adds pending rows for new watched files, public exports and e2e keys and drops vanished unbound e2e keys. Several extraction adapters accept the v488 source shapes (new test imports, a moved shielded-carrier bound, `dict.update` and `**` in test samples, backend constant tables guarded by `try`/`raise`, an optional future import in description leaves, the paired wallet write's `BT_PW_*` read, an owner setter Python lists only in `HYPERPARAMS`, and the payment wrapper's new declarations) (D-128).
+- The adopt step stops on metadata drift only when the signing envelope or runtime identity breaks; breaking call, storage, event and model shapes are regenerated and listed in the adoption's changelog entry. `ci/runtime-adopt-test.sh` no longer counts the checkout's own due ports as an issue of the simulated loop (D-128).
+
 ### Since `snapshot-2026-11-05`
 
 Tagged as `snapshot-2026-11-05.2`; not a versioned release. Each item links to
@@ -91,7 +131,6 @@ code authentication, metadata-hash and signing checks are unchanged.
 #### Not changed
 
 - V16-only metadata is still rejected; the core parser needs V16 support first. Every current runtime serves V15.
-- The `ProxyType` variants of runtime 487 (`Lock` 21, `GammaSpend` 22) wait for the 487 pin. Until then calls with the existing variants compose from live metadata and dynamic reads show the new names, but the typed `ProxyType` model cannot hold them.
 
 ### Owner-row guard and weight refusals at the dispatch block (D-098)
 

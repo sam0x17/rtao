@@ -5,6 +5,7 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+mod account_modes;
 mod arguments;
 #[cfg(any(
     feature = "batch",

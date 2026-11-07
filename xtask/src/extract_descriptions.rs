@@ -169,12 +169,16 @@ pub(super) fn checked(
         } else {
             suite.as_slice()
         };
+        // The future import is optional (v488's hashed_accounts.py has
+        // none); the annotation evaluates the same either way.
         ensure!(
-            body.len() == 2,
+            matches!(body.len(), 1 | 2),
             "{path}: description leaf must remain one annotation and literal table"
         );
-        exact(&leaf_source, &body[0], "from __future__ import annotations")?;
-        let ast::Stmt::AnnAssign(assign) = &body[1] else {
+        if body.len() == 2 {
+            exact(&leaf_source, &body[0], "from __future__ import annotations")?;
+        }
+        let ast::Stmt::AnnAssign(assign) = &body[body.len() - 1] else {
             bail!("{path}: description leaf annotation missing")
         };
         ensure!(
@@ -250,7 +254,7 @@ mod tests {
                 .as_object()
                 .context("description map missing")?
                 .len(),
-            406
+            441
         );
         let source = resolver.source(AGGREGATOR)?;
         for changed in [

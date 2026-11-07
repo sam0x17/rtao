@@ -147,6 +147,7 @@ async fn fixture() -> Result<(Executor, FakeChain, PublicKeys)> {
 
 fn transfer(destination: AccountId, rao: u64) -> Transfer {
     Transfer {
+        hashed_descriptor: None,
         dest_ss58: destination.into(),
         amount_tao: Balance::<Tao>::from_rao(rao).into(),
         keep_alive: true,

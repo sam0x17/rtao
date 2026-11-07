@@ -1902,3 +1902,122 @@ home = "rtao::SubnetLifecycleState"
 reason = "Four serialized snake-case lifecycle values match Python's string enum; new-storage reads and historical fallback are block-pinned, and transport failures propagate. No runtime execution or independent oracle claim."
 source = "sdk/python/bittensor/__init__.py"
 pinning_tests = ["rtao_reads::lifecycle::lifecycle_storage_includes_dissolving_subnets_and_independent_emission", "rtao_reads::lifecycle::legacy_lifecycle_preserves_cleanup_precedence_and_zero_first_emission"]
+
+[[export]]
+python = "bittensor.RegistrationSponsorship"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.RegistrationSponsorshipRequired"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.evm.resolve_evm_recipient"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/evm/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.http_auth.clear_verifier"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/http_auth.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.http_auth.configure_verifier"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/http_auth.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.AuthorizeOrder"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.CancelOrder"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.CloseGammaDeposit"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.ExecuteBatchedOrders"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.ExecuteOrders"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.MintGamma"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.MintGammaWithStake"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.MoveGamma"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.SetGammaDepositDailySpendCap"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.SetGammaDepositSpender"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.SetService"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"
+
+[[export]]
+python = "bittensor.intents.SpendGamma"
+home = "pending: new public export at v488"
+reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v488 adoption"

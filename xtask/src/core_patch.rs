@@ -1213,7 +1213,7 @@ fn rebase(root: &Path, pins: &DocumentMut, target: &str) -> Result<()> {
         // A new core release needs its complete pin/metadata/fingerprint
         // candidate. The pin pipeline calls rebase_candidate with both old and
         // new identities, then runs all candidate gates before adoption.
-        return crate::pin::run(vec!["--parity".into(), target.into()]);
+        return crate::pin::run(vec!["--parity".into(), target.into(), "--core-bump".into()]);
     }
     let mut next = pins.clone();
     rebase_candidate(root, pins, &mut next)?;

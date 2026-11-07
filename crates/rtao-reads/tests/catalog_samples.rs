@@ -22,7 +22,7 @@ const SAMPLE_PATH: &str = "sdk/python/tests/harness/samples.py";
 fn samples() -> TestResult<BTreeMap<String, Map<String, Value>>> {
     let table = rtao_catalog::py::table(SAMPLE_PATH, "READ_SAMPLES")
         .ok_or("authenticated READ_SAMPLES table missing")?;
-    assert_eq!(table.blob, "60ee43d2db3159b969a7a01fb14edade193e57b8");
+    assert_eq!(table.blob, "8a6ded3185596b57cef116eeb602b57cbb3d6ce4");
     let encoded: Value = rtao_primitives::json::from_str(table.value_json)?;
     let decoded = literal(&encoded)?;
     decoded
@@ -48,7 +48,7 @@ fn source_samples_equal_the_complete_registry_and_only_use_declared_parameters()
         .into_iter()
         .map(|name| name.as_str())
         .collect::<BTreeSet<_>>();
-    assert_eq!(expected.len(), 105);
+    assert_eq!(expected.len(), ReadName::ALL.len());
     assert_eq!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
         expected,
@@ -106,6 +106,10 @@ async fn all_105_source_samples_dispatch_at_the_client_head_and_snapshot_90() ->
         for name in ReadName::ALL {
             let args = samples.get(name.as_str()).ok_or("source sample missing")?;
             observed.insert(name.as_str());
+            // A read new upstream is a pending port (D-128) and does no I/O.
+            if !name.interface_metadata().implemented {
+                continue;
+            }
             let head = RecordingView::new(client.clone());
             if let Err(error) = dispatch(&head, name, args).await {
                 failures.push(format!("{name} at head: {error}"));
@@ -122,7 +126,7 @@ async fn all_105_source_samples_dispatch_at_the_client_head_and_snapshot_90() ->
                 }
             }
         }
-        assert_eq!(observed.len(), 105);
+        assert_eq!(observed.len(), ReadName::ALL.len());
         assert!(
             failures.is_empty(),
             "catalog dispatch failures:\n{}",

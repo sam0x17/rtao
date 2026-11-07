@@ -22,7 +22,7 @@ const SOURCE: &str = "runtime/src/transaction_payment_wrapper.rs";
 const EXPECTED: &str = r###"use crate::{NORMAL_DISPATCH_BASE_PRIORITY, OPERATIONAL_DISPATCH_PRIORITY, Weight};
 use codec::{Decode, DecodeWithMemTracking, Encode};
 use frame_election_provider_support::private::sp_arithmetic::traits::SaturatedConversion;
-use frame_support::dispatch::{DispatchClass, DispatchInfo, PostDispatchInfo};
+use frame_support::dispatch::{DispatchClass, DispatchInfo, Pays, PostDispatchInfo};
 use frame_support::pallet_prelude::TypeInfo;
 use frame_support::traits::{Get, IsSubType, IsType};
 use pallet_subtensor_proxy as pallet_proxy;
@@ -61,6 +61,12 @@ pub trait ColdkeyFeeCallFilter<Call> {
 pub trait FeeWeightDiscount<Call> {
     /// Weight to subtract from `info.call_weight` before pricing the fee.
     fn fee_weight_discount(call: &Call, info: &DispatchInfo) -> Weight;
+    /// Fixed compatibility credits also deducted after dispatch refunds. Unlike
+    /// allowance caps, these compensate work added to both declared and actual weight.
+    fn fee_refund_discount(call: &Call) -> Weight {
+        let _ = call;
+        Weight::zero()
+    }
     fn fee_discount_overhead(call: &Call) -> Weight;
 }
 
@@ -71,15 +77,22 @@ pub fn fee_dispatch_info(info: &DispatchInfo, discount: Weight) -> DispatchInfo 
     }
 }
 
-#[freeze_struct("f003cde1f9da4a90")]
+/// Calls whose execution fee is replaced by gas after dispatch.
+pub trait GasPaidExecution<Call> {
+    fn gas_paid_execution(call: &Call) -> bool;
+}
+
+#[freeze_struct("84732a1b48b3e34f")]
 #[derive(Encode, Decode, DecodeWithMemTracking, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
-pub struct ChargeTransactionPaymentWrapper<T: Config> {
+pub struct ChargeTransactionPaymentWrapper<T: Config, const AUTHORIZED: bool = false> {
     inner: ChargeTransactionPayment<T>,
 }
 
-impl<T: Config + pallet_proxy::Config + pallet_utility::Config + pallet_subtensor::Config>
-    ChargeTransactionPaymentWrapper<T>
+impl<
+    T: Config + pallet_proxy::Config + pallet_utility::Config + pallet_subtensor::Config,
+    const AUTHORIZED: bool,
+> ChargeTransactionPaymentWrapper<T, AUTHORIZED>
 where
     RuntimeCallOf<T>: IsSubType<pallet_proxy::Call<T>> + IsSubType<pallet_utility::Call<T>>,
     T: ColdkeyFeeCallFilter<RuntimeCallOf<T>>,
@@ -170,13 +183,17 @@ where
         pallet_subtensor::Pallet::<T>::maybe_coldkey_for_hotkey(signer)
     }
 }
-impl<T: Config + pallet_proxy::Config + pallet_utility::Config + pallet_subtensor::Config>
-    TransactionExtension<RuntimeCallOf<T>> for ChargeTransactionPaymentWrapper<T>
+impl<
+    T: Config + pallet_proxy::Config + pallet_utility::Config + pallet_subtensor::Config,
+    const AUTHORIZED: bool,
+> TransactionExtension<RuntimeCallOf<T>> for ChargeTransactionPaymentWrapper<T, AUTHORIZED>
 where
     RuntimeCallOf<T>: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>
         + IsSubType<pallet_proxy::Call<T>>
         + IsSubType<pallet_utility::Call<T>>,
-    T: ColdkeyFeeCallFilter<RuntimeCallOf<T>> + FeeWeightDiscount<RuntimeCallOf<T>>,
+    T: ColdkeyFeeCallFilter<RuntimeCallOf<T>>
+        + FeeWeightDiscount<RuntimeCallOf<T>>
+        + GasPaidExecution<RuntimeCallOf<T>>,
     BalanceOf<T>: Zero + Send + Sync,
     RuntimeOriginOf<T>: AsSystemOriginSigner<AccountIdOf<T>>
         + Clone
@@ -185,7 +202,7 @@ where
     const IDENTIFIER: &'static str = "ChargeTransactionPaymentWrapper";
     type Implicit = ();
     type Val = Val<T>;
-    type Pre = (Pre<T>, Weight);
+    type Pre = (Pre<T>, Weight, Weight, Option<Weight>);
 
     fn validate(
         &self,
@@ -245,8 +262,11 @@ where
         ChargeTransactionPayment::<T>::metadata()
     }
 }
-impl<T: Config> core::fmt::Debug for ChargeTransactionPaymentWrapper<T> {}
-impl<T: Config> ChargeTransactionPaymentWrapper<T>
+impl<T: Config, const AUTHORIZED: bool> core::fmt::Debug
+    for ChargeTransactionPaymentWrapper<T, AUTHORIZED>
+{
+}
+impl<T: Config, const AUTHORIZED: bool> ChargeTransactionPaymentWrapper<T, AUTHORIZED>
 where
     T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
     BalanceOf<T>: Send + Sync,
@@ -497,8 +517,8 @@ mod tests {
                 "    #[cfg(feature = \"alternate-payment\")]\n    fn validate(",
             ),
             (
-                "    TransactionExtension<RuntimeCallOf<T>> for ChargeTransactionPaymentWrapper<T>",
-                "    TransactionExtension<RuntimeCallOf<T>> for OtherPaymentWrapper<T>",
+                "> TransactionExtension<RuntimeCallOf<T>> for ChargeTransactionPaymentWrapper<T, AUTHORIZED>",
+                "> TransactionExtension<RuntimeCallOf<T>> for OtherPaymentWrapper<T, AUTHORIZED>",
             ),
             ("type BalanceOf<T> =", "type OtherBalanceOf<T> ="),
             (

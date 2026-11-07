@@ -73,6 +73,9 @@ struct Scanner<'a, 'root> {
     aliases: BTreeMap<String, String>,
     export_aliases: BTreeMap<String, BTreeMap<String, String>>,
     local_names: BTreeSet<String>,
+    /// Locals bound once to `<keyfile>.env_var_name()`: true while that is
+    /// their only assignment in the current function (v488 wallet.py).
+    password_names: BTreeMap<String, bool>,
     class_outer: Vec<Scope>,
     uncertain_aliases: BTreeSet<String>,
     occurrences: Vec<Value>,
@@ -443,6 +446,24 @@ impl Scanner<'_, '_> {
                 .first()
                 .or_else(|| key_kw.map(|keyword| &keyword.value))
                 .context("environment read has no key")?;
+            // A keyfile's own password variable (`BT_PW_*`, named by
+            // `Keyfile.env_var_name()`), which v488's paired wallet write reads
+            // to restore it on rollback.
+            if let ast::Expr::Name(name) = key
+                && self.password_names.get(name.id.as_str()) == Some(&true)
+            {
+                let default = self.default(
+                    call.args
+                        .get(1)
+                        .or_else(|| default_kw.map(|keyword| &keyword.value)),
+                )?;
+                let family = password_family(self.resolver)?["family"].clone();
+                self.record("BT_PW_*".to_owned(), &api, default, call.range)?;
+                if let Some(row) = self.occurrences.last_mut() {
+                    row["family"] = family;
+                }
+                return Ok(());
+            }
             let names = self.names(key, false)?;
             let default = self.default(
                 call.args
@@ -520,6 +541,7 @@ impl Scanner<'_, '_> {
         let old_bindings = self.bindings.clone();
         let old_imports = self.imports.clone();
         let old_uncertain = self.uncertain_aliases.clone();
+        let old_passwords = std::mem::take(&mut self.password_names);
         let classes = std::mem::take(&mut self.class_outer);
         if let Some(outer) = classes.last() {
             self.restore(outer.clone());
@@ -552,6 +574,7 @@ impl Scanner<'_, '_> {
         self.bindings = old_bindings;
         self.imports = old_imports;
         self.uncertain_aliases = old_uncertain;
+        self.password_names = old_passwords;
     }
 
     fn comprehension(&mut self, generators: Vec<ast::Comprehension>, expressions: Vec<ast::Expr>) {
@@ -861,6 +884,22 @@ impl Visitor for Scanner<'_, '_> {
     }
 
     fn visit_stmt_assign(&mut self, node: ast::StmtAssign) {
+        let password_name = matches!(&*node.value, ast::Expr::Call(call)
+            if call.args.is_empty()
+                && call.keywords.is_empty()
+                && matches!(&*call.func, ast::Expr::Attribute(method)
+                    if method.attr.as_str() == "env_var_name"));
+        for target in &node.targets {
+            if let ast::Expr::Name(name) = target
+                && self.local_names.contains(name.id.as_str())
+            {
+                let single = node.targets.len() == 1 && password_name;
+                self.password_names
+                    .entry(name.id.to_string())
+                    .and_modify(|qualified| *qualified = false)
+                    .or_insert(single);
+            }
+        }
         let alias = self.canonical(&node.value);
         let module_value=node.targets.iter().all(|target|matches!(target,ast::Expr::Name(name) if !self.local_names.contains(name.id.as_str())));
         let value = if module_value && self.bounded_assignment(&node.value).unwrap_or(false) {
@@ -1060,6 +1099,7 @@ fn scan(resolver: &mut Resolver<'_>, path: &str, source: &str) -> Result<Vec<Val
         aliases: BTreeMap::new(),
         export_aliases: BTreeMap::new(),
         local_names: BTreeSet::new(),
+        password_names: BTreeMap::new(),
         class_outer: Vec::new(),
         uncertain_aliases: BTreeSet::new(),
         occurrences: Vec::new(),

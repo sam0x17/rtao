@@ -1011,6 +1011,10 @@ pub enum ProxyType {
     Validate,
     /// The runtime's `Weights` permission category.
     Weights,
+    /// The runtime's `Lock` permission category (runtime 487, D-125).
+    Lock,
+    /// The runtime's `GammaSpend` permission category (runtime 487, D-125).
+    GammaSpend,
 }
 impl ToDynamic for ProxyType {
     fn to_dynamic(&self) -> Value {
@@ -1037,6 +1041,8 @@ impl ToDynamic for ProxyType {
                 Self::BasketTrading => "BasketTrading",
                 Self::Validate => "Validate",
                 Self::Weights => "Weights",
+                Self::Lock => "Lock",
+                Self::GammaSpend => "GammaSpend",
             }
             .into(),
         )

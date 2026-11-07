@@ -261,7 +261,7 @@ struct OwnerApproval {
     member: AccountId,
 }
 impl IntentInterface for OwnerApproval {
-    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[31];
+    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[39];
     type Role = Coldkey;
     type Origin = Signed;
     type Output = ();

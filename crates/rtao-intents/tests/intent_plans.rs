@@ -406,8 +406,8 @@ fn authenticated_samples_preserve_schemas_roundtrip_and_unknown_field_refusal() 
     let samples = samples()?;
     let expected: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
     ensure!(
-        expected.len() == 86,
-        "review changes to the pinned 86-op catalog"
+        expected.len() == 98,
+        "review changes to the pinned 98-op catalog"
     );
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == expected,
@@ -475,6 +475,11 @@ fn authenticated_samples_preserve_schemas_roundtrip_and_unknown_field_refusal() 
     Ok(())
 }
 
+/// Operations new upstream whose behavior is a pending port (D-128).
+fn pending(name: &str) -> bool {
+    include_str!("../../../parity/pending.toml").contains(&format!("\"{name}\""))
+}
+
 #[tokio::test]
 // pyt: unit/test_intents_table.py::test_every_intent_has_a_sample
 // pyt: unit/test_intents_table.py::test_composes_and_plans_offline
@@ -482,8 +487,8 @@ async fn all_86_catalog_operations_plan_with_fake_chain() -> Result<()> {
     let samples = samples()?;
     let expected: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
     ensure!(
-        expected.len() == 86,
-        "review changes to the pinned 86-op catalog"
+        expected.len() == 98,
+        "review changes to the pinned 98-op catalog"
     );
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == expected,
@@ -492,6 +497,10 @@ async fn all_86_catalog_operations_plan_with_fake_chain() -> Result<()> {
     let runtime = FakeState::try_default()?.runtime;
     let mut failures = Vec::new();
     for spec in &INTENTS {
+        // A pending port (D-128) has typed inputs but no behavior yet.
+        if pending(spec.name) {
+            continue;
+        }
         let result = async {
             let args = scenario_args(spec.name, &samples[spec.name])?;
             plan_case(runtime.clone(), spec, args, None, None).await
@@ -514,7 +523,7 @@ async fn all_86_catalog_operations_plan_with_fake_chain() -> Result<()> {
 async fn all_86_sample_plans_enforce_declared_spend_caps_without_private_access() -> Result<()> {
     let samples = samples()?;
     let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
-    ensure!(names.len() == 86, "review the pinned 86-op catalog");
+    ensure!(names.len() == 98, "review the pinned 98-op catalog");
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == names,
         "spend policy must cover every authenticated sample"
@@ -528,6 +537,10 @@ async fn all_86_sample_plans_enforce_declared_spend_caps_without_private_access(
     let mut unbounded = BTreeSet::new();
     let mut permitted = BTreeSet::new();
     for spec in &INTENTS {
+        // A pending port (D-128) has typed inputs but no behavior yet.
+        if pending(spec.name) {
+            continue;
+        }
         let args = scenario_args(spec.name, &samples[spec.name])?;
         let intent = AnyIntent::from_tool(spec.name, args.clone())?;
         let spend = intent.as_dyn().spend_dyn();
@@ -583,7 +596,8 @@ async fn all_86_sample_plans_enforce_declared_spend_caps_without_private_access(
         "nonspending controls disappeared"
     );
     ensure!(
-        bounded.len() + unbounded.len() + permitted.len() == 86,
+        bounded.len() + unbounded.len() + permitted.len()
+            == INTENTS.iter().filter(|spec| !pending(spec.name)).count(),
         "spend-policy sample inventory is incomplete"
     );
     Ok(())
@@ -594,7 +608,7 @@ async fn all_86_sample_plans_enforce_declared_spend_caps_without_private_access(
 async fn all_86_sample_plans_enforce_subnet_allowlists_without_private_access() -> Result<()> {
     let samples = samples()?;
     let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
-    ensure!(names.len() == 86, "review the pinned 86-op catalog");
+    ensure!(names.len() == 98, "review the pinned 98-op catalog");
     ensure!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>() == names,
         "subnet policy must cover every authenticated sample"
@@ -612,6 +626,10 @@ async fn all_86_sample_plans_enforce_subnet_allowlists_without_private_access() 
     let mut root_scoped = BTreeSet::new();
     let mut visited = BTreeSet::new();
     for spec in &INTENTS {
+        // A pending port (D-128) has typed inputs but no behavior yet.
+        if pending(spec.name) {
+            continue;
+        }
         let original = AnyIntent::from_tool(spec.name, samples[spec.name].clone())?;
         let original_scope = original.as_dyn().touches_netuids_dyn();
         let declared_global = original.as_dyn().affects_all_subnets_dyn();
@@ -702,7 +720,12 @@ async fn all_86_sample_plans_enforce_subnet_allowlists_without_private_access() 
         ensure!(visited.insert(spec.name), "duplicate policy sample");
     }
     ensure!(
-        visited == names,
+        visited
+            == names
+                .iter()
+                .copied()
+                .filter(|name| !pending(name))
+                .collect::<BTreeSet<_>>(),
         "subnet-policy sample inventory is incomplete"
     );
     ensure!(

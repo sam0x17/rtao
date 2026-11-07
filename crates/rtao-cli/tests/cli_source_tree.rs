@@ -90,6 +90,15 @@ fn pinned_source_inventory_has_current_hashes_and_no_unresolved_parameters() -> 
                 .path
                 .starts_with("vendor/upstream/src/sdk/python/bittensor/cli/")
         );
+        // A source a runtime adoption left as a due port (D-128) keeps its
+        // last reviewed inventory until it is ported and blessed.
+        let upstream = source
+            .path
+            .strip_prefix("vendor/upstream/src/")
+            .unwrap_or(&source.path);
+        if include_str!("../../../parity/port_due.toml").contains(&format!("py = \"{upstream}\"")) {
+            continue;
+        }
         assert_eq!(
             hex::encode(Sha256::digest(fs::read(root.join(&source.path))?)),
             source.sha256,

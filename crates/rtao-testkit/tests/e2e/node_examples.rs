@@ -43,6 +43,7 @@ pub(super) async fn execute_transfer<K: KeySource<Coldkey>>(
     amount: Balance<Tao>,
 ) -> Result<ExtrinsicResult, TxError> {
     let transfer = rtao_intents::transfer::Transfer {
+        hashed_descriptor: None,
         dest_ss58: destination.into(),
         amount_tao: amount.into(),
         keep_alive: true,

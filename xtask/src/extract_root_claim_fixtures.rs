@@ -499,16 +499,20 @@ fn annotation(expr: &ast::Expr) -> bool {
 
 /// Fixed-source module envelope. Unknown top-level code may mutate declarations.
 fn envelope(suite: &[ast::Stmt]) -> Result<()> {
-    let expected_imports = BTreeMap::from([
+    // One entry per reviewed import statement; v488 imports from
+    // bittensor.intents twice (Policy for a new test) and adds Keypair.
+    let expected_imports = [
         ("__future__", vec![("annotations", "annotations")]),
         ("bittensor.balance", vec![("Balance", "Balance")]),
         ("bittensor.client", vec![("Client", "Client")]),
+        ("bittensor.intents", vec![("Policy", "Policy")]),
         ("bittensor.intents", vec![("_root_claim_fee", "fees")]),
         (
             "bittensor.intents.registration",
             vec![("ClaimRoot", "ClaimRoot")],
         ),
         ("bittensor.result", vec![("PolicyError", "PolicyError")]),
+        ("bittensor.sp_core", vec![("Keypair", "Keypair")]),
         (
             "tests.harness.fake_substrate",
             vec![("FakeSubstrate", "FakeSubstrate")],
@@ -523,7 +527,7 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
                 ("dev_wallet", "dev_wallet"),
             ],
         ),
-    ]);
+    ];
     let mut imports = BTreeSet::new();
     let mut declarations = BTreeSet::new();
     let mut functions = BTreeSet::new();
@@ -548,8 +552,8 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
                     .context("relative fixture import")?
                     .as_str();
                 ensure!(
-                    node.level.is_none_or(|level| level.to_usize() == 0) && imports.insert(module),
-                    "duplicate/relative fixture import"
+                    node.level.is_none_or(|level| level.to_usize() == 0),
+                    "relative fixture import"
                 );
                 let aliases = node
                     .names
@@ -561,10 +565,11 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
                         )
                     })
                     .collect::<Vec<_>>();
-                ensure!(
-                    expected_imports.get(module) == Some(&aliases),
-                    "fixture import changed: {module}"
-                );
+                let index = expected_imports
+                    .iter()
+                    .position(|(expected, names)| *expected == module && *names == aliases)
+                    .with_context(|| format!("fixture import changed: {module}"))?;
+                ensure!(imports.insert(index), "duplicate fixture import: {module}");
             }
             ast::Stmt::Assign(node) => {
                 ensure!(node.targets.len() == 1, "aliased fixture declaration");
@@ -605,7 +610,7 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
         "fixture imports/declarations missing"
     );
     ensure!(
-        functions.len() == 34
+        functions.len() == 36
             && functions
                 .contains("test_single_hotkey_admission_covers_full_subnet_limit_plus_root_basket")
             && functions.contains("_seed_claim_quote")
@@ -649,6 +654,9 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
                         | "expected_ok"
                         | "payout_failure"
                         | "monkeypatch"
+                        // v488's actual-signer test, parametrized below.
+                        | "crypto"
+                        | "shielded"
                 ),
                 "fixture argument shadows a protected name"
             );
@@ -667,11 +675,19 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
         if PARAMETRIZED.contains(&wanted) {
             continue;
         }
+        // A test nothing is extracted from may be parametrized over literal
+        // values only (v488's actual-signer root-claim test).
         ensure!(
-            function
-                .decorators
-                .iter()
-                .all(|expr| call_path(expr).as_deref() == Some("pytest.mark.asyncio")),
+            function.decorators.iter().all(|expr| {
+                call_path(expr).as_deref() == Some("pytest.mark.asyncio")
+                    || matches!(expr, ast::Expr::Call(call)
+                        if call_path(&call.func).as_deref() == Some("pytest.mark.parametrize")
+                            && call.keywords.is_empty()
+                            && call.args.len() == 2
+                            && string(&call.args[0]).is_ok()
+                            && matches!(&call.args[1], ast::Expr::List(values)
+                                if values.elts.iter().all(|value| matches!(value, ast::Expr::Constant(_)))))
+            }),
             "unrecognized decorator on {wanted}"
         );
     }

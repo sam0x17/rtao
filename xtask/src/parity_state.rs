@@ -545,22 +545,28 @@ pub(super) fn exports(root: &Path, index: &Index, strict: bool) -> Result<Value>
     let mut names = BTreeSet::new();
     let mut mapped = 0;
     let root_names = documented_root_names(root)?;
+    let mut missing = Vec::new();
     for (path, exports) in &discovered {
         let module = super::symbols::module(path)?;
         for name in exports {
             let symbol = format!("{module}.{name}");
             names.insert(symbol.clone());
-            ensure!(
-                index.aliases.contains_key(&symbol)
-                    || decisions.contains_key(&symbol)
-                    || (module == "bittensor" && root_names.contains(name)),
-                "public export {symbol} lacks a Rust doc alias or reasoned parity/exports_extra.toml row"
-            );
+            if !(index.aliases.contains_key(&symbol)
+                || decisions.contains_key(&symbol)
+                || (module == "bittensor" && root_names.contains(name)))
+            {
+                missing.push(symbol.clone());
+            }
             if index.aliases.contains_key(&symbol) {
                 mapped += 1;
             }
         }
     }
+    ensure!(
+        missing.is_empty(),
+        "public exports lack a Rust doc alias or reasoned parity/exports_extra.toml row: {}",
+        missing.join(", ")
+    );
     ensure!(
         decisions.keys().all(|name| names.contains(name)),
         "export decision names vanished Python API"
@@ -1164,6 +1170,28 @@ fn e2e_target(name: &str, value: &str, index: &Index) -> Result<String> {
 }
 
 pub(super) fn e2e(root: &Path, index: &Index, strict: bool) -> Result<Value> {
+    let expected = e2e_keys(root)?;
+    let map = document(root, "parity/e2e_map.toml")?;
+    let rows = map
+        .get("tests")
+        .and_then(Item::as_table_like)
+        .context("e2e tests map missing")?;
+    let keys = rows
+        .iter()
+        .map(|(name, _)| name.to_owned())
+        .collect::<BTreeSet<_>>();
+    ensure!(
+        keys == expected,
+        "e2e map has missing or vanished authenticated keys: missing {:?}, vanished {:?}",
+        expected.difference(&keys).collect::<Vec<_>>(),
+        keys.difference(&expected).collect::<Vec<_>>()
+    );
+    e2e_rows(root, index, strict, &expected, rows)
+}
+
+/// Every authenticated upstream e2e key: the core manifest's names and the
+/// Python e2e test functions.
+pub(super) fn e2e_keys(root: &Path) -> Result<BTreeSet<String>> {
     let pins = document(root, "upstream.toml")?;
     let pin = &pins["artifacts"]["sdk/bittensor-core/tests/e2e-manifest.json"];
     let path = pin["to"]
@@ -1178,10 +1206,9 @@ pub(super) fn e2e(root: &Path, index: &Index, strict: bool) -> Result<Value> {
     let manifest: Value = serde_json::from_slice(&bytes)?;
     let mut expected = BTreeSet::new();
     collect_manifest_names(&manifest, &mut expected)?;
-    ensure!(
-        expected.len() == 112,
-        "upstream e2e manifest names changed; review complete map"
-    );
+    // The map must name every key (checked by the caller); a changed key set
+    // is reconciled there, by review or by an adoption's pending rows.
+    ensure!(!expected.is_empty(), "upstream e2e manifest has no names");
     let tree = super::read_tree(&fs::read_to_string(root.join("vendor/upstream/tree.txt"))?)?;
     for (path, blob) in tree
         .iter()
@@ -1209,18 +1236,16 @@ pub(super) fn e2e(root: &Path, index: &Index, strict: bool) -> Result<Value> {
             }
         }
     }
-    let map = document(root, "parity/e2e_map.toml")?;
-    let rows = map
-        .get("tests")
-        .and_then(Item::as_table_like)
-        .context("e2e tests map missing")?;
-    ensure!(
-        rows.iter()
-            .map(|(name, _)| name.to_owned())
-            .collect::<BTreeSet<_>>()
-            == expected,
-        "e2e map has missing or vanished authenticated keys"
-    );
+    Ok(expected)
+}
+
+fn e2e_rows(
+    root: &Path,
+    index: &Index,
+    strict: bool,
+    expected: &BTreeSet<String>,
+    rows: &dyn toml_edit::TableLike,
+) -> Result<Value> {
     let mut pending = 0;
     let mut mapped = 0;
     let mut na = 0;
@@ -1297,6 +1322,34 @@ fn collect_manifest_names(value: &Value, names: &mut BTreeSet<String>) -> Result
         _ => {}
     }
     Ok(())
+}
+
+/// Public Python exports with no doc alias, root documentation or
+/// exports_extra row, with their source module (D-128 adoption rows).
+pub(super) fn unmapped_exports(root: &Path, index: &Index) -> Result<Vec<(String, String)>> {
+    let extra = document(root, "parity/exports_extra.toml")?;
+    let decided = extra
+        .get("export")
+        .and_then(Item::as_array_of_tables)
+        .into_iter()
+        .flat_map(|rows| rows.iter())
+        .filter_map(|row| row.get("python").and_then(Item::as_str).map(str::to_owned))
+        .collect::<BTreeSet<_>>();
+    let root_names = documented_root_names(root)?;
+    let mut missing = Vec::new();
+    for (path, exports) in &crate::extract::public_exports(root)? {
+        let module = super::symbols::module(path)?;
+        for name in exports {
+            let symbol = format!("{module}.{name}");
+            if !(index.aliases.contains_key(&symbol)
+                || decided.contains(&symbol)
+                || (module == "bittensor" && root_names.contains(name)))
+            {
+                missing.push((symbol, path.clone()));
+            }
+        }
+    }
+    Ok(missing)
 }
 
 fn documented_root_names(root: &Path) -> Result<BTreeSet<String>> {

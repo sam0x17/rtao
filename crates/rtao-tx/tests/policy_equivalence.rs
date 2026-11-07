@@ -95,6 +95,7 @@ fn m2_pairs() -> Vec<Pair> {
                     IntentCall::transfer_allow_death(DESTINATION.to_string(), u128::from(amount))
                 },
                 intent: Box::new(Transfer {
+                    hashed_descriptor: None,
                     dest_ss58: DESTINATION.into(),
                     amount_tao: Balance::<Tao>::from_rao(amount).into(),
                     keep_alive,
@@ -107,6 +108,7 @@ fn m2_pairs() -> Vec<Pair> {
             constructor: "transfer_all",
             core: IntentCall::transfer_all(DESTINATION.to_string(), keep_alive),
             intent: Box::new(TransferAll {
+                hashed_descriptor: None,
                 dest_ss58: DESTINATION.into(),
                 keep_alive,
             }),
@@ -116,6 +118,7 @@ fn m2_pairs() -> Vec<Pair> {
             constructor: "transfer_all",
             core: IntentCall::transfer_all(DESTINATION.to_string(), keep_alive),
             intent: Box::new(Transfer {
+                hashed_descriptor: None,
                 dest_ss58: DESTINATION.into(),
                 amount_tao: Amount::All,
                 keep_alive,
@@ -721,6 +724,7 @@ async fn trusted_m2_policy_pairs_build_identical_chain_calls() {
 #[test]
 fn fee_caps_fail_closed_and_report_python_diagnostics_in_order() {
     let intent = Transfer {
+        hashed_descriptor: None,
         dest_ss58: DESTINATION.into(),
         amount_tao: Balance::<Tao>::from_rao(11).into(),
         keep_alive: true,
@@ -760,6 +764,7 @@ fn fee_caps_fail_closed_and_report_python_diagnostics_in_order() {
 fn one_rao_over_caps_is_rejected_through_the_native_maximum() {
     for amount in AMOUNTS.into_iter().filter(|amount| *amount > 0) {
         let intent = Transfer {
+            hashed_descriptor: None,
             dest_ss58: DESTINATION.into(),
             amount_tao: Balance::<Tao>::from_rao(amount).into(),
             keep_alive: true,
@@ -791,10 +796,12 @@ fn one_rao_over_caps_is_rejected_through_the_native_maximum() {
 fn full_balance_sweeps_are_blocked_by_every_configured_native_spend_cap() {
     for keep_alive in [true, false] {
         let explicit = TransferAll {
+            hashed_descriptor: None,
             dest_ss58: DESTINATION.into(),
             keep_alive,
         };
         let alias = Transfer {
+            hashed_descriptor: None,
             dest_ss58: DESTINATION.into(),
             amount_tao: Amount::All,
             keep_alive,
@@ -844,6 +851,7 @@ fn raw_call_submission_requires_explicit_policy_opt_in() {
 #[test]
 fn transfer_unit_mismatch_cannot_become_a_bounded_tao_spend() {
     let intent = Transfer {
+        hashed_descriptor: None,
         dest_ss58: DESTINATION.into(),
         amount_tao: Balance::<Alpha>::new(NetUid(7), 1).unwrap().into(),
         keep_alive: true,

@@ -1264,7 +1264,7 @@ struct ApprovalIntent {
     timepoint: Option<rtao_runtime::models::MultisigTimepoint>,
 }
 impl IntentInterface for ApprovalIntent {
-    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[31];
+    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[39];
     type Role = Coldkey;
     type Origin = rtao_tx::Signed;
     type Output = ();
