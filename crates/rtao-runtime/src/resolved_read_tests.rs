@@ -9,7 +9,7 @@ use scale_info::{
     TypeDefTuple, TypeDefVariant, Variant,
 };
 
-const METADATA: &[u8] = include_bytes!("../../../vendor/metadata/finney/486.v15.scale");
+const METADATA: &[u8] = include_bytes!("../../../vendor/metadata/finney/488.v15.scale");
 const PALLET: &str = "SubtensorModule";
 const PROBE: &str = "ResolvedReadProbe";
 const WHO: [u8; 32] = [7; 32];
@@ -50,7 +50,7 @@ fn field(name: Option<&str>, ty: u32) -> Field<PortableForm> {
 impl Lab {
     fn new() -> Self {
         Self {
-            core: Runtime::parse(METADATA, 486, 1, 42).unwrap(),
+            core: Runtime::parse(METADATA, 488, 1, 42).unwrap(),
         }
     }
 

@@ -78,10 +78,13 @@ mod tests {
     fn unknown_tools_keep_python_quoted_input_and_complete_sorted_registry()
     -> Result<(), Box<dyn std::error::Error>> {
         // Python registry.build uses repr(op) and sorted(REGISTRY). Its
-        // catalog supplies the complete independently authenticated op set.
+        // catalog supplies the complete independently authenticated op set;
+        // operations still pending a port (D-128) are not offered.
+        let pending = include_str!("../../../parity/pending.toml");
         let mut known = rtao_catalog::INTENTS
             .iter()
             .map(|entry| entry.name)
+            .filter(|name| !pending.contains(&format!("\"{name}\"")))
             .collect::<Vec<_>>();
         known.sort_unstable();
         let list = known

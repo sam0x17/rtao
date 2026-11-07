@@ -21,6 +21,10 @@ impl Intent for AnnounceColdkeySwap {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::no_hashed_destination(
+            "announce_coldkey_swap",
+            self.hashed_descriptor.as_ref(),
+        )?;
         crate::generated::passthrough::announce_coldkey_swap(self, cx).await
     }
 
@@ -33,6 +37,13 @@ impl Intent for AnnounceColdkeySwap {
             "make sure you control the new coldkey and have its mnemonic backed up".into(),
             "if the destination already holds assets, the swap merges into it".into(),
         ])
+    }
+    fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::no_hashed_destination(
+            "announce_coldkey_swap",
+            self.hashed_descriptor.as_ref(),
+        )?;
+        Ok(())
     }
 }
 
@@ -152,6 +163,7 @@ mod tests {
         for prefix in [0, 2, 42, 110] {
             let spelling = account.to_ss58(prefix);
             let announce = AnnounceColdkeySwap {
+                hashed_descriptor: None,
                 new_coldkey_ss58: spelling.parse()?,
             };
             let swap = SwapColdkeyAnnounced {
@@ -256,6 +268,7 @@ mod tests {
         let requests = chain.requests().len();
         let address: Ss58Address = AccountId::ZERO.into();
         let announce = AnnounceColdkeySwap {
+            hashed_descriptor: None,
             new_coldkey_ss58: address.clone(),
         };
         let swap = SwapColdkeyAnnounced {

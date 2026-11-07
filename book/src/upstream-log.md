@@ -301,6 +301,28 @@ The oracle remains optional-unverified, with a null validated range and empty
 runtime attestations. No upstream filing, publication or push accompanies this
 local candidate.
 
+## 2026-11-07: finalized v488 runtime, core held at v478
+
+Advance parity v486 (`72323e13249c9e25c7e792a2b3c08502c84651d5`) to the final
+[v488 release](https://github.com/RaoFoundation/subtensor/releases/tag/v488)
+(`b6a81d144078eac18bd25c3af7cb31579bb670f3`), which contains release 487.
+Finney finalized spec 488 at block 9,442,816; the pin records finalized head
+`0x0cb6e583fc4bf8c0c7ed52543a35bcd65f66db0477f0b51a52cfd7aa6cb05fbc` with code
+`0x3147daab804046184359d8a929cb333d75f490323b9e1327887a172c64eafa94`, which four
+public endpoints and the release wasm confirm; testnet runs the same code and is
+recorded. The core inputs moved (post-quantum keys), so the core stays at v478
+with its patch and `[parity] core_fingerprint` records the bump as due (D-127).
+
+The metadata drift is breaking only through appended enum variants (`ProxyType`
+`Lock`/`GammaSpend`, `VersionedOrder::Authorized`); extrinsic versions, signed
+extensions and the transaction version are unchanged. Import 474 artifacts,
+regenerate 98 intents and 111 reads (12 and 6 new, pending), merge stage-487
+(D-125), re-derive 31 sources and list 111 changed hand ports as due, with
+pending rows for 84 new files, 17 exports and 59 e2e keys (D-128). See the
+[upgrade record](../../docs/compat/v488-upgrade.md). Adopted by hand with the
+runtime-adopt stage commands after fixing the workflow (D-126 to D-128); no
+hosted CI, oracle comparison, localnet e2e or image execution.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

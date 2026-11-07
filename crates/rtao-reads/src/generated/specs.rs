@@ -87,7 +87,7 @@ pub enum RenderHint {
         value: &'static str,
     },
 }
-/// The fourteen public read categories.
+/// The public read categories of the pinned catalog.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Category {
     #[doc = "Accounts & keys"]
@@ -100,6 +100,8 @@ pub enum Category {
     Delegation,
     #[doc = "Epochs & timing"]
     Epochs,
+    #[doc = "Gamma"]
+    Gamma,
     #[doc = "Hyperparameters"]
     Hyperparameters,
     #[doc = "Identity & commitments"]
@@ -128,6 +130,7 @@ impl Category {
             Self::Collateral => "Mining & collateral",
             Self::Delegation => "Delegation",
             Self::Epochs => "Epochs & timing",
+            Self::Gamma => "Gamma",
             Self::Hyperparameters => "Hyperparameters",
             Self::Identity => "Identity & commitments",
             Self::Leasing => "Leases & crowdloans",
@@ -165,7 +168,7 @@ pub struct ReadSpec {
     pub pinning: Pinning,
 }
 /// Every read's complete authenticated metadata, in catalog order.
-pub static READ_SPECS: [ReadSpec; 105] = [
+pub static READ_SPECS: [ReadSpec; 111] = [
     ReadSpec {
         name: "accepts_locked_alpha",
         summary: "Whether a coldkey accepts incoming locked alpha transfers.",
@@ -1103,6 +1106,62 @@ pub static READ_SPECS: [ReadSpec; 105] = [
         pinning: Pinning::Single,
     },
     ReadSpec {
+        name: "gamma_deposit",
+        summary: "The gamma deposit at a hotkey on a subnet, or None.",
+        description: "The gamma deposit at a hotkey on a subnet, or None.\n\nIts `netuid`, `hotkey`, `coldkey`, `spender`, and `balance_gamma`,\n`daily_spend_cap_gamma` and `spendable_gamma` as exact decimal strings of\ngamma. A `daily_spend_cap_gamma` of None is no cap, and \"0\" pauses the\ndeposit. `spendable_gamma` is the balance within what its daily spend cap\nallows now.",
+        params: &[
+            ParamSpec {
+                name: "netuid",
+                json_type: JsonType::Integer,
+                doc: "Subnet of the deposit.",
+                required: true,
+                default: None,
+                own_key: false,
+            },
+            ParamSpec {
+                name: "hotkey_ss58",
+                json_type: JsonType::String,
+                doc: "Hotkey of the deposit.",
+                required: false,
+                default: None,
+                own_key: true,
+            },
+        ],
+        category: Category::Gamma,
+        namespace: "gamma",
+        docs_url: "/docs/query/gamma-deposit",
+        hits: &[Hit {
+            kind: HitKind::RuntimeApi,
+            container: "GammaRuntimeApi",
+            name: "get_gamma_deposit",
+        }],
+        render: None,
+        pinning: Pinning::Single,
+    },
+    ReadSpec {
+        name: "gamma_deposits",
+        summary: "Every gamma deposit of a coldkey, on every subnet.",
+        description: "Every gamma deposit of a coldkey, on every subnet.",
+        params: &[ParamSpec {
+            name: "coldkey_ss58",
+            json_type: JsonType::String,
+            doc: "Coldkey owning the deposits.",
+            required: false,
+            default: None,
+            own_key: true,
+        }],
+        category: Category::Gamma,
+        namespace: "gamma",
+        docs_url: "/docs/query/gamma-deposits",
+        hits: &[Hit {
+            kind: HitKind::RuntimeApi,
+            container: "GammaRuntimeApi",
+            name: "get_gamma_deposits_for_coldkey",
+        }],
+        render: None,
+        pinning: Pinning::Single,
+    },
+    ReadSpec {
         name: "hotkey_conviction",
         summary: "Conviction metrics for a hotkey on a subnet.",
         description: "Conviction metrics for a hotkey on a subnet.\n\nReturns `conviction_alpha` denominated in the subnet's alpha, rolled\nforward to the current block.",
@@ -1826,6 +1885,72 @@ pub static READ_SPECS: [ReadSpec; 105] = [
         pinning: Pinning::Single,
     },
     ReadSpec {
+        name: "quote_mint_gamma",
+        summary: "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.",
+        description: "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma.",
+        params: &[
+            ParamSpec {
+                name: "netuid",
+                json_type: JsonType::Integer,
+                doc: "Subnet to mint on.",
+                required: true,
+                default: None,
+                own_key: false,
+            },
+            ParamSpec {
+                name: "amount_tao",
+                json_type: JsonType::Number,
+                doc: "TAO spent buying alpha.",
+                required: true,
+                default: None,
+                own_key: false,
+            },
+        ],
+        category: Category::Gamma,
+        namespace: "gamma",
+        docs_url: "/docs/query/quote-mint-gamma",
+        hits: &[Hit {
+            kind: HitKind::RuntimeApi,
+            container: "GammaRuntimeApi",
+            name: "sim_mint_gamma",
+        }],
+        render: None,
+        pinning: Pinning::Single,
+    },
+    ReadSpec {
+        name: "quote_mint_gamma_with_stake",
+        summary: "The alpha burned, its TAO value, and the gamma `mint_gamma_with_stake` would mint now.",
+        description: "The alpha burned, its TAO value, and the gamma `mint_gamma_with_stake` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma.",
+        params: &[
+            ParamSpec {
+                name: "netuid",
+                json_type: JsonType::Integer,
+                doc: "Subnet to mint on.",
+                required: true,
+                default: None,
+                own_key: false,
+            },
+            ParamSpec {
+                name: "amount_alpha",
+                json_type: JsonType::Number,
+                doc: "Alpha of stake burned.",
+                required: true,
+                default: None,
+                own_key: false,
+            },
+        ],
+        category: Category::Gamma,
+        namespace: "gamma",
+        docs_url: "/docs/query/quote-mint-gamma-with-stake",
+        hits: &[Hit {
+            kind: HitKind::RuntimeApi,
+            container: "GammaRuntimeApi",
+            name: "sim_mint_gamma_with_stake",
+        }],
+        render: None,
+        pinning: Pinning::Single,
+    },
+    ReadSpec {
         name: "quote_stake",
         summary: "Simulate staking `amount_tao` TAO into a subnet: alpha out, fee, and slippage.",
         description: "Simulate staking `amount_tao` TAO into a subnet: alpha out, fee, and slippage.\n\nUse this to compute a safe `limit_price_rao` for the `add_stake_limit` intent.",
@@ -2075,6 +2200,46 @@ pub static READ_SPECS: [ReadSpec; 105] = [
         }],
         render: None,
         pinning: Pinning::Single,
+    },
+    ReadSpec {
+        name: "services",
+        summary: "Every service published on a subnet, by hotkey.",
+        description: "Every service published on a subnet, by hotkey.\n\nEach `url` points to its hotkey's own document of its services and the\npayments they accept; the chain does not check what it says. `spender` is\nthe spender customers name on gamma deposits for the service. `owner`\nmarks the subnet owner's hotkey while the owner owns it, whose spender new\ndeposits name by default. A url that is not printable text is returned as\n0x-hex.",
+        params: &[ParamSpec {
+            name: "netuid",
+            json_type: JsonType::Integer,
+            doc: "Subnet whose services to list.",
+            required: true,
+            default: None,
+            own_key: false,
+        }],
+        category: Category::Subnets,
+        namespace: "subnets",
+        docs_url: "/docs/query/services",
+        hits: &[
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "Owner",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "Services",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetOwner",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetOwnerHotkey",
+            },
+        ],
+        render: None,
+        pinning: Pinning::Pinned,
     },
     ReadSpec {
         name: "stake",
@@ -2964,6 +3129,29 @@ pub static READ_SPECS: [ReadSpec; 105] = [
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
                 name: "Tempo",
+            },
+        ],
+        render: None,
+        pinning: Pinning::Pinned,
+    },
+    ReadSpec {
+        name: "tao_usd_price",
+        summary: "The TAO/USD price oracle, its last feed, and the accepted price at this block.",
+        description: "The TAO/USD price oracle, its last feed, and the accepted price at this block.\n\nThe accepted price falls to the feed at once and rises toward it by at most\n0.0066% (66 ppm) of itself per block, and mints value TAO at it. Minting needs a\nfeed at most 300 blocks old, so no new mint succeeds once `blocks_since_last_feed`\nexceeds 300.",
+        params: &[],
+        category: Category::Gamma,
+        namespace: "gamma",
+        docs_url: "/docs/query/tao-usd-price",
+        hits: &[
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "TaoUsdPrice",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "TaoUsdPriceOracle",
             },
         ],
         render: None,

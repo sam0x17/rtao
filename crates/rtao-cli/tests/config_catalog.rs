@@ -307,7 +307,7 @@ fn command_parsers_require_values_show_help_and_accept_global_overrides() -> Tes
 fn tools_json_equals_python_on_upstream_fields_for_all_86_ops() -> TestResult {
     let payload = catalog::tools_payload(&[])?;
     let rows = payload.as_array().ok_or("catalog array")?;
-    assert_eq!(rows.len(), 86);
+    assert_eq!(rows.len(), rtao_catalog::INTENTS.len());
     let keys = [
         "name",
         "summary",
@@ -382,7 +382,10 @@ fn tools_always_emits_json_to_stdout_even_without_json_flag_and_with_quiet() -> 
     for quiet in [false, true] {
         let (out, sink) = capture(false, quiet);
         catalog::run_tools(&out, &[])?;
-        assert_eq!(payload(&sink)?.as_array().ok_or("tools JSON")?.len(), 86);
+        assert_eq!(
+            payload(&sink)?.as_array().ok_or("tools JSON")?.len(),
+            rtao_catalog::INTENTS.len()
+        );
         assert!(sink.bytes(Stream::Stderr)?.is_empty());
     }
     Ok(())

@@ -2027,6 +2027,7 @@ mod tests {
                 subnets: vec![NetUid::ROOT],
             };
             let transfer = crate::Transfer {
+                hashed_descriptor: None,
                 dest_ss58: PAYER.into(),
                 amount_tao: Balance::<Tao>::from_rao(100_000_000).into(),
                 keep_alive: true,

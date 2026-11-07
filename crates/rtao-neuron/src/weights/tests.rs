@@ -1167,8 +1167,8 @@ mod validator_surface {
 
     fn pinned() -> Runtime {
         Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/finney/486.v15.scale"),
-            486,
+            include_bytes!("../../../../vendor/metadata/finney/488.v15.scale"),
+            488,
             1,
             42,
         )

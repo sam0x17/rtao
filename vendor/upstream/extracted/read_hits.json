@@ -1,8 +1,8 @@
 {
   "format": 1,
   "parity": {
-    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
-    "tag": "v486"
+    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+    "tag": "v488"
   },
   "reads": [
     {
@@ -334,9 +334,9 @@
       "name": "burn",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -476,9 +476,9 @@
       "name": "commit_reveal_enabled",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -762,6 +762,48 @@
     },
     {
       "helpers": [
+        "_deposit_record",
+        "gamma_deposit"
+      ],
+      "hits": [
+        {
+          "container": "GammaRuntimeApi",
+          "kind": "runtime",
+          "name": "get_gamma_deposit"
+        }
+      ],
+      "name": "gamma_deposit",
+      "pinning": "single",
+      "provenance": {
+        "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
+        "path": "sdk/python/bittensor/reads/gamma.py",
+        "sha256": "f8b0fdca04a01dc4d87ba529d03324305adda30545db7ef087a31c38c9767bc3"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
+        "_deposit_record",
+        "gamma_deposits"
+      ],
+      "hits": [
+        {
+          "container": "GammaRuntimeApi",
+          "kind": "runtime",
+          "name": "get_gamma_deposits_for_coldkey"
+        }
+      ],
+      "name": "gamma_deposits",
+      "pinning": "single",
+      "provenance": {
+        "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
+        "path": "sdk/python/bittensor/reads/gamma.py",
+        "sha256": "f8b0fdca04a01dc4d87ba529d03324305adda30545db7ef087a31c38c9767bc3"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
         "hotkey_conviction"
       ],
       "hits": [
@@ -1037,9 +1079,9 @@
       "name": "mechanism_count",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -1057,9 +1099,9 @@
       "name": "mechanism_emission_split",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -1077,9 +1119,9 @@
       "name": "metagraph",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -1337,6 +1379,48 @@
     },
     {
       "helpers": [
+        "_mint_quote",
+        "quote_mint_gamma"
+      ],
+      "hits": [
+        {
+          "container": "GammaRuntimeApi",
+          "kind": "runtime",
+          "name": "sim_mint_gamma"
+        }
+      ],
+      "name": "quote_mint_gamma",
+      "pinning": "single",
+      "provenance": {
+        "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
+        "path": "sdk/python/bittensor/reads/gamma.py",
+        "sha256": "f8b0fdca04a01dc4d87ba529d03324305adda30545db7ef087a31c38c9767bc3"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
+        "_mint_quote",
+        "quote_mint_gamma_with_stake"
+      ],
+      "hits": [
+        {
+          "container": "GammaRuntimeApi",
+          "kind": "runtime",
+          "name": "sim_mint_gamma_with_stake"
+        }
+      ],
+      "name": "quote_mint_gamma_with_stake",
+      "pinning": "single",
+      "provenance": {
+        "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
+        "path": "sdk/python/bittensor/reads/gamma.py",
+        "sha256": "f8b0fdca04a01dc4d87ba529d03324305adda30545db7ef087a31c38c9767bc3"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
         "_swap_quote",
         "quote_stake"
       ],
@@ -1551,6 +1635,42 @@
         "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
         "path": "sdk/python/bittensor/reads/root.py",
         "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
+        "_url_text",
+        "services"
+      ],
+      "hits": [
+        {
+          "container": "SubtensorModule",
+          "kind": "storage",
+          "name": "Owner"
+        },
+        {
+          "container": "SubtensorModule",
+          "kind": "storage",
+          "name": "Services"
+        },
+        {
+          "container": "SubtensorModule",
+          "kind": "storage",
+          "name": "SubnetOwner"
+        },
+        {
+          "container": "SubtensorModule",
+          "kind": "storage",
+          "name": "SubnetOwnerHotkey"
+        }
+      ],
+      "name": "services",
+      "pinning": "pinned",
+      "provenance": {
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
+        "path": "sdk/python/bittensor/reads/subnets.py",
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -1782,9 +1902,9 @@
       "name": "subnet",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -1958,9 +2078,9 @@
       "name": "subnet_emission_weights",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -1979,9 +2099,9 @@
       "name": "subnet_hyperparameters",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -1999,9 +2119,9 @@
       "name": "subnet_identity",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -2019,9 +2139,9 @@
       "name": "subnet_names",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -2039,9 +2159,9 @@
       "name": "subnet_registration_cost",
       "pinning": "single",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -2064,9 +2184,9 @@
       "name": "subnet_start_schedule",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -2111,9 +2231,9 @@
       "name": "subnet_state",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -2158,9 +2278,9 @@
       "name": "subnet_states",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -2179,9 +2299,9 @@
       "name": "subnet_tao_flows",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },
@@ -2247,9 +2367,35 @@
       "name": "subnets",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
+        "_accepted_price",
+        "tao_usd_price"
+      ],
+      "hits": [
+        {
+          "container": "SubtensorModule",
+          "kind": "storage",
+          "name": "TaoUsdPrice"
+        },
+        {
+          "container": "SubtensorModule",
+          "kind": "storage",
+          "name": "TaoUsdPriceOracle"
+        }
+      ],
+      "name": "tao_usd_price",
+      "pinning": "pinned",
+      "provenance": {
+        "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
+        "path": "sdk/python/bittensor/reads/gamma.py",
+        "sha256": "f8b0fdca04a01dc4d87ba529d03324305adda30545db7ef087a31c38c9767bc3"
       },
       "render": null
     },
@@ -2307,9 +2453,9 @@
       "name": "token_symbols",
       "pinning": "pinned",
       "provenance": {
-        "blob": "72ebf3fd8948e09ee03ac9878e1b3829e049cf58",
+        "blob": "8cc78cffa8572f583a95cbe81326f702d034f30a",
         "path": "sdk/python/bittensor/reads/subnets.py",
-        "sha256": "1c9c53ad684929b1b7332f1751ac9158a5349b6ec02ca4716cf07e22832b87a2"
+        "sha256": "d6a8f01f07de14be6b921c1fec49cc9e58335ac2d020ad63be0d7dc354ad6be1"
       },
       "render": null
     },

@@ -548,6 +548,43 @@ pub async fn existential_deposit<V: rtao_client::View + ?Sized>(
 ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
     crate::reads::m6_accounts::existential_deposit(view).await
 }
+#[doc = "Typed parameters for `gamma_deposit`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GammaDepositParams {
+    #[doc = "Subnet of the deposit."]
+    pub netuid: rtao_primitives::NetUid,
+    #[doc = "Hotkey of the deposit."]
+    pub hotkey_ss58: rtao_primitives::AccountId,
+}
+#[doc = "The gamma deposit at a hotkey on a subnet, or None.\n\nIts `netuid`, `hotkey`, `coldkey`, `spender`, and `balance_gamma`,\n`daily_spend_cap_gamma` and `spendable_gamma` as exact decimal strings of\ngamma. A `daily_spend_cap_gamma` of None is no cap, and \"0\" pauses the\ndeposit. `spendable_gamma` is the balance within what its daily spend cap\nallows now."]
+#[doc(alias = "bittensor.reads.gamma_deposit")]
+pub async fn gamma_deposit<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: rtao_primitives::NetUid,
+    _hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::GammaDeposit,
+    ))
+}
+#[doc = "Typed parameters for `gamma_deposits`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GammaDepositsParams {
+    #[doc = "Coldkey owning the deposits."]
+    pub coldkey_ss58: rtao_primitives::AccountId,
+}
+#[doc = "Every gamma deposit of a coldkey, on every subnet."]
+#[doc(alias = "bittensor.reads.gamma_deposits")]
+pub async fn gamma_deposits<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _coldkey_ss58: rtao_primitives::AccountId,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::GammaDeposits,
+    ))
+}
 #[doc = "Typed parameters for `hotkey_conviction`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -997,6 +1034,46 @@ pub async fn proxies<V: rtao_client::View + ?Sized>(
 ) -> Result<crate::reads::owner::ProxyDelegations, crate::ReadError> {
     crate::reads::owner::proxies(view, coldkey_ss58).await
 }
+#[doc = "Typed parameters for `quote_mint_gamma`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QuoteMintGammaParams {
+    #[doc = "Subnet to mint on."]
+    pub netuid: rtao_primitives::NetUid,
+    #[doc = "TAO spent buying alpha."]
+    pub amount_tao: f64,
+}
+#[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
+#[doc(alias = "bittensor.reads.quote_mint_gamma")]
+pub async fn quote_mint_gamma<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: rtao_primitives::NetUid,
+    _amount_tao: f64,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::QuoteMintGamma,
+    ))
+}
+#[doc = "Typed parameters for `quote_mint_gamma_with_stake`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QuoteMintGammaWithStakeParams {
+    #[doc = "Subnet to mint on."]
+    pub netuid: rtao_primitives::NetUid,
+    #[doc = "Alpha of stake burned."]
+    pub amount_alpha: f64,
+}
+#[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma_with_stake` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
+#[doc(alias = "bittensor.reads.quote_mint_gamma_with_stake")]
+pub async fn quote_mint_gamma_with_stake<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: rtao_primitives::NetUid,
+    _amount_alpha: f64,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::QuoteMintGammaWithStake,
+    ))
+}
 #[doc = "Typed parameters for `quote_stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1152,6 +1229,23 @@ pub async fn root_claim_threshold<V: rtao_client::View + ?Sized>(
     view: &V,
 ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
     crate::reads::owner::root_claim_threshold(view).await
+}
+#[doc = "Typed parameters for `services`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ServicesParams {
+    #[doc = "Subnet whose services to list."]
+    pub netuid: rtao_primitives::NetUid,
+}
+#[doc = "Every service published on a subnet, by hotkey.\n\nEach `url` points to its hotkey's own document of its services and the\npayments they accept; the chain does not check what it says. `spender` is\nthe spender customers name on gamma deposits for the service. `owner`\nmarks the subnet owner's hotkey while the owner owns it, whose spender new\ndeposits name by default. A url that is not printable text is returned as\n0x-hex."]
+#[doc(alias = "bittensor.reads.services")]
+pub async fn services<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: rtao_primitives::NetUid,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::Services,
+    ))
 }
 #[doc = "Typed parameters for `stake`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1491,6 +1585,19 @@ pub async fn subnets<V: rtao_client::View + ?Sized>(
     view: &V,
 ) -> Result<Vec<crate::reads::m6_root::SubnetInfo>, crate::ReadError> {
     crate::reads::m6_root::subnets(view).await
+}
+#[doc = "Typed parameters for `tao_usd_price`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TaoUsdPriceParams {}
+#[doc = "The TAO/USD price oracle, its last feed, and the accepted price at this block.\n\nThe accepted price falls to the feed at once and rises toward it by at most\n0.0066% (66 ppm) of itself per block, and mints value TAO at it. Minting needs a\nfeed at most 300 blocks old, so no new mint succeeds once `blocks_since_last_feed`\nexceeds 300."]
+#[doc(alias = "bittensor.reads.tao_usd_price")]
+pub async fn tao_usd_price<V: rtao_client::View + ?Sized>(
+    _view: &V,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::TaoUsdPrice,
+    ))
 }
 #[doc = "Typed parameters for `timelocked_weight_commits`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

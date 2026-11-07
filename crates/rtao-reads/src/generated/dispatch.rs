@@ -561,6 +561,37 @@ pub async fn dispatch(
                 detail: error.to_string(),
             })
         }
+        ReadName::GammaDeposit => {
+            let args: super::interfaces::GammaDepositParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value =
+                super::interfaces::gamma_deposit(view, args.netuid, args.hotkey_ss58).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::GammaDeposits => {
+            let args: super::interfaces::GammaDepositsParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::gamma_deposits(view, args.coldkey_ss58).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
         ReadName::HotkeyConviction => {
             let args: super::interfaces::HotkeyConvictionParams =
                 serde_json::from_value(Value::Object(params)).map_err(|error| {
@@ -976,6 +1007,42 @@ pub async fn dispatch(
                 detail: error.to_string(),
             })
         }
+        ReadName::QuoteMintGamma => {
+            let args: super::interfaces::QuoteMintGammaParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value =
+                super::interfaces::quote_mint_gamma(view, args.netuid, args.amount_tao).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::QuoteMintGammaWithStake => {
+            let args: super::interfaces::QuoteMintGammaWithStakeParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::quote_mint_gamma_with_stake(
+                view,
+                args.netuid,
+                args.amount_alpha,
+            )
+            .await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
         ReadName::QuoteStake => {
             let args: super::interfaces::QuoteStakeParams =
                 serde_json::from_value(Value::Object(params)).map_err(|error| {
@@ -1124,6 +1191,21 @@ pub async fn dispatch(
                 })?;
             let _ = &args;
             let value = super::interfaces::root_claim_threshold(view).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::Services => {
+            let args: super::interfaces::ServicesParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::services(view, args.netuid).await?;
             serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
                 descriptor: "read result",
                 detail: error.to_string(),
@@ -1463,6 +1545,21 @@ pub async fn dispatch(
                 })?;
             let _ = &args;
             let value = super::interfaces::subnets(view).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::TaoUsdPrice => {
+            let args: super::interfaces::TaoUsdPriceParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::tao_usd_price(view).await?;
             serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
                 descriptor: "read result",
                 detail: error.to_string(),

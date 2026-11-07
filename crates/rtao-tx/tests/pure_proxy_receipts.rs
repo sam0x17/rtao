@@ -156,6 +156,7 @@ fn assert_receipt<O>(
 #[tokio::test]
 async fn pure_proxy_clear_and_explicit_shield_receipts_preserve_python_data_shapes() {
     let intent = CreatePureProxy {
+        account_mode: None,
         proxy_type: "Any".into(),
         delay: 7,
         index: 9,

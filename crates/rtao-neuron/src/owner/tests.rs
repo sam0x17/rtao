@@ -152,14 +152,14 @@ setter_tests!(
 
 #[test]
 fn allowlist_has_exact_row_and_setter_counts() {
-    assert_eq!(OWNER_HYPERPARAMETERS.len(), 33);
+    assert_eq!(OWNER_HYPERPARAMETERS.len(), 34);
     assert_eq!(
         OWNER_HYPERPARAMETERS
             .iter()
             .map(|row| row.setter)
             .collect::<std::collections::BTreeSet<_>>()
             .len(),
-        32
+        33
     );
     for (name, variant) in [
         ("commit_reveal_period", "WeightCommitInterval"),

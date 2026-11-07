@@ -292,7 +292,12 @@ async fn conservative_carrier_probe_is_public_bounded_and_does_not_mutate_nonce(
         Value::Str(bytes) => bytes.len(),
         other => panic!("unexpected ciphertext {other:?}"),
     };
-    assert_eq!(length, 8192);
+    // The carrier bound follows the pinned Python (v488: 32768, the runtime's
+    // `MaxEncryptedCarrier`).
+    assert_eq!(
+        length,
+        usize::try_from(rtao_catalog::py::MAX_SHIELDED_CIPHERTEXT_BYTES).unwrap()
+    );
 }
 
 #[tokio::test]
@@ -349,7 +354,15 @@ async fn finality_lag_refuses_exact_expiry_boundary_before_signing() {
 async fn oversized_inner_ciphertext_is_rejected_before_carrier_signature() {
     let (client, fake, signer) = fixture().await;
     let result = client
-        .submit_shielded(call(&client, 8192).await, &signer, &pool())
+        .submit_shielded(
+            call(
+                &client,
+                usize::try_from(rtao_catalog::py::MAX_SHIELDED_CIPHERTEXT_BYTES).unwrap(),
+            )
+            .await,
+            &signer,
+            &pool(),
+        )
         .await;
     assert!(
         matches!(result,Err(SubmitFailure::Client(ClientError::Protocol(ref message))) if message.contains("shield ciphertext"))

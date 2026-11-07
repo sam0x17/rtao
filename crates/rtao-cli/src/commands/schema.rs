@@ -254,6 +254,15 @@ pub fn arguments(mut command: Command, fields: &[Field], tx: bool) -> Command {
 pub fn values(matches: &ArgMatches, fields: &[Field]) -> Result<Map<String, Value>, CliError> {
     let mut result = Map::new();
     for field in fields {
+        // A hand-written command (for example `wallet transfer`) may define
+        // only the options it ports; an intent field it does not offer, such
+        // as runtime 487's `hashed_descriptor`, keeps its catalog default.
+        if matches.try_get_raw(field.name).is_err() {
+            if let Some(default) = &field.default {
+                result.insert(field.name.into(), default.clone());
+            }
+            continue;
+        }
         let value = if field.boolean() {
             let opposite = format!("__no_{}", field.name);
             if matches.value_source(field.name) == Some(ValueSource::CommandLine) {

@@ -38,6 +38,7 @@ impl Intent for Transfer {
         format!("transfer {amount} to {}", self.dest_ss58)
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::no_hashed_destination("transfer", self.hashed_descriptor.as_ref())?;
         Ok(Built::new(self.chain_call()?.compose(cx.runtime)?))
     }
     async fn warnings<V: View + ?Sized>(
@@ -61,6 +62,7 @@ impl Intent for Transfer {
         }
     }
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::no_hashed_destination("transfer", self.hashed_descriptor.as_ref())?;
         self.amount_tao.resolve(NetUid::ROOT, true)?;
         Ok(())
     }
@@ -74,6 +76,10 @@ impl Intent for TransferAll {
         format!("transfer ALL TAO to {}", self.dest_ss58)
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::no_hashed_destination(
+            "transfer_all",
+            self.hashed_descriptor.as_ref(),
+        )?;
         crate::generated::passthrough::transfer_all(self, cx).await
     }
     async fn warnings<V: View + ?Sized>(
@@ -88,6 +94,13 @@ impl Intent for TransferAll {
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
     }
+    fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::no_hashed_destination(
+            "transfer_all",
+            self.hashed_descriptor.as_ref(),
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -100,6 +113,7 @@ mod tests {
     #[test]
     fn fixed_all_and_keep_alive_choose_python_calls() {
         let mut intent = Transfer {
+            hashed_descriptor: None,
             dest_ss58: AccountId([1; 32]).into(),
             amount_tao: Balance::<Tao>::from_rao(123).into(),
             keep_alive: true,
@@ -135,6 +149,7 @@ mod tests {
             intent
         );
         let invalid = Transfer {
+            hashed_descriptor: None,
             dest_ss58: destination.into(),
             amount_tao: Balance::<Alpha>::new(NetUid(1), 1).unwrap().into(),
             keep_alive: true,
@@ -146,6 +161,7 @@ mod tests {
     fn summaries_and_spend_match_python_transfer_semantics() {
         let destination = AccountId([1; 32]);
         let intent = Transfer {
+            hashed_descriptor: None,
             dest_ss58: destination.into(),
             amount_tao: Balance::<Tao>::from_rao(1_234_500_000_000).into(),
             keep_alive: true,
@@ -161,6 +177,7 @@ mod tests {
         );
         assert_eq!(
             TransferAll {
+                hashed_descriptor: None,
                 dest_ss58: destination.into(),
                 keep_alive: false
             }

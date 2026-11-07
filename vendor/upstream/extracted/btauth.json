@@ -1,44 +1,44 @@
 {
   "format": 1,
   "provenance": {
-    "blob": "0a2fdf4710f4c6a3868aad7f300414775e218d71",
-    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+    "blob": "e6d1251fa5b1b33ce7370546081e2a5ec19527c7",
+    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
     "path": "sdk/python/tests/unit/test_http_auth.py",
-    "tag": "v486"
+    "tag": "v488"
   },
   "values": {
     "BODY": {
-      "end_line": 20,
-      "line": 20,
+      "end_line": 29,
+      "line": 29,
       "value": {
         "bytes_hex": "7b2270726f6d7074223a202268656c6c6f227d"
       }
     },
     "FIXED_NONCE": {
-      "end_line": 19,
-      "line": 19,
+      "end_line": 28,
+      "line": 28,
       "value": 1752076800000000000
     },
     "GOLDEN_ED25519_SIGNATURE": {
-      "end_line": 36,
-      "line": 33,
+      "end_line": 45,
+      "line": 42,
       "value": "0x1a6b631988bf1f7ea093ab9d5acf61f05c316d0b0e428b24b487b75a5f6ee0e1a56a26918fdf871b6cf09437e6588023a4ce423cf622621b2a7feee17612f704"
     },
     "GOLDEN_SR25519_PAYLOAD": {
-      "end_line": 31,
-      "line": 24,
+      "end_line": 40,
+      "line": 33,
       "value": {
         "bytes_hex": "6274617574682f310a737232353531390a504f53540a2f67656e65726174653f73747265616d3d66616c73650a333431633537343438653533313331306662626538336634346365613261356538333862643965386136623832623236396630316430646262633233633363630a313735323037363830303030303030303030300a3547727776614546357a58623236467a397263517044575335374374455248704e6568584350634e6f48474b757451590a3546486e655734367847586773356d5569766555347362547947427a6d73745573705a43393255686a4a4d3639347479"
       }
     },
     "METHOD": {
-      "end_line": 21,
-      "line": 21,
+      "end_line": 30,
+      "line": 30,
       "value": "POST"
     },
     "PATH": {
-      "end_line": 22,
-      "line": 22,
+      "end_line": 31,
+      "line": 31,
       "value": "/generate?stream=false"
     }
   }

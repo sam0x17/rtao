@@ -99,10 +99,16 @@ impl DynKeySource for SamplePublicKeys {
     }
 }
 
+/// Operations new upstream that are pending ports (D-128): the CLI offers no
+/// command for them yet, so sample runs skip them.
+fn pending(name: &str) -> bool {
+    include_str!("../../../parity/pending.toml").contains(&format!("\"{name}\""))
+}
+
 fn cli_samples(name: &str) -> TestResult<BTreeMap<String, Value>> {
     let table = rtao_catalog::py::table("sdk/python/tests/harness/samples.py", name)
         .ok_or("authenticated CLI sample table")?;
-    assert_eq!(table.blob, "60ee43d2db3159b969a7a01fb14edade193e57b8");
+    assert_eq!(table.blob, "8a6ded3185596b57cef116eeb602b57cbb3d6ce4");
     let extracted = rtao::primitives::json::from_str::<Value>(table.value_json)?;
     let decoded = literal(&extracted)?;
     Ok(decoded
@@ -314,7 +320,13 @@ fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability()
     assert!(tx.find_subcommand("add-stake").is_some());
     let rows = rtao_intents::interface_metadata();
     assert_eq!(rows.len(), rtao_catalog::INTENTS.len());
-    assert!(rows.iter().all(|row| row.implemented));
+    // Only operations in the pending register (new upstream operations not
+    // yet ported, D-128) lack behavior.
+    let pending = include_str!("../../../parity/pending.toml");
+    assert!(
+        rows.iter()
+            .all(|row| row.implemented || pending.contains(&format!("\"{}\"", row.name)))
+    );
     let expected_leaves = rows
         .iter()
         .filter(|row| row.compiled && row.implemented)
@@ -463,11 +475,14 @@ fn complete_query_tree_exposes_every_read_and_authenticated_parameter() -> TestR
         .collect::<BTreeSet<_>>();
     let expected = rtao::reads::ReadName::ALL
         .into_iter()
+        .filter(|name| !pending(name.as_str()))
         .map(|name| name.as_str().replace('_', "-"))
         .collect::<BTreeSet<_>>();
-    assert_eq!(actual.len(), 105);
     assert_eq!(actual, expected);
-    for name in rtao::reads::ReadName::ALL {
+    for name in rtao::reads::ReadName::ALL
+        .into_iter()
+        .filter(|name| !pending(name.as_str()))
+    {
         let spelling = name.as_str().replace('_', "-");
         let command = query.find_subcommand(&spelling).ok_or("read command")?;
         let arguments = command
@@ -1040,7 +1055,7 @@ async fn all_86_samples_run_through_actual_cli_json_dry_run_without_private_acce
         .iter()
         .map(|spec| spec.name)
         .collect::<BTreeSet<_>>();
-    assert_eq!(expected.len(), 86);
+    assert_eq!(expected.len(), rtao_catalog::INTENTS.len());
     assert_eq!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
         expected,
@@ -1066,6 +1081,9 @@ async fn all_86_samples_run_through_actual_cli_json_dry_run_without_private_acce
     let mut failures = Vec::new();
     for spec in &rtao_catalog::INTENTS {
         visited.insert(spec.name);
+        if pending(spec.name) {
+            continue;
+        }
         let outcome: TestResult = async {
             let state = intent_state(runtime.clone(), spec.name)?;
             let mut args = intent_args(spec.name, &samples[spec.name])?;
@@ -1204,7 +1222,7 @@ async fn all_105_samples_parse_dispatch_and_render_actual_cli_json_queries() -> 
         .into_iter()
         .map(|name| name.as_str())
         .collect::<BTreeSet<_>>();
-    assert_eq!(expected.len(), 105);
+    assert_eq!(expected.len(), ReadName::ALL.len());
     assert_eq!(
         samples.keys().map(String::as_str).collect::<BTreeSet<_>>(),
         expected,
@@ -1218,6 +1236,9 @@ async fn all_105_samples_parse_dispatch_and_render_actual_cli_json_queries() -> 
     let mut failures = Vec::new();
     for name in ReadName::ALL {
         visited.insert(name.as_str());
+        if pending(name.as_str()) {
+            continue;
+        }
         let outcome: TestResult = async {
             let mut argv = vec![
                 "rtao".into(),

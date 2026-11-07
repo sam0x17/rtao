@@ -28,6 +28,13 @@ plural = "Vec<rtao_primitives::Ss58Address>"
 "set_subnet_emission_weights.values" = "Vec<serde_json::Value>"
 # Python leaves this default integer untouched until the PoW timeout is used.
 "pow_register.mining_timeout" = "serde_json::Number"
+# Gamma (runtime 487/488) is a third money unit with its own decimals. These
+# intents are pending (D-128): their Money fields keep Python's exact decimal
+# or "all" spelling until a gamma unit source is ported with their behavior.
+"mint_gamma.daily_spend_cap_gamma" = "Option<rtao_primitives::Amount>"
+"mint_gamma_with_stake.daily_spend_cap_gamma" = "Option<rtao_primitives::Amount>"
+"set_gamma_deposit_daily_spend_cap.daily_spend_cap_gamma" = "Option<rtao_primitives::Amount>"
+"move_gamma.amount_gamma" = "rtao_primitives::Amount"
 
 [money_units]
 "set_min_collateral.min_alpha" = "alpha:netuid"

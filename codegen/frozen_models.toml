@@ -10,6 +10,7 @@
 "pallets/subtensor/src/rpc_info/basket_info.rs::BetaPricingPage" = "e76d410f6d42ab4"
 "pallets/subtensor/src/rpc_info/delegate_info.rs::DelegateInfo" = "bfb7d342e9ede512"
 "pallets/subtensor/src/rpc_info/dynamic_info.rs::DynamicInfo" = "cf677afa654c96a6"
+"pallets/subtensor/src/rpc_info/gamma_info.rs::GammaDepositInfo" = "1fbec154e8c48c46"
 "pallets/subtensor/src/rpc_info/metagraph.rs::Metagraph" = "93460b9b3cbf6d4e"
 "pallets/subtensor/src/rpc_info/metagraph.rs::SelectiveMetagraph" = "bb7420226d39c0eb"
 "pallets/subtensor/src/rpc_info/neuron_info.rs::NeuronInfo" = "77daa43c02912b80"

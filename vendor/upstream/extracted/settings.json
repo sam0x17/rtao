@@ -1,10 +1,10 @@
 {
   "format": 1,
   "provenance": {
-    "blob": "418de02b74d6f6aaeba2ebef7679dbb2b40b992f",
-    "commit": "72323e13249c9e25c7e792a2b3c08502c84651d5",
+    "blob": "06abeb57ac889d85eeaf6456f97a48463726e4d7",
+    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
     "path": "sdk/python/bittensor/settings.py",
-    "tag": "v486"
+    "tag": "v488"
   },
   "values": {
     "ALPHA_SYMBOL": {
@@ -13,8 +13,8 @@
       "value": "α"
     },
     "ARCHIVE_ENDPOINTS": {
-      "end_line": 77,
-      "line": 69,
+      "end_line": 78,
+      "line": 70,
       "value": {
         "dict": [
           [
@@ -34,28 +34,28 @@
       }
     },
     "BLOCKTIME": {
-      "end_line": 20,
-      "line": 20,
+      "end_line": 21,
+      "line": 21,
       "value": 12.0
     },
     "DEFAULT_ERA_PERIOD": {
-      "end_line": 22,
-      "line": 22,
+      "end_line": 23,
+      "line": 23,
       "value": 128
     },
     "DEFAULT_NETWORK": {
-      "end_line": 41,
-      "line": 41,
+      "end_line": 42,
+      "line": 42,
       "value": "finney"
     },
     "DOCS_URL": {
-      "end_line": 114,
-      "line": 114,
+      "end_line": 115,
+      "line": 115,
       "value": "https://www.bittensor.com/docs"
     },
     "EXPLORER_ACCOUNT_URLS": {
-      "end_line": 180,
-      "line": 174,
+      "end_line": 181,
+      "line": 175,
       "value": {
         "dict": [
           [
@@ -92,8 +92,8 @@
       }
     },
     "EXPLORER_BLOCK_URLS": {
-      "end_line": 198,
-      "line": 195,
+      "end_line": 199,
+      "line": 196,
       "value": {
         "dict": [
           [
@@ -108,8 +108,8 @@
       }
     },
     "EXPLORER_EXTRINSIC_URLS": {
-      "end_line": 156,
-      "line": 153,
+      "end_line": 157,
+      "line": 154,
       "value": {
         "dict": [
           [
@@ -124,8 +124,8 @@
       }
     },
     "EXPLORER_SUBNET_URLS": {
-      "end_line": 213,
-      "line": 210,
+      "end_line": 214,
+      "line": 211,
       "value": {
         "dict": [
           [
@@ -140,8 +140,8 @@
       }
     },
     "FALLBACK_ENDPOINTS": {
-      "end_line": 64,
-      "line": 56,
+      "end_line": 65,
+      "line": 57,
       "value": {
         "dict": [
           [
@@ -161,23 +161,23 @@
       }
     },
     "FINNEY_GENESIS_HASH": {
-      "end_line": 45,
-      "line": 45,
+      "end_line": 46,
+      "line": 46,
       "value": "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
     },
     "GLOBAL_MAX_SUBNET_COUNT": {
-      "end_line": 31,
-      "line": 31,
+      "end_line": 32,
+      "line": 32,
       "value": 4096
     },
     "MEV_SHIELD_ERA_PERIOD": {
-      "end_line": 29,
-      "line": 29,
+      "end_line": 30,
+      "line": 30,
       "value": 8
     },
     "NETWORKS": {
-      "end_line": 39,
-      "line": 33,
+      "end_line": 40,
+      "line": 34,
       "value": {
         "dict": [
           [
@@ -223,13 +223,13 @@
       "value": "τ"
     },
     "U16_MAX": {
-      "end_line": 18,
-      "line": 18,
+      "end_line": 19,
+      "line": 19,
       "value": 65535
     },
     "VAULT_GUIDE_URL": {
-      "end_line": 50,
-      "line": 50,
+      "end_line": 51,
+      "line": 51,
       "value": "https://www.bittensor.com/docs/guides/vault"
     }
   }

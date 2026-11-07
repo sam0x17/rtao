@@ -93,7 +93,7 @@ struct RootCall;
 impl ProbeKind for RootCall {
     // The wrapper test below guards this authenticated catalog position;
     // enabling the public M5 intent feature is unnecessary for this fixture.
-    const SPEC: &'static IntentSpec = &rtao_catalog::INTENTS[60];
+    const SPEC: &'static IntentSpec = &rtao_catalog::INTENTS[71];
     type Role = Coldkey;
     type Origin = Root;
 }
@@ -1547,6 +1547,7 @@ async fn continuations_refuse_different_semantic_arguments_and_canonical_groups(
     let (executor, fake, keys) = fixture(1_000_000_000).await;
     let group = group(&executor, &keys, 2).await;
     let transfer = rtao_intents::Transfer {
+        hashed_descriptor: None,
         dest_ss58: AccountId([3; 32]).into(),
         amount_tao: Balance::<Tao>::from_rao(50).into(),
         keep_alive: true,
@@ -1861,6 +1862,7 @@ async fn production_root_and_proxy_shield_sign_the_wrapped_semantic_call_before_
                 })
             } else {
                 Box::new(rtao_intents::Transfer {
+                    hashed_descriptor: None,
                     dest_ss58: real.into(),
                     amount_tao: Balance::<Tao>::from_rao(1_000_000_000).into(),
                     keep_alive: true,

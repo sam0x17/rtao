@@ -187,11 +187,19 @@ impl Intent for CreatePureProxy {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "create_pure_proxy",
+            self.account_mode.as_deref(),
+        )?;
         self.validate()?;
         crate::generated::passthrough::create_pure_proxy(self, cx).await
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "create_pure_proxy",
+            self.account_mode.as_deref(),
+        )?;
         check_proxy_type(&self.proxy_type)?;
         Ok(())
     }
@@ -206,11 +214,19 @@ impl Intent for KillPureProxy {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "kill_pure_proxy",
+            Some(self.account_mode.as_str()),
+        )?;
         self.validate()?;
         crate::generated::passthrough::kill_pure_proxy(self, cx).await
     }
 
     fn validate(&self) -> Result<(), IntentError> {
+        crate::account_modes::legacy_account_mode(
+            "kill_pure_proxy",
+            Some(self.account_mode.as_str()),
+        )?;
         check_proxy_type(&self.proxy_type)?;
         Ok(())
     }
@@ -415,11 +431,13 @@ mod tests {
                 delay: 0,
             };
             let create = CreatePureProxy {
+                account_mode: None,
                 proxy_type: name.into(),
                 delay: u32::MAX,
                 index: u16::MAX,
             };
             let kill = KillPureProxy {
+                account_mode: "legacy".to_owned(),
                 spawner_ss58: REAL.into(),
                 proxy_type: name.into(),
                 index: u16::MAX,

@@ -9,8 +9,8 @@ use scale_info::TypeDef;
 fn future_proxy_variant_refuses_exact_enum_and_containing_model() {
     let pinned = || {
         Runtime::parse(
-            include_bytes!("../../../vendor/metadata/finney/486.v15.scale"),
-            486,
+            include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
+            488,
             1,
             42,
         )

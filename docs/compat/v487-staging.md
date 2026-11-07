@@ -1,5 +1,9 @@
 # Runtime 487 staging (D-125)
 
+> Landed: Finney went from 486 to 488, which contains 487's changes, and the
+> branch merged with the v488 parity pin (see `v488-upgrade.md`). The text
+> below is the staging record as written.
+
 Branch `stage-487` carries the hand-written parts of the runtime 487 surface so
 the 487 pin bump only has to merge it. Runtime 487 is upstream subtensor PR
 #3294; it is not merged or enacted on Finney yet, so nothing here is on `main`.

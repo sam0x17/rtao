@@ -1058,6 +1058,7 @@ async fn public_child_mutation_is_revalidated_and_invalid_children_fail_before_r
     let benign = json!({"op":"transfer","dest_ss58":DEST,"amount_tao":"0.000000000"});
     let (executor, chain, keys) = fixture().await?;
     let mut multisig = MultisigThreshold1 {
+        account_mode: "legacy".to_owned(),
         other_signatories: vec![json!(OTHER)],
         call: benign.clone(),
     };

@@ -22,8 +22,8 @@ const PROXY: &str = "call:Proxy.proxy";
 
 fn pinned() -> Runtime {
     Runtime::parse(
-        include_bytes!("../../../vendor/metadata/finney/486.v15.scale"),
-        486,
+        include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
+        488,
         1,
         42,
     )
@@ -52,12 +52,13 @@ fn unit_variant(name: &str, index: u8) -> Variant<PortableForm> {
     }
 }
 
-/// 486 metadata with runtime 487's two new `ProxyType` variants.
-fn with_487_proxy_types() -> RuntimeHandle {
+/// Pinned metadata with one more `ProxyType` variant, as runtime 487 added
+/// `Lock` (21) and `GammaSpend` (22) to 486 (both are pinned since 488).
+fn with_added_proxy_type() -> RuntimeHandle {
     let mut core = pinned();
     let variants = proxy_type_variants(&mut core);
-    variants.push(unit_variant("Lock", 21));
-    variants.push(unit_variant("GammaSpend", 22));
+    let next = variants.iter().map(|variant| variant.index).max().unwrap() + 1;
+    variants.push(unit_variant("FutureProxyType", next));
     RuntimeHandle::new(core).unwrap()
 }
 
@@ -112,7 +113,7 @@ fn surface_refusal(result: Result<CallBytes, ComposeError>) -> String {
 #[test]
 fn an_added_enum_variant_composes_from_live_metadata() {
     let pinned = RuntimeHandle::new(pinned()).unwrap();
-    let changed = with_487_proxy_types();
+    let changed = with_added_proxy_type();
     assert!(pinned.surface_report().shape_matches(PROXY));
     assert!(
         !changed.surface_report().shape_matches(PROXY),

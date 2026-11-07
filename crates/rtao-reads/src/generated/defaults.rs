@@ -85,6 +85,10 @@ pub mod difficulty {
 pub mod epoch_status {}
 /// Extracted defaults for `existential_deposit`.
 pub mod existential_deposit {}
+/// Extracted defaults for `gamma_deposit`.
+pub mod gamma_deposit {}
+/// Extracted defaults for `gamma_deposits`.
+pub mod gamma_deposits {}
 /// Extracted defaults for `hotkey_conviction`.
 pub mod hotkey_conviction {}
 /// Extracted defaults for `hotkey_identities`.
@@ -164,6 +168,10 @@ pub mod parents {}
 pub mod pending_children {}
 /// Extracted defaults for `proxies`.
 pub mod proxies {}
+/// Extracted defaults for `quote_mint_gamma`.
+pub mod quote_mint_gamma {}
+/// Extracted defaults for `quote_mint_gamma_with_stake`.
+pub mod quote_mint_gamma_with_stake {}
 /// Extracted defaults for `quote_stake`.
 pub mod quote_stake {}
 /// Extracted defaults for `quote_unstake`.
@@ -189,6 +197,8 @@ pub mod root_basket_total_nav {}
 pub mod root_baskets {}
 /// Extracted defaults for `root_claim_threshold`.
 pub mod root_claim_threshold {}
+/// Extracted defaults for `services`.
+pub mod services {}
 /// Extracted defaults for `stake`.
 pub mod stake {}
 /// Extracted defaults for `stake_availability`.
@@ -238,6 +248,8 @@ pub mod subnet_states {}
 pub mod subnet_tao_flows {}
 /// Extracted defaults for `subnets`.
 pub mod subnets {}
+/// Extracted defaults for `tao_usd_price`.
+pub mod tao_usd_price {}
 /// Extracted defaults for `timelocked_weight_commits`.
 pub mod timelocked_weight_commits {
     /// Authenticated default for `mechid`.

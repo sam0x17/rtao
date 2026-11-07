@@ -250,8 +250,8 @@ impl FakeState {
     /// Parse the checked-in pinned Finney runtime and load extracted Python defaults.
     pub fn try_default() -> Result<Self, CoreError> {
         let runtime = Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/finney/486.v15.scale"),
-            486,
+            include_bytes!("../../../../vendor/metadata/finney/488.v15.scale"),
+            488,
             1,
             42,
         )
@@ -2002,8 +2002,8 @@ mod tests {
     fn extracted_defaults_encode_through_pinned_metadata() -> Result<(), CoreError> {
         let mut state = FakeState::try_default()?;
         assert_eq!(state.python_storage_defaults.len(), 22);
-        assert_eq!(state.python_constant_defaults.len(), 3);
-        assert_eq!(state.python_runtime_defaults.len(), 3);
+        assert_eq!(state.python_constant_defaults.len(), 5);
+        assert_eq!(state.python_runtime_defaults.len(), 6);
         let info = state
             .runtime
             .storage_entry("SubtensorModule", "Tempo")
@@ -2133,7 +2133,7 @@ mod tests {
         );
         assert_eq!(
             call(&mut state, "state_getRuntimeVersion", json!([]))?.get("specVersion"),
-            Some(&json!(486))
+            Some(&json!(488))
         );
         Ok(())
     }

@@ -365,8 +365,8 @@ fn all_86_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             );
         }
     }
-    assert_eq!(rtao_catalog::INTENTS.len(), 86);
-    assert_eq!(tested.len(), 86);
+    assert_eq!(rtao_catalog::INTENTS.len(), 98);
+    assert_eq!(tested.len(), 98);
 }
 
 #[cfg(feature = "serving")]
