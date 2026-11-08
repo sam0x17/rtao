@@ -14,7 +14,7 @@
 
 use bittensor_core::{
     CoreError,
-    keys::{CRYPTO_ED25519, CRYPTO_SR25519, Keypair},
+    keys::{CRYPTO_ED25519, CRYPTO_SR25519, Keypair, is_hashed_crypto, is_pq_crypto},
 };
 use serde_json::json;
 use std::{
@@ -247,8 +247,128 @@ pub fn serialized_keypair_to_keyfile_data(keypair: &Keypair) -> Result<Vec<u8>, 
 
     data.0.insert("ss58Address", json!(keypair.ss58_address()));
     data.0.insert("cryptoType", json!(keypair.crypto_type()));
+    // v488: every keyfile names its account type and signing scheme; hashed
+    // and post-quantum keyfiles carry their public descriptor (a persisted
+    // rotating generation would be stale, so none is written).
+    data.0.insert("accountType", json!(keypair.account_type()));
+    data.0
+        .insert("signingScheme", json!(keypair.signing_scheme()));
+    if is_hashed_crypto(keypair.crypto_type()) || is_pq_crypto(keypair.crypto_type()) {
+        let field = if is_pq_crypto(keypair.crypto_type()) {
+            data.0.insert("walletVersion", json!(2));
+            "mldsaDescriptor"
+        } else {
+            "hashedDescriptor"
+        };
+        if let Ok(descriptor) = keypair.authorization_descriptor() {
+            data.0
+                .insert(field, json!(format!("0x{}", hex::encode(descriptor))));
+        }
+    }
 
     serialize_secret_map(&data)
+}
+
+// Upstream sdk/bittensor-core/src/keyfiles/mod.rs @ v488 `deserialize_hashed`,
+// over the wiping JSON values.
+fn deserialize_hashed(keyfile: &SecretValue<'_>, crypto_type: u8) -> Result<Keypair, CoreError> {
+    let descriptor_field = if is_pq_crypto(crypto_type) {
+        let version = match keyfile.get("walletVersion") {
+            Some(SecretValue::Number(text)) => text.parse::<u64>().ok(),
+            _ => None,
+        };
+        if version != Some(2) || keyfile.get("hashedDescriptor").is_some() {
+            return Err(key_err(
+                "post-quantum keyfiles require walletVersion 2 and mldsaDescriptor",
+            ));
+        }
+        "mldsaDescriptor"
+    } else {
+        if keyfile.get("mldsaDescriptor").is_some() {
+            return Err(key_err("v2 descriptor requires post-quantum cryptoType"));
+        }
+        "hashedDescriptor"
+    };
+    let public = match keyfile.get(descriptor_field) {
+        Some(SecretValue::String(encoded)) => {
+            let descriptor = hex::decode(encoded.as_str().trim_start_matches("0x"))
+                .map_err(|_| key_err("invalid hashed descriptor encoding"))?;
+            Some(Keypair::from_hashed_descriptor(&descriptor, 42)?)
+        }
+        Some(_) => return Err(key_err("hashedDescriptor must be a hex string")),
+        None => None,
+    };
+    let private = if let Some(phrase) = keyfile.get("secretPhrase") {
+        let phrase = phrase
+            .as_str()
+            .ok_or_else(|| key_err("invalid hashed secretPhrase"))?;
+        Some(Keypair::from_mnemonic(phrase, crypto_type, None)?)
+    } else if let Some(seed) = keyfile
+        .get("secretSeed")
+        .or_else(|| keyfile.get("privateKey"))
+    {
+        let seed = seed
+            .as_str()
+            .ok_or_else(|| key_err("invalid hashed master seed"))?;
+        let seed = seed.trim_start_matches("0x");
+        if seed.len() % 2 != 0 || !seed.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err(key_err("invalid hashed master seed encoding"));
+        }
+        let seed =
+            decode_secret_seed(seed).map_err(|_| key_err("invalid hashed master seed encoding"))?;
+        Some(Keypair::from_seed(&seed, crypto_type)?)
+    } else {
+        None
+    };
+    if private.is_some() && public.is_none() {
+        return Err(key_err(
+            "hashed secret keyfiles require their versioned hashedDescriptor",
+        ));
+    }
+    let keypair = match (private, public) {
+        (Some(private), Some(public)) => {
+            if private.authorization_descriptor()? != public.authorization_descriptor()? {
+                return Err(key_err(
+                    "hashedDescriptor does not match the recovered master seed",
+                ));
+            }
+            private
+        }
+        (None, Some(public)) => public,
+        (None, None) => Keypair::new(stored_ss58(keyfile), None, crypto_type, 42)?,
+        (Some(_), None) => return Err(key_err("missing hashed descriptor")),
+    };
+    for (field, expected) in [
+        ("accountType", keypair.account_type()),
+        ("signingScheme", keypair.signing_scheme()),
+    ] {
+        if let Some(value) = keyfile.get(field) {
+            if value.as_str() != Some(expected) {
+                return Err(key_err(format!("{field} does not match hashedDescriptor")));
+            }
+        }
+    }
+    if keypair.crypto_type() != crypto_type {
+        return Err(key_err("cryptoType does not match hashedDescriptor"));
+    }
+    if let Some(address) = stored_ss58(keyfile) {
+        if keypair.ss58_address() != address {
+            return Err(key_err("ss58Address does not match hashedDescriptor"));
+        }
+    }
+    for field in ["accountId", "publicKey"] {
+        if let Some(stored) = keyfile.get(field) {
+            let encoded = stored
+                .as_str()
+                .ok_or_else(|| key_err("invalid hashed account ID"))?;
+            let bytes = hex::decode(encoded.trim_start_matches("0x"))
+                .map_err(|_| key_err("invalid hashed account ID encoding"))?;
+            if bytes != keypair.public_key_bytes() {
+                return Err(key_err("account ID does not match hashedDescriptor"));
+            }
+        }
+    }
+    Ok(keypair)
 }
 
 /// Stored ss58Address, including the legacy leading-space `" ss58Address"`
@@ -379,6 +499,17 @@ pub fn deserialize_keypair_from_keyfile_data(keyfile_data: &[u8]) -> Result<Keyp
     // Historical writers disagree on the cryptoType JSON type: python btwallet
     // wrote a number, some JS tooling wrote a numeric string.
     let crypto_type = stored_crypto_type(&keyfile_dict.0);
+
+    if is_hashed_crypto(crypto_type) || is_pq_crypto(crypto_type) {
+        return deserialize_hashed(&keyfile_dict.0, crypto_type);
+    }
+    if keyfile_dict.0.get("hashedDescriptor").is_some()
+        || keyfile_dict.0.get("mldsaDescriptor").is_some()
+    {
+        return Err(key_err(
+            "wallet descriptors require a hashed or post-quantum cryptoType",
+        ));
+    }
 
     if let Some(secret_phrase) = keyfile_dict
         .0

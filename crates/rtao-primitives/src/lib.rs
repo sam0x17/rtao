@@ -12,6 +12,8 @@ mod fixed;
 mod ids;
 mod money;
 mod python;
+/// Receiving addresses for hashed and ML-DSA accounts (Python `bittensor.receiving`).
+pub mod receiving;
 #[cfg(feature = "schemars")]
 mod schema;
 mod text;

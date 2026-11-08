@@ -8480,7 +8480,7 @@
           "ci/oracle/image_identity.py (source, binding and lock identity)",
           "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "f74371f1940e852295fce71bbb1f2eba35dad324"
+        "synced_blob": "bbf2f9ee76a2a915e16fc038397f11e2fe67d18e"
       },
       {
         "kind": "oracle-only",
@@ -8519,7 +8519,7 @@
           "ci/oracle/image_identity.py (source, binding and lock identity)",
           "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "d2f9fa02eda6f300ea09af5d1d925a37dbebca2a"
+        "synced_blob": "29f1fbd4ecafb89047b32c4aadf17e610fa45bd0"
       },
       {
         "kind": "oracle-only",
@@ -8571,7 +8571,7 @@
           "ci/oracle/image_identity.py (source, binding and lock identity)",
           "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "a81737591f49b75d5f1ecc194a9cfd0ac132d979"
+        "synced_blob": "b08498bd199be4630978a5400d5e44f6259f4021"
       },
       {
         "kind": "oracle-only",
@@ -8608,7 +8608,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "556780e20985472c01974f536ad9417f9c7602d1"
+        "synced_blob": "d150c4f8763b38324e5f79a535589dad8e93027c"
       },
       {
         "kind": "n/a",
@@ -8630,7 +8630,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "15af650c0a8e631df0953151a1d03ca9ed10045a"
+        "synced_blob": "d27296e3e95ff14eddeef4d475a039c889051a62"
       },
       {
         "kind": "n/a",
@@ -8652,7 +8652,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "f65984d0c239d1ba70d20612ca42e153353f96ca"
+        "synced_blob": "e89ea79697385628778536420468deaba5b69aa5"
       },
       {
         "kind": "n/a",
@@ -8663,7 +8663,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "57c6aa9b0f50fc7c9bed8a8b4dc088431a64d680"
+        "synced_blob": "3383f2dff19936574626067b59402402da92ada9"
       },
       {
         "kind": "n/a",
@@ -8674,7 +8674,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "2323274bca0786d608891b5d12008b9c880b3ecc"
+        "synced_blob": "a8f1691507e8261705cae69fd2d8c1ea4f9210c3"
       },
       {
         "kind": "n/a",
@@ -8685,7 +8685,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "2c6bd1cd9e1245b4460bb11705cfc2166e0126a5"
+        "synced_blob": "e7c334c94925749d68bcb1b2eac4b7a61a30d5f2"
       },
       {
         "kind": "n/a",
@@ -8740,7 +8740,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "340ee8ae749118e7a506e620ac5b149c3efe4a9e"
+        "synced_blob": "28dc206e4dd759b67ee4b6547fdd4d4939d0ea69"
       },
       {
         "kind": "n/a",
@@ -8773,7 +8773,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "7e52a25bd1f91386632c75c0ffe266a78cef461a"
+        "synced_blob": "e1886bb247f761ffc59548875208daa375919f83"
       },
       {
         "kind": "n/a",
@@ -8938,7 +8938,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "ca7815e7009249f06cde663c80f3805085aa42a0"
+        "synced_blob": "ac12f18a9edc1470d0dc67ed74b87f577454ac85"
       },
       {
         "kind": "n/a",
@@ -8960,7 +8960,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "9ab786b44eb0dc621b440b0756deae03f9893b2f"
+        "synced_blob": "9bc178b23b8d624cdbeb2706422807adc5c3478f"
       },
       {
         "kind": "n/a",
@@ -8971,7 +8971,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "5e377c55a9a8cb5fa5d12a2113e9ac7af5d86e3b"
+        "synced_blob": "35ecd6602e71a1619b220ad8656ef5d6aae57902"
       },
       {
         "kind": "n/a",
@@ -11247,7 +11247,7 @@
           "rtao_reads::generated::{ReadName, ReadSpec, ParamSpec, RenderHint, READ_SPECS, dispatch, fill_defaults, interfaces}",
           "rtao_reads::reads::subnets::utf8_text (crate-private)"
         ],
-        "synced_blob": "f74a29405503ad610431ceded37c31c23be73c40"
+        "synced_blob": "c96d40ce6a5aad4cb3697977245d8bf091dd61e9"
       },
       {
         "kind": "ported",

@@ -238,3 +238,56 @@ fn pure_environment_encoding_round_trips_through_core_in_child_process() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+// v488 keyfiles: accountType and signingScheme on every keyfile; hashed and
+// post-quantum keyfiles carry their descriptor and are checked against it
+// (upstream sdk/bittensor-core/src/keyfiles/mod.rs @ v488).
+#[test]
+fn hashed_and_post_quantum_keyfiles_match_core() {
+    use rtao_core::keys::{CRYPTO_ED25519, CRYPTO_HASHED, CRYPTO_HASHED_ED25519, CRYPTO_MLDSA65};
+    for code in [CRYPTO_HASHED, CRYPTO_HASHED_ED25519, CRYPTO_MLDSA65] {
+        let key = Keypair::from_seed(&[37; 32], code).unwrap();
+        for original in [key.public_only().unwrap(), key] {
+            let bytes = keyfiles::serialized_keypair_to_keyfile_data(&original).unwrap();
+            // Both codecs write a map in hash order; compare() checks values.
+            compare(&bytes);
+            let data: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            let mutate = |edit: &dyn Fn(&mut serde_json::Map<String, serde_json::Value>)| {
+                let mut changed = data.clone();
+                edit(changed.as_object_mut().unwrap());
+                compare(&serde_json::to_vec(&changed).unwrap());
+            };
+            for field in ["accountType", "signingScheme"] {
+                mutate(&|map| {
+                    map.insert(field.into(), "wrong".into());
+                });
+                mutate(&|map| {
+                    map.remove(field);
+                });
+            }
+            for field in ["hashedDescriptor", "mldsaDescriptor", "walletVersion"] {
+                mutate(&|map| {
+                    map.remove(field);
+                });
+            }
+            mutate(&|map| {
+                map.insert("walletVersion".into(), 1.into());
+            });
+            mutate(&|map| {
+                map.insert("cryptoType".into(), CRYPTO_ED25519.into());
+            });
+            mutate(&|map| {
+                map.insert(
+                    "ss58Address".into(),
+                    "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY".into(),
+                );
+            });
+            mutate(&|map| {
+                map.insert("accountId".into(), format!("0x{}", "00".repeat(32)).into());
+            });
+            mutate(&|map| {
+                map.insert("secretSeed".into(), "0x0".into());
+            });
+        }
+    }
+}

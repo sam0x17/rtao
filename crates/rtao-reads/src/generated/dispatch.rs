@@ -30,7 +30,7 @@ pub async fn dispatch(
     name: ReadName,
     params: &Map<String, Value>,
 ) -> Result<Value, ReadError> {
-    let params = fill_defaults(name, params)?;
+    let params = crate::receiving::coerce_read_params(name, fill_defaults(name, params)?)?;
     match name {
         ReadName::AcceptsLockedAlpha => {
             let args: super::interfaces::AcceptsLockedAlphaParams =

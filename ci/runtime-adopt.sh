@@ -81,6 +81,7 @@ die() {
 # One scalar from a [section] of a flat, generated TOML file.
 toml_get() {
   awk -v section="[$2]" -v key="$3" '
+    skip { next }
     /^\[/ { inside = ($0 == section); next }
     inside && $1 == key && $2 == "=" {
       value = $0
@@ -88,7 +89,9 @@ toml_get() {
       gsub(/^"|"$/, "", value)
       print value
       found = 1
-      exit
+      # Read on instead of exiting: a producer piping into this (git show
+      # in push) would otherwise die of SIGPIPE under pipefail.
+      skip = 1
     }
     END { exit !found }
   ' "$1"
@@ -1356,10 +1359,19 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
       # open until both networks are seen on indexed runtimes.
       if [[ "$(jq '.unobserved // [] | length' "$decision")" != 0 ]]; then
         echo "not closing: $(jq -r '.unobserved | join("; ")' "$decision")"
-      elif [[ "$open_id" == core-* ]]; then
+      elif [[ "$open_id" == core-* ]] &&
+        toml_get "${RTAO_ADOPT_PINS_ROOT:-.}/upstream.toml" parity core_fingerprint >/dev/null; then
         # A failed core bump is resolved by a core bump (D-136), never by
         # the networks running indexed runtimes.
         echo "not closing: the open issue reports a core bump ($open_id)"
+      elif [[ "$open_id" == core-* && -n "$number" ]]; then
+        # The pins no longer hold the core: the core bump landed (D-139).
+        gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
+          --comment "Core bumped: \`[core]\` is at $(toml_get "${RTAO_ADOPT_PINS_ROOT:-.}/upstream.toml" core tag), the parity pin's core, and no core is held ([run]($run))." >/dev/null
+        local other
+        for other in $(tracked_ids "$previous" "$open_id"); do
+          alert "$other" false "core bump resolved: the core is no longer held" "$run"
+        done
       elif [[ -n "$number" ]]; then
         gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
           --comment "Finney and testnet run indexed runtimes again ([run]($run))." >/dev/null

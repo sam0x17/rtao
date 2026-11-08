@@ -12,10 +12,31 @@
 
 Not a versioned release. Each item links to its section below.
 
+- The core is bumped from v478 to v488 (D-127, D-136, D-142); reads accept receiving addresses for their address parameters (D-142).
 - Account registration can take MEV Shield automatically when enabled with `Executor::with_auto_shield` (D-140); HTTP authentication keeps its verifier until hashed identities verify (D-141).
 - The core patch extends its Ed25519 wipe fix to v488's hashed-account keys through a reviewed adaptation, which unblocks the core bump (D-139, issue #13); the same `hashed.rs` fix is proposed upstream as RaoFoundation/subtensor#3317.
 - The core bump can run on GitHub's hosted runners: `runtime-adopt` takes a `core_bump` dispatch input (D-136, issue #12). Its first run is blocked by v488's hashed Ed25519 keys, which the core patch's erasure guard refuses; the core stays at v478 (D-138, needs a decision).
 - v488 hand ports, fifth batch (D-137, issue #12): plans select the Shield route and period as execution does and report it (`Plan::shielded`), `rtao gamma`, and the four limit-order intents with classical identities.
+
+### Receiving addresses in reads; core bump completion (D-142)
+
+#### rtao-primitives
+
+- New: `receiving` (`is_receiving_address`, `parse_recipient`, `account_for_read`, `Recipient`), Python's `bittensor.receiving` for reads: a `tao_` receiving address resolves to its hashed or ML-DSA account through the core's strict decoder.
+
+#### rtao-reads
+
+- New: every catalog read's address parameters (`*_ss58`, `*_ss58s`) accept receiving addresses through `dispatch`, as Python's read coercion (`reads/base.py`); `receiving::coerce_read_params`.
+
+#### rtao-core
+
+- Changed: `keyfile_json` follows the v488 core's keyfile format: written keyfiles carry `accountType` and `signingScheme`, hashed and post-quantum keyfiles their public descriptor (`hashedDescriptor`, or `mldsaDescriptor` with `walletVersion` 2), parsed with the core's checks; a standard `cryptoType` with a descriptor field is refused.
+- New: `keys::{decode_hashed_receiving_address, encode_hashed_receiving_address, CRYPTO_HASHED, CRYPTO_HASHED_ED25519, CRYPTO_MLDSA65, CRYPTO_MLDSA65_FIXED}`.
+
+#### Automation
+
+- Fixed: runtime-adopt's push job died of SIGPIPE computing the snapshot message for a core bump (`toml_get` stopped reading a pipe); the third core bump's validated bundle was pushed by hand with the same checks.
+- Changed: an open core-bump issue closes on a quiet run once the pins no longer hold a core, with that reason; while a core is held it stays open.
 
 ### Opt-in registration Shield default (D-140)
 

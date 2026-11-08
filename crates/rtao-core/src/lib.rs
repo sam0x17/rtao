@@ -39,8 +39,9 @@ include!(concat!(env!("OUT_DIR"), "/core_pin.rs"));
 /// upstream `Keypair` retains its diagnostic behavior pending subtensor #3252.
 pub mod keys {
     pub use bittensor_core::keys::{
-        CRYPTO_ED25519, CRYPTO_SR25519, DEFAULT_SS58_FORMAT, Keypair, public_key_from_ss58,
-        ss58_from_public, verify,
+        CRYPTO_ED25519, CRYPTO_HASHED, CRYPTO_HASHED_ED25519, CRYPTO_MLDSA65, CRYPTO_MLDSA65_FIXED,
+        CRYPTO_SR25519, DEFAULT_SS58_FORMAT, Keypair, decode_hashed_receiving_address,
+        encode_hashed_receiving_address, public_key_from_ss58, ss58_from_public, verify,
     };
     pub use rtao_core_ext::verify_strict;
 }

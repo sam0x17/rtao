@@ -481,6 +481,7 @@ check adoption-closes-and-resolves '[[ "$(run s1 "$(at 2026-11-04T11:30:00Z "$go
 core_fake=$work/core-fake
 mkdir -p "$core_fake"
 core_loop() { FAKE_GH=$core_fake RTAO_ADOPT_PORT_DUE=$work/no-port-due.toml PATH=$fake/bin:$PATH \
+  RTAO_ADOPT_PINS_ROOT=${core_pins:-$held_root} \
   GITHUB_REPOSITORY=owner/repo GH_TOKEN=x RUNTIME_ALERT_URL=https://alerts.invalid RUNTIME_ALERT_TOKEN=x "$@"; }
 jq -n --arg id "$core_id" --argjson spec "$spec" --arg code "$code" --arg from "$core_tag" --arg to "$parity_tag" \
   '{action: "core-bump", network: "finney", spec: $spec, code: $code, id: $id, reason: "core bump", upcoming: [], deferred: [],
@@ -490,6 +491,9 @@ jq -n '{action: "none", network: null, spec: null, code: null, id: "none", reaso
   >"$work/core-none.json"
 core_loop bash "$script" notify "$work/core-none.json" none >/dev/null
 check core-bump-failure-survives-a-quiet-run '[[ -f $core_fake/1.open ]] && grep -q "Core bump failed" $core_fake/log && ! grep -q "^close" $core_fake/log'
+# Once the pins no longer hold the core, the next quiet run closes it as bumped.
+core_pins=$free_root core_loop bash "$script" notify "$work/core-none.json" none >/dev/null
+check core-bump-issue-closes-once-the-core-moved '[[ -f $core_fake/1.closed ]] && grep -q "^close" $core_fake/log && grep -q "Core bumped" $core_fake/log'
 
 if ((failures)); then
   echo "$failures decision checks failed" >&2

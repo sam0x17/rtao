@@ -17,6 +17,8 @@ pub use generated::{
 };
 /// Typed entry points for catalog reads.
 pub mod reads;
+/// Receiving-address resolution for catalog read parameters (Python `reads/base.py`).
+pub mod receiving;
 pub use reads::lifecycle::SubnetLifecycleState;
 
 use std::fmt;

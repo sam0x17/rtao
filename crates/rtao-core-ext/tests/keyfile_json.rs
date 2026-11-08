@@ -71,7 +71,15 @@ fn serialization_preserves_btcli_field_values_and_public_only_shape() -> Result<
             data["privateKey"],
             json!(format!("0x{}", hex::encode(&*private)))
         );
-        assert_eq!(data.as_object().ok_or("JSON is not an object")?.len(), 7);
+        // v488 adds the account type and signing scheme to every keyfile.
+        let scheme = if crypto == CRYPTO_SR25519 {
+            "sr25519"
+        } else {
+            "ed25519"
+        };
+        assert_eq!(data["accountType"], json!("standard"));
+        assert_eq!(data["signingScheme"], json!(scheme));
+        assert_eq!(data.as_object().ok_or("JSON is not an object")?.len(), 9);
 
         let public_only = Keypair::new(None, Some(&original.public_key_bytes()), crypto, 42)?;
         let data: serde_json::Value =
@@ -83,6 +91,8 @@ fn serialization_preserves_btcli_field_values_and_public_only_shape() -> Result<
                 "publicKey": public,
                 "ss58Address": original.ss58_address(),
                 "cryptoType": crypto,
+                "accountType": "standard",
+                "signingScheme": scheme,
             })
         );
         let decoded = deserialize_keypair_from_keyfile_data(&serde_json::to_vec(&data)?)?;
