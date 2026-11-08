@@ -137,6 +137,8 @@ pub struct RawMultisig {
     pub preset: Option<String>,
     /// Original wallet/contact references for portable replay labels.
     pub refs: Vec<String>,
+    /// The group's derivation: a saved group's `account_mode`, else legacy.
+    pub account_mode: rtao::primitives::AccountMode,
 }
 
 /// Public origin and replay data for a composed raw or semantic multisig call.
@@ -540,6 +542,7 @@ impl RawCallRequest {
                 signatories,
                 preset: None,
                 refs,
+                account_mode: rtao::primitives::AccountMode::Legacy,
             })
         } else {
             None
@@ -947,7 +950,13 @@ pub async fn execute_with(
         .multisig
         .as_ref()
         .map(|group| {
-            Multisig::new(&runtime, &group.signatories, group.threshold).map_err(public_input)
+            Multisig::with_mode(
+                &runtime,
+                &group.signatories,
+                group.threshold,
+                group.account_mode,
+            )
+            .map_err(public_input)
         })
         .transpose()?;
     let (default, required) = shield_policy_for_target(&request.target);
@@ -1015,7 +1024,13 @@ pub async fn execute_rounds_with(
         .multisig
         .as_ref()
         .map(|group| {
-            Multisig::new(&runtime, &group.signatories, group.threshold).map_err(public_input)
+            Multisig::with_mode(
+                &runtime,
+                &group.signatories,
+                group.threshold,
+                group.account_mode,
+            )
+            .map_err(public_input)
         })
         .transpose()?;
     let (default, required) = shield_policy_for_target(&request.target);
@@ -1192,7 +1207,7 @@ async fn prepare_continuation(
         .estimate_weight(call.clone(), signer, CryptoType::Sr25519)
         .await
         .map_err(CliError::from)?;
-    let outer = rtao::client::compose::as_multi_existing(
+    let outer = rtao::client::compose::as_multi_existing_with_mode(
         &snapshot,
         signer,
         &group.signatories,
@@ -1200,6 +1215,7 @@ async fn prepare_continuation(
         call.clone(),
         &estimate,
         expected,
+        group.account_mode,
     )
     .await
     .map_err(CliError::from)?;
@@ -1597,6 +1613,13 @@ fn resolve_preset_with(
                 .ok_or_else(|| CliError::input("saved multisig signatory must be a string"))
         })
         .collect::<Result<Vec<_>, _>>()?;
+    // A group saved as safe composes the safe calls from its safe account;
+    // omitted means legacy, as Python's `saved_account_mode`.
+    let account_mode = match entry.get("account_mode") {
+        None => rtao::primitives::AccountMode::Legacy,
+        Some(Json::String(mode)) => mode.parse().map_err(public_input)?,
+        Some(_) => return Err(CliError::input("account_mode must be 'legacy' or 'safe'")),
+    };
     let signatories = resolve_members(names, &refs)?;
     if signatories.len() < usize::from(threshold) {
         return Err(CliError::input(format!(
@@ -1609,6 +1632,7 @@ fn resolve_preset_with(
         signatories,
         preset: Some(preset.into()),
         refs,
+        account_mode,
     })
 }
 

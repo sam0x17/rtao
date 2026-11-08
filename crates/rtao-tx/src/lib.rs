@@ -15,6 +15,7 @@ mod output;
 pub mod pinned;
 mod plan;
 mod policy;
+pub mod receiving;
 mod registration;
 /// Portable Quicknet timelock envelopes and asynchronous beacon decryption.
 pub mod timelock;

@@ -3,7 +3,7 @@
 
 use rtao_client::{View, ViewExt};
 use rtao_core::DynValue;
-use rtao_primitives::{AccountId, CryptoType, NetUid, Spend};
+use rtao_primitives::{AccountId, AccountMode, CryptoType, NetUid, Spend};
 use rtao_runtime::{CallBytes, calls::multisig, models::MultisigTimepoint};
 use rtao_tx::{
     BuildCx, Built, Intent, IntentError, IntentInterface, IntentSafety, OriginView, PreflightCx,
@@ -50,19 +50,22 @@ fn check_inputs(
     Ok(())
 }
 
+/// Python's `validate_account_mode`, applied where Python derives the group.
+fn account_mode(mode: &str) -> Result<AccountMode, IntentError> {
+    crate::account_modes::validate_account_mode(mode)
+}
+
+/// A member identity: SS58, or a receiving address's account (members are
+/// identities, not payment destinations, so the descriptor is only validated).
+fn member(value: &Value) -> Result<AccountId, IntentError> {
+    let text = value
+        .as_str()
+        .ok_or_else(|| IntentError::validation("multisig signatories must be SS58 strings"))?;
+    Ok(rtao_primitives::receiving::parse_recipient(text)?.account)
+}
+
 fn addresses(others: &[Value]) -> Result<Vec<AccountId>, IntentError> {
-    others
-        .iter()
-        .map(|address| {
-            address
-                .as_str()
-                .ok_or_else(|| {
-                    IntentError::validation("multisig signatories must be SS58 strings")
-                })?
-                .parse::<AccountId>()
-                .map_err(IntentError::from)
-        })
-        .collect()
+    others.iter().map(member).collect()
 }
 
 fn validate_multisig(
@@ -70,6 +73,8 @@ fn validate_multisig(
     others: &[Value],
     signer: AccountId,
 ) -> Result<(), IntentError> {
+    // Python normalizes the members first: spellings of one account count once.
+    let others = sorted_others(others)?;
     if threshold < 2 {
         return Err(IntentError::validation(format!(
             "multisig threshold must be at least 2, got {threshold} (use multisig_threshold_1 for 1-of-N)"
@@ -81,11 +86,7 @@ fn validate_multisig(
             others.len().saturating_add(1)
         )));
     }
-    for other in others {
-        let address = other
-            .as_str()
-            .ok_or_else(|| IntentError::validation("multisig signatories must be SS58 strings"))?
-            .parse::<AccountId>()?;
+    for address in others {
         if address == signer {
             return Err(IntentError::validation(format!(
                 "other_signatories must not include the signer's own account ({signer}); list only the other members"
@@ -100,32 +101,24 @@ fn group_account(
     signer: AccountId,
     threshold: u16,
     others: &[Value],
+    mode: &str,
 ) -> Result<AccountId, IntentError> {
-    let mut members = addresses(others)?;
+    let mode = account_mode(mode)?;
+    let mut members = sorted_others(others)?;
     members.push(signer);
     // D-039: use the existing runtime-cap and duplicate-set refusal before
     // returning any funding address. Core still owns sorting and derivation.
-    Ok(rtao_tx::Multisig::new(runtime, &members, threshold)
-        .map_err(intent_error)?
-        .address)
+    Ok(
+        rtao_tx::Multisig::with_mode(runtime, &members, threshold, mode)
+            .map_err(intent_error)?
+            .address,
+    )
 }
 
 fn sorted_others(others: &[Value]) -> Result<Vec<AccountId>, IntentError> {
-    // Python deduplicates spellings first, then sorts by decoded account bytes.
-    let unique: BTreeSet<&str> = others
-        .iter()
-        .map(|value| {
-            value
-                .as_str()
-                .ok_or_else(|| IntentError::validation("multisig signatories must be SS58 strings"))
-        })
-        .collect::<Result<_, _>>()?;
-    let mut result = unique
-        .into_iter()
-        .map(str::parse::<AccountId>)
-        .collect::<Result<Vec<_>, _>>()?;
-    result.sort_unstable();
-    Ok(result)
+    // Python v488 deduplicates by account, not spelling, then sorts by bytes.
+    let unique: BTreeSet<AccountId> = addresses(others)?.into_iter().collect();
+    Ok(unique.into_iter().collect())
 }
 
 fn truthy(value: &Value) -> bool {
@@ -305,6 +298,7 @@ enum Dispatch {
     Approve,
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn build_approval<V: View + ?Sized>(
     cx: &BuildCx<'_, V>,
     dispatch: Dispatch,
@@ -312,6 +306,7 @@ async fn build_approval<V: View + ?Sized>(
     others: &[Value],
     call: &Value,
     when: Option<&Value>,
+    mode: &str,
 ) -> Result<Built, IntentError> {
     check_inputs(others, call, when)?;
     let signer = cx.coldkey_address()?;
@@ -320,7 +315,8 @@ async fn build_approval<V: View + ?Sized>(
         // Execute deliberately performs this check after composing the child.
         validate_multisig(threshold, others, signer)?;
     }
-    let account = group_account(cx.runtime, signer, threshold, others)?;
+    let account = group_account(cx.runtime, signer, threshold, others, mode)?;
+    let mode = account_mode(mode)?;
     let Built {
         call: inner,
         extras: nested,
@@ -334,22 +330,24 @@ async fn build_approval<V: View + ?Sized>(
         .estimate_weight(inner.clone(), signer, CryptoType::Sr25519)
         .await?;
     let when = timepoint(when)?;
-    let outer = if matches!(dispatch, Dispatch::Approve) && when.is_some() {
-        multisig::approve_as_multi(
-            threshold,
-            sorted_others(others)?,
-            when.clone(),
-            inner.hash(),
-            DynValue::new(estimate.weight),
-        )
-    } else {
-        multisig::as_multi(
-            threshold,
-            sorted_others(others)?,
-            when.clone(),
-            inner.clone(),
-            DynValue::new(estimate.weight),
-        )
+    let weight = DynValue::new(estimate.weight);
+    let others = sorted_others(others)?;
+    let outer = match (
+        matches!(dispatch, Dispatch::Approve) && when.is_some(),
+        mode,
+    ) {
+        (true, AccountMode::Legacy) => {
+            multisig::approve_as_multi(threshold, others, when.clone(), inner.hash(), weight)
+        }
+        (true, AccountMode::Safe) => {
+            multisig::approve_as_multi_safe(threshold, others, when.clone(), inner.hash(), weight)
+        }
+        (false, AccountMode::Legacy) => {
+            multisig::as_multi(threshold, others, when.clone(), inner.clone(), weight)
+        }
+        (false, AccountMode::Safe) => {
+            multisig::as_multi_safe(threshold, others, when.clone(), inner.clone(), weight)
+        }
     }
     .compose(cx.runtime)?;
     check_multisig_funds(
@@ -426,7 +424,7 @@ fn reviewed_approval_hash(
             value.field("call_module").and_then(ValueExt::as_str)?,
             value.field("call_function").and_then(ValueExt::as_str)?,
         ) {
-            ("Multisig", "approve_as_multi") => {
+            ("Multisig", "approve_as_multi" | "approve_as_multi_safe") => {
                 let signatories = arg(value, "other_signatories").and_then(list)?;
                 let matches = arg(value, "threshold").and_then(ValueExt::as_u128)
                     == Some(u128::from(threshold))
@@ -448,7 +446,10 @@ fn reviewed_approval_hash(
             }
             ("Proxy", "proxy" | "proxy_announced")
             | ("Sudo", "sudo" | "sudo_unchecked_weight")
-            | ("Multisig", "as_multi" | "as_multi_threshold_1") => {
+            | (
+                "Multisig",
+                "as_multi" | "as_multi_threshold_1" | "as_multi_safe" | "as_multi_threshold_1_safe",
+            ) => {
                 stack.push(arg(value, "call")?);
             }
             ("Utility", "batch" | "batch_all" | "force_batch") => {
@@ -475,6 +476,7 @@ impl Intent for MultisigExecute {
             cx.coldkey_address()?,
             self.threshold,
             &self.other_signatories,
+            &self.account_mode,
         )?;
         inner_safety_at(cx, account, &self.call, Self::SPEC.mev_shield_required).await
     }
@@ -510,10 +512,7 @@ impl Intent for MultisigExecute {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_execute",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         build_approval(
             cx,
             Dispatch::Execute,
@@ -521,6 +520,7 @@ impl Intent for MultisigExecute {
             &self.other_signatories,
             &self.call,
             self.timepoint.as_ref(),
+            &self.account_mode,
         )
         .await
     }
@@ -544,10 +544,7 @@ impl Intent for MultisigExecute {
     }
 
     fn validate(&self) -> Result<(), IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_execute",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         check_inputs(&self.other_signatories, &self.call, self.timepoint.as_ref())
     }
 }
@@ -563,6 +560,7 @@ impl Intent for MultisigApprove {
             cx.coldkey_address()?,
             self.threshold,
             &self.other_signatories,
+            &self.account_mode,
         )?;
         inner_safety_at(cx, account, &self.call, Self::SPEC.mev_shield_required).await
     }
@@ -600,10 +598,7 @@ impl Intent for MultisigApprove {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_approve",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         build_approval(
             cx,
             Dispatch::Approve,
@@ -611,6 +606,7 @@ impl Intent for MultisigApprove {
             &self.other_signatories,
             &self.call,
             self.timepoint.as_ref(),
+            &self.account_mode,
         )
         .await
     }
@@ -633,6 +629,7 @@ impl Intent for MultisigApprove {
             cx.dispatch_origin,
             self.threshold,
             &self.other_signatories,
+            &self.account_mode,
         )?;
         let Some(hash) = reviewed_approval_hash(
             cx.call,
@@ -669,10 +666,7 @@ impl Intent for MultisigApprove {
     }
 
     fn validate(&self) -> Result<(), IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_approve",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         check_inputs(&self.other_signatories, &self.call, self.timepoint.as_ref())
     }
 }
@@ -688,6 +682,7 @@ impl Intent for MultisigThreshold1 {
             cx.coldkey_address()?,
             1,
             &self.other_signatories,
+            &self.account_mode,
         )?;
         inner_safety_at(cx, account, &self.call, Self::SPEC.mev_shield_required).await
     }
@@ -718,19 +713,23 @@ impl Intent for MultisigThreshold1 {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_threshold_1",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         check_inputs(&self.other_signatories, &self.call, None)?;
         let signer = cx.coldkey_address()?;
-        let account = group_account(cx.runtime, signer, 1, &self.other_signatories)?;
+        let account = group_account(
+            cx.runtime,
+            signer,
+            1,
+            &self.other_signatories,
+            &self.account_mode,
+        )?;
         let inner = compose_inner(cx, account, &self.call).await?;
+        let others = sorted_others(&self.other_signatories)?;
         Ok(Built {
-            call: multisig::as_multi_threshold_1(
-                sorted_others(&self.other_signatories)?,
-                inner.call,
-            )
+            call: match account_mode(&self.account_mode)? {
+                AccountMode::Legacy => multisig::as_multi_threshold_1(others, inner.call),
+                AccountMode::Safe => multisig::as_multi_threshold_1_safe(others, inner.call),
+            }
             .compose(cx.runtime)?,
             extras: inner.extras,
         })
@@ -741,10 +740,7 @@ impl Intent for MultisigThreshold1 {
     }
 
     fn validate(&self) -> Result<(), IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_threshold_1",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         check_inputs(&self.other_signatories, &self.call, None)
     }
 }
@@ -755,32 +751,35 @@ impl Intent for MultisigCancel {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_cancel",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         check_inputs(&self.other_signatories, &self.call, Some(&self.timepoint))?;
         let signer = cx.coldkey_address()?;
-        let account = group_account(cx.runtime, signer, self.threshold, &self.other_signatories)?;
+        let account = group_account(
+            cx.runtime,
+            signer,
+            self.threshold,
+            &self.other_signatories,
+            &self.account_mode,
+        )?;
         let inner = compose_inner(cx, account, &self.call).await?.call;
         let when = timepoint(Some(&self.timepoint))?
             .ok_or_else(|| IntentError::validation("multisig cancellation requires a timepoint"))?;
+        let others = sorted_others(&self.other_signatories)?;
         Ok(Built::new(
-            multisig::cancel_as_multi(
-                self.threshold,
-                sorted_others(&self.other_signatories)?,
-                when,
-                inner.hash(),
-            )
+            match account_mode(&self.account_mode)? {
+                AccountMode::Legacy => {
+                    multisig::cancel_as_multi(self.threshold, others, when, inner.hash())
+                }
+                AccountMode::Safe => {
+                    multisig::cancel_as_multi_safe(self.threshold, others, when, inner.hash())
+                }
+            }
             .compose(cx.runtime)?,
         ))
     }
 
     fn validate(&self) -> Result<(), IntentError> {
-        crate::account_modes::legacy_account_mode(
-            "multisig_cancel",
-            Some(self.account_mode.as_str()),
-        )?;
+        account_mode(&self.account_mode)?;
         check_inputs(&self.other_signatories, &self.call, Some(&self.timepoint))
     }
 }
@@ -983,11 +982,88 @@ mod tests {
 
     #[cfg(feature = "transfer")]
     #[tokio::test]
+    async fn safe_groups_compose_the_safe_calls_from_their_safe_account() -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture(1_000).await?;
+        let runtime = &snapshot.block().runtime;
+        let others = vec![json!(OTHER)];
+        let legacy = group_account(runtime, MEMBER, 2, &others, "legacy")?;
+        let safe = group_account(runtime, MEMBER, 2, &others, "safe")?;
+        assert_ne!(legacy, safe);
+        let (expected, _) = rtao_primitives::multisig_account_id(
+            &[MEMBER, OTHER],
+            2,
+            rtao_primitives::AccountMode::Safe,
+        )?;
+        assert_eq!(safe, expected);
+        let execute = MultisigExecute {
+            account_mode: "safe".to_owned(),
+            threshold: 2,
+            other_signatories: others.clone(),
+            call: transfer(),
+            timepoint: None,
+        };
+        let approve_later = MultisigApprove {
+            account_mode: "safe".to_owned(),
+            threshold: 2,
+            other_signatories: others.clone(),
+            call: transfer(),
+            timepoint: Some(json!({"height":12,"index":3})),
+        };
+        let cancel = MultisigCancel {
+            account_mode: "safe".to_owned(),
+            threshold: 2,
+            other_signatories: others.clone(),
+            call: transfer(),
+            timepoint: json!({"height":12,"index":3}),
+        };
+        let immediate = MultisigThreshold1 {
+            account_mode: "safe".to_owned(),
+            other_signatories: others.clone(),
+            call: transfer(),
+        };
+        for (intent, function) in [
+            (&execute as &dyn DynIntent, "as_multi_safe"),
+            (&approve_later as &dyn DynIntent, "approve_as_multi_safe"),
+            (&cancel as &dyn DynIntent, "cancel_as_multi_safe"),
+            (&immediate as &dyn DynIntent, "as_multi_threshold_1_safe"),
+        ] {
+            let built = intent
+                .build_dyn(&BuildCx {
+                    view: &snapshot as &dyn DynView,
+                    origin: OriginView::Account(MEMBER),
+                    runtime,
+                    clock: &SystemClock,
+                    spec: intent.spec(),
+                })
+                .await?;
+            let decoded = decode(&built.call, runtime)?;
+            assert_eq!(decoded["call_function"], function, "{}", intent.spec().name);
+            assert_eq!(
+                arg(&decoded, "other_signatories")?,
+                &json!([OTHER.to_string()])
+            );
+        }
+        // An unknown mode is refused before anything is composed.
+        let unknown = MultisigExecute {
+            account_mode: "Safe".to_owned(),
+            ..execute
+        };
+        assert_eq!(
+            unknown.validate().expect_err("unknown mode").to_string(),
+            "account_mode must be 'legacy' or 'safe'"
+        );
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[cfg(feature = "transfer")]
+    #[tokio::test]
     async fn raw_multisig_never_looks_up_pending_or_autofills_the_explicit_opening()
     -> anyhow::Result<()> {
         let (chain, client, snapshot) = fixture(1_000).await?;
         let runtime = &snapshot.block().runtime;
-        let account = group_account(runtime, MEMBER, 2, &[json!(OTHER)])?;
+        let account = group_account(runtime, MEMBER, 2, &[json!(OTHER)], "legacy")?;
         let inner = CallBytes::decode(&transfer_bytes(), runtime)?;
         chain.mutate_state(|state|state.seed_python("Multisig","Multisigs",&[json!(account),json!(format!("0x{}",hex::encode(inner.hash())))],json!({"when":{"height":12,"index":3},"deposit":120,"depositor":MEMBER,"approvals":[MEMBER]})))?;
         let recorded = RecordingView::new(snapshot.clone());
@@ -1032,7 +1108,7 @@ mod tests {
             other_signatories: vec![json!(OTHER)],
             call: json!({"op":"evm_withdraw","amount_tao":"0.000000001"}),
         };
-        let account = group_account(runtime, MEMBER, 1, &intent.other_signatories)?;
+        let account = group_account(runtime, MEMBER, 1, &intent.other_signatories, "legacy")?;
         let built = intent
             .build(&BuildCx {
                 view: &snapshot,
@@ -1192,7 +1268,7 @@ mod tests {
                 call: transfer(),
                 timepoint: Some(json!({"height":12,"index":3})),
             };
-            let account = group_account(runtime, MEMBER, 3, &intent.other_signatories)?;
+            let account = group_account(runtime, MEMBER, 3, &intent.other_signatories, "legacy")?;
             let inner = CallBytes::decode(&transfer_bytes(), runtime)?;
             chain.mutate_state(|state| state.seed_python(
                 "Multisig", "Multisigs", &[json!(account), json!(format!("0x{}", hex::encode(inner.hash())))],
@@ -1272,7 +1348,7 @@ mod tests {
             ])),
         )
         .compose(runtime)?;
-        let account = group_account(runtime, MEMBER, 2, &intent.other_signatories)?;
+        let account = group_account(runtime, MEMBER, 2, &intent.other_signatories, "legacy")?;
         chain.mutate_state(|state| state.seed_python(
             "Multisig", "Multisigs",
             &[json!(account), json!(format!("0x{}", hex::encode(reviewed_hash)))],
@@ -1510,13 +1586,21 @@ mod tests {
             let error=intent.build(&BuildCx{view:&snapshot,origin:OriginView::Account(MEMBER),runtime,clock:&SystemClock,spec:MultisigApprove::SPEC}).await.expect_err("invalid group");
             assert_eq!(error.to_string(),message);
         }
+        assert!(group_account(runtime, MEMBER, 1, &[], "legacy").is_err());
+        // Python v488 normalizes members by account: repeated spellings of one
+        // member are one signatory, never a second one or a refusal.
+        let single = group_account(runtime, MEMBER, 1, &[json!(OTHER)], "legacy")?;
         for others in [
-            vec![],
             vec![json!(OTHER), json!(OTHER)],
             vec![json!(OTHER), json!(OTHER.to_ss58(0))],
         ] {
-            assert!(group_account(runtime, MEMBER, 1, &others).is_err());
+            assert_eq!(
+                group_account(runtime, MEMBER, 1, &others, "legacy")?,
+                single
+            );
         }
+        // The signer listed again is still a duplicate member.
+        assert!(group_account(runtime, MEMBER, 1, &[json!(MEMBER)], "legacy").is_err());
         let intent = MultisigExecute {
             account_mode: "legacy".to_owned(),
             threshold: 1,

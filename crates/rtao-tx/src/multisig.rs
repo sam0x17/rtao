@@ -5,8 +5,8 @@
 use crate::{ChainError, ExecuteOptions, Executor, ExtrinsicResult, IntentError, TxError};
 use rtao_catalog::py::RAO_PER_TAO;
 use rtao_client::{CallBytes, Client, ClientError, View, ViewExt};
-use rtao_core::{CoreError, DynValue, value_ext::ValueExt};
-use rtao_primitives::{AccountId, Balance, CryptoType, Tao};
+use rtao_core::{DynValue, value_ext::ValueExt};
+use rtao_primitives::{AccountId, AccountMode, Balance, CryptoType, Tao};
 use rtao_signer::{DynKeySource, KeyView, SignerRole};
 use std::time::Duration;
 
@@ -19,6 +19,8 @@ pub struct Multisig {
     pub threshold: u16,
     /// Account derived by the core from the signer set and threshold.
     pub address: AccountId,
+    /// The derivation of [`Self::address`]; every approval uses its calls.
+    pub account_mode: AccountMode,
 }
 
 /// Public signer selection and waiting options for one approval.
@@ -54,11 +56,23 @@ impl Default for ApproveOptions {
 }
 
 impl Multisig {
-    /// Derive an account after validating the set against the pinned runtime.
+    /// Derive the legacy account after validating the set against the pinned runtime.
     pub fn new(
         runtime: &rtao_client::RuntimeHandle,
         signatories: &[AccountId],
         threshold: u16,
+    ) -> Result<Self, TxError> {
+        Self::with_mode(runtime, signatories, threshold, AccountMode::Legacy)
+    }
+
+    /// Derive the account of `mode` after validating the set against the
+    /// pinned runtime. A `Safe` group's account cannot be a raw classical key
+    /// and is a different account from the same members' legacy one.
+    pub fn with_mode(
+        runtime: &rtao_client::RuntimeHandle,
+        signatories: &[AccountId],
+        threshold: u16,
+        account_mode: AccountMode,
     ) -> Result<Self, TxError> {
         if signatories.len() < 2 {
             return Err(IntentError::InvalidArgument(
@@ -74,20 +88,19 @@ impl Multisig {
         }
         rtao_client::compose::validate_multisig_signatory_count(runtime, signatories.len())
             .map_err(|error| IntentError::Validation(error.to_string()))?;
-        let public_keys = signatories
-            .iter()
-            .map(|account| account.0)
-            .collect::<Vec<_>>();
-        let (address, sorted) = rtao_core::extrinsic::multisig_account_id(&public_keys, threshold)
-            .map_err(CoreError::from)
-            .map_err(IntentError::from)?;
-        if sorted.windows(2).any(|pair| pair[0] == pair[1]) {
+        let mut unique = signatories.to_vec();
+        unique.sort_unstable();
+        if unique.windows(2).any(|pair| pair[0] == pair[1]) {
             return Err(IntentError::InvalidArgument("duplicate multisig signatory".into()).into());
         }
+        let (address, sorted) =
+            rtao_primitives::multisig_account_id(signatories, threshold, account_mode)
+                .map_err(IntentError::from)?;
         Ok(Self {
-            signatories: sorted.into_iter().map(AccountId).collect(),
+            signatories: sorted,
             threshold,
-            address: AccountId(address),
+            address,
+            account_mode,
         })
     }
 
@@ -121,8 +134,12 @@ impl Multisig {
         let preparation = async {
             let client = executor.client();
             let snapshot = View::pin(client).await?;
-            let canonical =
-                Self::new(&snapshot.block().runtime, &self.signatories, self.threshold)?;
+            let canonical = Self::with_mode(
+                &snapshot.block().runtime,
+                &self.signatories,
+                self.threshold,
+                self.account_mode,
+            )?;
             if canonical.address != self.address {
                 return Err(IntentError::InvalidArgument(
                     "multisig address does not match its signer set".into(),
@@ -147,19 +164,25 @@ impl Multisig {
                     .copied()
                     .filter(|account| *account != signer)
                     .collect::<Vec<_>>();
-                rtao_client::compose::as_multi_threshold_1(runtime, &others, call)
-                    .map_err(ClientError::from)?
+                rtao_client::compose::as_multi_threshold_1_with_mode(
+                    runtime,
+                    &others,
+                    call,
+                    self.account_mode,
+                )
+                .map_err(ClientError::from)?
             } else {
                 let estimate = client
                     .estimate_weight(call.clone(), signer, CryptoType::Sr25519)
                     .await?;
-                rtao_client::compose::as_multi(
+                rtao_client::compose::as_multi_with_mode(
                     &snapshot,
                     signer,
                     &self.signatories,
                     self.threshold,
                     call,
                     &estimate,
+                    self.account_mode,
                 )
                 .await?
             };
@@ -227,14 +250,24 @@ impl Multisig {
                     .copied()
                     .filter(|account| *account != signer)
                     .collect::<Vec<_>>();
+                let weight = DynValue::new(estimate.weight);
                 Some(
-                    rtao_runtime::calls::multisig::as_multi(
-                        self.threshold,
-                        others,
-                        None,
-                        call.clone(),
-                        DynValue::new(estimate.weight),
-                    )
+                    match self.account_mode {
+                        AccountMode::Legacy => rtao_runtime::calls::multisig::as_multi(
+                            self.threshold,
+                            others,
+                            None,
+                            call.clone(),
+                            weight,
+                        ),
+                        AccountMode::Safe => rtao_runtime::calls::multisig::as_multi_safe(
+                            self.threshold,
+                            others,
+                            None,
+                            call.clone(),
+                            weight,
+                        ),
+                    }
                     .compose(&runtime)
                     .map_err(ClientError::from)?,
                 )
@@ -270,14 +303,33 @@ fn approval_timeout() -> TxError {
 }
 
 impl Executor {
-    /// Derive an account only after checking the pinned runtime's signer limit.
+    /// Derive the legacy account only after checking the pinned runtime's signer limit.
     pub async fn multisig(
         &self,
         signatories: &[AccountId],
         threshold: u16,
     ) -> Result<Multisig, TxError> {
+        self.multisig_with_mode(signatories, threshold, AccountMode::Legacy)
+            .await
+    }
+
+    /// Python's `Client.multisig(signatories, threshold, account_mode=)`:
+    /// derive the account of `account_mode` after checking the pinned
+    /// runtime's signer limit.
+    #[doc(alias = "bittensor.client.Client.multisig")]
+    pub async fn multisig_with_mode(
+        &self,
+        signatories: &[AccountId],
+        threshold: u16,
+        account_mode: AccountMode,
+    ) -> Result<Multisig, TxError> {
         let snapshot = View::pin(self.client()).await?;
-        Multisig::new(&snapshot.block().runtime, signatories, threshold)
+        Multisig::with_mode(
+            &snapshot.block().runtime,
+            signatories,
+            threshold,
+            account_mode,
+        )
     }
 }
 

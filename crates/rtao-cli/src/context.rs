@@ -2978,7 +2978,7 @@ impl AppContext {
         let raw = crate::call::resolve_preset(self, &self.globals.wallet_name)?;
         let rounds = crate::call::plan_rounds(self, Some(&raw), SignerRole::Coldkey, None)?;
         let group = rtao::Executor::new(client.clone())
-            .multisig(&raw.signatories, raw.threshold)
+            .multisig_with_mode(&raw.signatories, raw.threshold, raw.account_mode)
             .await
             .map_err(CliError::transaction)?;
         if intent

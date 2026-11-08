@@ -1323,20 +1323,20 @@ impl<'a> NameResolver<'a> {
         resolving.active.insert(name.to_owned());
         resolving.heights.push(1);
         let mut derive = || -> Result<String, ResolveError> {
-            // Safe derivation needs the core's safe multisig account (D-133);
-            // never derive the legacy account for a group saved as safe.
-            match entry.get("account_mode") {
-                None => {}
-                Some(Value::String(mode)) if mode == "legacy" => {}
-                Some(Value::String(mode)) if mode == "safe" => {
-                    return Err(ResolveError::new(format!(
-                        "saved multisig {name} uses account_mode 'safe', whose account this build cannot derive yet"
-                    )));
+            // A group saved as safe resolves to its safe account, never the
+            // legacy account of the same members; omitted means legacy.
+            let mode = match entry.get("account_mode") {
+                None => rtao::primitives::AccountMode::Legacy,
+                Some(Value::String(mode)) => {
+                    mode.parse()
+                        .map_err(|error: rtao::primitives::AccountModeError| {
+                            ResolveError::new(error.to_string())
+                        })?
                 }
                 Some(_) => {
                     return Err(ResolveError::new("account_mode must be 'legacy' or 'safe'"));
                 }
-            }
+            };
             let threshold = entry
                 .get("threshold")
                 .and_then(threshold_u16)
@@ -1366,13 +1366,12 @@ impl<'a> NameResolver<'a> {
                 .map(|address| {
                     address
                         .parse::<AccountId>()
-                        .map(|account| account.0)
                         .map_err(|error| ResolveError::new(error.to_string()))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let (account, _) = rtao::core::extrinsic::multisig_account_id(&keys, threshold)
+            let (account, _) = rtao::primitives::multisig_account_id(&keys, threshold, mode)
                 .map_err(|error| ResolveError::new(error.to_string()))?;
-            Ok(AccountId(account).to_string())
+            Ok(account.to_string())
         };
         let result = derive();
         let height = resolving.heights.pop().unwrap_or(1);
@@ -1640,7 +1639,8 @@ mod tests {
     }
 
     #[test]
-    fn saved_safe_multisigs_never_resolve_to_the_legacy_account() -> Result<(), Box<dyn Error>> {
+    fn saved_safe_multisigs_resolve_to_the_safe_account_never_the_legacy_one()
+    -> Result<(), Box<dyn Error>> {
         let books = Books::from_values(
             json!([]),
             json!([]),
@@ -1656,11 +1656,16 @@ mod tests {
             names.resolve_address_ref("new_coldkey", "legacy")?.address,
             "5F3QVbS78a4aTYLiRAD8N3czjqVoNyV42L19CXyhqUMCh4Ch"
         );
-        let error = names
-            .resolve_address_ref("new_coldkey", "safe")
-            .err()
-            .ok_or("a safe group must not resolve")?;
-        assert!(error.to_string().contains("account_mode 'safe'"), "{error}");
+        // The core's safe derivation of the same members, a different account.
+        let members = [ALICE.parse::<AccountId>()?, BOB.parse::<AccountId>()?];
+        let (safe, _) = rtao::primitives::multisig_account_id(
+            &members,
+            2,
+            rtao::primitives::AccountMode::Safe,
+        )?;
+        let resolved = names.resolve_address_ref("new_coldkey", "safe")?.address;
+        assert_eq!(resolved, safe.to_string());
+        assert_ne!(resolved, "5F3QVbS78a4aTYLiRAD8N3czjqVoNyV42L19CXyhqUMCh4Ch");
         let error = names
             .resolve_address_ref("new_coldkey", "other")
             .err()

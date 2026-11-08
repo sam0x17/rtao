@@ -888,14 +888,20 @@ impl SyncClient {
         })
     }
 
-    /// Validate and derive a multisig account against the current runtime.
+    /// Validate and derive a multisig account of `account_mode` against the
+    /// current runtime (Python's `multisig(signatories, threshold,
+    /// account_mode=)`; [`AccountMode::Legacy`](rtao_primitives::AccountMode)
+    /// is the existing account).
     pub fn multisig(
         &self,
         signatories: Vec<AccountId>,
         threshold: u16,
+        account_mode: rtao_primitives::AccountMode,
     ) -> Result<SyncMultisig, Error> {
         let multisig = self.view.with_executor(move |executor| async move {
-            executor.multisig(&signatories, threshold).await
+            executor
+                .multisig_with_mode(&signatories, threshold, account_mode)
+                .await
         })?;
         Ok(SyncMultisig {
             client: self.clone(),

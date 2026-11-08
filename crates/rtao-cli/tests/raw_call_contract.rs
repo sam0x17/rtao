@@ -623,6 +623,7 @@ fn multisig_replay_uses_rtao_and_preserves_btcli_inside_user_arguments() -> Test
     let alice = AccountId([7; 32]);
     let bob = AccountId([8; 32]);
     let group = RawMultisig {
+        account_mode: rtao::primitives::AccountMode::Legacy,
         threshold: 2,
         signatories: vec![alice, bob],
         preset: Some("btcli team".into()),
@@ -879,6 +880,7 @@ async fn raw_round_review_lists_member_backends_before_confirmation_without_priv
             })));
             let mut raw = request();
             raw.multisig = Some(RawMultisig {
+                account_mode: rtao::primitives::AccountMode::Legacy,
                 threshold: 2,
                 signatories: vec![alice.key.account(), bob.key.account()],
                 preset: Some("team".into()),
@@ -1230,6 +1232,7 @@ async fn opening_timepoint_is_authenticated_from_included_matching_receipt_event
 fn chained_request(keys: &[Keys]) -> RawCallRequest {
     let mut raw = request();
     raw.multisig = Some(RawMultisig {
+        account_mode: rtao::primitives::AccountMode::Legacy,
         threshold: 2,
         signatories: keys.iter().map(|key| key.key.account()).collect(),
         preset: Some("team".into()),
@@ -1554,6 +1557,7 @@ async fn executed_first_approval_stops_later_members_and_caches_exact_inner_call
     raw.sudo = true;
     raw.proxy_for = Some(AccountId([42; 32]));
     raw.multisig = Some(RawMultisig {
+        account_mode: rtao::primitives::AccountMode::Legacy,
         threshold: 3,
         signatories: keys.iter().map(|keys| keys.key.account()).collect(),
         preset: Some("team".into()),
@@ -1724,6 +1728,7 @@ async fn pending_followup_retains_timepoint_approvals_and_copyable_commands() ->
     let runtime = View::runtime(&client).await?;
     let mut raw = request();
     raw.multisig = Some(RawMultisig {
+        account_mode: rtao::primitives::AccountMode::Legacy,
         threshold: 2,
         signatories: keys.iter().map(|keys| keys.key.account()).collect(),
         preset: None,
@@ -2230,6 +2235,7 @@ fn multisig_alias_labels_and_rounds_use_public_natural_wallet_order() -> TestRes
         ctx.globals.wallet_path = wallet_root;
         ctx.globals.wallet_name = "team".into();
         let group = RawMultisig {
+            account_mode: rtao::primitives::AccountMode::Legacy,
             threshold: 2,
             signatories: vec![bob, alice],
             preset: None,
@@ -2345,6 +2351,7 @@ fn automatic_multisig_aliases_use_last_admission_and_display_but_first_wallet_so
                 ctx.globals.wallet_path = wallet_root;
                 ctx.globals.wallet_name = "team".into();
                 let group = RawMultisig {
+                    account_mode: rtao::primitives::AccountMode::Legacy,
                     threshold: 2,
                     signatories: vec![alice, bob],
                     preset: None,
@@ -2431,6 +2438,7 @@ fn interactive_multisig_alias_selection_keeps_chosen_wallet_source() -> TestResu
                 messages: Arc::new(Mutex::new(Vec::new())),
             })));
             let group = RawMultisig {
+                account_mode: rtao::primitives::AccountMode::Legacy,
                 threshold: 1,
                 signatories: vec![alice, bob],
                 preset: None,
@@ -2514,6 +2522,7 @@ fn chained_multisig_references_use_only_member_contacts_and_local_names() -> Tes
             vec![alice, bob]
         };
         let group = RawMultisig {
+            account_mode: rtao::primitives::AccountMode::Legacy,
             threshold: 2,
             refs: signatories.iter().map(ToString::to_string).collect(),
             signatories,

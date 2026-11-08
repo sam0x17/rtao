@@ -32,11 +32,21 @@ fn saved_group(
     ctx: &AppContext,
     signatories: &[AccountId],
     threshold: u16,
+    mode: rtao::primitives::AccountMode,
 ) -> Result<(Option<String>, Vec<String>), CliError> {
     let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
     let wanted: BTreeSet<_> = signatories.iter().copied().collect();
     for entry in &ctx.books.multisigs {
         if entry.get("threshold").and_then(Value::as_u64) != Some(u64::from(threshold)) {
+            continue;
+        }
+        // A saved group names one derivation; never relabel another mode's group.
+        let saved = match entry.get("account_mode") {
+            None => Some(rtao::primitives::AccountMode::Legacy),
+            Some(Value::String(mode)) => mode.parse().ok(),
+            Some(_) => None,
+        };
+        if saved != Some(mode) {
             continue;
         }
         let Some(name) = entry.get("name").and_then(Value::as_str) else {
@@ -91,6 +101,11 @@ pub(super) async fn followup(
         .and_then(|value| u16::try_from(value).ok())
         .filter(|threshold| *threshold >= 2)
         .ok_or_else(|| failure("direct multisig followup requires a native threshold"))?;
+    let mode: rtao::primitives::AccountMode = match args.get("account_mode") {
+        None | Some(Value::Null) => rtao::primitives::AccountMode::Legacy,
+        Some(Value::String(mode)) => mode.parse().map_err(failure)?,
+        Some(_) => return Err(failure("account_mode must be 'legacy' or 'safe'")),
+    };
     let role = intent.signer_role_dyn().map_err(failure)?;
     let mut signatories = args
         .get("other_signatories")
@@ -100,9 +115,12 @@ pub(super) async fn followup(
         .map(|value| {
             value
                 .as_str()
-                .ok_or_else(|| failure("direct multisig member is not an address"))?
-                .parse::<AccountId>()
-                .map_err(failure)
+                .ok_or_else(|| failure("direct multisig member is not an address"))
+                .and_then(|text| {
+                    rtao::primitives::receiving::parse_recipient(text)
+                        .map(|recipient| recipient.account)
+                        .map_err(failure)
+                })
         })
         .collect::<Result<Vec<_>, _>>()?;
     signatories.push(signer);
@@ -140,13 +158,14 @@ pub(super) async fn followup(
             "direct multisig receipt hash does not match its call bytes",
         ));
     }
-    let multisig = Multisig::new(runtime, &signatories, threshold).map_err(failure)?;
-    let (preset, refs) = saved_group(ctx, &signatories, threshold)?;
+    let multisig = Multisig::with_mode(runtime, &signatories, threshold, mode).map_err(failure)?;
+    let (preset, refs) = saved_group(ctx, &signatories, threshold, mode)?;
     let group = RawMultisig {
         threshold,
         signatories,
         preset,
         refs,
+        account_mode: mode,
     };
     let spec = crate::call::decode_multisig_call_spec_at(runtime, &call, role);
     let cache = match &ctx.config_store {

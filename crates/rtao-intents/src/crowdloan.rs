@@ -123,7 +123,15 @@ fn stored_deferred_source_refusal(call: &CoreValue) -> Result<(), IntentError> {
                 pending.extend(children);
             }
             (Some("Proxy"), Some("proxy" | "proxy_announced"))
-            | (Some("Multisig"), Some("as_multi" | "as_multi_threshold_1"))
+            | (
+                Some("Multisig"),
+                Some(
+                    "as_multi"
+                    | "as_multi_threshold_1"
+                    | "as_multi_safe"
+                    | "as_multi_threshold_1_safe",
+                ),
+            )
             | (Some("Sudo"), Some("sudo" | "sudo_unchecked_weight")) => {
                 pending.push(call_arg(call, "call")?)
             }
@@ -288,7 +296,7 @@ fn leaf_safety(
             "Proxy",
             "add_proxy" | "create_pure" | "kill_pure" | "remove_proxies" | "remove_proxy",
         )
-        | ("Multisig", "cancel_as_multi")
+        | ("Multisig", "cancel_as_multi" | "cancel_as_multi_safe")
         | ("EVM", "withdraw")
         | (
             "Crowdloan",
@@ -550,7 +558,13 @@ async fn finalize_safety_at<V: View + ?Sized>(
                         );
                     }
                     ("Proxy", "proxy" | "proxy_announced")
-                    | ("Multisig", "as_multi" | "as_multi_threshold_1")
+                    | (
+                        "Multisig",
+                        "as_multi"
+                        | "as_multi_threshold_1"
+                        | "as_multi_safe"
+                        | "as_multi_threshold_1_safe",
+                    )
                     | ("Sudo", "sudo" | "sudo_unchecked_weight") => {
                         pending.push(Pending::Call(
                             call_arg(&call, "call")?.clone(),

@@ -195,8 +195,13 @@ fn validated_group(
     group: &Multisig,
     member: AccountId,
 ) -> Result<Multisig, IntentError> {
-    let canonical =
-        Multisig::new(runtime, &group.signatories, group.threshold).map_err(intent_error)?;
+    let canonical = Multisig::with_mode(
+        runtime,
+        &group.signatories,
+        group.threshold,
+        group.account_mode,
+    )
+    .map_err(intent_error)?;
     if canonical.address != group.address {
         return Err(IntentError::InvalidArgument(
             "multisig address does not match its signer set".into(),
@@ -467,10 +472,11 @@ impl DynIntent for SemanticMultisig<'_> {
             inner.ensure_runtime(cx.runtime)?;
             let (outer, timepoint) = if self.group.threshold == 1 {
                 (
-                    rtao::client::compose::as_multi_threshold_1(
+                    rtao::client::compose::as_multi_threshold_1_with_mode(
                         cx.runtime,
                         &self.others,
                         inner.clone(),
+                        self.group.account_mode,
                     )?,
                     None,
                 )
@@ -480,7 +486,7 @@ impl DynIntent for SemanticMultisig<'_> {
                         .client
                         .estimate_weight(inner.clone(), self.member, self.crypto)
                         .await?;
-                    let outer = rtao::client::compose::as_multi_existing(
+                    let outer = rtao::client::compose::as_multi_existing_with_mode(
                         cx.view,
                         self.member,
                         &self.group.signatories,
@@ -488,6 +494,7 @@ impl DynIntent for SemanticMultisig<'_> {
                         inner.clone(),
                         &estimate,
                         expected.clone(),
+                        self.group.account_mode,
                     )
                     .await?;
                     (outer, Some(expected.clone()))
@@ -513,13 +520,14 @@ impl DynIntent for SemanticMultisig<'_> {
                         .client
                         .estimate_weight(inner.clone(), self.member, self.crypto)
                         .await?;
-                    let outer = rtao::client::compose::as_multi(
+                    let outer = rtao::client::compose::as_multi_with_mode(
                         cx.view,
                         self.member,
                         &self.group.signatories,
                         self.group.threshold,
                         inner.clone(),
                         &estimate,
+                        self.group.account_mode,
                     )
                     .await?;
                     (outer, timepoint)

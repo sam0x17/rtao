@@ -5,20 +5,23 @@
 //! Orders are the runtime's `VersionedOrder` values as JSON (`{"V1": {...}}`,
 //! `{"V2": {...}}`, or `{"Authorized": {"nonce": n, "terms": ...}}`), encoded
 //! by the live metadata. Their identities (`signer`, `hotkey`,
-//! `fee_recipient`, `relayer`) are ss58 addresses. Python also accepts a
-//! receiving address there (a hashed account's `tao_` payment address,
-//! checked against its finalized registration); that needs the core's
-//! receiving-address codec, so such an identity is refused until the core
-//! bump lands (D-128, D-135).
+//! `fee_recipient`, `relayer`) are ss58 or receiving (`tao_`) addresses.
+//! `signer`, `hotkey` and `relayer` are identities: a receiving address is
+//! replaced by its account. `fee_recipient` is paid: a receiving address keeps
+//! its descriptor until its registration is checked in finalized state, and
+//! only then becomes its account in the chain's order ([`order_for_chain`]).
+//! Orders may be relayed much later and through either execution route; a
+//! finalized registration is permanent, so it protects their fees without
+//! changing the signed terms (D-144).
 
-use rtao_client::View;
+use rtao_client::{Client, View};
 use rtao_core::{DynValue, codec::Value as CoreValue};
+use rtao_primitives::receiving::{Recipient, parse_recipient};
 use rtao_primitives::{AccountId, NetUid, Spend};
 use rtao_runtime::{RuntimeHandle, calls::limit_orders as calls};
 use rtao_tx::{BuildCx, Built, Intent, IntentError};
 use serde_json::{Map, Value, json};
 use smallvec::SmallVec;
-use std::str::FromStr;
 
 pub use crate::{AuthorizeOrder, CancelOrder, ExecuteBatchedOrders, ExecuteOrders};
 
@@ -98,30 +101,44 @@ fn order_terms_mut(order: &mut Value) -> Option<&mut Map<String, Value>> {
     inner.values_mut().next()?.as_object_mut()
 }
 
-// py: sdk/python/bittensor/receiving.py:23-29
-/// Python's routing predicate for the receiving-address family.
-pub fn is_receiving_address(value: &str) -> bool {
-    let value = value.trim_start().to_ascii_lowercase();
-    value.starts_with("bth") || value.starts_with("tao_")
-}
+pub use rtao_primitives::receiving::is_receiving_address;
 
-// py: sdk/python/bittensor/receiving.py:32-43 (classical addresses)
-fn recipient(value: &Value, field: &str) -> Result<String, IntentError> {
+// py: sdk/python/bittensor/receiving.py:32-43
+fn recipient(value: &Value, field: &str) -> Result<Recipient, IntentError> {
     let text = value
         .as_str()
         .ok_or_else(|| validation("recipient must be an address string"))?;
-    if is_receiving_address(text) {
-        return Err(IntentError::InvalidArgument(format!(
-            "order {field}: receiving addresses (hashed accounts, runtime 487) are not ported yet; use the account's ss58 address"
-        )));
-    }
-    AccountId::from_str(text).map_err(|error| validation(format!("order {field}: {error}")))?;
-    Ok(text.to_owned())
+    parse_recipient(text).map_err(|error| validation(format!("order {field}: {error}")))
+}
+
+/// An identity term: SS58 as written, a receiving address as its account.
+fn identity(value: &Value, field: &str) -> Result<String, IntentError> {
+    let recipient = recipient(value, field)?;
+    Ok(match recipient.descriptor {
+        None => recipient.address,
+        Some(_) => recipient.account.to_string(),
+    })
 }
 
 fn term_account(terms: &Map<String, Value>, field: &str) -> Result<AccountId, IntentError> {
-    let text = recipient(terms.get(field).unwrap_or(&Value::Null), field)?;
-    AccountId::from_str(&text).map_err(|error| validation(format!("order {field}: {error}")))
+    Ok(recipient(terms.get(field).unwrap_or(&Value::Null), field)?.account)
+}
+
+/// The order's `fee_recipient` when it is a receiving address still awaiting
+/// its finalized registration check.
+fn unresolved_fee_recipient(order: &Value) -> Result<Option<String>, IntentError> {
+    let terms = order_terms(order)?;
+    let recipient = recipient(
+        terms.get("fee_recipient").unwrap_or(&Value::Null),
+        "fee_recipient",
+    )?;
+    Ok(recipient.descriptor.map(|_| recipient.address))
+}
+
+fn needs_finalized_check(address: &str) -> IntentError {
+    validation(format!(
+        "order fee_recipient {address} is a receiving address, whose registration must be checked in finalized state before the order is encoded; prepare it with PreparedOrder::prepare_checked (or resolve it with limit_orders::order_for_chain)"
+    ))
 }
 
 fn term_netuid(terms: &Map<String, Value>) -> Result<NetUid, IntentError> {
@@ -132,27 +149,77 @@ fn term_netuid(terms: &Map<String, Value>) -> Result<NetUid, IntentError> {
 }
 
 // py: sdk/python/bittensor/limit_orders.py:52-63
-/// Validate an order's identities, as Python's `canonical_order` normalizes
-/// them (a classical address is kept as written).
+/// Normalize an order's identities, as Python's `canonical_order`: a
+/// classical address is kept as written, an identity's receiving address
+/// becomes its account, and a receiving `fee_recipient` keeps its descriptor
+/// until [`order_for_chain`] checks its finalized registration.
 pub fn canonical_order(order: &Value) -> Result<Value, IntentError> {
     let mut result = order.clone();
     let terms = order_terms(&result)?.clone();
     let canonical = order_terms_mut(&mut result)
         .ok_or_else(|| validation("VersionedOrder terms must be an object"))?;
-    for field in ["signer", "hotkey", "fee_recipient"] {
+    for field in ["signer", "hotkey"] {
         canonical.insert(
             field.into(),
-            json!(recipient(terms.get(field).unwrap_or(&Value::Null), field)?),
+            json!(identity(terms.get(field).unwrap_or(&Value::Null), field)?),
         );
     }
+    let fee = recipient(
+        terms.get("fee_recipient").unwrap_or(&Value::Null),
+        "fee_recipient",
+    )?;
+    canonical.insert("fee_recipient".into(), json!(fee.address));
     if let Some(relayer) = terms.get("relayer").filter(|relayer| !relayer.is_null()) {
         let relayers = relayer
             .as_array()
             .ok_or_else(|| validation("order relayer must be a list of addresses"))?
             .iter()
-            .map(|item| recipient(item, "relayer").map(Value::String))
+            .map(|item| identity(item, "relayer").map(Value::String))
             .collect::<Result<Vec<_>, _>>()?;
         canonical.insert("relayer".into(), Value::Array(relayers));
+    }
+    Ok(result)
+}
+
+// py: sdk/python/bittensor/limit_orders.py:66-92
+/// Python's `registered_fee_recipient`: a fee recipient's account, once a
+/// receiving address's descriptor is permanently bound in finalized state.
+#[doc(alias = "bittensor.limit_orders.registered_fee_recipient")]
+pub async fn registered_fee_recipient(
+    client: &Client,
+    address: &str,
+) -> Result<AccountId, IntentError> {
+    let recipient = parse_recipient(address)?;
+    if recipient.descriptor.is_none() {
+        return Ok(recipient.account);
+    }
+    match rtao_tx::receiving::finalized_descriptor(client, &recipient).await? {
+        None => Err(validation(
+            "order fee recipient registration is not finalized; register the recipient and wait for finalization before preparing or executing orders",
+        )),
+        Some(stored) if Some(stored.as_slice()) != recipient.descriptor.as_deref() => Err(
+            validation("registered order fee recipient descriptor does not match"),
+        ),
+        Some(_) => Ok(recipient.account),
+    }
+}
+
+// py: sdk/python/bittensor/limit_orders.py:95-99
+/// Python's `order_for_chain`: the canonical order with a receiving
+/// `fee_recipient` replaced by its account after the finalized registration
+/// check. An order without one needs no chain read.
+#[doc(alias = "bittensor.limit_orders.order_for_chain")]
+pub async fn order_for_chain<V: View + ?Sized>(
+    view: &V,
+    order: &Value,
+) -> Result<Value, IntentError> {
+    let mut result = canonical_order(order)?;
+    if let Some(address) = unresolved_fee_recipient(&result)? {
+        let snapshot = view.pin().await?;
+        let account = registered_fee_recipient(snapshot.client(), &address).await?;
+        order_terms_mut(&mut result)
+            .ok_or_else(|| validation("VersionedOrder terms must be an object"))?
+            .insert("fee_recipient".into(), json!(account.to_string()));
     }
     Ok(result)
 }
@@ -209,11 +276,18 @@ fn dyn_value(value: &Value) -> Result<DynValue, IntentError> {
 // py: sdk/python/bittensor/limit_orders.py:110-126
 /// The runtime codec's exact SCALE encoding of the `VersionedOrder` terms an
 /// authorized order with `nonce` carries.
+///
+/// This is synchronous, so it encodes only chain-ready terms: a receiving
+/// `fee_recipient` is refused, naming [`order_for_chain`] and
+/// [`PreparedOrder::prepare_checked`], which check its finalized registration.
 pub fn encoded_order(
     runtime: &RuntimeHandle,
     nonce: u64,
     order: &Value,
 ) -> Result<Vec<u8>, IntentError> {
+    if let Some(address) = unresolved_fee_recipient(&canonical_order(order)?)? {
+        return Err(needs_finalized_check(&address));
+    }
     let call =
         calls::authorize_order(dyn_value(&authorized_order(nonce, order)?)?).compose(runtime)?;
     let data = call.as_bytes();
@@ -246,6 +320,10 @@ impl PreparedOrder {
     /// `ApprovedOrders.highest_nonce`. The chain permits eight live approvals
     /// per owner; cancellation or expiry frees a slot but does not reset the
     /// nonce watermark.
+    ///
+    /// This needs no chain read, so it refuses a receiving-address
+    /// `fee_recipient`, whose registration must be checked in finalized state:
+    /// use [`Self::prepare_checked`] for those (and for any order, if preferred).
     pub fn prepare(
         runtime: &RuntimeHandle,
         genesis_hash: [u8; 32],
@@ -253,11 +331,36 @@ impl PreparedOrder {
         order: &Value,
     ) -> Result<Self, IntentError> {
         let order = canonical_order(order)?;
+        if let Some(address) = unresolved_fee_recipient(&order)? {
+            return Err(needs_finalized_check(&address));
+        }
         Ok(Self {
             nonce,
             encoded: encoded_order(runtime, nonce, &order)?,
             order,
             genesis_hash,
+        })
+    }
+
+    /// Python's `LimitOrders.prepare` (`prepare_order`): prepare terms against
+    /// the client's chain, resolving a receiving-address `fee_recipient` to its
+    /// account only once its registration is finalized ([`order_for_chain`]).
+    ///
+    /// The prepared order carries the chain-ready terms, so [`Self::check`],
+    /// [`Self::authorize`] and [`Self::account_approved`] use the account.
+    #[doc(alias = "bittensor.limit_orders.prepare_order")]
+    pub async fn prepare_checked(
+        client: &Client,
+        nonce: u64,
+        order: &Value,
+    ) -> Result<Self, IntentError> {
+        let snapshot = client.at(rtao_client::BlockRef::Best).await?;
+        let order = order_for_chain(&snapshot, order).await?;
+        Ok(Self {
+            nonce,
+            encoded: encoded_order(&snapshot.block().runtime, nonce, &order)?,
+            order,
+            genesis_hash: client.genesis().0,
         })
     }
     /// The order's owner, its `signer`.
@@ -350,6 +453,8 @@ async fn owner_build<V: View + ?Sized>(
             "the order owner must authorize this call, directly or through its proxy/multisig origin",
         ));
     }
+    // The chain's terms: a receiving fee recipient only after its finalized check.
+    let order = order_for_chain(cx.view, &order).await?;
     if !order_data.is_empty()
         && encoded_order(cx.runtime, nonce, &order)? != hex_bytes(order_data, "order_data")?
     {
@@ -488,6 +593,18 @@ fn signed_orders(orders: &[Value]) -> Result<Vec<Value>, IntentError> {
     Ok(result)
 }
 
+/// Each signed order's terms as the chain takes them ([`order_for_chain`]).
+async fn chain_orders<V: View + ?Sized>(
+    view: &V,
+    mut orders: Vec<Value>,
+) -> Result<Vec<Value>, IntentError> {
+    for signed in &mut orders {
+        let order = order_for_chain(view, &signed["order"]).await?;
+        signed["order"] = order;
+    }
+    Ok(orders)
+}
+
 fn orders_touch(orders: &[Value]) -> SmallVec<[NetUid; 2]> {
     let mut netuids = orders
         .iter()
@@ -506,7 +623,7 @@ impl Intent for ExecuteOrders {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        let orders = signed_orders(&self.orders)?;
+        let orders = chain_orders(cx.view, signed_orders(&self.orders)?).await?;
         Ok(Built::new(
             calls::execute_orders(
                 orders.iter().map(dyn_value).collect::<Result<_, _>>()?,
@@ -537,7 +654,7 @@ impl Intent for ExecuteBatchedOrders {
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         self.validate()?;
-        let orders = signed_orders(&self.orders)?;
+        let orders = chain_orders(cx.view, signed_orders(&self.orders)?).await?;
         Ok(Built::new(
             calls::execute_batched_orders(
                 self.netuid,
@@ -603,16 +720,143 @@ mod tests {
         }
     }
 
+    /// Complete V1 terms, as Python's `test_mldsa_orders.order`.
+    fn full_terms() -> Value {
+        json!({"V1": {
+            "signer": ALICE, "hotkey": BOB, "netuid": 1, "order_type": "LimitBuy",
+            "amount": 100, "limit_price": 1_000_000_000_u64, "expiry": 2_000_000_000_000_u64,
+            "fee_rate": 0, "fee_recipient": BOB, "relayer": [BOB], "max_slippage": 1000,
+            "chain_id": 42, "partial_fills_enabled": true,
+        }})
+    }
+
+    fn runtime() -> RuntimeHandle {
+        RuntimeHandle::parse(
+            include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
+            488,
+            1,
+            42,
+        )
+        .unwrap()
+    }
+
+    fn hashed() -> (rtao_core::keys::Keypair, String) {
+        let key =
+            rtao_core::keys::Keypair::from_seed(&[31; 32], rtao_core::keys::CRYPTO_HASHED_ED25519)
+                .unwrap();
+        let address = key.hashed_receiving_address().unwrap();
+        (key, address)
+    }
+
     #[test]
-    fn receiving_addresses_are_refused_until_the_core_codec_lands() {
-        let mut order = terms();
-        order["V1"]["fee_recipient"] = json!("tao_1qexample");
-        let error = canonical_order(&order).unwrap_err().to_string();
-        assert!(error.contains("receiving addresses"), "{error}");
+    fn receiving_identities_resolve_and_receiving_fees_wait_for_finality() {
+        let (key, address) = hashed();
+        let mut order = full_terms();
+        order["V1"]["signer"] = json!(address);
+        order["V1"]["relayer"] = json!([address, BOB]);
+        order["V1"]["fee_recipient"] = json!(address);
+        let canonical = canonical_order(&order).unwrap();
+        let terms = order_terms(&canonical).unwrap();
+        // Identities are their accounts; the paid fee recipient keeps its descriptor.
+        assert_eq!(terms["signer"], key.ss58_address());
+        assert_eq!(terms["relayer"], json!([key.ss58_address(), BOB]));
+        assert_eq!(terms["fee_recipient"], address);
+        // Neither synchronous path encodes a receiving fee recipient.
+        let runtime = runtime();
+        for error in [
+            PreparedOrder::prepare(&runtime, [0; 32], 1, &order).unwrap_err(),
+            encoded_order(&runtime, 1, &order).unwrap_err(),
+        ] {
+            let error = error.to_string();
+            assert!(
+                error.contains("receiving address") && error.contains("prepare_checked"),
+                "{error}"
+            );
+        }
+        // A classical fee recipient is unchanged and needs no chain read.
+        order["V1"]["fee_recipient"] = json!(BOB);
+        let prepared = PreparedOrder::prepare(&runtime, [0; 32], 1, &order).unwrap();
+        assert_eq!(prepared.owner().unwrap(), AccountId(key.public_key_bytes()));
         assert!(is_receiving_address("  BTH1x") && is_receiving_address("tao_x"));
         assert!(!is_receiving_address(ALICE));
-        order["V1"]["fee_recipient"] = json!("not an address");
-        assert!(canonical_order(&order).is_err());
+        // A malformed receiving address or SS58 is refused while canonicalizing.
+        let mut tampered = address.clone();
+        tampered.pop();
+        tampered.push(if address.ends_with('A') { 'B' } else { 'A' });
+        for bad in [tampered, "not an address".to_owned()] {
+            order["V1"]["fee_recipient"] = json!(bad);
+            assert!(canonical_order(&order).is_err());
+        }
+    }
+
+    #[tokio::test]
+    async fn prepare_checked_resolves_only_a_finalized_matching_registration() -> anyhow::Result<()>
+    {
+        use rtao_client::{ClientConfig, Network};
+        use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+        let (key, address) = hashed();
+        let account = AccountId(key.public_key_bytes());
+        let descriptor = key.hashed_descriptor()?;
+        let mut order = full_terms();
+        order["V1"]["fee_recipient"] = json!(address);
+        let chain = FakeChain::from_state(FakeState::try_default()?);
+        let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+        config.track_heads = false;
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
+        let error = PreparedOrder::prepare_checked(&client, 4, &order)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("registration is not finalized"), "{error}");
+        // Another account's descriptor registered under this account is refused.
+        let (other, _) = {
+            let key = rtao_core::keys::Keypair::from_seed(
+                &[32; 32],
+                rtao_core::keys::CRYPTO_HASHED_ED25519,
+            )?;
+            (key.hashed_descriptor()?, ())
+        };
+        let record = |descriptor: &[u8]| {
+            json!({
+                "descriptor": rtao_primitives::receiving::descriptor_value(descriptor).unwrap(),
+                "generation": 0,
+                "commitment": format!("0x{}", "11".repeat(32)),
+            })
+        };
+        chain.mutate_state(|state| {
+            state.seed_python(
+                "HashedAccounts",
+                "Accounts",
+                &[json!(account)],
+                record(&other),
+            )
+        })?;
+        let error = PreparedOrder::prepare_checked(&client, 4, &order)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("descriptor does not match"), "{error}");
+        chain.mutate_state(|state| {
+            state.seed_python(
+                "HashedAccounts",
+                "Accounts",
+                &[json!(account)],
+                record(&descriptor),
+            )
+        })?;
+        let prepared = PreparedOrder::prepare_checked(&client, 4, &order).await?;
+        assert_eq!(
+            order_terms(&prepared.order)?["fee_recipient"],
+            account.to_string()
+        );
+        assert_eq!(prepared.genesis_hash, client.genesis().0);
+        let runtime = rtao_client::View::runtime(&client).await?;
+        prepared.check(&runtime, prepared.genesis_hash)?;
+        assert_eq!(prepared.authorize().order, prepared.order);
+        client.close().await;
+        Ok(())
     }
 
     #[test]

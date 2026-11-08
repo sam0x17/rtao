@@ -2358,9 +2358,11 @@ fn coldkey_pays(runtime: &rtao_runtime::RuntimeHandle, call: &CallBytes) -> Resu
                 .and_then(|arg| arg.field("value"))
         };
         match (pallet, call) {
-            ("Proxy", "proxy") | ("Multisig", "as_multi" | "as_multi_threshold_1") => {
-                arg("call").is_some_and(walk)
-            }
+            ("Proxy", "proxy")
+            | (
+                "Multisig",
+                "as_multi" | "as_multi_threshold_1" | "as_multi_safe" | "as_multi_threshold_1_safe",
+            ) => arg("call").is_some_and(walk),
             ("Utility", "batch_all" | "batch" | "force_batch") => arg("calls")
                 .and_then(list)
                 .is_some_and(|calls| calls.iter().any(walk)),

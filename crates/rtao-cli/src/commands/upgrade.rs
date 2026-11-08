@@ -347,10 +347,11 @@ async fn execute_loaded(
         return Err(CliError::input("unknown upgrade command"));
     }
     let group = resolve_group(ctx, leaf, bundle.manifest.as_ref())?;
-    let multisig = Multisig::new(
+    let multisig = Multisig::with_mode(
         &snapshot.block().runtime,
         &group.signatories,
         group.threshold,
+        group.account_mode,
     )
     .map_err(failure)?;
     if multisig.address != outcome.sudo {
@@ -619,6 +620,7 @@ fn resolve_group(
             signatories,
             preset: None,
             refs,
+            account_mode: rtao::primitives::AccountMode::Legacy,
         });
     }
     let sudo = manifest.and_then(|manifest| manifest.get("sudo"));
@@ -646,11 +648,18 @@ fn resolve_group(
                 refs.push(reference.to_owned());
             }
         }
+        // Python reads the manifest's `sudo.account_mode`; omitted is legacy.
+        let account_mode = match sudo.and_then(|sudo| sudo.get("account_mode")) {
+            None => rtao::primitives::AccountMode::Legacy,
+            Some(Value::String(mode)) => mode.parse().map_err(failure)?,
+            Some(_) => return Err(failure("account_mode must be 'legacy' or 'safe'")),
+        };
         return Ok(RawMultisig {
             threshold,
             signatories: accounts,
             preset: None,
             refs,
+            account_mode,
         });
     }
     Err(failure(
@@ -741,10 +750,11 @@ async fn submit_verified(
             "the chain sudo key changed since verification; rerun upgrade sign",
         ));
     }
-    let current_group = Multisig::new(
+    let current_group = Multisig::with_mode(
         &snapshot.block().runtime,
         &group.signatories,
         group.threshold,
+        group.account_mode,
     )
     .map_err(failure)?;
     if current_group.address != reviewed_sudo {
@@ -801,27 +811,26 @@ async fn submit_verified(
     others.sort();
     others.dedup();
     let when = layer.as_ref().map(|layer| layer.when.clone());
-    let call = if group.threshold == 1 {
-        rtao_runtime::calls::multisig::as_multi_threshold_1(others, finalizing.clone())
-    } else if layer
+    use rtao::primitives::AccountMode;
+    use rtao_runtime::calls::multisig as ms;
+    let hash_only = layer
         .as_ref()
-        .is_none_or(|layer| layer.approvals.len() < usize::from(group.threshold.saturating_sub(1)))
-    {
-        rtao_runtime::calls::multisig::approve_as_multi(
-            group.threshold,
-            others,
-            when,
-            finalizing.hash(),
-            weight,
-        )
-    } else {
-        rtao_runtime::calls::multisig::as_multi(
-            group.threshold,
-            others,
-            when,
-            finalizing.clone(),
-            weight,
-        )
+        .is_none_or(|layer| layer.approvals.len() < usize::from(group.threshold.saturating_sub(1)));
+    let call = match (group.threshold == 1, hash_only, group.account_mode) {
+        (true, _, AccountMode::Legacy) => ms::as_multi_threshold_1(others, finalizing.clone()),
+        (true, _, AccountMode::Safe) => ms::as_multi_threshold_1_safe(others, finalizing.clone()),
+        (false, true, AccountMode::Legacy) => {
+            ms::approve_as_multi(group.threshold, others, when, finalizing.hash(), weight)
+        }
+        (false, true, AccountMode::Safe) => {
+            ms::approve_as_multi_safe(group.threshold, others, when, finalizing.hash(), weight)
+        }
+        (false, false, AccountMode::Legacy) => {
+            ms::as_multi(group.threshold, others, when, finalizing.clone(), weight)
+        }
+        (false, false, AccountMode::Safe) => {
+            ms::as_multi_safe(group.threshold, others, when, finalizing.clone(), weight)
+        }
     }
     .compose(&snapshot.block().runtime)
     .map_err(failure)?;

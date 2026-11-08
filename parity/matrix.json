@@ -9119,9 +9119,10 @@
         "python": "sdk/python/bittensor/_transport/codec.py",
         "rtao": "reconciled",
         "rust": [
-          "crates/rtao-runtime/src/handle.rs"
+          "crates/rtao-runtime/src/handle.rs",
+          "crates/rtao-primitives/src/account_mode.rs"
         ],
-        "synced_blob": "02520d119cd34ca7b974f06e272b5a0baa99ccbe"
+        "synced_blob": "41fbdd2c46a9d696bfed70296912c20b7ba34b76"
       },
       {
         "kind": "n/a",
@@ -12531,22 +12532,22 @@
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/intents/limit_orders.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "crates/rtao-intents/src/limit_orders.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9a3d299c1f5938a89bf37e27162279c8e9222329"
       },
       {
         "kind": "ported",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/limit_orders.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "crates/rtao-intents/src/limit_orders.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "504d9f0fab2413858639aab05c7af704e714a0ee"
       },
       {
         "kind": "ported",

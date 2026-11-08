@@ -8,6 +8,48 @@
 - The parity pin (v488) and the runtime are unchanged. 81 hand port(s) remain listed in `parity/port_due.toml`.
 - Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42502998044)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
 
+### Since `snapshot-2026-11-08.3`
+
+Not a versioned release. Each item links to its section below.
+
+- Safe multisig derivation: the multisig intents, `Executor::multisig_with_mode` and the blocking `SyncClient::multisig` take `account_mode` and compose the `*_safe` calls (D-143); saved safe groups resolve and approve as their safe account.
+- Limit orders accept receiving addresses; a receiving fee recipient is resolved only after its finalized registration, through the new `PreparedOrder::prepare_checked` (D-144).
+- The secondary lockfiles follow the v488 core, and `rtao-intents` builds on Rust 1.89 again.
+
+### Safe multisig derivation; receiving identities in limit orders (D-143, D-144)
+
+#### rtao-primitives
+
+- New: `AccountMode` (`Legacy`, `Safe`) and `multisig_account_id(signatories, threshold, mode)`, Python's `account_mode` and `multisig_account`; safe derivation is the core's `safe_multisig_account_id`.
+- New: `receiving::{descriptor_value, descriptor_bytes, descriptor_storage, registration_descriptor_value, is_stateless_pq_descriptor}` (Python `hashed`).
+
+#### rtao-core
+
+- New: `extrinsic::safe_multisig_account_id`.
+
+#### rtao-client
+
+- New: `compose::{as_multi_threshold_1_with_mode, as_multi_with_mode, as_multi_existing_with_mode, approve_as_multi_with_mode}`, which compose the `*_safe` calls for a safe group; the existing functions are unchanged (legacy).
+
+#### rtao-tx
+
+- New: `Multisig::with_mode`, `Executor::multisig_with_mode` (Python's `Client.multisig(..., account_mode=)`).
+- Changed (source-breaking): `Multisig` has a public `account_mode` field; struct literals must set it.
+- New: `receiving::{finalized_descriptor, account_for_registered_write}`: a receiving address on a write that cannot carry a registration guard resolves only to a finalized, matching registration.
+
+#### rtao-intents
+
+- Changed: `multisig_execute`, `multisig_approve`, `multisig_threshold_1` and `multisig_cancel` accept `account_mode = "safe"` (they refused it) and compose the safe calls from the safe account; other signatories may be receiving addresses and are deduplicated by account.
+- Changed: limit orders accept receiving addresses (they refused them). `signer`, `hotkey` and `relayer` resolve to their accounts; a receiving `fee_recipient` is resolved only after its registration is finalized. `PreparedOrder::prepare` and `encoded_order` stay synchronous and refuse a receiving fee recipient, naming the new `PreparedOrder::prepare_checked(client, nonce, order)`; new `limit_orders::{order_for_chain, registered_fee_recipient}`.
+
+#### rtao (blocking)
+
+- Changed (source-breaking): `SyncClient::multisig(signatories, threshold, account_mode)`.
+
+#### rtao-cli
+
+- Fixed: a saved multisig with `account_mode: "safe"` resolves to its safe account, and a saved or manifest sudo group used with `--multisig` composes its own mode's calls; before, a saved safe group used as a preset would have been approved as the legacy account.
+
 ### Secondary lockfiles at the v488 core; Rust 1.89 build restored
 
 #### Repository maintenance

@@ -381,6 +381,7 @@ impl Request {
                         signatories,
                         preset: Some(name),
                         refs,
+                        account_mode: rtao::primitives::AccountMode::Legacy,
                     },
                     overwrite,
                 })
@@ -438,6 +439,7 @@ impl Request {
                         signatories,
                         preset: None,
                         refs,
+                        account_mode: rtao::primitives::AccountMode::Legacy,
                     }
                 } else {
                     let mut saved: Vec<_> = ctx
@@ -622,10 +624,11 @@ async fn execute_saved(
         | Request::Pending { group, .. } => group,
         _ => return Err(failure("unexpected offline multisig request")),
     };
-    let multisig = Multisig::new(
+    let multisig = Multisig::with_mode(
         &snapshot.block().runtime,
         &group.signatories,
         group.threshold,
+        group.account_mode,
     )
     .map_err(failure)?;
     let sudo = snapshot
@@ -765,10 +768,9 @@ fn opening_inner_bytes(extrinsic: &[u8], runtime: &RuntimeHandle) -> Option<Vec<
         .pallets
         .iter()
         .find(|pallet| pallet.index == pallet_index && pallet.name == "Multisig")?;
-    let call = pallet
-        .calls
-        .iter()
-        .find(|call| call.index == call_index && call.name == "as_multi")?;
+    let call = pallet.calls.iter().find(|call| {
+        call.index == call_index && matches!(call.name.as_str(), "as_multi" | "as_multi_safe")
+    })?;
     for argument in &call.args {
         let start = cursor.offset;
         core.decode_id(argument.type_id, &mut cursor).ok()?;
@@ -1374,6 +1376,7 @@ mod tests {
             signatories: accounts(),
             preset: Some("team".into()),
             refs: vec!["alice".into(), "bob".into(), "carol".into()],
+            account_mode: rtao::primitives::AccountMode::Legacy,
         }
     }
     fn runtime() -> Result<RuntimeHandle, Box<dyn std::error::Error>> {

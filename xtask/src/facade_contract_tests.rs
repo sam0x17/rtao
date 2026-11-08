@@ -121,17 +121,12 @@ fn python_surface(source: &str, class_name: &str) -> Result<BTreeMap<String, Vec
     Ok(methods)
 }
 
-/// Python `Client` methods added or changed by runtime 487/488 and not ported:
-/// `register_wallet`, `prepare_mldsa_call` and `prepare_pq_call` are new;
-/// `preflight` gained `shielded` and `period`, and `multisig` gained
-/// `account_mode`.
-const PENDING_CLIENT_METHODS: &[&str] = &[
-    "multisig",
-    "preflight",
-    "prepare_mldsa_call",
-    "prepare_pq_call",
-    "register_wallet",
-];
+/// Python `Client` methods added by runtime 487/488 and not ported:
+/// `register_wallet`, `prepare_mldsa_call` and `prepare_pq_call` are new.
+/// (`preflight`'s `shielded` and `period` are `PlanOptions` fields, D-137, and
+/// `multisig`'s `account_mode` is a parameter, D-143.)
+const PENDING_CLIENT_METHODS: &[&str] =
+    &["prepare_mldsa_call", "prepare_pq_call", "register_wallet"];
 
 // pyt: unit/test_facades.py::test_sync_facade_mirrors_async_surface
 #[test]

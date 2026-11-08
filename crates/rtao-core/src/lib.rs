@@ -65,10 +65,10 @@ pub mod runtime {
     };
 }
 
-/// Signed-extrinsic parameters, era math, and multisig account derivation.
+/// Signed-extrinsic parameters, era math, and legacy and safe multisig account derivation.
 pub mod extrinsic {
     pub use bittensor_core::codec::extrinsic::{
-        TxParams, era_birth, multisig_account_id, multisig_ss58,
+        TxParams, era_birth, multisig_account_id, multisig_ss58, safe_multisig_account_id,
     };
 }
 

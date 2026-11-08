@@ -24,7 +24,7 @@ use rtao::blocking::{Blocks, EpochEvent, Error, SyncClient, SyncMultisig, SyncSn
 use rtao_client::{BlockHeader, BlockInfo, BlockRef, CallBytes, Finality, UnsignedExtrinsic};
 use rtao_core::{DynValue, codec::Value};
 use rtao_intents::transfer::Transfer;
-use rtao_primitives::{AccountId, Balance, CryptoType, NetUid, Tao};
+use rtao_primitives::{AccountId, AccountMode, Balance, CryptoType, NetUid, Tao};
 use rtao_reads::ReadName;
 use rtao_signer::{Coldkey, KeypairSigner, MultiSignature};
 use rtao_tx::{
@@ -70,7 +70,7 @@ facade_contract! {
     "wait_for_block" ["block", "timeout"] => SyncClient::wait_for_block : fn(&SyncClient, Option<u64>, Option<Duration>) -> FacadeResult<BlockHeader>;
     "wait_for_timestamp" ["when", "timeout"] => SyncClient::wait_for_timestamp : fn(&SyncClient, SystemTime, Option<Duration>) -> FacadeResult<BlockHeader>;
     "wait_for_epoch" ["netuid", "timeout"] => SyncClient::wait_for_epoch : fn(&SyncClient, NetUid, Option<Duration>) -> FacadeResult<EpochEvent>;
-    "preflight" ["intent", "wallet", "proxy_for", "proxy_type"] => SyncClient::preflight::<Transfer, KeypairSigner> : fn(&SyncClient, Transfer, Arc<KeypairSigner>, PlanOptions) -> FacadeResult<IntentPreflight>;
+    "preflight" ["intent", "wallet", "proxy_for", "proxy_type", "shielded", "period"] => SyncClient::preflight::<Transfer, KeypairSigner> : fn(&SyncClient, Transfer, Arc<KeypairSigner>, PlanOptions) -> FacadeResult<IntentPreflight>;
     "estimate_shielded_carrier_fee" ["fee_payer", "call", "period"] => SyncClient::estimate_shielded_carrier_fee : fn(&SyncClient, AccountId, CallBytes, u64) -> FacadeResult<Balance<Tao>>;
     "plan" ["intent", "wallet", "kwargs"] => SyncClient::plan::<Transfer, KeypairSigner> : fn(&SyncClient, Transfer, Arc<KeypairSigner>, PlanOptions) -> FacadeResult<Plan>;
     "execute" ["intent", "wallet", "kwargs"] => SyncClient::execute::<Transfer, KeypairSigner> : fn(&SyncClient, Transfer, Arc<KeypairSigner>, ExecuteOptions) -> FacadeResult<ExtrinsicResult>;
@@ -81,7 +81,7 @@ facade_contract! {
     "submit_signature" ["unsigned", "signature", "kwargs"] => SyncClient::submit_signature : fn(&SyncClient, UnsignedExtrinsic, MultiSignature, ExecuteOptions) -> FacadeResult<ExtrinsicResult>;
     "compose" ["call"] => SyncClient::compose : fn(&SyncClient, rtao_runtime::Call) -> FacadeResult<CallBytes>;
     "estimate_weight" ["call", "address"] => SyncClient::estimate_weight : fn(&SyncClient, CallBytes, AccountId, CryptoType) -> FacadeResult<rtao_core::ops::fee::FeeEstimate>;
-    "multisig" ["signatories", "threshold"] => SyncClient::multisig : fn(&SyncClient, Vec<AccountId>, u16) -> FacadeResult<SyncMultisig>;
+    "multisig" ["signatories", "threshold", "account_mode"] => SyncClient::multisig : fn(&SyncClient, Vec<AccountId>, u16, AccountMode) -> FacadeResult<SyncMultisig>;
     "connect" [] => SyncClient::connect : fn(&SyncClient) -> FacadeResult<()>;
     "close" [] => SyncClient::close : fn(&SyncClient) -> FacadeResult<()>;
     "block" [] => SyncClient::block : fn(&SyncClient) -> FacadeResult<u64>;

@@ -585,6 +585,7 @@ async fn post_review_sudo_change_and_reopened_operation_refuse_before_source() -
         signatories: vec![signer, OTHER, THIRD],
         refs: vec![],
         preset: None,
+        account_mode: rtao::primitives::AccountMode::Legacy,
     };
     let selection = SigningSelection {
         display_name: None,

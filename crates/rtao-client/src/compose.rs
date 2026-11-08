@@ -5,7 +5,7 @@
 
 use crate::{ClientError, View, ViewExt};
 use rtao_core::{CoreError, DynValue, codec::Value, value_ext::ValueExt};
-use rtao_primitives::{AccountId, H256, IntoCoreValue};
+use rtao_primitives::{AccountId, AccountMode, H256, IntoCoreValue};
 use rtao_runtime::models::{MultisigTimepoint, ProxyType};
 use rtao_runtime::{CallBytes, ComposeError, MetadataLevel, RuntimeHandle};
 
@@ -53,10 +53,24 @@ pub fn batch_all(
 }
 
 /// Compose a threshold-one multisig dispatch with the sorted other signatories.
+///
+/// This is the legacy account's call; [`as_multi_threshold_1_with_mode`]
+/// composes either derivation's.
 pub fn as_multi_threshold_1(
     runtime: &RuntimeHandle,
     others: &[AccountId],
     inner: CallBytes,
+) -> Result<CallBytes, ComposeError> {
+    as_multi_threshold_1_with_mode(runtime, others, inner, AccountMode::Legacy)
+}
+
+/// Compose a threshold-one dispatch from the group derived in `mode`
+/// (`as_multi_threshold_1` or `as_multi_threshold_1_safe`).
+pub fn as_multi_threshold_1_with_mode(
+    runtime: &RuntimeHandle,
+    others: &[AccountId],
+    inner: CallBytes,
+    mode: AccountMode,
 ) -> Result<CallBytes, ComposeError> {
     inner.ensure_runtime(runtime)?;
     if others.is_empty() {
@@ -70,7 +84,31 @@ pub fn as_multi_threshold_1(
     if others.windows(2).any(|pair| pair[0] == pair[1]) {
         return Err(CoreError::Codec("duplicate multisig signatory".into()).into());
     }
-    rtao_runtime::calls::multisig::as_multi_threshold_1(others, inner).compose(runtime)
+    match mode {
+        AccountMode::Legacy => rtao_runtime::calls::multisig::as_multi_threshold_1(others, inner),
+        AccountMode::Safe => {
+            rtao_runtime::calls::multisig::as_multi_threshold_1_safe(others, inner)
+        }
+    }
+    .compose(runtime)
+}
+
+fn as_multi_call(
+    mode: AccountMode,
+    threshold: u16,
+    others: Vec<AccountId>,
+    when: Option<MultisigTimepoint>,
+    inner: CallBytes,
+    weight: DynValue,
+) -> rtao_runtime::Call {
+    match mode {
+        AccountMode::Legacy => {
+            rtao_runtime::calls::multisig::as_multi(threshold, others, when, inner, weight)
+        }
+        AccountMode::Safe => {
+            rtao_runtime::calls::multisig::as_multi_safe(threshold, others, when, inner, weight)
+        }
+    }
 }
 
 /// Check a complete signer set against this runtime's `MaxSignatories`.
@@ -121,6 +159,7 @@ fn multisig_members(
     signer: AccountId,
     signatories: &[AccountId],
     threshold: u16,
+    mode: AccountMode,
 ) -> Result<(AccountId, Vec<AccountId>), ClientError> {
     if signatories.len() < 2 {
         return Err(ClientError::Protocol(
@@ -133,27 +172,18 @@ fn multisig_members(
         ));
     }
     validate_multisig_signatory_count(runtime, signatories.len())?;
-    let keys = signatories
-        .iter()
-        .map(|account| account.0)
-        .collect::<Vec<_>>();
-    let (account, sorted) =
-        rtao_core::extrinsic::multisig_account_id(&keys, threshold).map_err(CoreError::from)?;
+    let (account, sorted) = rtao_primitives::multisig_account_id(signatories, threshold, mode)?;
     if sorted.windows(2).any(|pair| pair[0] == pair[1]) {
         return Err(ClientError::Protocol("duplicate multisig signatory".into()));
     }
-    if !sorted.contains(&signer.0) {
+    if !sorted.contains(&signer) {
         return Err(ClientError::Protocol(
             "signer is not a multisig signatory".into(),
         ));
     }
     Ok((
-        AccountId(account),
-        sorted
-            .into_iter()
-            .filter(|key| *key != signer.0)
-            .map(AccountId)
-            .collect(),
+        account,
+        sorted.into_iter().filter(|key| *key != signer).collect(),
     ))
 }
 
@@ -169,12 +199,35 @@ pub async fn as_multi<V: View + ?Sized>(
     inner: CallBytes,
     estimate: &rtao_core::ops::fee::FeeEstimate,
 ) -> Result<CallBytes, ClientError> {
+    as_multi_with_mode(
+        view,
+        signer,
+        signatories,
+        threshold,
+        inner,
+        estimate,
+        AccountMode::Legacy,
+    )
+    .await
+}
+
+/// [`as_multi`] for the group derived in `mode` (`as_multi_safe` for `Safe`).
+pub async fn as_multi_with_mode<V: View + ?Sized>(
+    view: &V,
+    signer: AccountId,
+    signatories: &[AccountId],
+    threshold: u16,
+    inner: CallBytes,
+    estimate: &rtao_core::ops::fee::FeeEstimate,
+    mode: AccountMode,
+) -> Result<CallBytes, ClientError> {
     let snapshot = view.pin().await?;
     let runtime = &snapshot.block().runtime;
     inner.ensure_runtime(runtime)?;
-    let (account, others) = multisig_members(runtime, signer, signatories, threshold)?;
+    let (account, others) = multisig_members(runtime, signer, signatories, threshold, mode)?;
     if threshold == 1 {
-        return as_multi_threshold_1(runtime, &others, inner).map_err(ClientError::from);
+        return as_multi_threshold_1_with_mode(runtime, &others, inner, mode)
+            .map_err(ClientError::from);
     }
     let pending = snapshot
         .storage(
@@ -182,7 +235,8 @@ pub async fn as_multi<V: View + ?Sized>(
             (account, inner.hash()),
         )
         .await?;
-    rtao_runtime::calls::multisig::as_multi(
+    as_multi_call(
+        mode,
         threshold,
         others,
         pending.map(|pending| pending.when),
@@ -210,10 +264,35 @@ pub async fn as_multi_existing<V: View + ?Sized>(
     estimate: &rtao_core::ops::fee::FeeEstimate,
     expected: MultisigTimepoint,
 ) -> Result<CallBytes, ClientError> {
+    as_multi_existing_with_mode(
+        view,
+        signer,
+        signatories,
+        threshold,
+        inner,
+        estimate,
+        expected,
+        AccountMode::Legacy,
+    )
+    .await
+}
+
+/// [`as_multi_existing`] for the group derived in `mode`.
+#[allow(clippy::too_many_arguments)]
+pub async fn as_multi_existing_with_mode<V: View + ?Sized>(
+    view: &V,
+    signer: AccountId,
+    signatories: &[AccountId],
+    threshold: u16,
+    inner: CallBytes,
+    estimate: &rtao_core::ops::fee::FeeEstimate,
+    expected: MultisigTimepoint,
+    mode: AccountMode,
+) -> Result<CallBytes, ClientError> {
     let snapshot = view.pin().await?;
     let runtime = &snapshot.block().runtime;
     inner.ensure_runtime(runtime)?;
-    let (account, others) = multisig_members(runtime, signer, signatories, threshold)?;
+    let (account, others) = multisig_members(runtime, signer, signatories, threshold, mode)?;
     if threshold < 2 {
         return Err(ClientError::Protocol(
             "multisig continuation requires threshold at least two".into(),
@@ -248,7 +327,8 @@ pub async fn as_multi_existing<V: View + ?Sized>(
             });
         }
     }
-    rtao_runtime::calls::multisig::as_multi(
+    as_multi_call(
+        mode,
         threshold,
         others,
         Some(expected),
@@ -272,21 +352,57 @@ pub async fn approve_as_multi<V: View + ?Sized>(
     timepoint: MultisigTimepoint,
     estimate: &rtao_core::ops::fee::FeeEstimate,
 ) -> Result<CallBytes, ClientError> {
+    approve_as_multi_with_mode(
+        view,
+        signer,
+        signatories,
+        threshold,
+        call_hash,
+        timepoint,
+        estimate,
+        AccountMode::Legacy,
+    )
+    .await
+}
+
+/// [`approve_as_multi`] for the group derived in `mode`
+/// (`approve_as_multi_safe` for `Safe`).
+#[allow(clippy::too_many_arguments)]
+pub async fn approve_as_multi_with_mode<V: View + ?Sized>(
+    view: &V,
+    signer: AccountId,
+    signatories: &[AccountId],
+    threshold: u16,
+    call_hash: H256,
+    timepoint: MultisigTimepoint,
+    estimate: &rtao_core::ops::fee::FeeEstimate,
+    mode: AccountMode,
+) -> Result<CallBytes, ClientError> {
     let snapshot = view.pin().await?;
     let runtime = &snapshot.block().runtime;
-    let (_, others) = multisig_members(runtime, signer, signatories, threshold)?;
+    let (_, others) = multisig_members(runtime, signer, signatories, threshold, mode)?;
     if threshold < 2 {
         return Err(ClientError::Protocol(
             "hash-only multisig approval requires threshold at least two".into(),
         ));
     }
-    rtao_runtime::calls::multisig::approve_as_multi(
-        threshold,
-        others,
-        Some(timepoint),
-        call_hash.0,
-        DynValue::new(estimate.weight.clone()),
-    )
+    let weight = DynValue::new(estimate.weight.clone());
+    match mode {
+        AccountMode::Legacy => rtao_runtime::calls::multisig::approve_as_multi(
+            threshold,
+            others,
+            Some(timepoint),
+            call_hash.0,
+            weight,
+        ),
+        AccountMode::Safe => rtao_runtime::calls::multisig::approve_as_multi_safe(
+            threshold,
+            others,
+            Some(timepoint),
+            call_hash.0,
+            weight,
+        ),
+    }
     .compose(runtime)
     .map_err(ClientError::from)
 }
