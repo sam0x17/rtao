@@ -272,6 +272,7 @@ pub struct Executor {
     policy: Option<Policy>,
     clock: Arc<dyn Clock>,
     registry: Option<Arc<dyn IntentRegistry>>,
+    auto_shield: bool,
 }
 impl Executor {
     /// Start without policy limits or private-key ownership.
@@ -281,7 +282,24 @@ impl Executor {
             policy: None,
             clock: Arc::new(SystemClock),
             registry: None,
+            auto_shield: false,
         }
+    }
+    /// Route account registration through MEV Shield when the network offers
+    /// it, as Python's default `shielded=None` does (D-140). Off by default:
+    /// `ExecuteOptions::shielded` and `PlanOptions::shielded` stay an explicit
+    /// on/off, and with this setting off nothing changes. When on, a plan,
+    /// execution or raw call whose call registers a protected account
+    /// (`HashedAccounts.register`, `register_derived`,
+    /// `register_derived_sponsored`, `Proxy.create_protected_pure` or
+    /// `Utility.as_protected_derivative`, also inside proxy, multisig,
+    /// derivative, dispatch, sudo, `if_else` and batch wrappers) takes the
+    /// Shield route when `MevShield.NextKey` is set, and otherwise is planned
+    /// unshielded with a warning. An explicit `shielded` or a required-Shield
+    /// intent is unaffected.
+    pub fn with_auto_shield(mut self, enabled: bool) -> Self {
+        self.auto_shield = enabled;
+        self
     }
     /// Set the executor's default policy.
     pub fn with_policy(mut self, policy: Policy) -> Self {
@@ -599,6 +617,11 @@ impl Executor {
         .await;
         let mut warnings = preview.warnings.clone();
         warnings.extend(surface_warnings);
+        let shielded = shielded
+            || (!declared_safety.mev_shield_required
+                && self
+                    .auto_shield_route(&snapshot, &runtime, &built.call, &mut warnings)
+                    .await?);
         let role: SignerRole = intent.signer_role_dyn()?;
         if !shielded
             && role == SignerRole::Hotkey
@@ -1032,6 +1055,23 @@ impl Executor {
                 Output = Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>,
             > + Send,
     {
+        let auto;
+        let opts = if !opts.shielded && self.auto_shield {
+            let snapshot = View::pin(&self.client).await?;
+            let runtime = self.client.refresh_runtime().await?;
+            // A raw call has no plan to carry Python's warning; without a
+            // shield key it is submitted unshielded, as Python does.
+            let route = self
+                .auto_shield_route(&snapshot, &runtime, &call, &mut Vec::new())
+                .await?;
+            auto = ExecuteOptions {
+                shielded: route,
+                ..opts.clone()
+            };
+            &auto
+        } else {
+            opts
+        };
         let (mut scoped, _owner) = scoped_journal_execution(opts)?;
         let shield_period = opts.shielded.then(|| opts.shield_period()).transpose()?;
         let max_fee = opts
@@ -1619,6 +1659,25 @@ impl Executor {
                 }
             };
             budget.check(&self.client)?;
+            if plan.shielded {
+                // Only the opt-in registration default selects Shield here;
+                // explicit and required routes returned above (D-140).
+                let mut shielded = opts.clone();
+                shielded.shielded = true;
+                return Box::pin(self.submit_shielded_with_keys(
+                    intent,
+                    keys,
+                    address,
+                    signer,
+                    &ShieldOptions {
+                        period: shielded.shield_period()?,
+                        execute: shielded,
+                        ..Default::default()
+                    },
+                    budget,
+                ))
+                .await;
+            }
             if !plan.ok() {
                 return Err(TxError::Policy(PolicyError {
                     violations: plan.violations,
@@ -2167,6 +2226,105 @@ fn is_sudo(runtime: &rtao_runtime::RuntimeHandle, call: &CallBytes) -> Result<bo
             .and_then(rtao_core::value_ext::ValueExt::as_str)
             == Some("sudo"))
 }
+impl Executor {
+    // py: sdk/python/bittensor/shielding.py:77-89
+    /// Python's `registration_shield_default`, behind the opt-in setting.
+    async fn auto_shield_route<V: View + ?Sized>(
+        &self,
+        view: &V,
+        runtime: &rtao_runtime::RuntimeHandle,
+        call: &CallBytes,
+        warnings: &mut Vec<String>,
+    ) -> Result<bool, TxError> {
+        if !self.auto_shield || !contains_account_registration(runtime, call)? {
+            return Ok(false);
+        }
+        use rtao_client::ViewExt;
+        let key: Option<Vec<u8>> = view
+            .storage(&rtao_runtime::storage::mev_shield::NEXT_KEY, ())
+            .await?;
+        if key.is_some_and(|key| !key.is_empty()) {
+            return Ok(true);
+        }
+        warnings.push(
+            "MEV Shield is not active on this network; submitting account registration unshielded. Set ExecuteOptions::shielded to require encrypted submission."
+                .into(),
+        );
+        Ok(false)
+    }
+}
+
+// py: sdk/python/bittensor/shielding.py:10-74
+/// Whether a call registers a protected account, directly or inside a
+/// single-call wrapper, `Utility.if_else` or a batch (Python's
+/// `contains_account_registration`).
+pub fn contains_account_registration(
+    runtime: &rtao_runtime::RuntimeHandle,
+    call: &CallBytes,
+) -> Result<bool, TxError> {
+    let decoded = runtime
+        .core()
+        .decode_spec(&rtao_core::runtime::TypeSpec::Call, call.as_bytes(), true)
+        .map_err(rtao_core::CoreError::from)
+        .map_err(IntentError::from)?;
+    fn walk(value: &rtao_core::codec::Value) -> bool {
+        use rtao_core::value_ext::ValueExt;
+        fn list(value: &rtao_core::codec::Value) -> Option<&[rtao_core::codec::Value]> {
+            match value {
+                rtao_core::codec::Value::List(values) | rtao_core::codec::Value::Tuple(values) => {
+                    Some(values)
+                }
+                _ => None,
+            }
+        }
+        let (Some(pallet), Some(function)) = (
+            value.field("call_module").and_then(ValueExt::as_str),
+            value.field("call_function").and_then(ValueExt::as_str),
+        ) else {
+            return false;
+        };
+        let arg = |name: &str| {
+            value
+                .field("call_args")
+                .and_then(list)
+                .and_then(|args| {
+                    args.iter()
+                        .find(|arg| arg.field("name").and_then(ValueExt::as_str) == Some(name))
+                })
+                .and_then(|arg| arg.field("value"))
+        };
+        match (pallet, function) {
+            ("HashedAccounts", "register" | "register_derived" | "register_derived_sponsored")
+            | ("Proxy", "create_protected_pure")
+            | ("Utility", "as_protected_derivative") => true,
+            ("Proxy", "proxy" | "proxy_announced")
+            | (
+                "Multisig",
+                "as_multi" | "as_multi_safe" | "as_multi_threshold_1" | "as_multi_threshold_1_safe",
+            )
+            | (
+                "Utility",
+                "as_derivative"
+                | "as_safe_derivative"
+                | "dispatch_as"
+                | "dispatch_as_fallible"
+                | "with_weight",
+            )
+            | ("Sudo", "sudo" | "sudo_unchecked_weight" | "sudo_as") => {
+                arg("call").is_some_and(walk)
+            }
+            ("Utility", "if_else") => {
+                arg("main").is_some_and(walk) || arg("fallback").is_some_and(walk)
+            }
+            ("Utility", "batch" | "batch_all" | "force_batch") => arg("calls")
+                .and_then(list)
+                .is_some_and(|calls| calls.iter().any(walk)),
+            _ => false,
+        }
+    }
+    Ok(walk(&decoded))
+}
+
 fn coldkey_pays(runtime: &rtao_runtime::RuntimeHandle, call: &CallBytes) -> Result<bool, TxError> {
     let decoded = runtime
         .core()
@@ -2880,6 +3038,42 @@ mod tests {
         assert!(coldkey_pays(&runtime, &proxy)?);
         let sudo = rtao_runtime::calls::sudo::sudo(weights).compose(&runtime)?;
         assert!(!coldkey_pays(&runtime, &sudo)?); // Python treats sudo itself as a leaf.
+        Ok(())
+    }
+
+    // pyt: unit/test_shielding.py (contains_account_registration)
+    #[test]
+    fn account_registration_is_found_through_wrappers_only()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let runtime = rtao_runtime::RuntimeHandle::parse(
+            include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
+            488,
+            1,
+            42,
+        )?;
+        let register = rtao_runtime::calls::proxy::create_protected_pure(
+            rtao_runtime::models::ProxyType::Any,
+            0,
+            0,
+        )
+        .compose(&runtime)?;
+        let remark = rtao_runtime::calls::system::remark(vec![]).compose(&runtime)?;
+        assert!(contains_account_registration(&runtime, &register)?);
+        assert!(!contains_account_registration(&runtime, &remark)?);
+        let batch = rtao_runtime::calls::utility::batch_all(vec![remark.clone(), register.clone()])
+            .compose(&runtime)?;
+        let proxy = rtao_runtime::calls::proxy::proxy(
+            rtao_core::DynValue::new(AccountId([1; 32]).into_core_value()),
+            None,
+            batch,
+        )
+        .compose(&runtime)?;
+        assert!(contains_account_registration(&runtime, &proxy)?);
+        let sudo = rtao_runtime::calls::sudo::sudo(register).compose(&runtime)?;
+        assert!(contains_account_registration(&runtime, &sudo)?);
+        let plain = rtao_runtime::calls::utility::batch_all(vec![remark.clone(), remark])
+            .compose(&runtime)?;
+        assert!(!contains_account_registration(&runtime, &plain)?);
         Ok(())
     }
 

@@ -6,9 +6,17 @@
 
 Not a versioned release. Each item links to its section below.
 
+- Account registration can take MEV Shield automatically when enabled with `Executor::with_auto_shield` (D-140); HTTP authentication keeps its verifier until hashed identities verify (D-141).
 - The core patch extends its Ed25519 wipe fix to v488's hashed-account keys through a reviewed adaptation, which unblocks the core bump (D-139, issue #13); the same `hashed.rs` fix is proposed upstream as RaoFoundation/subtensor#3317.
 - The core bump can run on GitHub's hosted runners: `runtime-adopt` takes a `core_bump` dispatch input (D-136, issue #12). Its first run is blocked by v488's hashed Ed25519 keys, which the core patch's erasure guard refuses; the core stays at v478 (D-138, needs a decision).
 - v488 hand ports, fifth batch (D-137, issue #12): plans select the Shield route and period as execution does and report it (`Plan::shielded`), `rtao gamma`, and the four limit-order intents with classical identities.
+
+### Opt-in registration Shield default (D-140)
+
+#### rtao-tx
+
+- New: `Executor::with_auto_shield(bool)` (default off): account registration (`HashedAccounts.register*`, `Proxy.create_protected_pure`, `Utility.as_protected_derivative`, also inside wrappers and batches) is planned and executed through MEV Shield when the network has a shield key, as Python's default `shielded=None`; without a key it is planned unshielded with Python's warning. `ExecuteOptions::shielded` and `PlanOptions::shielded` are unchanged.
+- New: `contains_account_registration(runtime, call)`, Python's `contains_account_registration`.
 
 ### Core patch adaptation for v488 (D-139)
 

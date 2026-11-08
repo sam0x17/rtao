@@ -22,7 +22,7 @@ pub mod timelock;
 pub use error::{ChainError, IntentError, PolicyError, TxError, classify};
 pub use executor::{
     ExecuteOptions, Executor, IntentRegistry, PlanOptions, Progress, ShieldOptions, ToolSpec,
-    compose_nested_intent_call,
+    compose_nested_intent_call, contains_account_registration,
 };
 pub use intent::{
     BuildCx, Built, Clock, DynIntent, FactsTitle, Intent, IntentInterface, IntentPreflight,
