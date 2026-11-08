@@ -344,7 +344,10 @@ async fn crash_after_inclusion_before_ack_reopens_and_finds_actual_historical_re
             &signer,
             &SubmitOptions {
                 journal: Some(b.clone()),
-                deadline: Some(Duration::from_millis(100)),
+                // The silent handler never acks, so submission ends at this
+                // deadline; it must leave time to sign and dispatch first on a
+                // loaded runner (100 ms did not, runtime-adopt run 42498364492).
+                deadline: Some(Duration::from_secs(2)),
                 ..Default::default()
             },
         )
@@ -481,7 +484,8 @@ async fn missing_list_at_actual_inclusion_retains_uncertainty_past_expiry() {
                 &SubmitOptions {
                     journal: Some(b.clone()),
                     mortality: Mortality::Mortal(Period::new(4)),
-                    deadline: Some(Duration::from_millis(100)),
+                    // Leaves time to sign and dispatch on a loaded runner.
+                    deadline: Some(Duration::from_secs(2)),
                     ..Default::default()
                 }
             )
