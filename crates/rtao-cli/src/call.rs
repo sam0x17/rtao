@@ -70,6 +70,9 @@ pub fn command() -> Command {
                     .long("multisig")
                     .help("Named saved multisig."),
             )
+            .arg(account_mode_arg(
+                "Account derivation: legacy or safe; must match the existing group.",
+            ))
             .arg(
                 Arg::new("multisig_threshold")
                     .long("multisig-threshold")
@@ -104,6 +107,42 @@ pub fn command() -> Command {
             ),
         Tier::Tx,
     )
+}
+
+/// `--multisig-account-mode`: the derivation of an inline group, or a check of
+/// a saved one (Python's `resolve_multisig(account_mode=)`).
+pub(crate) fn account_mode_arg(help: &'static str) -> Arg {
+    Arg::new("multisig_account_mode")
+        .long("multisig-account-mode")
+        .value_name("MODE")
+        .help(help)
+}
+
+/// The `--multisig-account-mode` value, validated as Python's
+/// `validate_account_mode`; absent when the flag was not given.
+pub(crate) fn requested_account_mode(
+    matches: &ArgMatches,
+) -> Result<Option<rtao::primitives::AccountMode>, CliError> {
+    matches
+        .try_get_one::<String>("multisig_account_mode")
+        .ok()
+        .flatten()
+        .map(|mode| mode.parse().map_err(public_input))
+        .transpose()
+}
+
+/// A saved group keeps its own derivation: an explicit, different
+/// `--multisig-account-mode` is refused rather than deriving another account.
+pub(crate) fn check_saved_account_mode(
+    group: &RawMultisig,
+    requested: Option<rtao::primitives::AccountMode>,
+) -> Result<(), CliError> {
+    match requested {
+        Some(mode) if mode != group.account_mode => Err(CliError::input(
+            "account mode does not match the saved multisig",
+        )),
+        _ => Ok(()),
+    }
 }
 
 /// Public signer selection; acquiring this source must not unlock its key.
@@ -498,8 +537,11 @@ impl RawCallRequest {
                 "use either --multisig NAME or inline multisig flags, not both",
             ));
         }
+        let requested_mode = requested_account_mode(matches)?;
         let multisig = if let Some(preset) = preset {
-            Some(resolve_preset_with(&names, ctx, &preset)?)
+            let group = resolve_preset_with(&names, ctx, &preset)?;
+            check_saved_account_mode(&group, requested_mode)?;
+            Some(group)
         } else if let Some(threshold) = threshold {
             if threshold == 0 {
                 return Err(CliError::input("threshold must be >= 1"));
@@ -542,7 +584,7 @@ impl RawCallRequest {
                 signatories,
                 preset: None,
                 refs,
-                account_mode: rtao::primitives::AccountMode::Legacy,
+                account_mode: requested_mode.unwrap_or_default(),
             })
         } else {
             None
@@ -2727,6 +2769,11 @@ pub fn multisig_replay_command(
             ]);
         }
         tokens.extend(["-w".into(), label.into()]);
+    }
+    // A safe group's co-signers derive the same account (Python's
+    // `build_replay_command(account_mode=)`).
+    if raw.account_mode == rtao::primitives::AccountMode::Safe {
+        tokens.extend(["--multisig-account-mode".into(), "safe".into()]);
     }
     if request.role != rtao::signer::SignerRole::Coldkey {
         tokens.extend(["--signer".into(), request.role.as_str().into()]);

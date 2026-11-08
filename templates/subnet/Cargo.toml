@@ -24,7 +24,18 @@ serde_json = { version = "1.0.132", features = ["arbitrary_precision"] }
 tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "time", "signal"] }
 toml_edit = "0.23"
 
-# Cargo ignores patches in dependencies and workspace members. Keep this once,
-# in the final workspace root, at the core pin used by rtao.
+# Cargo ignores patches in dependencies and workspace members. Keep these once,
+# in the final workspace root, equal to rtao's: the BLS patch at the core pin,
+# and the core patch at rtao's reviewed fork revision (it wipes hashed signing
+# keys; its own path packages stay at the core pin).
 [patch.crates-io]
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+
+[patch."https://github.com/RaoFoundation/subtensor.git"]
+bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "cd1a2e6ae41bf558eef8e21d00348c5a65e77d33" }
+
+[patch."https://github.com/sam0x17/subtensor.git"]
+fips204 = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+subtensor-hashed = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }

@@ -360,6 +360,49 @@ fn patch_tables(
     Ok(())
 }
 
+/// Standalone workspaces that build the core themselves. Cargo applies only a
+/// final workspace root's patches, so each carries the root's core patch
+/// tables, and the template hands them to every generated project: all build
+/// the reviewed core (the hashed-key wipe fix, D-139), never the bare tag.
+pub(crate) const SECONDARY_MANIFESTS: [&str; 4] = [
+    "templates/subnet/Cargo.toml",
+    "fuzz/Cargo.toml",
+    "ci/validator/probe/Cargo.toml",
+    "ci/tls-two-providers/Cargo.toml",
+];
+
+/// Write the core patch tables to the root manifest and every secondary one.
+fn write_patch_tables(
+    root: &Path,
+    core_tag: &str,
+    rev: &str,
+    shared: &BTreeSet<String>,
+    pins: &DocumentMut,
+) -> Result<()> {
+    for path in std::iter::once("Cargo.toml").chain(SECONDARY_MANIFESTS) {
+        let mut manifest = read_document(&root.join(path))?;
+        patch_tables(&mut manifest, core_tag, rev, shared)?;
+        verify_tables(&manifest, pins).with_context(|| format!("core patch tables of {path}"))?;
+        atomic_write(&root.join(path), manifest.to_string().as_bytes())?;
+    }
+    Ok(())
+}
+
+/// The template's core patch tables equal the root's.
+pub(crate) fn verify_template_tables(manifest: &DocumentMut, pins: &DocumentMut) -> Result<()> {
+    verify_tables(manifest, pins)
+        .context("templates/subnet/Cargo.toml must carry the root's core patch tables (D-146)")
+}
+
+/// Every secondary manifest's core patch tables equal the root's.
+fn verify_secondary_tables(root: &Path, pins: &DocumentMut) -> Result<()> {
+    for path in SECONDARY_MANIFESTS {
+        verify_tables(&read_document(&root.join(path))?, pins)
+            .with_context(|| format!("{path} must carry the root's core patch tables (D-146)"))?;
+    }
+    Ok(())
+}
+
 fn verify_tables(manifest: &DocumentMut, pins: &DocumentMut) -> Result<()> {
     let actual = manifest["patch"]
         .as_table_like()
@@ -1037,6 +1080,7 @@ pub(crate) fn verify_source(root: &Path, pins: &DocumentMut) -> Result<()> {
 /// candidate whose moved core is re-resolved and fully checked afterwards.
 pub(crate) fn verify_source_with(root: &Path, pins: &DocumentMut, lock: bool) -> Result<()> {
     verify_tables(&read_document(&root.join("Cargo.toml"))?, pins)?;
+    verify_secondary_tables(root, pins)?;
     verify_clippy(root)?;
     if lock {
         verify_lock(&read_document(&root.join("Cargo.lock"))?, pins)?;
@@ -1357,10 +1401,7 @@ pub(crate) fn rebase_candidate(
             // at the already reviewed combined commit. Hosted CI only reads the fork.
             let mut prepared = next.clone();
             prepared["core"]["patch"] = entry;
-            let mut manifest = read_document(&root.join("Cargo.toml"))?;
-            patch_tables(&mut manifest, &target, remote, &shared_packages)?;
-            verify_tables(&manifest, &prepared)?;
-            atomic_write(&root.join("Cargo.toml"), manifest.to_string().as_bytes())?;
+            write_patch_tables(root, &target, remote, &shared_packages, &prepared)?;
             *next = prepared;
             println!(
                 "Adopted existing append-only core patch branch {branch} at {remote}; validate the hosted candidate before source adoption."
@@ -1562,9 +1603,11 @@ pub(crate) fn run(arguments: Vec<String>) -> Result<()> {
                 std::env::var("RTAO_CORE_UNPATCHED_DISPOSABLE").as_deref() == Ok("1"),
                 "core-patch strip requires RTAO_CORE_UNPATCHED_DISPOSABLE=1 in a disposable hosted checkout"
             );
-            let mut manifest = read_document(&root.join("Cargo.toml"))?;
-            remove_tables(&mut manifest)?;
-            atomic_write(&root.join("Cargo.toml"), manifest.to_string().as_bytes())?;
+            for path in std::iter::once("Cargo.toml").chain(SECONDARY_MANIFESTS) {
+                let mut manifest = read_document(&root.join(path))?;
+                remove_tables(&mut manifest)?;
+                atomic_write(&root.join(path), manifest.to_string().as_bytes())?;
+            }
             let mut pins = read_document(&root.join("upstream.toml"))?;
             pins["core"]
                 .as_table_like_mut()
@@ -1600,6 +1643,38 @@ pub(crate) fn run(arguments: Vec<String>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn secondary_manifests_carry_the_root_core_patch() -> Result<()> {
+        // The committed template, fuzz and CI workspaces follow the root's
+        // reviewed core patch (D-146); a stale revision or a missing table fails.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root missing")?;
+        let pins = read_document(&root.join("upstream.toml"))?;
+        verify_secondary_tables(root, &pins)?;
+        let Some(entry) = patch(&pins)? else {
+            return Ok(());
+        };
+        for path in SECONDARY_MANIFESTS {
+            let manifest = read_document(&root.join(path))?;
+            let mut stale = manifest.clone();
+            stale["patch"][UPSTREAM]["bittensor-core"]["rev"] = value("3".repeat(40));
+            assert!(verify_tables(&stale, &pins).is_err(), "{path}");
+            let mut missing = manifest.clone();
+            remove_tables(&mut missing)?;
+            assert!(verify_tables(&missing, &pins).is_err(), "{path}");
+            let mut rewritten = missing;
+            patch_tables(
+                &mut rewritten,
+                field(&pins["core"], "tag")?,
+                field(entry, "rev")?,
+                &shared(entry)?,
+            )?;
+            verify_tables(&rewritten, &pins)?;
+        }
+        Ok(())
+    }
 
     #[test]
     fn tables_and_lock_bind_only_the_core_to_the_fork() -> Result<()> {

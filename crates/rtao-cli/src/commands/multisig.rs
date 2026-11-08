@@ -102,6 +102,14 @@ pub fn command() -> Command {
             )
             .action(ArgAction::Append),
         )
+        .arg(
+            option(
+                "account_mode",
+                "account-mode",
+                "Account derivation: safe for a new group, legacy for an existing standard group.",
+            )
+            .value_name("MODE"),
+        )
         .arg(option("note", "note", "Free-form note stored with the entry.").default_value(""))
         .arg(
             option(
@@ -123,6 +131,9 @@ pub fn command() -> Command {
             "multisig",
             "multisig",
             "Saved multisig; defaults to -w when saved.",
+        ))
+        .arg(crate::call::account_mode_arg(
+            "Account derivation: legacy or safe; saved groups retain their mode.",
         ))
         .arg(
             option(
@@ -366,14 +377,33 @@ impl Request {
                     )));
                 }
                 let overwrite = matches.get_flag("overwrite");
-                if ctx.books.multisig(&name).is_some() && !overwrite {
+                let existing = ctx.books.multisig(&name);
+                if existing.is_some() && !overwrite {
                     return Err(failure(format!(
                         "multisig {} already exists",
                         pyfmt::string_repr(&name)
                     ))
                     .with_help("pass `--overwrite` to replace it"));
                 }
-                let entry = json!({"name":name,"threshold":threshold,"signatories":refs,"note":text(matches,"note").unwrap_or("")});
+                // Python v488: a new group is safe unless --account-mode says
+                // otherwise; replacing a saved group keeps its mode (legacy
+                // when it has none).
+                let account_mode = match text(matches, "account_mode") {
+                    Some(mode) => mode.parse().map_err(failure)?,
+                    None => match existing.map(|entry| entry.get("account_mode")) {
+                        None => rtao::primitives::AccountMode::Safe,
+                        Some(None) => rtao::primitives::AccountMode::Legacy,
+                        Some(Some(Value::String(mode))) => mode.parse().map_err(failure)?,
+                        Some(Some(_)) => {
+                            return Err(failure("account_mode must be 'legacy' or 'safe'"));
+                        }
+                    },
+                };
+                // An unusable signer set is refused before it is saved or
+                // replaces a funding target.
+                rtao::primitives::multisig_account_id(&signatories, threshold, account_mode)
+                    .map_err(failure)?;
+                let entry = json!({"name":name,"threshold":threshold,"signatories":refs,"note":text(matches,"note").unwrap_or(""),"account_mode":account_mode.as_str()});
                 Ok(Self::Add {
                     entry,
                     group: RawMultisig {
@@ -381,7 +411,7 @@ impl Request {
                         signatories,
                         preset: Some(name),
                         refs,
-                        account_mode: rtao::primitives::AccountMode::Legacy,
+                        account_mode,
                     },
                     overwrite,
                 })
@@ -402,8 +432,11 @@ impl Request {
                 }
                 let default = (!inline && ctx.books.multisig(&ctx.globals.wallet_name).is_some())
                     .then_some(ctx.globals.wallet_name.as_str());
+                let requested_mode = crate::call::requested_account_mode(matches)?;
                 let group = if let Some(preset) = preset.or(default) {
-                    resolve_preset(ctx, preset)?
+                    let group = resolve_preset(ctx, preset)?;
+                    crate::call::check_saved_account_mode(&group, requested_mode)?;
+                    group
                 } else if let Some(threshold) = threshold {
                     if full.is_some() && others.is_some() {
                         return Err(failure(
@@ -439,7 +472,7 @@ impl Request {
                         signatories,
                         preset: None,
                         refs,
-                        account_mode: rtao::primitives::AccountMode::Legacy,
+                        account_mode: requested_mode.unwrap_or_default(),
                     }
                 } else {
                     let mut saved: Vec<_> = ctx
@@ -1513,8 +1546,9 @@ mod tests {
         };
         assert_eq!(
             entry,
-            json!({"name":"new","threshold":2,"signatories":["alice","bob","carol","alice-alias"],"note":"portable"})
+            json!({"name":"new","threshold":2,"signatories":["alice","bob","carol","alice-alias"],"note":"portable","account_mode":"safe"})
         );
+        assert_eq!(group.account_mode, rtao::primitives::AccountMode::Safe);
         assert_eq!(group.signatories, accounts());
         assert!(!overwrite);
         assert!(ctx.globals.signatories.is_empty());
@@ -1546,6 +1580,91 @@ mod tests {
         ] {
             assert!(context(&args, books()).is_err());
         }
+        Ok(())
+    }
+
+    #[test]
+    fn account_modes_default_new_groups_to_safe_and_keep_saved_ones() -> TestResult {
+        use rtao::primitives::AccountMode;
+        let add =
+            |extra: &[&'static str]| -> Result<(Value, RawMultisig), Box<dyn std::error::Error>> {
+                let mut args = vec![
+                    "add",
+                    "team",
+                    "--threshold",
+                    "2",
+                    "--signatories",
+                    "alice,bob",
+                ];
+                args.extend_from_slice(extra);
+                let (mut ctx, matches, _) = context(&args, books())?;
+                match Request::from_matches(&mut ctx, &matches, &mut PromptHistory::default())? {
+                    Request::Add { entry, group, .. } => Ok((entry, group)),
+                    _ => Err("add request".into()),
+                }
+            };
+        // Replacing the saved group (no account_mode: legacy) keeps legacy.
+        let (entry, group) = add(&["--overwrite"])?;
+        assert_eq!(entry["account_mode"], "legacy");
+        assert_eq!(group.account_mode, AccountMode::Legacy);
+        // An explicit mode wins, and is validated.
+        let (entry, group) = add(&["--overwrite", "--account-mode", "safe"])?;
+        assert_eq!(entry["account_mode"], "safe");
+        assert_eq!(group.account_mode, AccountMode::Safe);
+        let error = add(&["--overwrite", "--account-mode", "Safe"])
+            .err()
+            .ok_or("invalid mode")?;
+        assert_eq!(error.to_string(), "account_mode must be 'legacy' or 'safe'");
+        // A safe group needs two distinct members; it is refused before saving.
+        let (mut ctx, matches, _) = context(
+            &["add", "solo", "--threshold", "1", "--signatories", "alice"],
+            books(),
+        )?;
+        assert!(Request::from_matches(&mut ctx, &matches, &mut PromptHistory::default()).is_err());
+        let (mut ctx, matches, _) = context(
+            &[
+                "add",
+                "solo",
+                "--threshold",
+                "1",
+                "--signatories",
+                "alice",
+                "--account-mode",
+                "legacy",
+            ],
+            books(),
+        )?;
+        assert!(Request::from_matches(&mut ctx, &matches, &mut PromptHistory::default()).is_ok());
+        // Pending: a saved group's mode is checked, an inline group takes it.
+        let pending = |args: &[&'static str]| -> Result<RawMultisig, Box<dyn std::error::Error>> {
+            let (mut ctx, matches, _) = context(args, books())?;
+            match Request::from_matches(&mut ctx, &matches, &mut PromptHistory::default())? {
+                Request::Pending { group, .. } => Ok(group),
+                _ => Err("pending request".into()),
+            }
+        };
+        assert_eq!(
+            pending(&["pending", "-w", "team", "--multisig-account-mode", "legacy"])?.account_mode,
+            AccountMode::Legacy
+        );
+        let error = pending(&["pending", "-w", "team", "--multisig-account-mode", "safe"])
+            .err()
+            .ok_or("mode mismatch")?;
+        assert_eq!(
+            error.to_string(),
+            "account mode does not match the saved multisig"
+        );
+        let inline = [
+            "pending",
+            "--multisig-threshold",
+            "2",
+            "--signatories",
+            "alice,bob",
+        ];
+        assert_eq!(pending(&inline)?.account_mode, AccountMode::Legacy);
+        let mut safe = inline.to_vec();
+        safe.extend(["--multisig-account-mode", "safe"]);
+        assert_eq!(pending(&safe)?.account_mode, AccountMode::Safe);
         Ok(())
     }
 
@@ -1701,7 +1820,9 @@ mod tests {
         assert_eq!(error.message, "this multisig command requires a client");
         assert_eq!(
             MultisigBook::new(&files.paths).load().await?,
-            vec![json!({"name":"new","threshold":2,"signatories":["alice","bob"],"note":""})]
+            vec![
+                json!({"name":"new","threshold":2,"signatories":["alice","bob"],"note":"","account_mode":"safe"})
+            ]
         );
         let before = fs::read(files.paths.path(ConfigFile::Multisigs))?;
         assert!(execute(&ctx, &files.paths, &request, None).await.is_err());
@@ -1833,6 +1954,64 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn safe_group_pending_reads_its_safe_account_and_replays_its_mode() -> TestResult {
+        let files = Files::new()?;
+        let runtime = runtime()?;
+        let mut group = group();
+        group.account_mode = rtao::primitives::AccountMode::Safe;
+        let safe = Multisig::with_mode(
+            &runtime,
+            &group.signatories,
+            group.threshold,
+            group.account_mode,
+        )?;
+        let legacy = Multisig::new(&runtime, &group.signatories, group.threshold)?;
+        assert_ne!(safe.address, legacy.address);
+        let known = rtao_runtime::calls::system::remark(vec![3]).compose(&runtime)?;
+        FsRawCallCache::new(&files.paths)
+            .save(hex_hash(known.hash()), json!({"target":"System.remark","params":{"remark":"0x03"},"call_data":format!("0x{}",hex::encode(known.as_bytes()))}))
+            .await?;
+        let mut state = FakeState::try_default()?;
+        clear_sudo(&mut state)?;
+        seed_pending(
+            &mut state,
+            safe.address,
+            known.hash(),
+            &pending(90, vec![accounts()[0]]),
+        )?;
+        let (client, _chain) = client(state).await?;
+        let (ctx, _, sink) = context(&["pending", "--multisig", "team"], books())?;
+        execute_with_fetch(
+            &ctx,
+            &files.paths,
+            &Request::Pending {
+                group,
+                call_hash: None,
+                call_data: None,
+            },
+            Some(&client),
+            &Fetch::default(),
+        )
+        .await?;
+        let result = output(&sink)?;
+        assert_eq!(result["count"], 1);
+        let commands = result["pending_multisigs"][0]["co_signer_commands"]
+            .as_array()
+            .ok_or("commands")?;
+        assert!(!commands.is_empty());
+        for command in commands {
+            assert!(
+                command["command"]
+                    .as_str()
+                    .ok_or("replay")?
+                    .contains("--multisig-account-mode safe")
+            );
+        }
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn pending_authenticates_shared_cache_bytes_and_preserves_unknown_pending_rows()
     -> TestResult {
         let files = Files::new()?;
@@ -1920,6 +2099,12 @@ mod tests {
                 .as_str()
                 .ok_or("replay")?
                 .contains("--signatory bob")
+        );
+        assert!(
+            !rows[1]["co_signer_commands"][0]["command"]
+                .as_str()
+                .ok_or("replay")?
+                .contains("--multisig-account-mode")
         );
         let human_sink = MemorySink::default();
         ctx.output = Output::new(

@@ -15,3 +15,12 @@ base64 = "0.22"
 
 [patch.crates-io]
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+
+[patch."https://github.com/RaoFoundation/subtensor.git"]
+bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "cd1a2e6ae41bf558eef8e21d00348c5a65e77d33" }
+
+[patch."https://github.com/sam0x17/subtensor.git"]
+fips204 = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+subtensor-hashed = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }

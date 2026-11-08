@@ -76,6 +76,9 @@ pub fn command() -> Command {
         .subcommand(with_globals(
             source("sign")
                 .arg(Arg::new("multisig").long("multisig"))
+                .arg(crate::call::account_mode_arg(
+                    "Sudo group derivation: legacy or safe.",
+                ))
                 .arg(
                     Arg::new("multisig_threshold")
                         .long("multisig-threshold")
@@ -98,6 +101,7 @@ pub fn reserved(group: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
             "hex_file",
             "wasm",
             "multisig",
+            "multisig_account_mode",
             "multisig_threshold",
             "signatories",
             "other_signatories",
@@ -569,6 +573,7 @@ fn resolve_group(
         .ok()
         .flatten()
         .copied();
+    let requested_mode = crate::call::requested_account_mode(matches)?;
     if let Some(preset) = text(matches, "multisig").filter(|value| !value.is_empty()) {
         if threshold.is_some()
             || ["signatories", "other_signatories"]
@@ -579,7 +584,9 @@ fn resolve_group(
                 "use either --multisig NAME or inline multisig flags, not both",
             ));
         }
-        return crate::call::resolve_preset(ctx, preset);
+        let group = crate::call::resolve_preset(ctx, preset)?;
+        crate::call::check_saved_account_mode(&group, requested_mode)?;
+        return Ok(group);
     }
     if let Some(threshold) = threshold {
         let full = text(matches, "signatories").filter(|value| !value.is_empty());
@@ -620,7 +627,7 @@ fn resolve_group(
             signatories,
             preset: None,
             refs,
-            account_mode: rtao::primitives::AccountMode::Legacy,
+            account_mode: requested_mode.unwrap_or_default(),
         });
     }
     let sudo = manifest.and_then(|manifest| manifest.get("sudo"));
@@ -648,11 +655,16 @@ fn resolve_group(
                 refs.push(reference.to_owned());
             }
         }
-        // Python reads the manifest's `sudo.account_mode`; omitted is legacy.
-        let account_mode = match sudo.and_then(|sudo| sudo.get("account_mode")) {
-            None => rtao::primitives::AccountMode::Legacy,
-            Some(Value::String(mode)) => mode.parse().map_err(failure)?,
-            Some(_) => return Err(failure("account_mode must be 'legacy' or 'safe'")),
+        // Python: --multisig-account-mode, else the manifest's
+        // `sudo.account_mode`; omitted is legacy.
+        let account_mode = match (
+            requested_mode,
+            sudo.and_then(|sudo| sudo.get("account_mode")),
+        ) {
+            (Some(mode), _) => mode,
+            (None, None) => rtao::primitives::AccountMode::Legacy,
+            (None, Some(Value::String(mode))) => mode.parse().map_err(failure)?,
+            (None, Some(_)) => return Err(failure("account_mode must be 'legacy' or 'safe'")),
         };
         return Ok(RawMultisig {
             threshold,

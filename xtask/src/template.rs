@@ -288,18 +288,26 @@ fn check_source(root: &Path) -> Result<()> {
         bls["tag"].as_str() == pins["core"]["tag"].as_str(),
         "template BLS tag differs from the core pin"
     );
+    // The BLS patch, plus exactly the root's core patch tables when the core
+    // is patched (D-146): generated projects build the reviewed core.
+    let core_tables = if pins["core"].get("patch").is_some() {
+        2
+    } else {
+        0
+    };
     ensure!(
         manifest["patch"]
             .as_table()
-            .is_some_and(|table| table.len() == 1),
-        "template must carry only the root crates.io patch table"
+            .is_some_and(|table| table.len() == 1 + core_tables),
+        "template must carry only the crates.io and core patch tables"
     );
     ensure!(
         manifest["patch"]["crates-io"]
             .as_table()
             .is_some_and(|table| table.len() == 1),
-        "template must carry only the BLS patch, never a core patch"
+        "template must carry only the BLS crates.io patch"
     );
+    crate::core_patch::verify_template_tables(&manifest, &pins)?;
     for (role, profile) in [
         ("validator", "validator"),
         ("miner", "miner"),

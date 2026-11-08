@@ -355,6 +355,45 @@ fn recorded_core_patch(
     })
 }
 
+/// The core patch record a replacement is checked against: the workspace's
+/// own `upstream.toml` (rtao's checkout), else the one beside the `rtao-core`
+/// the workspace resolves, which that crate's provenance is built from. A
+/// project generated from the template carries rtao's core patch (D-146) and
+/// has no record of its own.
+fn core_record(root: &Path, manifest_path: &Path) -> Result<DocumentMut, String> {
+    let local = root.join("upstream.toml");
+    if local.is_file() {
+        return document(&local);
+    }
+    let metadata = metadata(manifest_path, false).map_err(|error| {
+        format!("the core replacement's record is the resolved rtao-core's upstream.toml; inspecting it requires dependencies cached for offline Cargo metadata:\n{error}")
+    })?;
+    let records = metadata
+        .get("packages")
+        .and_then(Json::as_array)
+        .ok_or("Cargo metadata has no packages")?
+        .iter()
+        .filter(|package| package.get("name").and_then(Json::as_str) == Some("rtao-core"))
+        .map(|package| {
+            package
+                .get("manifest_path")
+                .and_then(Json::as_str)
+                .map(Path::new)
+                .and_then(Path::parent)
+                .and_then(Path::parent)
+                .and_then(Path::parent)
+                .map(|workspace| workspace.join("upstream.toml"))
+                .ok_or("rtao-core metadata has no manifest path")
+        })
+        .collect::<Result<BTreeSet<_>, _>>()?;
+    let mut records = records.into_iter();
+    match (records.next(), records.next()) {
+        (Some(record), None) => document(&record),
+        (None, _) => Err("workspace replaces bittensor-core without an upstream.toml record and resolves no rtao-core to take it from".into()),
+        (Some(_), Some(_)) => Err("workspace resolves more than one rtao-core; its core replacement has no single record".into()),
+    }
+}
+
 fn full_commit(commit: &str) -> bool {
     commit.len() == 40 && commit.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
@@ -473,11 +512,7 @@ pub(super) fn check(manifest_path: &Path) -> Result<Check, String> {
         .ok_or("Cargo.toml has no parent directory")?;
     let lock = document(&root.join("Cargo.lock"))?;
     let bls_source = if core_replacement(&manifest, &expected).is_some() {
-        let patch = recorded_core_patch(
-            &manifest,
-            &expected,
-            &document(&root.join("upstream.toml"))?,
-        )?;
+        let patch = recorded_core_patch(&manifest, &expected, &core_record(root, &manifest_path)?)?;
         verify_resolved_lock(
             &lock,
             &patch.core,
@@ -862,6 +897,45 @@ mod tests {
                 fs::read(fixture.0.join("Cargo.lock")).map_err(|error| error.to_string())?
             );
         }
+        Ok(())
+    }
+
+    #[test]
+    fn replacement_record_comes_from_the_resolved_rtao_core() -> Result<(), String> {
+        let fixture = Fixture::new()?;
+        let record = format!(
+            "[monorepo]\nurl = {MONOREPO:?}\n[core]\ntag = \"v478\"\ncommit = {COMMIT:?}\n"
+        );
+        fixture.write("sdk/upstream.toml", &record)?;
+        fixture.package("sdk/crates/rtao-core", "rtao-core", "[workspace]\n", "")?;
+        fixture.package(
+            "app",
+            "doctor-app",
+            "[workspace]\n",
+            "[dependencies]\nrtao-core = { path = \"../sdk/crates/rtao-core\" }\n",
+        )?;
+        let app = fixture.0.join("app");
+        let lock = |directory: &Path| {
+            cargo_output(
+                Command::new("cargo")
+                    .current_dir(directory)
+                    .args(["generate-lockfile", "--offline"]),
+            )
+        };
+        lock(&app)?;
+        let found = core_record(&app, &app.join("Cargo.toml"))?;
+        assert_eq!(found.to_string(), record);
+        // A workspace's own record wins.
+        fixture.write("app/upstream.toml", "[core]\n")?;
+        assert_eq!(
+            core_record(&app, &app.join("Cargo.toml"))?.to_string(),
+            "[core]\n"
+        );
+        // Without either, the replacement has no record.
+        fixture.package("bare", "doctor-bare", "[workspace]\n", "")?;
+        let bare = fixture.0.join("bare");
+        lock(&bare)?;
+        assert!(core_record(&bare, &bare.join("Cargo.toml")).is_err());
         Ok(())
     }
 

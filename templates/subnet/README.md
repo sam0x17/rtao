@@ -14,9 +14,11 @@ miner admits metagraph members with validator permits by default.
 
 Use Rust 1.89 or newer. The pre-release SDK dependencies use `main`; Cargo.lock
 records their exact commit. At the first rtao release, select the same `rtao-v*`
-tag for all three SDK dependencies. Keep the single root `w3f-bls` patch at the
-SDK's core pin, and commit Cargo.lock after generation. Never copy a core source
-patch into this workspace.
+tag for all three SDK dependencies. Keep the root `[patch]` tables equal to the
+SDK revision's own: the `w3f-bls` patch at the SDK's core pin and the core patch
+at its reviewed fork revision, which wipes Ed25519 and hashed-account signing
+keys from memory. `rtao doctor` checks the core patch against the record beside
+the rtao-core that Cargo.lock resolves. Commit Cargo.lock after generation.
 
 The generated workflow validates client source on free GitHub `ubuntu-latest`.
 It formats and lints the workspace, builds the validator, miner and owner tool,

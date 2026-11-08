@@ -8,6 +8,26 @@
 - The parity pin (v488) and the runtime are unchanged. 81 hand port(s) remain listed in `parity/port_due.toml`.
 - Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42502998044)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
 
+### Since `snapshot-2026-11-08.4`
+
+Not a versioned release. Each item links to its section below.
+
+- `rtao multisig add` saves new groups as safe by default (`--account-mode`), and `--multisig-account-mode` selects or checks a group's derivation (D-145).
+- The subnet template, `fuzz/` and the CI probe workspaces build the reviewed core patch, kept equal to the root's by the pin and template checks (D-146).
+
+### CLI account modes; the template's core patch (D-145, D-146)
+
+#### rtao-cli
+
+- Changed: `rtao multisig add` saves `account_mode`. **A new group without `--account-mode` is now saved as `safe`**, as in Python v488: its account differs from the legacy account of the same members, and it needs at least two distinct members. Pass `--account-mode legacy` to save a group for an existing standard multisig account. Replacing a saved group with `--overwrite` keeps its saved mode; existing saved groups are unchanged.
+- New: `--multisig-account-mode legacy|safe` on `multisig pending`, `call` and `upgrade sign`: the derivation of an inline signer set (legacy when omitted); with a saved group it must match the saved mode, and with a release manifest's sudo group it overrides the manifest's `account_mode`. Co-signer replay commands for a safe group include `--multisig-account-mode safe`.
+- Changed: `rtao doctor` accepts a workspace that carries rtao's core patch without an `upstream.toml` of its own, checking the replacement against the record beside the `rtao-core` it resolves.
+
+#### Template and workspaces
+
+- Changed: `templates/subnet/Cargo.toml` carries the root's core patch tables (`bittensor-core` at the reviewed fork revision, the fork's path packages at the core tag), so a generated project builds the core that wipes Ed25519 and hashed-account signing keys. Projects generated earlier can copy the two tables from the same rtao revision's `Cargo.toml`.
+- `fuzz/` and `ci/validator/probe/` carry the same tables and lock the core from the fork. `cargo xtask pin --check` and the template source check refuse a secondary manifest whose tables differ from the root's; a core-patch adoption rewrites them together.
+
 ### Since `snapshot-2026-11-08.3`
 
 Not a versioned release. Each item links to its section below.
