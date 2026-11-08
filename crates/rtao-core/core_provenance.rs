@@ -132,6 +132,7 @@ fn patch_identity<'a>(
                 "sdk/bittensor-core/Cargo.toml",
                 "sdk/bittensor-core/src/keys/mod.rs",
                 "sdk/bittensor-core/src/keys/encrypted_json.rs",
+                "sdk/bittensor-core/src/keys/hashed.rs",
             ][..],
         ),
         (

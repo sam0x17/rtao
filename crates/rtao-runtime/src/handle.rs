@@ -653,8 +653,55 @@ fn call_import_encoder(core: &Runtime) -> Result<Runtime, CoreError> {
         if ty.ty.path.segments.as_slice() == ["Option"] {
             ty.ty.path.segments.insert(0, "rtao_call_import".into());
         }
+        if ty.ty.path.segments.last().map(String::as_str) == Some("BTreeMap") {
+            continue;
+        }
+        match &mut ty.ty.type_def {
+            scale_info::TypeDef::Composite(composite) => {
+                name_newtype_sequence(core, &mut composite.fields)?;
+            }
+            scale_info::TypeDef::Variant(variants) => {
+                for variant in &mut variants.variants {
+                    name_newtype_sequence(core, &mut variant.fields)?;
+                }
+            }
+            _ => {}
+        }
     }
     Ok(encoder)
+}
+
+/// The record key under which the private import encoder carries the one
+/// unnamed field of a newtype over a sequence.
+const NEWTYPE_SEQUENCE_FIELD: &str = "rtao_call_import_newtype";
+
+/// A single unnamed field whose type is a sequence. The core encodes such a
+/// newtype from a bare list but guesses whether the list carries one legacy
+/// nesting level, and its guess changed between cores (v478 always removed a
+/// one-item level; v488 first tries the list as it is), so the import bridge
+/// names the field and encodes it through the core's named-field path, which
+/// does not guess.
+fn is_newtype_sequence(core: &Runtime, fields: &[Field<PortableForm>]) -> Result<bool, CoreError> {
+    let [field] = fields else {
+        return Ok(false);
+    };
+    Ok(field.name.is_none()
+        && matches!(
+            &core.resolve(field.ty.id).map_err(CoreError::from)?.type_def,
+            scale_info::TypeDef::Sequence(_)
+        ))
+}
+
+fn name_newtype_sequence(
+    core: &Runtime,
+    fields: &mut [Field<PortableForm>],
+) -> Result<(), CoreError> {
+    if is_newtype_sequence(core, fields)?
+        && let [field] = fields
+    {
+        field.name = Some(NEWTYPE_SEQUENCE_FIELD.into());
+    }
+    Ok(())
 }
 
 fn canonical_scale_value(
@@ -840,16 +887,11 @@ fn canonical_scale_fields(
     }
     if let [field] = fields {
         let value = canonical_scale_value(core, field.ty.id, cursor, budget)?;
-        // Core's legacy single-field sequence encoder removes one list level.
-        // Supply that level explicitly so a one-element nested sequence keeps
-        // its cardinality. Byte leaves use Bytes and bypass this list coercion.
-        if matches!(value, Value::List(_))
-            && matches!(
-                &core.resolve(field.ty.id).map_err(CoreError::from)?.type_def,
-                scale_info::TypeDef::Sequence(_)
-            )
-        {
-            return Ok(Value::List(vec![value]));
+        // A newtype over a sequence is a one-field record for the private
+        // encoder (call_import_encoder names the field), so a nested or
+        // one-element sequence keeps its exact cardinality under every core.
+        if is_newtype_sequence(core, fields)? {
+            return Ok(Value::record(vec![(NEWTYPE_SEQUENCE_FIELD.into(), value)]));
         }
         return Ok(value);
     }
@@ -1573,7 +1615,15 @@ mod tests {
         )
         .unwrap();
         assert_eq!(cursor.remaining(), 0);
-        assert_eq!(core.encode_spec(&spec, &canonical).unwrap(), encoded);
+        // The import bridge's value re-encodes through its private encoder,
+        // which carries the newtype's sequence as a named field.
+        assert_eq!(
+            call_import_encoder(&core)
+                .unwrap()
+                .encode_spec(&spec, &canonical)
+                .unwrap(),
+            encoded
+        );
     }
 
     #[test]

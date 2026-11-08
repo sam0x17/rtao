@@ -6,8 +6,27 @@
 
 Not a versioned release. Each item links to its section below.
 
+- The core patch extends its Ed25519 wipe fix to v488's hashed-account keys through a reviewed adaptation, which unblocks the core bump (D-139, issue #13); the same `hashed.rs` fix is proposed upstream as RaoFoundation/subtensor#3317.
 - The core bump can run on GitHub's hosted runners: `runtime-adopt` takes a `core_bump` dispatch input (D-136, issue #12). Its first run is blocked by v488's hashed Ed25519 keys, which the core patch's erasure guard refuses; the core stays at v478 (D-138, needs a decision).
 - v488 hand ports, fifth batch (D-137, issue #12): plans select the Shield route and period as execution does and report it (`Plan::shielded`), `rtao gamma`, and the four limit-order intents with classical identities.
+
+### Core patch adaptation for v488 (D-139)
+
+#### Automation (xtask)
+
+- New: `[[core.patch.adaptation]]` in `upstream.toml`, a reviewed diff of fork commits applied after the combined PR-U17/#3251 patch to the core it was recorded for (and later ones until replaced); one for a later tag is staged and only verified. The exact-tree check applies the combined diff and then the adaptation, and a core-patch rebase cherry-picks both. The v488 adaptation is recorded (`rtao-core-patch/v488`).
+- New: `keys/hashed.rs` joins the core patch's modify-only path allowlist; the Ed25519 erasure guard also requires, when the core has that file, that its Ed25519 derivation returns `Zeroizing<SigningKey>` and that its regression test and vectors remain. No existing rule changed.
+- New: `[core.patch] shared`, the core's in-repository path packages (v488 adds `subtensor-hashed` and `fips204`), kept at the core tag in the fork's patch table and checked against the core's manifests, so the lock still holds one package from the fork.
+- New: `cargo xtask core-patch verify-security <commit> [<repository>]`, a local, read-only run of the erasure guard.
+- Fixed: `pin --prepare-candidate` with a moved core patch checked the lock before the candidate re-resolves it, so every such core bump failed at provenance; the lock is now checked by the full `pin --check` after the lock stage.
+
+#### rtao-runtime
+
+- Fixed: `CallBytes::decode` refused calls containing a newtype over a sequence (for example `Vec<Vec<u8>>` wrappers) under v488's core, whose encoder tries a bare list before removing a legacy nesting level. The import bridge's private encoder now names such a field and encodes it as a one-field record, the same bytes under every core.
+
+#### rtao-reads
+
+- Fixed: `subnet_states` and `subnet_state` on a runtime without `SubtensorModule.SubnetState` (482 and earlier) returned the core's "not found in this runtime" error instead of the legacy lifecycle.
 
 ### v488 hand ports, fifth batch: planning route, gamma CLI, limit orders (D-137)
 

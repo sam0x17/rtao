@@ -110,10 +110,17 @@ fn nested_options_and_sequence_newtypes_preserve_complete_call_bytes() {
 }
 
 #[test]
-fn private_encoder_changes_only_option_presentation_paths() {
+fn private_encoder_changes_only_option_paths_and_sequence_newtype_names() {
     let runtime = fixture(|_| {});
     let encoder = call_import_encoder(runtime.core()).unwrap();
     let mut changed = 0;
+    let mut named = 0;
+    let is_sequence = |id: u32| {
+        matches!(
+            runtime.core().resolve(id).unwrap().type_def,
+            TypeDef::Sequence(_)
+        )
+    };
     for (original, projected) in runtime.core().types.types.iter().zip(&encoder.types.types) {
         let mut expected = original.clone();
         if expected.ty.path.segments.as_slice() == ["Option"] {
@@ -124,9 +131,31 @@ fn private_encoder_changes_only_option_presentation_paths() {
                 .insert(0, "rtao_call_import".into());
             changed += 1;
         }
+        let mut name = |fields: &mut Vec<scale_info::Field<scale_info::form::PortableForm>>| {
+            if let [field] = fields.as_mut_slice()
+                && field.name.is_none()
+                && is_sequence(field.ty.id)
+            {
+                field.name = Some("rtao_call_import_newtype".into());
+                named += 1;
+            }
+        };
+        let map = expected.ty.path.segments.last().map(String::as_str) == Some("BTreeMap");
+        match &mut expected.ty.type_def {
+            _ if map => {}
+            TypeDef::Composite(composite) => name(&mut composite.fields),
+            TypeDef::Variant(variants) => {
+                for variant in &mut variants.variants {
+                    name(&mut variant.fields);
+                }
+            }
+            _ => {}
+        }
         assert_eq!(&expected, projected);
     }
     assert!(changed >= 2);
+    // NestedSequences and the Option<Vec<_>> payloads of the fixture.
+    assert!(named >= 1);
     assert_eq!(encoder.metadata_bytes, runtime.core().metadata_bytes);
     assert_eq!(encoder.spec_version, runtime.spec_version());
     assert_eq!(encoder.transaction_version, runtime.transaction_version());

@@ -438,7 +438,16 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             None
         };
         verify_pin_identity(&repo, &next)?;
-        verify_manifest(root, &next, opts.prepare_candidate)?;
+        // A moved core patch changes the core's lock source, which the
+        // candidate re-resolves after this step (runtime-adopt's lock stage,
+        // pin-pipeline's core-bump stage) and then verifies with the full
+        // pin --check; until then the lock is not checked here (D-139).
+        verify_manifest(
+            root,
+            &next,
+            opts.prepare_candidate,
+            opts.prepare_candidate && core_moved,
+        )?;
         if current.is_none() || !opts.check {
             record_oracle_lock(root, &repo, &proof.commit)?;
         }
@@ -501,7 +510,7 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             crate::core_patch::prepare_cache(root, &current)?;
         }
         verify_pin_identity(&repo, &current)?;
-        verify_manifest(root, &current, opts.source_only)?;
+        verify_manifest(root, &current, opts.source_only, false)?;
         crate::metadata_pin::verify(root, &current)?;
         crate::network_pin::verify(root, &current)?;
         verify_lock(root, &current)?;
@@ -1533,7 +1542,12 @@ fn verify_git_dependency(item: &Item, tag: &str, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn verify_manifest(root: &Path, pins: &DocumentMut, source_only: bool) -> Result<()> {
+fn verify_manifest(
+    root: &Path,
+    pins: &DocumentMut,
+    source_only: bool,
+    lock_pending: bool,
+) -> Result<()> {
     let manifest = read_document(&root.join("Cargo.toml"))?;
     let tag = pin_string(pins, "core", "tag")?;
     for name in ["bittensor-core", "subtensor-macros", "subtensor-linting"] {
@@ -1583,7 +1597,7 @@ fn verify_manifest(root: &Path, pins: &DocumentMut, source_only: bool) -> Result
         &root.join("xtask/Cargo.toml"),
     )?;
     if source_only {
-        crate::core_patch::verify_source(root, pins)?;
+        crate::core_patch::verify_source_with(root, pins, !lock_pending)?;
         println!(
             "Core patch source identity verified; hosted patched/unpatched API build probes NOT executed."
         );

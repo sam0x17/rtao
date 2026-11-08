@@ -58,10 +58,14 @@ fn decode(value: &Value) -> Result<Option<SubnetLifecycleState>, ReadError> {
     }
 }
 // Match Python's missing-field/value fallback, never transport failures.
+// A runtime before `SubnetState` (482 and earlier) has no such storage: the
+// client reports it as absent from the runtime, which also uses legacy state.
 fn legacy_error(error: &ClientError) -> bool {
     matches!(
         error,
-        ClientError::SurfaceChanged { .. } | ClientError::Decode { .. }
+        ClientError::SurfaceChanged { .. }
+            | ClientError::Decode { .. }
+            | ClientError::Core(rtao_core::CoreError::NotInRuntime(_))
     )
 }
 async fn legacy<V: View + ?Sized>(

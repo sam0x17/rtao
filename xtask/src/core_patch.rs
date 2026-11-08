@@ -22,14 +22,24 @@ const LEDGER_PATHS: [&str; 3] = [
     "sdk/bittensor-core/src/signers/ledger.rs",
     "sdk/bittensor-core/src/signers/hid.rs",
 ];
-const PATHS: [&str; 6] = [
+// Every path is modify-only: a carried diff may change an existing regular
+// source and never add, delete, rename or re-mode one. `keys/hashed.rs` is
+// new in v488, absent at the PR-U17 base, so only a reviewed adaptation
+// (D-139) can change it; it holds the hashed-account Ed25519 keys.
+const PATHS: [&str; 7] = [
     "sdk/bittensor-core/src/signers/mod.rs",
     "sdk/bittensor-core/src/signers/ledger.rs",
     "sdk/bittensor-core/src/signers/hid.rs",
     "sdk/bittensor-core/Cargo.toml",
     "sdk/bittensor-core/src/keys/mod.rs",
     "sdk/bittensor-core/src/keys/encrypted_json.rs",
+    "sdk/bittensor-core/src/keys/hashed.rs",
 ];
+const HASHED: &str = "sdk/bittensor-core/src/keys/hashed.rs";
+// The core's own path packages that always exist; others (v488's
+// `subtensor-hashed` and `fips204`) are found from the core tag's manifests.
+const SHARED_BASE: [&str; 2] = ["subtensor-macros", "w3f-bls"];
+const MAX_ADAPTATIONS: usize = 4;
 const PROBES: [&str; 2] = [
     "bittensor_core::signers::ApduTransport",
     "bittensor_core::signers::ledger::LedgerDevice::with_transport",
@@ -46,6 +56,135 @@ fn tag(value: &str) -> bool {
     value.strip_prefix('v').is_some_and(|suffix| {
         !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
     })
+}
+
+fn tag_number(value: &str) -> Result<u64> {
+    ensure!(tag(value), "invalid release tag {value}");
+    value[1..]
+        .parse()
+        .with_context(|| format!("release tag {value} out of range"))
+}
+
+fn digest(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+/// A reviewed adaptation of the combined patch to a later core (D-139): the
+/// diff `base..rev` (fork commits, every changed path in `PATHS`, digest
+/// `diff_sha256`), applied after the combined patch to a core at `tag` or a
+/// later one until an adaptation for a later tag replaces it. A recorded
+/// adaptation for a tag after the core's is staged for the next core bump.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Adaptation {
+    tag: String,
+    base: String,
+    rev: String,
+    diff_sha256: String,
+}
+
+fn adaptations(patch: &Item) -> Result<Vec<Adaptation>> {
+    let Some(item) = patch.get("adaptation") else {
+        return Ok(Vec::new());
+    };
+    let tables = item
+        .as_array_of_tables()
+        .context("core.patch.adaptation must be an array of tables")?;
+    ensure!(
+        !tables.is_empty() && tables.len() <= MAX_ADAPTATIONS,
+        "core patch needs 1..={MAX_ADAPTATIONS} adaptations when the key exists"
+    );
+    let mut result = Vec::new();
+    let mut tags = BTreeSet::new();
+    for table in tables.iter() {
+        let keys: BTreeSet<_> = table.iter().map(|(key, _)| key).collect();
+        ensure!(
+            keys == BTreeSet::from(["base", "diff_sha256", "rev", "tag"]),
+            "core patch adaptation needs exactly tag, base, rev and diff_sha256"
+        );
+        let text = |key: &str| -> Result<String> {
+            table
+                .get(key)
+                .and_then(Item::as_str)
+                .map(str::to_owned)
+                .with_context(|| format!("core patch adaptation {key} must be a string"))
+        };
+        let adaptation = Adaptation {
+            tag: text("tag")?,
+            base: text("base")?,
+            rev: text("rev")?,
+            diff_sha256: text("diff_sha256")?,
+        };
+        ensure!(
+            tags.insert(tag_number(&adaptation.tag)?),
+            "duplicate core patch adaptation for {}",
+            adaptation.tag
+        );
+        ensure!(
+            hash(&adaptation.base) && hash(&adaptation.rev) && adaptation.base != adaptation.rev,
+            "core patch adaptation commits must be two full immutable Git hashes"
+        );
+        ensure!(
+            digest(&adaptation.diff_sha256),
+            "invalid core patch adaptation diff_sha256"
+        );
+        result.push(adaptation);
+    }
+    result.sort_by_key(|adaptation| tag_number(&adaptation.tag).unwrap_or(u64::MAX));
+    Ok(result)
+}
+
+/// The adaptation a core at `core_tag` carries: the one recorded for the
+/// latest tag not after it.
+fn applicable<'a>(adaptations: &'a [Adaptation], core_tag: &str) -> Result<Option<&'a Adaptation>> {
+    let number = tag_number(core_tag)?;
+    let mut selected = None;
+    for adaptation in adaptations {
+        if tag_number(&adaptation.tag)? <= number {
+            selected = Some(adaptation);
+        }
+    }
+    Ok(selected)
+}
+
+fn adaptation_table(adaptations: &[Adaptation]) -> Item {
+    let mut tables = toml_edit::ArrayOfTables::new();
+    for adaptation in adaptations {
+        let mut table = Table::new();
+        for (key, contents) in [
+            ("tag", &adaptation.tag),
+            ("base", &adaptation.base),
+            ("rev", &adaptation.rev),
+            ("diff_sha256", &adaptation.diff_sha256),
+        ] {
+            table.insert(key, value(contents.as_str()));
+        }
+        tables.push(table);
+    }
+    Item::ArrayOfTables(tables)
+}
+
+fn shared(patch: &Item) -> Result<BTreeSet<String>> {
+    let names = strings(patch, "shared")?;
+    for name in SHARED_BASE {
+        ensure!(
+            names.contains(name),
+            "core patch shared packages lost {name}"
+        );
+    }
+    for name in &names {
+        ensure!(
+            name != "bittensor-core"
+                && !name.is_empty()
+                && name
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_'),
+            "invalid core patch shared package {name}"
+        );
+    }
+    Ok(names)
 }
 
 fn field<'a>(item: &'a Item, name: &str) -> Result<&'a str> {
@@ -131,6 +270,8 @@ fn validate_patch(patch: &Item) -> Result<()> {
             "invalid core patch {key}"
         );
     }
+    shared(patch)?;
+    adaptations(patch)?;
     Ok(())
 }
 
@@ -197,13 +338,22 @@ fn remove_tables(manifest: &mut DocumentMut) -> Result<()> {
     Ok(())
 }
 
-fn patch_tables(manifest: &mut DocumentMut, core_tag: &str, rev: &str) -> Result<()> {
+fn patch_tables(
+    manifest: &mut DocumentMut,
+    core_tag: &str,
+    rev: &str,
+    shared: &BTreeSet<String>,
+) -> Result<()> {
     remove_tables(manifest)?;
     let mut core = Table::new();
     core.insert("bittensor-core", dependency(FORK, "rev", rev));
     manifest["patch"][UPSTREAM] = Item::Table(core);
+    // The patched core's own path packages would otherwise come from the
+    // fork's checkout: keep every one at the core tag, so the core is the
+    // only package from the fork (D-139; v488 adds subtensor-hashed and
+    // its fips204).
     let mut other = Table::new();
-    for name in ["w3f-bls", "subtensor-macros"] {
+    for name in shared {
         other.insert(name, dependency(UPSTREAM, "tag", core_tag));
     }
     manifest["patch"][FORK] = Item::Table(other);
@@ -220,6 +370,7 @@ fn verify_tables(manifest: &DocumentMut, pins: &DocumentMut) -> Result<()> {
             &mut expected,
             field(&pins["core"], "tag")?,
             field(patch, "rev")?,
+            &shared(patch)?,
         )?;
         for repo in [UPSTREAM, FORK] {
             let left = actual.get(repo).context("core patch Cargo table missing")?;
@@ -368,6 +519,37 @@ fn diff_digest(repo: &Path, base: &str, rev: &str) -> Result<String> {
     diff_digest_paths(repo, base, rev, &PATHS)
 }
 
+/// An adaptation's own provenance: a linear series of 1..=20 fork commits
+/// whose net diff changes only existing regular sources in `PATHS` and has
+/// the recorded digest. Returns the commits, oldest first.
+fn verify_adaptation(repo: &Path, adaptation: &Adaptation) -> Result<Vec<String>> {
+    verify_diff(repo, &adaptation.base, &adaptation.rev)
+        .with_context(|| format!("core patch adaptation for {}", adaptation.tag))?;
+    ensure!(
+        diff_digest(repo, &adaptation.base, &adaptation.rev)? == adaptation.diff_sha256,
+        "recorded core patch adaptation diff for {} changed",
+        adaptation.tag
+    );
+    let commits = git_text(
+        repo,
+        &[
+            "rev-list",
+            "--reverse",
+            "--ancestry-path",
+            &format!("{}..{}", adaptation.base, adaptation.rev),
+        ],
+    )?
+    .lines()
+    .map(str::to_owned)
+    .collect::<Vec<_>>();
+    ensure!(
+        !commits.is_empty() && commits.len() <= 20 && commits.iter().all(|commit| hash(commit)),
+        "core patch adaptation for {} needs 1..=20 linear commits",
+        adaptation.tag
+    );
+    Ok(commits)
+}
+
 fn verify_review(repo: &Path, entry: &Item) -> Result<()> {
     let review_base = field(entry, "review_base")?;
     let review_rev = field(entry, "review_rev")?;
@@ -376,11 +558,27 @@ fn verify_review(repo: &Path, entry: &Item) -> Result<()> {
         diff_digest(repo, review_base, review_rev)? == field(entry, "review_diff_sha256")?,
         "recorded core patch diff changed"
     );
+    let recorded = adaptations(entry)?;
+    for adaptation in &recorded {
+        verify_adaptation(repo, adaptation)?;
+    }
+    let applied = if recorded.is_empty() {
+        None
+    } else {
+        let core_tag = field(entry, "branch")?
+            .strip_prefix("rtao-core-patch/")
+            .context("unexpected core patch branch prefix")?;
+        applicable(&recorded, core_tag)?
+    };
     let base = field(entry, "base")?;
-    let expected = if base == review_base {
+    let expected = if base == review_base && applied.is_none() {
         git_text(repo, &["rev-parse", &format!("{review_rev}^{{tree}}")])?
     } else {
-        applied_review_tree(repo, base, review_base, review_rev)?
+        let mut diffs = vec![(review_base, review_rev)];
+        if let Some(adaptation) = applied {
+            diffs.push((adaptation.base.as_str(), adaptation.rev.as_str()));
+        }
+        applied_review_tree(repo, base, &diffs)?
     };
     let actual = git_text(
         repo,
@@ -428,6 +626,7 @@ fn verify_security_source_text(manifest: &str, sources: &[(String, String)]) -> 
     }
     let mut keys = None;
     let mut encrypted = None;
+    let mut hashed = None;
     for (path, text) in sources {
         let file = syn::parse_file(text)
             .with_context(|| format!("core patch source does not parse: {path}"))?;
@@ -442,6 +641,8 @@ fn verify_security_source_text(manifest: &str, sources: &[(String, String)]) -> 
             keys = Some((file, text));
         } else if path.ends_with("src/keys/encrypted_json.rs") {
             encrypted = Some(text);
+        } else if path == HASHED {
+            hashed = Some((file, text));
         }
     }
     let (keys, keys_text) = keys.context("core patch lost keys/mod.rs")?;
@@ -527,6 +728,72 @@ fn verify_security_source_text(manifest: &str, sources: &[(String, String)]) -> 
             "encrypted JSON import bypasses a wiping Ed25519 owner: {required}"
         );
     }
+    if let Some((file, text)) = hashed {
+        verify_hashed_source(&file, text)?;
+    }
+    Ok(())
+}
+
+// v488's hashed accounts derive one Ed25519 signing key per generation
+// (`keys/hashed.rs`). Beyond the type-position rule above, which already
+// refuses `ed25519::Pair` there, the derivation must return the wiping owner
+// and the regression test pinning the v488 bytes must remain (D-139).
+fn verify_hashed_source(file: &syn::File, text: &str) -> Result<()> {
+    use syn::visit::Visit;
+    fn tokens(value: &impl quote::ToTokens) -> String {
+        value.to_token_stream().to_string().replace(' ', "")
+    }
+    struct Items {
+        derive: Vec<String>,
+        tests: BTreeSet<String>,
+    }
+    impl<'ast> Visit<'ast> for Items {
+        fn visit_impl_item_fn(&mut self, node: &'ast syn::ImplItemFn) {
+            if node.sig.ident == "derive_ed" || node.sig.ident == "ed_at" {
+                self.derive.push(tokens(&node.sig.output));
+            }
+            syn::visit::visit_impl_item_fn(self, node);
+        }
+        fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
+            if node.sig.ident == "derive_ed" || node.sig.ident == "ed_at" {
+                self.derive.push(tokens(&node.sig.output));
+            }
+            if node.attrs.iter().any(|attr| attr.path().is_ident("test")) {
+                self.tests.insert(node.sig.ident.to_string());
+            }
+            syn::visit::visit_item_fn(self, node);
+        }
+    }
+    let mut items = Items {
+        derive: Vec::new(),
+        tests: BTreeSet::new(),
+    };
+    items.visit_file(file);
+    ensure!(
+        items.derive.len() == 2
+            && items
+                .derive
+                .iter()
+                .all(|output| output == "->Result<Zeroizing<SigningKey>,CoreError>"),
+        "hashed-account Ed25519 derivation does not return the wiping owner: {:?}",
+        items.derive
+    );
+    ensure!(
+        items
+            .tests
+            .contains("hashed_ed25519_signing_key_has_a_wiping_owner_and_keeps_vectors"),
+        "core patch lost the hashed Ed25519 erasure regression test"
+    );
+    for required in [
+        "8b9c4ae043290453eb92a40d48f5074178031bc6623e60544ae4a2f5ab6542a1",
+        "87ba9efaab5ed270bf9fa5e8a4101283cd6ba1541f9166177778f1ca47aa88c7",
+        "5EPuttWmgUjN8Wq2qKELKso6WrfRpBpgZpuNRzAwyAgQTXzo",
+    ] {
+        ensure!(
+            text.contains(required),
+            "core patch lost a hashed Ed25519 compatibility vector: {required}"
+        );
+    }
     Ok(())
 }
 
@@ -554,12 +821,9 @@ fn verify_security_source(repo: &Path, rev: &str) -> Result<()> {
     verify_security_source_text(&source("sdk/bittensor-core/Cargo.toml")?, &sources)
 }
 
-fn applied_review_tree(
-    repo: &Path,
-    base: &str,
-    review_base: &str,
-    review_rev: &str,
-) -> Result<String> {
+/// The exact tree of `base` with each reviewed diff applied in order (the
+/// combined patch, then the core's adaptation when it has one).
+fn applied_review_tree(repo: &Path, base: &str, diffs: &[(&str, &str)]) -> Result<String> {
     use std::io::Write;
     use std::process::Stdio;
     let temporary = hosted_root()?.join("core-patch");
@@ -588,36 +852,38 @@ fn applied_review_tree(
             output.status.success(),
             "cannot initialize isolated review index"
         );
-        let diff = git(
-            repo,
-            &[
-                "diff",
-                "--binary",
-                "--full-index",
-                "--no-ext-diff",
-                "--no-renames",
-                review_base,
-                review_rev,
-            ],
-        )?;
-        ensure!(diff.len() <= 1_048_576, "core patch diff exceeds 1 MiB");
-        let mut child = command()
-            .args(["apply", "--cached", "--3way", "-"])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-        child
-            .stdin
-            .take()
-            .context("review apply stdin missing")?
-            .write_all(&diff)?;
-        let output = child.wait_with_output()?;
-        ensure!(
-            output.status.success(),
-            "core-patch-conflict: recorded core patch does not apply to core base: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        for (from, to) in diffs {
+            let diff = git(
+                repo,
+                &[
+                    "diff",
+                    "--binary",
+                    "--full-index",
+                    "--no-ext-diff",
+                    "--no-renames",
+                    from,
+                    to,
+                ],
+            )?;
+            ensure!(diff.len() <= 1_048_576, "core patch diff exceeds 1 MiB");
+            let mut child = command()
+                .args(["apply", "--cached", "--3way", "-"])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()?;
+            child
+                .stdin
+                .take()
+                .context("review apply stdin missing")?
+                .write_all(&diff)?;
+            let output = child.wait_with_output()?;
+            ensure!(
+                output.status.success(),
+                "core-patch-conflict: recorded core patch {from}..{to} does not apply to core base: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
         let output = command().arg("write-tree").output()?;
         ensure!(
             output.status.success(),
@@ -712,10 +978,12 @@ fn probe(root: &Path, pins: &DocumentMut, patched: bool) -> Result<Output> {
         "[workspace]\n[package]\nname = \"rtao-core-patch-probe\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[dependencies]\nbittensor-core = {{ git = {UPSTREAM:?}, tag = {core_tag:?}, default-features = false, features = [\"ledger\"] }}\n[patch.crates-io]\nw3f-bls = {{ git = {UPSTREAM:?}, tag = {core_tag:?} }}\n"
     ).parse()?;
     if patched {
+        let entry = patch(pins)?.context("patch missing")?;
         patch_tables(
             &mut manifest,
             core_tag,
-            field(patch(pins)?.context("patch missing")?, "rev")?,
+            field(entry, "rev")?,
+            &shared(entry)?,
         )?;
     }
     fs::write(directory.join("Cargo.toml"), manifest.to_string())?;
@@ -762,9 +1030,17 @@ fn probe(root: &Path, pins: &DocumentMut, patched: bool) -> Result<Output> {
 
 /// Source and identity checks, without executing hosted API build probes.
 pub(crate) fn verify_source(root: &Path, pins: &DocumentMut) -> Result<()> {
+    verify_source_with(root, pins, true)
+}
+
+/// As `verify_source`; `lock` false skips only the lockfile check, for a
+/// candidate whose moved core is re-resolved and fully checked afterwards.
+pub(crate) fn verify_source_with(root: &Path, pins: &DocumentMut, lock: bool) -> Result<()> {
     verify_tables(&read_document(&root.join("Cargo.toml"))?, pins)?;
     verify_clippy(root)?;
-    verify_lock(&read_document(&root.join("Cargo.lock"))?, pins)?;
+    if lock {
+        verify_lock(&read_document(&root.join("Cargo.lock"))?, pins)?;
+    }
     if let Some(patch) = patch(pins)? {
         let repo = cached_repo(root)?;
         let rev = field(patch, "rev")?;
@@ -772,6 +1048,10 @@ pub(crate) fn verify_source(root: &Path, pins: &DocumentMut) -> Result<()> {
             .context("patch source cache missing; prepare it explicitly in hosted CI")?;
         verify_diff(&repo, field(patch, "base")?, rev)?;
         verify_review(&repo, patch)?;
+        ensure!(
+            shared(patch)? == crate::fingerprint::core_path_packages(&repo, field(patch, "base")?)?,
+            "core patch shared packages differ from the core's path packages at core.commit"
+        );
         let review_base = field(patch, "review_base")?;
         let upstream_pr_rev = field(patch, "upstream_pr_rev")?;
         verify_diff_paths(&repo, review_base, upstream_pr_rev, &LEDGER_PATHS)?;
@@ -802,11 +1082,15 @@ pub(crate) fn prepare_cache(root: &Path, pins: &DocumentMut) -> Result<()> {
     };
     hosted_root()?;
     let repo = cached_repo(root)?;
+    let recorded = adaptations(entry)?;
     for revision in [
         field(entry, "rev")?,
         field(entry, "review_rev")?,
         field(entry, "upstream_pr_rev")?,
-    ] {
+    ]
+    .into_iter()
+    .chain(recorded.iter().map(|adaptation| adaptation.rev.as_str()))
+    {
         git(&repo, &["fetch", "--filter=blob:none", FORK, revision])?;
     }
     Ok(())
@@ -949,7 +1233,30 @@ pub(crate) fn rebase_candidate(
     let review_base = field(previous, "review_base")?.to_owned();
     let review_rev = field(previous, "review_rev")?.to_owned();
     git(&repo, &["fetch", "--filter=blob:none", FORK, &review_rev])?;
+    let recorded = adaptations(previous)?;
+    for adaptation in &recorded {
+        git(
+            &repo,
+            &["fetch", "--filter=blob:none", FORK, &adaptation.rev],
+        )?;
+    }
     verify_review(&repo, previous)?;
+    // The new core carries the adaptation recorded for it (or the latest
+    // earlier one); adaptations staged for later cores stay recorded.
+    let adaptation = applicable(&recorded, &target)?.cloned();
+    let retained: Vec<Adaptation> = recorded
+        .iter()
+        .filter(|candidate| match &adaptation {
+            Some(selected) => tag_number(&candidate.tag).ok() >= tag_number(&selected.tag).ok(),
+            None => true,
+        })
+        .cloned()
+        .collect();
+    let adaptation_commits = match &adaptation {
+        Some(adaptation) => verify_adaptation(&repo, adaptation)?,
+        None => Vec::new(),
+    };
+    let shared_packages = crate::fingerprint::core_path_packages(&repo, &base)?;
     ensure!(
         ancestor(&repo, &ledger_rev, &review_rev)?,
         "PR-U17 is not an ancestor of the combined core patch review"
@@ -1022,6 +1329,14 @@ pub(crate) fn rebase_candidate(
             }
             entry.insert(key, value(array));
         }
+        let mut array = Array::new();
+        for name in &shared_packages {
+            array.push(name.as_str());
+        }
+        entry.insert("shared", value(array));
+        if !retained.is_empty() {
+            entry.insert("adaptation", adaptation_table(&retained));
+        }
         Ok(Item::Table(entry))
     };
     if let Some(remote) = &remote {
@@ -1043,7 +1358,7 @@ pub(crate) fn rebase_candidate(
             let mut prepared = next.clone();
             prepared["core"]["patch"] = entry;
             let mut manifest = read_document(&root.join("Cargo.toml"))?;
-            patch_tables(&mut manifest, &target, remote)?;
+            patch_tables(&mut manifest, &target, remote, &shared_packages)?;
             verify_tables(&manifest, &prepared)?;
             atomic_write(&root.join("Cargo.toml"), manifest.to_string().as_bytes())?;
             *next = prepared;
@@ -1065,7 +1380,7 @@ pub(crate) fn rebase_candidate(
             previous_same.is_none(),
             "recorded patch branch disappeared; do not recreate or delete pinned history"
         );
-        if base == review_base {
+        if base == review_base && adaptation.is_none() {
             // No new Git object is needed: the authorized publisher can create
             // this ref at the existing reviewed commit using their own access.
             let entry = entry_for(&review_rev)?;
@@ -1119,7 +1434,8 @@ pub(crate) fn rebase_candidate(
             ],
         )?;
     }
-    for commit in commits {
+    // The combined review series, then the new core's reviewed adaptation.
+    for commit in commits.iter().chain(&adaptation_commits) {
         let output = Command::new("git")
             .arg("-C")
             .arg(&directory)
@@ -1130,7 +1446,7 @@ pub(crate) fn rebase_candidate(
                 "user.email=core-patch@users.noreply.github.com",
                 "cherry-pick",
                 "--keep-redundant-commits",
-                &commit,
+                commit,
             ])
             .output()?;
         ensure!(
@@ -1257,7 +1573,27 @@ pub(crate) fn run(arguments: Vec<String>) -> Result<()> {
             atomic_write(&root.join("upstream.toml"), pins.to_string().as_bytes())?;
             Ok(())
         }
-        _ => bail!("usage: cargo xtask core-patch rebase <vN> | strip"),
+        [command, rev, rest @ ..] if command == "verify-security" && rest.len() <= 1 => {
+            // Read-only and local: runs the Ed25519 erasure check on a
+            // carried tree before it is published (D-139). Without a
+            // repository it fetches the commit from the fork into the
+            // upstream cache; nothing is built.
+            ensure!(hash(rev), "verify-security needs a full commit hash");
+            let repo = match rest.first() {
+                Some(path) => PathBuf::from(path),
+                None => {
+                    let repo = cached_repo(root)?;
+                    git(&repo, &["fetch", "--filter=blob:none", FORK, rev])?;
+                    repo
+                }
+            };
+            verify_security_source(&repo, rev)?;
+            println!("{rev}: the core sources pass the Ed25519 erasure check");
+            Ok(())
+        }
+        _ => bail!(
+            "usage: cargo xtask core-patch rebase <vN> | strip | verify-security <commit> [<repository>]"
+        ),
     }
 }
 
@@ -1285,7 +1621,11 @@ mod tests {
         ] {
             entry.insert(key, value(contents));
         }
-        for (key, values) in [("paths", &PATHS[..]), ("probe", &PROBES[..])] {
+        for (key, values) in [
+            ("paths", &PATHS[..]),
+            ("probe", &PROBES[..]),
+            ("shared", &SHARED_BASE[..]),
+        ] {
             let mut array = Array::new();
             for path in values {
                 array.push(*path);
@@ -1295,8 +1635,35 @@ mod tests {
         pins["core"]["patch"] = Item::Table(entry);
         let mut manifest: DocumentMut =
             "[patch.crates-io]\nw3f-bls={git='upstream',tag='v478'}\n".parse()?;
-        patch_tables(&mut manifest, "v478", &rev)?;
+        let shared_names: BTreeSet<String> = SHARED_BASE.iter().map(|n| n.to_string()).collect();
+        patch_tables(&mut manifest, "v478", &rev, &shared_names)?;
         verify_tables(&manifest, &pins)?;
+        // A core with more path packages (v488's subtensor-hashed and
+        // fips204) keeps every one of them at the core tag.
+        let mut wider = pins.clone();
+        let mut names = Array::new();
+        for name in ["fips204", "subtensor-hashed", "subtensor-macros", "w3f-bls"] {
+            names.push(name);
+        }
+        wider["core"]["patch"]["shared"] = value(names);
+        assert!(verify_tables(&manifest, &wider).is_err());
+        let mut wide_manifest = manifest.clone();
+        patch_tables(
+            &mut wide_manifest,
+            "v478",
+            &rev,
+            &shared(&wider["core"]["patch"])?,
+        )?;
+        verify_tables(&wide_manifest, &wider)?;
+        assert_eq!(
+            wide_manifest["patch"][FORK]["subtensor-hashed"]["tag"].as_str(),
+            Some("v478")
+        );
+        let mut lost = pins.clone();
+        let mut names = Array::new();
+        names.push("w3f-bls");
+        lost["core"]["patch"]["shared"] = value(names);
+        assert!(shared(&lost["core"]["patch"]).is_err());
         let source = expected_core_source(&pins)?;
         let lock: DocumentMut =
             format!("[[package]]\nname='bittensor-core'\nsource='{source}'\n").parse()?;
@@ -1420,6 +1787,110 @@ const V: [&str; 4] = [
         let mut missing = sources(keys, "");
         missing[1].1 = "fn f() {}".to_owned();
         assert!(verify_security_source_text(manifest, &missing).is_err());
+
+        // v488's hashed accounts (D-139): the derivation returns the wiping
+        // owner and the regression test with its v488 vectors remains.
+        let hashed = r#"
+use ed25519_zebra::{SigningKey, VerificationKey};
+impl HashedKeypair {
+    fn derive_ed(master: &[u8; 32], generation: u64) -> Result<Zeroizing<SigningKey>, CoreError> { todo!() }
+    fn ed_at(&self, generation: u64) -> Result<Zeroizing<SigningKey>, CoreError> { todo!() }
+}
+fn check() -> bool { ed25519::Pair::verify(&s, m, &p) }
+mod tests {
+    #[test]
+    fn hashed_ed25519_signing_key_has_a_wiping_owner_and_keeps_vectors() {
+        let v = [
+            "8b9c4ae043290453eb92a40d48f5074178031bc6623e60544ae4a2f5ab6542a1",
+            "87ba9efaab5ed270bf9fa5e8a4101283cd6ba1541f9166177778f1ca47aa88c7",
+            "5EPuttWmgUjN8Wq2qKELKso6WrfRpBpgZpuNRzAwyAgQTXzo",
+        ];
+    }
+}
+"#;
+        let with_hashed = |hashed: &str| {
+            let mut all = sources(keys, "");
+            all.push((HASHED.to_owned(), hashed.to_owned()));
+            all
+        };
+        verify_security_source_text(manifest, &with_hashed(hashed))?;
+        for mutant in [
+            // v488 as released: derives the non-wiping sp_core pair.
+            hashed.replace(
+                "Result<Zeroizing<SigningKey>, CoreError> { todo!() }\n    fn ed_at",
+                "Result<ed25519::Pair, CoreError> { todo!() }\n    fn ed_at",
+            ),
+            hashed.replace(
+                "fn ed_at(&self, generation: u64) -> Result<Zeroizing<SigningKey>, CoreError>",
+                "fn ed_at(&self, generation: u64) -> Result<SigningKey, CoreError>",
+            ),
+            hashed.replace("fn ed_at", "fn renamed_ed_at"),
+            hashed.replace("    #[test]\n", ""),
+            hashed.replace("8b9c4ae0", "0b9c4ae0"),
+            format!("{hashed}\nfn leak() -> sp_core::ed25519::Pair {{ todo!() }}"),
+        ] {
+            assert!(
+                verify_security_source_text(manifest, &with_hashed(&mutant)).is_err(),
+                "{mutant}"
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn adaptations_are_exact_and_the_latest_recorded_for_a_core_applies() -> Result<()> {
+        let one = |tag: &str, base: char, rev: char| {
+            format!(
+                "[[adaptation]]\ntag = '{tag}'\nbase = '{}'\nrev = '{}'\ndiff_sha256 = '{}'\n",
+                base.to_string().repeat(40),
+                rev.to_string().repeat(40),
+                "a".repeat(64)
+            )
+        };
+        let parse = |text: &str| -> Result<Vec<Adaptation>> {
+            let document: DocumentMut = text.parse()?;
+            adaptations(document.as_item())
+        };
+        assert!(parse("")?.is_empty());
+        let recorded = parse(&format!(
+            "{}{}",
+            one("v500", '3', '4'),
+            one("v488", '1', '2')
+        ))?;
+        assert_eq!(
+            recorded.iter().map(|a| a.tag.as_str()).collect::<Vec<_>>(),
+            ["v488", "v500"]
+        );
+        assert_eq!(applicable(&recorded, "v478")?, None);
+        assert_eq!(
+            applicable(&recorded, "v488")?.map(|a| a.tag.as_str()),
+            Some("v488")
+        );
+        assert_eq!(
+            applicable(&recorded, "v499")?.map(|a| a.tag.as_str()),
+            Some("v488")
+        );
+        assert_eq!(
+            applicable(&recorded, "v501")?.map(|a| a.tag.as_str()),
+            Some("v500")
+        );
+        for bad in [
+            format!("{}{}", one("v488", '1', '2'), one("v488", '3', '4')),
+            one("488", '1', '2'),
+            one("v488", '1', '1'),
+            one("v488", 'g', '2'),
+            one("v488", '1', '2').replace(&"a".repeat(64), &"A".repeat(64)),
+            format!("{}extra = 'x'\n", one("v488", '1', '2')),
+            one("v488", '1', '2').replace("tag = 'v488'\n", ""),
+            "adaptation = []\n".to_owned(),
+            (0..5).map(|n| one(&format!("v48{n}"), '1', '2')).collect(),
+        ] {
+            assert!(parse(&bad).is_err(), "{bad}");
+        }
+        let table = adaptation_table(&recorded);
+        let mut document = DocumentMut::new();
+        document["adaptation"] = table;
+        assert_eq!(adaptations(document.as_item())?, recorded);
         Ok(())
     }
 
@@ -1503,6 +1974,93 @@ const V: [&str; 4] = [
             )?;
             let executable = git_text(&root, &["rev-parse", "HEAD"])?;
             assert!(verify_diff(&root, &next_base, &executable).is_err());
+
+            // D-139: a later core adds a source absent at the review base.
+            // The review series cannot add or touch it; a reviewed adaptation
+            // after the carried review may modify it.
+            // --force: the index-only mode change above left the work tree
+            // file with its old mode.
+            git(
+                &root,
+                &["checkout", "--quiet", "--force", "--detach", &next_base],
+            )?;
+            let hashed = root.join(HASHED);
+            fs::create_dir_all(hashed.parent().context("fixture hashed parent")?)?;
+            fs::write(&hashed, "pub fn derive() -> Pair {}\n")?;
+            git(&root, &["add", "."])?;
+            git(
+                &root,
+                &[
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    "core release with a new key source",
+                ],
+            )?;
+            let newer_base = git_text(&root, &["rev-parse", "HEAD"])?;
+            assert!(verify_diff(&root, &next_base, &newer_base).is_err());
+            git(&root, &["cherry-pick", &review])?;
+            let carried = git_text(&root, &["rev-parse", "HEAD"])?;
+            fs::write(&hashed, "pub fn derive() -> Zeroizing<SigningKey> {}\n")?;
+            git(&root, &["commit", "--quiet", "-am", "reviewed adaptation"])?;
+            let adapted = git_text(&root, &["rev-parse", "HEAD"])?;
+            let adaptation = Adaptation {
+                tag: "v488".into(),
+                base: carried.clone(),
+                rev: adapted.clone(),
+                diff_sha256: diff_digest(&root, &carried, &adapted)?,
+            };
+            assert_eq!(
+                verify_adaptation(&root, &adaptation)?,
+                std::slice::from_ref(&adapted)
+            );
+            let adapted_entry = |tag: &str, rev: &str, adaptation: Option<&Adaptation>| {
+                let mut entry = entry(&base, rev);
+                entry["base"] = value(&newer_base);
+                entry["branch"] = value(format!("rtao-core-patch/{tag}"));
+                if let Some(adaptation) = adaptation {
+                    entry["adaptation"] = adaptation_table(std::slice::from_ref(adaptation));
+                }
+                entry
+            };
+            verify_diff(&root, &newer_base, &adapted)?;
+            verify_review(&root, &adapted_entry("v488", &adapted, Some(&adaptation)))?;
+            // Without the adaptation, or on a core before its tag, the
+            // adapted tree is not the reviewed one; the carried review is.
+            assert!(verify_review(&root, &adapted_entry("v488", &adapted, None)).is_err());
+            assert!(
+                verify_review(&root, &adapted_entry("v487", &adapted, Some(&adaptation))).is_err()
+            );
+            verify_review(&root, &adapted_entry("v487", &carried, Some(&adaptation)))?;
+            // A recorded digest binds the adaptation's exact bytes.
+            let mut wrong = adaptation.clone();
+            wrong.diff_sha256 = "0".repeat(64);
+            assert!(verify_review(&root, &adapted_entry("v488", &adapted, Some(&wrong))).is_err());
+            // An adaptation may not reach outside the allowlist or add files.
+            fs::write(
+                root.join("forbidden.txt"),
+                "unexpected adaptation content\n",
+            )?;
+            git(&root, &["add", "."])?;
+            git(
+                &root,
+                &[
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    "adaptation outside the allowlist",
+                ],
+            )?;
+            let outside = Adaptation {
+                rev: git_text(&root, &["rev-parse", "HEAD"])?,
+                diff_sha256: diff_digest(
+                    &root,
+                    &carried,
+                    &git_text(&root, &["rev-parse", "HEAD"])?,
+                )?,
+                ..adaptation.clone()
+            };
+            assert!(verify_adaptation(&root, &outside).is_err());
             Ok(())
         })();
         // Every child above is synchronous and has exited. Only this exact

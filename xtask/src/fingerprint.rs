@@ -74,6 +74,22 @@ pub(crate) fn resolved_graph(repo: &Path, revision: &str) -> Result<Vec<LockedPa
         .collect())
 }
 
+/// Names of the in-repository path packages the core depends on through
+/// normal and build edges (all features, transitively), the core excluded.
+///
+/// A core patched from the fork takes these from the fork's checkout too, so
+/// the core patch keeps each of them at the core tag (D-139).
+pub(crate) fn core_path_packages(repo: &Path, revision: &str) -> Result<BTreeSet<String>> {
+    let mut inputs = Inputs::new(repo, revision)?;
+    inputs.visit(CORE)?;
+    Ok(inputs
+        .paths
+        .into_iter()
+        .filter(|(path, _)| path != CORE)
+        .map(|(_, package)| package.name)
+        .collect())
+}
+
 /// Populate external source caches during bootstrap; ordinary pin checks are offline.
 pub(crate) fn prepare_source_cache(repo: &Path, revision: &str) -> Result<()> {
     Inputs::new(repo, revision)?.resolve(true)

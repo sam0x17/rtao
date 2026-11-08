@@ -19,8 +19,15 @@ security_issue = "https://github.com/RaoFoundation/subtensor/issues/3251"
 review_base = "850f2755bb05a3851f948489f0ab27b0645cebce"
 review_rev = "5f2477f5290f5f4cb467524754cc025626b52974"
 review_diff_sha256 = "8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489"
-paths = ["sdk/bittensor-core/src/signers/mod.rs", "sdk/bittensor-core/src/signers/ledger.rs", "sdk/bittensor-core/src/signers/hid.rs", "sdk/bittensor-core/Cargo.toml", "sdk/bittensor-core/src/keys/mod.rs", "sdk/bittensor-core/src/keys/encrypted_json.rs"]
+paths = ["sdk/bittensor-core/src/signers/mod.rs", "sdk/bittensor-core/src/signers/ledger.rs", "sdk/bittensor-core/src/signers/hid.rs", "sdk/bittensor-core/Cargo.toml", "sdk/bittensor-core/src/keys/mod.rs", "sdk/bittensor-core/src/keys/encrypted_json.rs", "sdk/bittensor-core/src/keys/hashed.rs"]
 probe = ["bittensor_core::signers::ApduTransport", "bittensor_core::signers::ledger::LedgerDevice::with_transport"]
+shared = ["subtensor-macros", "w3f-bls"]
+
+[[core.patch.adaptation]]
+tag = "v488"
+base = "f06ee33f12973ae890ed473255092e151d95a86e"
+rev = "cd1a2e6ae41bf558eef8e21d00348c5a65e77d33"
+diff_sha256 = "7dee4055f6ca8f29427912161fa51f279b9dfe91c412f80283dda3d0171a7f2b"
 
 [parity]
 tag = "v488"

@@ -127,3 +127,57 @@ the final head is recorded in `docs/execution/state.md`.
 
 No new emulator transcript was recorded, and no hardware, HID, firmware, app
 acceptance or screen evidence is claimed.
+
+## The v488 adaptation (D-139)
+
+v488 adds `keys/hashed.rs`, which derived each hashed-account Ed25519 key as
+`sp_core::ed25519::Pair`: the defect the repair above closes for ordinary
+keys. The erasure guard refused the carried tree (runtime-adopt run
+[42424054620](https://github.com/sam0x17/rtao/actions/runs/42424054620)).
+The reviewed combined patch also applies to v488 only textually: v488's new
+post-quantum and hashed `from_mnemonic` arms still returned a plain
+`Vec<u8>` seed where the repair made it `Zeroizing<Vec<u8>>`, so the
+carried core did not compile.
+
+The fix is a reviewed adaptation, recorded as `[[core.patch.adaptation]]`
+in `upstream.toml`, not a change to the combined review. It is the diff
+between two fork commits on `rtao-core-patch/v488`:
+
+- base `f06ee33f12973ae890ed473255092e151d95a86e`, the four reviewed commits
+  cherry-picked onto v488 (its tree equals the combined diff applied three-way
+  to v488, as the verifier computes it);
+- rev `cd1a2e6ae41bf558eef8e21d00348c5a65e77d33`, two commits: the
+  `from_mnemonic` seeds as `Zeroizing<Vec<u8>>`, and `HashedKeypair`'s
+  Ed25519 derivation into `Zeroizing<ed25519_zebra::SigningKey>` with the
+  master seed copied straight into its wiping buffer;
+- digest `7dee4055f6ca8f29427912161fa51f279b9dfe91c412f80283dda3d0171a7f2b`.
+
+The same `hashed.rs` change (identical blob) is proposed upstream in
+[RaoFoundation/subtensor#3317](https://github.com/RaoFoundation/subtensor/pull/3317),
+with the `ed25519-zebra` dependency that the combined patch already adds.
+A regression test pins the hashed Ed25519 public keys, a transaction proof
+and a message envelope recorded with the previous derivation; the fork's 136
+core library tests pass on the adapted tree.
+
+Rules. `keys/hashed.rs` joins the path allowlist. Every carried path is
+modify-only, so the combined review (based at v478, where the file does not
+exist) cannot touch it; only an adaptation can. An adaptation is 1..=20
+linear fork commits whose net diff changes only allowlisted regular sources
+and matches its digest. The applied adaptation is the one recorded for the
+latest tag not after the core's; one for a later tag is staged (verified, not
+applied), which is how this one is recorded while the core is still v478.
+The exact-tree check applies the combined diff and then the adaptation. A
+rebase cherry-picks both series and keeps the applied adaptation and any
+staged ones. The erasure guard is unchanged and additionally requires, when
+the core has `keys/hashed.rs`, that `derive_ed` and `ed_at` return
+`Result<Zeroizing<SigningKey>, CoreError>` and that the hashed regression
+test and its vectors remain. `cargo xtask core-patch verify-security
+<commit> [<repository>]` runs the guard locally and read-only; it refuses
+v488 with the combined patch alone and passes the adapted tip.
+
+v488's core also has more in-repository path packages (`subtensor-hashed`
+and its `fips204`). A core patched from the fork would take them from the
+fork's checkout, so `[core.patch] shared` lists every path package of the
+core at its commit (computed from the core's manifests and checked by
+`pin --check`), and the fork's patch table keeps each at the core tag. The
+lock still holds exactly one package from the fork.
