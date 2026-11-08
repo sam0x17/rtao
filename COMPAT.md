@@ -3,7 +3,7 @@
 
 | rtao | core tag (commit) | parity tag (Python source version) | validated spec range | btauth | interop target |
 |---|---|---|---|---|---|
-| 0.1.0 | v478 (`850f2755bb05a3851f948489f0ab27b0645cebce`) | v488 (11.3.2.dev0) | None recorded | btauth/1 | `bittensor` @ v488 (`b6a81d144078eac18bd25c3af7cb31579bb670f3`) |
+| 0.1.0 | v488 (`b6a81d144078eac18bd25c3af7cb31579bb670f3`) | v488 (11.3.2.dev0) | None recorded | btauth/1 | `bittensor` @ v488 (`b6a81d144078eac18bd25c3af7cb31579bb670f3`) |
 
 No PyPI release has been verified from the pinned Python commit. The Python version above is the source project version.
 
@@ -50,11 +50,11 @@ Distinct package identities reached through normal and build edges, excluding de
 
 | target | profile | packages | core host | report |
 |---|---|---:|---|---|
-| `aarch64-apple-darwin` | `core-no-host` | 225 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
-| `aarch64-apple-darwin` | `validator` | 362 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
-| `aarch64-apple-darwin` | `miner` | 366 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
-| `aarch64-apple-darwin` | `owner` | 417 | true | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
+| `aarch64-apple-darwin` | `core-no-host` | 232 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
+| `aarch64-apple-darwin` | `validator` | 369 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
+| `aarch64-apple-darwin` | `miner` | 373 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
+| `aarch64-apple-darwin` | `owner` | 424 | true | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 
-Measured on `x86_64-unknown-linux-gnu` with `rustc 1.99.0 (b940084d7 2026-09-28)`, source `9aa1b1652289e2ee339e851603fe78176d65dfc8` with dependency changes in the working tree; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
+Measured on `x86_64-unknown-linux-gnu` with `rustc 1.99.0 (b940084d7 2026-09-28)`, source `018981f854ce7a1be33b380e6faafd8d964bc27a` with dependency changes in the working tree; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
 
 Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. Validation evidence comes from `pr-gates` with `validate_compat=true` and is adopted with `ci/compat/adopt.sh`. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).

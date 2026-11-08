@@ -94,4 +94,4 @@ bench = false
 
 # Keep this standalone workspace's crypto dependency on the verified core pin.
 [patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }

@@ -3,16 +3,16 @@
 url = "https://github.com/RaoFoundation/subtensor.git"
 
 [core]
-tag = "v478"
-commit = "850f2755bb05a3851f948489f0ab27b0645cebce"
+tag = "v488"
+commit = "b6a81d144078eac18bd25c3af7cb31579bb670f3"
 toolchain = "1.89"
-fingerprint = "b3:edc9f51ac0953af2b9b60665398e0146567ae4ca9988d7f018d3788f01a73b86"
+fingerprint = "b3:3936452e140b597df13a0ab4cc6a7d08b5ac605fe8ccfaf858ee017db97dd730"
 
 [core.patch]
 repo = "https://github.com/sam0x17/subtensor.git"
-branch = "rtao-core-patch/v478"
-rev = "5f2477f5290f5f4cb467524754cc025626b52974"
-base = "850f2755bb05a3851f948489f0ab27b0645cebce"
+branch = "rtao-core-patch/v488"
+rev = "cd1a2e6ae41bf558eef8e21d00348c5a65e77d33"
+base = "b6a81d144078eac18bd25c3af7cb31579bb670f3"
 upstream_pr = "https://github.com/RaoFoundation/subtensor/pull/3242"
 upstream_pr_rev = "09f40dc4cf0af6668398adf1565358e77e910772"
 security_issue = "https://github.com/RaoFoundation/subtensor/issues/3251"
@@ -21,7 +21,7 @@ review_rev = "5f2477f5290f5f4cb467524754cc025626b52974"
 review_diff_sha256 = "8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e86c489"
 paths = ["sdk/bittensor-core/src/signers/mod.rs", "sdk/bittensor-core/src/signers/ledger.rs", "sdk/bittensor-core/src/signers/hid.rs", "sdk/bittensor-core/Cargo.toml", "sdk/bittensor-core/src/keys/mod.rs", "sdk/bittensor-core/src/keys/encrypted_json.rs", "sdk/bittensor-core/src/keys/hashed.rs"]
 probe = ["bittensor_core::signers::ApduTransport", "bittensor_core::signers::ledger::LedgerDevice::with_transport"]
-shared = ["subtensor-macros", "w3f-bls"]
+shared = ["fips204", "subtensor-hashed", "subtensor-macros", "w3f-bls"]
 
 [[core.patch.adaptation]]
 tag = "v488"
@@ -34,7 +34,6 @@ tag = "v488"
 commit = "b6a81d144078eac18bd25c3af7cb31579bb670f3"
 spec_version = 488
 python_package_version = "11.3.2.dev0"
-core_fingerprint = "b3:3936452e140b597df13a0ab4cc6a7d08b5ac605fe8ccfaf858ee017db97dd730"
 
 [localnet]
 image = "ghcr.io/raofoundation/subtensor-localnet"

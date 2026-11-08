@@ -27,4 +27,4 @@ toml_edit = "0.23"
 # Cargo ignores patches in dependencies and workspace members. Keep this once,
 # in the final workspace root, at the core pin used by rtao.
 [patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }

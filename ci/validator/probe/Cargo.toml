@@ -14,4 +14,4 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "process", 
 base64 = "0.22"
 
 [patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }

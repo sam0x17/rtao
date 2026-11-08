@@ -323,6 +323,13 @@ pending rows for 84 new files, 17 exports and 59 e2e keys (D-128). See the
 runtime-adopt stage commands after fixing the workflow (D-126 to D-128); no
 hosted CI, oracle comparison, localnet e2e or image execution.
 
+## 2026-11-08: core bumped from v478 to v488
+
+A dispatched runtime-adopt run moved the held core from v478 to v488, the core
+of the parity pin `v488` (D-127, D-136), carrying the reviewed core patch to
+fork revision `cd1a2e6ae41bf558eef8e21d00348c5a65e77d33`. The parity pin and the runtime are unchanged.
+Workflow run: <https://github.com/sam0x17/rtao/actions/runs/42502998044>.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

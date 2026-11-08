@@ -23,7 +23,7 @@ Rust 1.89 is the minimum supported version. Start with the read features:
 rtao = { git = "https://github.com/sam0x17/rtao", rev = "<full commit>", default-features = false, features = ["client", "reads"] }
 
 [patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v478" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
 ```
 
 Replace `<full commit>` with the reviewed commit you use. Cargo applies

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Core bumped from v478 to v488 (D-127, D-136)
+
+- `bittensor-core` and its companions move from v478 to v488, the parity pin's core (`b3:3936452e140b597df13a0ab4cc6a7d08b5ac605fe8ccfaf858ee017db97dd730`); `[parity] core_fingerprint` is gone. The reviewed core patch is carried onto v488 (fork revision `cd1a2e6ae41bf558eef8e21d00348c5a65e77d33`), and every downstream `[patch]` line names v488: applications that copy rtao's patch set must update theirs.
+- The parity pin (v488) and the runtime are unchanged. 81 hand port(s) remain listed in `parity/port_due.toml`.
+- Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42502998044)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
+
 ### Since `snapshot-2026-11-07.3`
 
 Not a versioned release. Each item links to its section below.
