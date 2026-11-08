@@ -18,6 +18,7 @@ Not a versioned release. Each item links to its section below.
 - New: `keys/hashed.rs` joins the core patch's modify-only path allowlist; the Ed25519 erasure guard also requires, when the core has that file, that its Ed25519 derivation returns `Zeroizing<SigningKey>` and that its regression test and vectors remain. No existing rule changed.
 - New: `[core.patch] shared`, the core's in-repository path packages (v488 adds `subtensor-hashed` and `fips204`), kept at the core tag in the fork's patch table and checked against the core's manifests, so the lock still holds one package from the fork.
 - New: `cargo xtask core-patch verify-security <commit> [<repository>]`, a local, read-only run of the erasure guard.
+- Fixed: runtime-adopt's live-evidence verdict did not compile under the runner's jq 1.7 (a subtraction as an object value needs parentheses), so every adoption or core bump stopped at its evidence stage.
 - Fixed: `pin --prepare-candidate` with a moved core patch checked the lock before the candidate re-resolves it, so every such core bump failed at provenance; the lock is now checked by the full `pin --check` after the lock stage.
 
 #### rtao-runtime

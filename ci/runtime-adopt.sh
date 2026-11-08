@@ -607,7 +607,7 @@ verdict() {
       ($answered | map({endpoint, mismatches: mismatches}) | map(select(.mismatches != []))) as $bad
     | ((.release.status // "unavailable") == "differs") as $release_bad
     | {ok: (($bad | length) == 0 and ($answered | length) >= 2 and ($release_bad | not)),
-       agreeing: ($answered | length) - ($bad | length),
+       agreeing: (($answered | length) - ($bad | length)),
        disagreeing: $bad,
        unanswered: (.endpoints | map(select((.error // null) != null) | {endpoint, error})),
        release: (.release.status // "unavailable"),
