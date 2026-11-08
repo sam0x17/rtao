@@ -53,9 +53,9 @@ InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:true,im
 #[cfg(not(feature="association"))]
 InterfaceMetadata{name:"associate_hotkey",feature:"association",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "limit_orders")]
-InterfaceMetadata{name:"authorize_order",feature:"limit_orders",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AuthorizeOrder>()),role:Some(std::any::type_name::<<super::interfaces::AuthorizeOrder as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AuthorizeOrder as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"authorize_order",feature:"limit_orders",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AuthorizeOrder>()),role:Some(std::any::type_name::<<super::interfaces::AuthorizeOrder as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AuthorizeOrder as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="limit_orders"))]
-InterfaceMetadata{name:"authorize_order",feature:"limit_orders",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"authorize_order",feature:"limit_orders",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "batch")]
 InterfaceMetadata{name:"batch",feature:"batch",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::Batch>()),role:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::Batch as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="batch"))]
@@ -65,9 +65,9 @@ InterfaceMetadata{name:"burned_register",feature:"registration",compiled:true,im
 #[cfg(not(feature="registration"))]
 InterfaceMetadata{name:"burned_register",feature:"registration",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "limit_orders")]
-InterfaceMetadata{name:"cancel_order",feature:"limit_orders",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::CancelOrder>()),role:Some(std::any::type_name::<<super::interfaces::CancelOrder as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CancelOrder as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"cancel_order",feature:"limit_orders",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CancelOrder>()),role:Some(std::any::type_name::<<super::interfaces::CancelOrder as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CancelOrder as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="limit_orders"))]
-InterfaceMetadata{name:"cancel_order",feature:"limit_orders",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"cancel_order",feature:"limit_orders",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "registration")]
 InterfaceMetadata{name:"claim_root",feature:"registration",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ClaimRoot>()),role:Some(std::any::type_name::<<super::interfaces::ClaimRoot as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ClaimRoot as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="registration"))]
@@ -117,13 +117,13 @@ InterfaceMetadata{name:"evm_withdraw",feature:"evm",compiled:true,implemented:tr
 #[cfg(not(feature="evm"))]
 InterfaceMetadata{name:"evm_withdraw",feature:"evm",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "limit_orders")]
-InterfaceMetadata{name:"execute_batched_orders",feature:"limit_orders",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::ExecuteBatchedOrders>()),role:Some(std::any::type_name::<<super::interfaces::ExecuteBatchedOrders as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ExecuteBatchedOrders as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"execute_batched_orders",feature:"limit_orders",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ExecuteBatchedOrders>()),role:Some(std::any::type_name::<<super::interfaces::ExecuteBatchedOrders as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ExecuteBatchedOrders as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="limit_orders"))]
-InterfaceMetadata{name:"execute_batched_orders",feature:"limit_orders",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"execute_batched_orders",feature:"limit_orders",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "limit_orders")]
-InterfaceMetadata{name:"execute_orders",feature:"limit_orders",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::ExecuteOrders>()),role:Some(std::any::type_name::<<super::interfaces::ExecuteOrders as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ExecuteOrders as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"execute_orders",feature:"limit_orders",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ExecuteOrders>()),role:Some(std::any::type_name::<<super::interfaces::ExecuteOrders as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ExecuteOrders as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="limit_orders"))]
-InterfaceMetadata{name:"execute_orders",feature:"limit_orders",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"execute_orders",feature:"limit_orders",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
 InterfaceMetadata{name:"execute_proxy_announced",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ExecuteProxyAnnounced>()),role:Some(std::any::type_name::<<super::interfaces::ExecuteProxyAnnounced as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ExecuteProxyAnnounced as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]

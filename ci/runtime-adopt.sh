@@ -1356,6 +1356,10 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
       # open until both networks are seen on indexed runtimes.
       if [[ "$(jq '.unobserved // [] | length' "$decision")" != 0 ]]; then
         echo "not closing: $(jq -r '.unobserved | join("; ")' "$decision")"
+      elif [[ "$open_id" == core-* ]]; then
+        # A failed core bump is resolved by a core bump (D-136), never by
+        # the networks running indexed runtimes.
+        echo "not closing: the open issue reports a core bump ($open_id)"
       elif [[ -n "$number" ]]; then
         gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
           --comment "Finney and testnet run indexed runtimes again ([run]($run))." >/dev/null

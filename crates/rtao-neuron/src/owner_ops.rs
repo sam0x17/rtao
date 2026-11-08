@@ -378,6 +378,8 @@ impl<K: KeySource<Coldkey>> OwnerOps<K> {
                     deadline: self.options.deadline,
                     proxy_for: self.options.proxy_for,
                     force_proxy_type: self.options.force_proxy_type,
+                    shielded: self.options.shielded,
+                    period: self.options.period,
                 },
             )
             .await?;

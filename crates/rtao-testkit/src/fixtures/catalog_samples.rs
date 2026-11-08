@@ -122,6 +122,30 @@ pub fn intent_args(op: &str, original: &Value) -> Result<Value, CoreError> {
     if op == "move_gamma" {
         args["destination_hotkey_ss58"] = json!(OTHER_HOT.to_string());
     }
+    // An order's owner is the planning wallet's coldkey, as ALICE is the
+    // Python harness's dev wallet.
+    let owned = |order: &mut Value| {
+        let terms = match order.get_mut("Authorized") {
+            Some(authorized) => &mut authorized["terms"],
+            None => order,
+        };
+        if let Some(terms) = terms.as_object_mut() {
+            for terms in terms.values_mut() {
+                terms["signer"] = json!(COLD.to_string());
+            }
+        }
+    };
+    match op {
+        "authorize_order" | "cancel_order" => owned(&mut args["order"]),
+        "execute_orders" | "execute_batched_orders" => {
+            if let Some(orders) = args["orders"].as_array_mut() {
+                for signed in orders {
+                    owned(&mut signed["order"]);
+                }
+            }
+        }
+        _ => {}
+    }
     Ok(args)
 }
 

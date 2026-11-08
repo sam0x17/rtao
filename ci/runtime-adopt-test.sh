@@ -477,6 +477,20 @@ check decide-failure-keeps-backoff '{ decide_failed 2026-11-04T04:10:00Z; [[ "$(
 check long-attempt-backs-off-from-its-end '[[ "$(run f3 "$(at 2026-11-04T05:00:00Z "$good")" failure build 2026-11-04T07:30:00Z)" == adopt-finney && "$(alerts "$id")" == "[true,true]" && "$(alerts decide)" == "[true,false]" && "$(run b4 "$(at 2026-11-04T07:40:00Z "$good")" backoff)" == backoff && "$(jq -r .retry_at $work/loop-b4.decision.json)" == 2026-11-04T11:25:00Z ]]'
 check adoption-closes-and-resolves '[[ "$(run s1 "$(at 2026-11-04T11:30:00Z "$good")" success)" == adopt-finney && -f $fake/issues/1.closed && "$(alerts "$id")" == "[true,true,false]" && "$(alerts decide)" == "[true,false]" ]]'
 
+# A failed core bump stays open through runs that find nothing to adopt.
+core_fake=$work/core-fake
+mkdir -p "$core_fake"
+core_loop() { FAKE_GH=$core_fake RTAO_ADOPT_PORT_DUE=$work/no-port-due.toml PATH=$fake/bin:$PATH \
+  GITHUB_REPOSITORY=owner/repo GH_TOKEN=x RUNTIME_ALERT_URL=https://alerts.invalid RUNTIME_ALERT_TOKEN=x "$@"; }
+jq -n --arg id "$core_id" --argjson spec "$spec" --arg code "$code" --arg from "$core_tag" --arg to "$parity_tag" \
+  '{action: "core-bump", network: "finney", spec: $spec, code: $code, id: $id, reason: "core bump", upcoming: [], deferred: [],
+    core: {from: $from, to: $to}, inputs: "abc", observed_at: "2026-11-04T00:00:00Z", observed: {}}' >"$work/core-failed.json"
+core_loop bash "$script" notify "$work/core-failed.json" failure >/dev/null
+jq -n '{action: "none", network: null, spec: null, code: null, id: "none", reason: "indexed", upcoming: [], deferred: [], unobserved: []}' \
+  >"$work/core-none.json"
+core_loop bash "$script" notify "$work/core-none.json" none >/dev/null
+check core-bump-failure-survives-a-quiet-run '[[ -f $core_fake/1.open ]] && grep -q "Core bump failed" $core_fake/log && ! grep -q "^close" $core_fake/log'
+
 if ((failures)); then
   echo "$failures decision checks failed" >&2
   exit 1

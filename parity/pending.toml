@@ -1,5 +1,5 @@
 # Operations awaiting behavior ports. The set only shrinks, except that a
 # parity pin bump adds operations new to the upstream catalog (D-128).
-intents = ["authorize_order", "cancel_order", "execute_batched_orders", "execute_orders"]
+intents = []
 
 reads = []

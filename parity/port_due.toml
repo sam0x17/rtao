@@ -333,14 +333,6 @@ tag = "v488"
 symbols = ["bittensor.cli.helpers._locked_value", "bittensor.cli.helpers.account_for_read", "bittensor.cli.helpers.fetch_coldkey_balances_and_valuations", "bittensor.cli.helpers.wallet_balance_row", "bittensor.cli.helpers.wallet_inspect_data", "bittensor.cli.helpers.wallet_registration_rows"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/intent_prompts.py"
-kind = "ported"
-from = "0c37eb9c0c67f303ffa0d36035528d434b982764"
-to = "1af00aa98cf5c3f7f54f930f22ab025464d7216d"
-tag = "v488"
-symbols = ["bittensor.cli.intent_prompts.AppContext", "bittensor.cli.intent_prompts.MoveGamma", "bittensor.cli.intent_prompts._GAMMA_DEPOSIT", "bittensor.cli.intent_prompts._POLICIES", "bittensor.cli.intent_prompts._typed", "bittensor.cli.intent_prompts.address_cli_name", "bittensor.cli.intent_prompts.falls_back_to_wallet", "bittensor.cli.intent_prompts.ss58_param_help", "bittensor.cli.intent_prompts.typer", "bittensor.cli.intent_prompts.validate_intent_prompt_policy"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/main.py"
 kind = "ported"
 from = "57f82d668a651b24f71174a0f26f5c91a2dea842"
@@ -445,14 +437,6 @@ tag = "v488"
 symbols = ["bittensor.http_auth.CLASSICAL_HASHED_CRYPTO_TYPES", "bittensor.http_auth.PQ_CRYPTO_TYPES", "bittensor.http_auth.__all__", "bittensor.http_auth._trusted_sender_schemes", "bittensor.http_auth._validate_trusted_crypto_type", "bittensor.http_auth._verifier_lock", "bittensor.http_auth.clear_verifier", "bittensor.http_auth.configure_verifier", "bittensor.http_auth.prepare_signer", "bittensor.http_auth.sign", "bittensor.http_auth.verify"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/__init__.py"
-kind = "n/a"
-from = "4d481e32a0ee00faecd01c14cd3ddae552fc967b"
-to = "9db3e6b1fb2d2e88bfd027bec9020457e1d1de5a"
-tag = "v488"
-symbols = ["bittensor.intents.AuthorizeOrder", "bittensor.intents.CancelOrder", "bittensor.intents.CloseGammaDeposit", "bittensor.intents.ExecuteBatchedOrders", "bittensor.intents.ExecuteOrders", "bittensor.intents.MintGamma", "bittensor.intents.MintGammaWithStake", "bittensor.intents.MoveGamma", "bittensor.intents.ResetAxon", "bittensor.intents.ServeAxon", "bittensor.intents.ServeAxonTls", "bittensor.intents.ServePrometheus", "bittensor.intents.SetGammaDepositDailySpendCap", "bittensor.intents.SetGammaDepositSpender", "bittensor.intents.SetService", "bittensor.intents.SpendGamma", "bittensor.intents.__all__"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/association.py"
 kind = "ported"
 from = "289fc369c7f702231460852af4b3a7f7ae348041"
@@ -507,14 +491,6 @@ from = "01acc9c3ea4664c82cdad7aabe2e0c52a439e736"
 to = "70dd6b22c6ee4788fa96e628eb33eff586dcc22a"
 tag = "v488"
 symbols = ["bittensor.intents.multisig.MultisigApprove", "bittensor.intents.multisig.MultisigApprove.account_mode", "bittensor.intents.multisig.MultisigApprove.build", "bittensor.intents.multisig.MultisigApprove.wraps", "bittensor.intents.multisig.MultisigCancel", "bittensor.intents.multisig.MultisigCancel.account_mode", "bittensor.intents.multisig.MultisigCancel.build", "bittensor.intents.multisig.MultisigCancel.wraps", "bittensor.intents.multisig.MultisigExecute", "bittensor.intents.multisig.MultisigExecute._build_with_inner", "bittensor.intents.multisig.MultisigExecute.account_mode", "bittensor.intents.multisig.MultisigExecute.build", "bittensor.intents.multisig.MultisigExecute.requires_build_for_policy", "bittensor.intents.multisig.MultisigExecute.wraps", "bittensor.intents.multisig.MultisigIntentAdapter", "bittensor.intents.multisig.MultisigIntentAdapter.account_mode", "bittensor.intents.multisig.MultisigIntentAdapter.origin_view", "bittensor.intents.multisig.MultisigIntentAdapter.preflight", "bittensor.intents.multisig.MultisigThreshold1", "bittensor.intents.multisig.MultisigThreshold1._build_with_inner", "bittensor.intents.multisig.MultisigThreshold1.account_mode", "bittensor.intents.multisig.MultisigThreshold1.build", "bittensor.intents.multisig.MultisigThreshold1.requires_build_for_policy", "bittensor.intents.multisig.MultisigThreshold1.wraps", "bittensor.intents.multisig._account_view", "bittensor.intents.multisig._compose_inner", "bittensor.intents.multisig._pending_timepoint", "bittensor.intents.multisig._sorted_signatories", "bittensor.intents.multisig._validate_multisig", "bittensor.intents.multisig.calls", "bittensor.intents.multisig.check_multisig_funds", "bittensor.intents.multisig.merge_approval_metadata", "bittensor.intents.multisig.multisig_call", "bittensor.intents.multisig.multisig_opening_shortfall", "bittensor.intents.multisig.parse_recipient", "bittensor.intents.multisig.ss58_decode", "bittensor.intents.multisig.ss58_encode", "bittensor.intents.multisig.warn_legacy_mldsa"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/plan.py"
-kind = "ported"
-from = "066fcd9abe97d3521edd19ebe28e7bc00d20f333"
-to = "da90a4a5964c0a1f3953577bdb0cca169c037f00"
-tag = "v488"
-symbols = ["bittensor.intents.plan.Plan", "bittensor.intents.plan.Plan.shielded", "bittensor.intents.plan.Plan.to_dict", "bittensor.intents.plan.Policy", "bittensor.intents.plan.Policy.check"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/proxy.py"

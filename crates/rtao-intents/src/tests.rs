@@ -220,6 +220,22 @@ fn all_86_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
                 json!([{"hotkey_ss58": address, "amount_gamma": "1"}]),
             );
         }
+        if matches!(spec.name, "authorize_order" | "cancel_order") {
+            args.insert(
+                "order".into(),
+                json!({"V1": {"signer": address, "hotkey": address, "netuid": 1, "fee_recipient": address}}),
+            );
+        }
+        if matches!(spec.name, "execute_orders" | "execute_batched_orders") {
+            args.insert(
+                "orders".into(),
+                json!([{
+                    "order": {"Authorized": {"nonce": 1, "terms": {"V1": {"signer": address, "hotkey": address, "netuid": 1, "fee_recipient": address}}}},
+                    "signature": "AccountApproved",
+                    "partial_fill": null,
+                }]),
+            );
+        }
         if spec.name == "set_service" {
             // Python refuses a url that is not http(s) at construction.
             args.insert("url".into(), json!("https://example.com/services.json"));

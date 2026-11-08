@@ -261,6 +261,50 @@ async fn plan_case(
                 "ordinary catalog plan fee differs from {expected_fee} rao: {:?}",
                 plan.fee
             );
+            let required = intent.as_dyn().semantic_intent_dyn().spec().mev_shield_required;
+            ensure!(
+                plan.shielded == required,
+                "plan route differs from the intent's Shield requirement"
+            );
+            if spec.name == "transfer" {
+                // An explicit Shield route is planned and quoted as such
+                // (Python's plan(shielded=True)): both fees, route retained.
+                let shielded = Executor::new(client.clone())
+                    .with_clock(Arc::new(FixtureClock))
+                    .plan_dyn(
+                        intent.as_dyn(),
+                        &keys,
+                        &PlanOptions {
+                            shielded: true,
+                            ..PlanOptions::default()
+                        },
+                    )
+                    .await?;
+                ensure!(
+                    shielded.shielded
+                        && shielded.fee.map(|fee| fee.rao()) == Some(248_828)
+                        && shielded.to_json()["shielded"] == true,
+                    "explicit Shield plan: {:?} {:?}",
+                    shielded.shielded,
+                    shielded.fee
+                );
+                let refused = Executor::new(client.clone())
+                    .with_clock(Arc::new(FixtureClock))
+                    .plan_dyn(
+                        intent.as_dyn(),
+                        &keys,
+                        &PlanOptions {
+                            shielded: true,
+                            period: Some(64),
+                            ..PlanOptions::default()
+                        },
+                    )
+                    .await;
+                ensure!(
+                    refused.is_err_and(|error| error.to_string().contains("4 or 8 blocks")),
+                    "a Shield plan accepted a period execution refuses"
+                );
+            }
         }
         ensure!(
             plan.ok(),

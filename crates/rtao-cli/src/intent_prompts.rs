@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/intent_prompts.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/intent_prompts.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_intent_prompts.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Declarative transformations for richer generated transaction prompts.
 
@@ -35,6 +35,47 @@ fn destination(field: &'static str) -> Rule {
         flow: PromptFlow::DestinationAccount,
     }
 }
+/// A typed address prompt, for a hotkey that is neither a stake position nor
+/// a validator (Python's `_typed`).
+fn typed(field: &'static str, before: &'static str) -> Rule {
+    Rule {
+        field,
+        before: Some(before),
+        flow: PromptFlow::Plain,
+    }
+}
+
+/// A gamma deposit's hotkey, typed on a terminal: it is an API key, never a
+/// stake position or the wallet's own hotkey.
+fn deposit_hotkey() -> Rule {
+    Rule {
+        field: "hotkey_ss58",
+        before: None,
+        flow: PromptFlow::Plain,
+    }
+}
+
+/// Fields an operation requires after prompting instead of falling back to
+/// the wallet's own key: a gamma deposit's hotkey is an API key, never the
+/// wallet's own hotkey.
+fn required_after_prompt(op: &str) -> &'static [&'static str] {
+    match op {
+        "claim_root_with_hotkey"
+        | "mint_gamma"
+        | "mint_gamma_with_stake"
+        | "close_gamma_deposit"
+        | "set_gamma_deposit_spender"
+        | "set_gamma_deposit_daily_spend_cap" => &["hotkey_ss58"],
+        _ => &[],
+    }
+}
+
+/// Python's `falls_back_to_wallet`: whether an omitted `field` takes the
+/// signing wallet's own key; true for `hotkey_ss58` and `coldkey_ss58`
+/// unless the operation's policy requires them.
+pub fn falls_back_to_wallet(op: &str, field: &str) -> bool {
+    matches!(field, "hotkey_ss58" | "coldkey_ss58") && !required_after_prompt(op).contains(&field)
+}
 fn rules(op: &str) -> Vec<Rule> {
     match op {
         "remove_stake" | "remove_stake_limit" => vec![source("hotkey_ss58", Some("netuid"))],
@@ -55,6 +96,19 @@ fn rules(op: &str) -> Vec<Rule> {
         }],
         "add_stake" | "add_stake_limit" => vec![target("hotkey_ss58", "amount_tao")],
         "transfer" | "transfer_all" => vec![destination("dest_ss58")],
+        "mint_gamma"
+        | "close_gamma_deposit"
+        | "set_gamma_deposit_spender"
+        | "set_gamma_deposit_daily_spend_cap" => vec![deposit_hotkey()],
+        // Each rule is placed first, so the stake source precedes the hotkey.
+        "mint_gamma_with_stake" => vec![
+            deposit_hotkey(),
+            source("origin_hotkey_ss58", Some("netuid")),
+        ],
+        "move_gamma" => vec![
+            typed("origin_hotkey_ss58", "amount_gamma"),
+            typed("destination_hotkey_ss58", "amount_gamma"),
+        ],
         _ => Vec::new(),
     }
 }
@@ -140,8 +194,13 @@ pub fn validate_intent_prompt_policy(
     op: &str,
     answers: &Map<String, Value>,
 ) -> Result<(), PromptError> {
-    if op == "claim_root_with_hotkey" && !supplied(answers, "hotkey_ss58") {
-        return Err(PromptError::MissingRequired(vec!["--hotkey".into()]));
+    let missing = required_after_prompt(op)
+        .iter()
+        .filter(|field| !supplied(answers, field))
+        .map(|field| format!("--{}", field.trim_end_matches("_ss58").replace('_', "-")))
+        .collect::<Vec<_>>();
+    if !missing.is_empty() {
+        return Err(PromptError::MissingRequired(missing));
     }
     Ok(())
 }
@@ -375,6 +434,68 @@ mod tests {
         )
         .unwrap();
         assert_eq!(claim[0].flow, PromptFlow::ClaimRootSource);
+    }
+
+    #[test]
+    fn gamma_deposit_hotkeys_never_fall_back_to_the_wallet() {
+        for op in [
+            "mint_gamma",
+            "mint_gamma_with_stake",
+            "close_gamma_deposit",
+            "set_gamma_deposit_spender",
+            "set_gamma_deposit_daily_spend_cap",
+            "claim_root_with_hotkey",
+        ] {
+            assert!(!falls_back_to_wallet(op, "hotkey_ss58"), "{op}");
+            assert!(falls_back_to_wallet(op, "coldkey_ss58"), "{op}");
+            assert_eq!(
+                validate_intent_prompt_policy(op, &Map::new())
+                    .unwrap_err()
+                    .to_string(),
+                PromptError::MissingRequired(vec!["--hotkey".into()]).to_string()
+            );
+        }
+        assert!(falls_back_to_wallet("add_stake", "hotkey_ss58"));
+        assert!(!falls_back_to_wallet("move_gamma", "origin_hotkey_ss58"));
+        let mut terminal = TerminalFixture {
+            interactive: true,
+            ..Default::default()
+        };
+        let source = apply_intent_prompt_policy(
+            &PromptContext::default(),
+            &mut terminal,
+            "mint_gamma_with_stake",
+            Vec::new(),
+            &Map::new(),
+        )
+        .unwrap();
+        assert_eq!(source[0].field, "origin_hotkey_ss58");
+        assert_eq!(
+            source[0].flow,
+            PromptFlow::StakeSource {
+                netuid_field: Some("netuid".into())
+            }
+        );
+        let moved = apply_intent_prompt_policy(
+            &PromptContext::default(),
+            &mut terminal,
+            "move_gamma",
+            specs(&["netuid", "amount_gamma"]),
+            &Map::new(),
+        )
+        .unwrap();
+        assert_eq!(
+            moved
+                .iter()
+                .map(|spec| (spec.field.as_str(), spec.flow.clone()))
+                .collect::<Vec<_>>(),
+            [
+                ("netuid", PromptFlow::Plain),
+                ("origin_hotkey_ss58", PromptFlow::Plain),
+                ("destination_hotkey_ss58", PromptFlow::Plain),
+                ("amount_gamma", PromptFlow::Plain),
+            ]
+        );
     }
 
     #[test]

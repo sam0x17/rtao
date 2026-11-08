@@ -1427,11 +1427,17 @@ pub fn address_cli_name(param: &str) -> String {
 
 /// Python's help text for an address-typed CLI option.
 pub fn ss58_param_help(param: &str) -> String {
+    ss58_param_help_for(param, true)
+}
+
+/// Python's `ss58_param_help(param, wallet_default=...)`: without the wallet
+/// default, an own-key parameter does not say it falls back to the wallet.
+pub fn ss58_param_help_for(param: &str, wallet_default: bool) -> String {
     let book = "address-book or proxy-book name, ";
     if param.contains("hotkey") {
         let mut text =
             format!("ss58 address, {book}or a local hotkey name (HOTKEY or WALLET/HOTKEY).");
-        if param == "hotkey_ss58" {
+        if param == "hotkey_ss58" && wallet_default {
             text.push_str(" Defaults to your wallet's hotkey.");
         }
         text
@@ -1443,7 +1449,7 @@ pub fn ss58_param_help(param: &str) -> String {
         let mut text = format!(
             "ss58 address, {book}saved multisig name, or a local wallet name (uses its coldkey)."
         );
-        if param == "coldkey_ss58" {
+        if param == "coldkey_ss58" && wallet_default {
             text.push_str(" Defaults to your wallet's coldkey.");
         }
         text

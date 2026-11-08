@@ -4,7 +4,7 @@
 //! Argument shapes and coercion for generated commands; money stays exact.
 
 use crate::{
-    books::{address_cli_name, ss58_param_help},
+    books::{address_cli_name, ss58_param_help_for},
     error::CliError,
     prompt::python_strip,
 };
@@ -70,6 +70,7 @@ fn field(
     property: Option<&Value>,
     allow_all: bool,
     query: bool,
+    wallet_default: bool,
 ) -> Result<Field, CliError> {
     let annotation = param.annotation.unwrap_or("str");
     let annotation_base = base(annotation);
@@ -105,7 +106,7 @@ fn field(
         } else {
             param.name
         };
-        let mut note = ss58_param_help(scalar);
+        let mut note = ss58_param_help_for(scalar, wallet_default);
         if (query && param.default_json.is_some()) || param.name.ends_with("_ss58s") {
             note = note
                 .split(" Defaults to your wallet")
@@ -133,6 +134,10 @@ fn field(
     if allow_all {
         help.push_str(" Pass all for the entire available amount.");
     }
+    // An own key that the operation's prompt policy requires (Python's
+    // `falls_back_to_wallet` false) stays optional here: it is prompted on a
+    // terminal and refused when still missing (`validate_intent_prompt_policy`),
+    // and its help does not offer the wallet default.
     let own_key = param.own_key || matches!(param.name, "hotkey_ss58" | "coldkey_ss58");
     let required = param.required && !own_key;
     if required {
@@ -172,6 +177,7 @@ pub fn intent_fields(spec: &'static IntentSpec) -> Result<Vec<Field>, CliError> 
                 schema["input_schema"]["properties"].get(p.name),
                 spec.all_amount_fields.contains(&p.name),
                 false,
+                crate::intent_prompts::falls_back_to_wallet(spec.name, p.name),
             )?;
             if native
                 .as_ref()
@@ -191,7 +197,7 @@ pub fn read_fields(name: ReadName) -> Result<Vec<Field>, CliError> {
     spec.params
         .iter()
         .map(|p| {
-            let mut result = field(p, None, false, true)?;
+            let mut result = field(p, None, false, true, true)?;
             if let Some(doc) = catalog["param_docs"].get(p.name).and_then(Value::as_str) {
                 result.help = format!("{doc} {}", result.help);
             }

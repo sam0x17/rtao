@@ -18,6 +18,8 @@ pub mod evm;
 /// Browser-extension bridge lifecycle and public account discovery.
 #[cfg(feature = "extension")]
 pub mod extension;
+/// Gamma deposits: minting, moving, spending and inspection.
+pub mod gamma;
 
 /// On-chain axon endpoint commands.
 pub mod axon;
@@ -64,6 +66,7 @@ pub fn command_tree() -> Result<clap::Command, crate::error::CliError> {
         generated::query_command()?,
         hparams::command()?,
         stake::command()?,
+        gamma::command()?,
         proxy::command()?,
         multisig::command(),
         wallet::command(),

@@ -6,7 +6,29 @@
 
 Not a versioned release. Each item links to its section below.
 
-- The core bump can run on GitHub's hosted runners: `runtime-adopt` takes a `core_bump` dispatch input (D-136, issue #12).
+- The core bump can run on GitHub's hosted runners: `runtime-adopt` takes a `core_bump` dispatch input (D-136, issue #12). Its first run is blocked by v488's hashed Ed25519 keys, which the core patch's erasure guard refuses; the core stays at v478 (D-138, needs a decision).
+- v488 hand ports, fifth batch (D-137, issue #12): plans select the Shield route and period as execution does and report it (`Plan::shielded`), `rtao gamma`, and the four limit-order intents with classical identities.
+
+### v488 hand ports, fifth batch: planning route, gamma CLI, limit orders (D-137)
+
+#### rtao-tx
+
+- New: `PlanOptions::shielded` and `PlanOptions::period`, so `plan`/`preflight` quote the route execution takes (Python's `plan(shielded=, period=)` and `preflight(shielded=, period=)`); `Plan::shielded` reports the selected route and `Plan::to_json` carries `"shielded"`.
+- Changed (source-breaking): `PlanOptions` no longer derives `Default`; its `Default` sets `period: Some(128)`, and struct literals need the two new fields (or `..PlanOptions::default()`).
+- Fixed: the Shield submission path quoted its carrier at 8 blocks even for a 4-block shield era.
+
+#### rtao-intents
+
+- New (feature `limit_orders`): `AuthorizeOrder`, `CancelOrder`, `ExecuteOrders` and `ExecuteBatchedOrders` replace `NotYetPorted`, with Python's checks, the owner check, pinned `order_data` and subnet scope; `limit_orders::PreparedOrder` (prepare, `order_id`, check, account approval) and `encoded_order`. A receiving address (`tao_`/`bth`) in an order is refused until the core bump (D-138).
+
+#### rtao-cli
+
+- New: `rtao gamma` (`show`, `list`, `mint`, `mint-with-stake`, `move`, `close`, `set-spender`, `set-cap`, `spend --spend HOTKEY=AMOUNT[:REFERENCE]`).
+- Changed: the hotkey of `mint_gamma`, `mint_gamma_with_stake`, `close_gamma_deposit`, `set_gamma_deposit_spender` and `set_gamma_deposit_daily_spend_cap` never falls back to the wallet's hotkey: it is typed on a terminal and refused when missing; its help, and `claim_root_with_hotkey`'s, no longer offers the wallet default. `mint_gamma_with_stake` picks its stake source and `move_gamma` asks for both hotkeys before the amount.
+
+#### Automation
+
+- Changed: a failed core bump keeps its issue open through runs that find nothing to adopt (D-138).
 
 ### Core bump through runtime-adopt (D-136)
 

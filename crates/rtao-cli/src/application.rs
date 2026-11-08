@@ -768,6 +768,10 @@ fn required_wallet_tier(path: &[String]) -> Option<&'static str> {
         | ["misc", "weights", "set" | "commit" | "reveal"]
         | ["misc", "axon", "set" | "reset"]
         | ["misc", "collateral", "add" | "set-min"]
+        | [
+            "gamma",
+            "mint" | "mint-with-stake" | "move" | "close" | "set-spender" | "set-cap" | "spend",
+        ]
         | ["evm", "associate"] => Some("tx"),
         _ => None,
     }
@@ -825,6 +829,7 @@ pub fn pending_prompt_reserved(
         Some(("hparams", group)) => crate::commands::hparams::reserved(group),
         Some(("conviction", group)) => crate::commands::conviction::reserved(group),
         Some(("collateral", group)) => crate::commands::collateral::reserved(group),
+        Some(("gamma", group)) => crate::commands::gamma::reserved(group),
         Some(("misc" | "utils", group)) => match group.subcommand() {
             Some(("collateral", group)) => crate::commands::collateral::reserved(group),
             _ => Ok(Vec::new()),

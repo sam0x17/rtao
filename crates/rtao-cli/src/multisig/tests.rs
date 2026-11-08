@@ -351,6 +351,7 @@ async fn plan_preserves_the_semantic_contract_and_exact_python_dispatch_shape() 
                 "timepoint": null,
             },
             "fee_tao": 0.000000123,
+            "shielded": false,
             "spend_tao": 0.00000005,
             "spend_unbounded": false,
             "effects": ["semantic effect", "multisig 2-of-2 execute transfer"],

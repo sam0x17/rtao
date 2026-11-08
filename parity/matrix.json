@@ -9795,7 +9795,7 @@
           "crates/rtao-cli/src/intent_prompts.rs",
           "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "0c37eb9c0c67f303ffa0d36035528d434b982764"
+        "synced_blob": "1af00aa98cf5c3f7f54f930f22ab025464d7216d"
       },
       {
         "kind": "ported",
@@ -10779,7 +10779,7 @@
         "rust": [
           "`rtao_intents` crate root"
         ],
-        "synced_blob": "4d481e32a0ee00faecd01c14cd3ddae552fc967b"
+        "synced_blob": "9db3e6b1fb2d2e88bfd027bec9020457e1d1de5a"
       },
       {
         "kind": "ported",
@@ -10992,7 +10992,7 @@
           "rtao_tx::{Policy, PolicySubject, Plan}",
           "rtao_tx::Executor::{plan, plan_dyn}"
         ],
-        "synced_blob": "066fcd9abe97d3521edd19ebe28e7bc00d20f333"
+        "synced_blob": "da90a4a5964c0a1f3953577bdb0cca169c037f00"
       },
       {
         "kind": "ported",
@@ -12461,14 +12461,14 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/commands/gamma.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/src/commands/gamma.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "cd8e254744312effe8513e86743517e2def3d7b5"
       },
       {
         "kind": "ported",
@@ -12533,7 +12533,7 @@
         "python": "sdk/python/bittensor/intents/limit_orders.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/limit_orders.rs"
         ],
         "synced_blob": "pending"
       },
@@ -12544,7 +12544,7 @@
         "python": "sdk/python/bittensor/limit_orders.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/limit_orders.rs"
         ],
         "synced_blob": "pending"
       },
@@ -13356,7 +13356,7 @@
         "name": "authorize_order",
         "oracle": "missing",
         "python_class": "AuthorizeOrder",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "batch",
@@ -13374,7 +13374,7 @@
         "name": "cancel_order",
         "oracle": "missing",
         "python_class": "CancelOrder",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "claim_root",
@@ -13452,13 +13452,13 @@
         "name": "execute_batched_orders",
         "oracle": "missing",
         "python_class": "ExecuteBatchedOrders",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "execute_orders",
         "oracle": "missing",
         "python_class": "ExecuteOrders",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "execute_proxy_announced",

@@ -678,6 +678,8 @@ impl<K: KeySource<Coldkey>> OwnerOps<K> {
                         proxy_for: self.options.proxy_for,
                         force_proxy_type: self.options.force_proxy_type,
                         deadline: self.options.deadline,
+                        shielded: self.options.shielded,
+                        period: self.options.period,
                     };
                     let plan = match action.kind.as_ref() {
                         TrimActionKind::Batch(intent) => {

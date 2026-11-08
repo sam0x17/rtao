@@ -35,6 +35,10 @@ pub struct Plan {
     /// preview has a fixed shape, such as a before/after vector; empty when
     /// the intent only produces prose.
     pub preview: Map<String, Value>,
+    /// The route selected before quoting: true when the call goes through
+    /// MEV Shield (a required-Shield intent, or `PlanOptions::shielded`), so
+    /// `fee` covers both the inner transaction and its carrier.
+    pub shielded: bool,
     call: CallBytes,
 }
 impl Plan {
@@ -58,6 +62,7 @@ impl Plan {
             spend: Spend::None,
             args: Value::Null,
             preview: Map::new(),
+            shielded: false,
             call,
         }
     }
@@ -71,7 +76,7 @@ impl Plan {
     }
     /// Python's to_dict shape; signing bytes and extras stay outside it.
     pub fn to_json(&self) -> Value {
-        json!({"op":self.op,"summary":self.summary,"signer":self.signer.as_str(),"signer_address":self.signer_address,"args":self.args,"fee_tao":self.fee.map(crate::output::tao_json),"spend_tao":match self.spend {Spend::Bounded(amount)=>Some(crate::output::tao_json(amount)),_=>None},"spend_unbounded":matches!(self.spend,Spend::Unbounded),"effects":self.effects,"warnings":self.warnings,"violations":self.violations,"ok":self.ok(),"preview":self.preview,"docs_url":format!("{}/tx/{}",rtao_catalog::py::DOCS_URL,self.op.replace('_',"-"))})
+        json!({"op":self.op,"summary":self.summary,"signer":self.signer.as_str(),"signer_address":self.signer_address,"args":self.args,"fee_tao":self.fee.map(crate::output::tao_json),"shielded":self.shielded,"spend_tao":match self.spend {Spend::Bounded(amount)=>Some(crate::output::tao_json(amount)),_=>None},"spend_unbounded":matches!(self.spend,Spend::Unbounded),"effects":self.effects,"warnings":self.warnings,"violations":self.violations,"ok":self.ok(),"preview":self.preview,"docs_url":format!("{}/tx/{}",rtao_catalog::py::DOCS_URL,self.op.replace('_',"-"))})
     }
 }
 
@@ -122,6 +127,7 @@ mod tests {
                 "signer_address":ALICE,
                 "args":{"amount_tao":"18446744073.709551615","keep_alive":false},
                 "fee_tao":0.125,
+                "shielded":false,
                 "spend_tao":0.375,
                 "spend_unbounded":false,
                 "effects":["effect sentinel"],
@@ -155,6 +161,7 @@ mod tests {
                     "signer_address":ALICE,
                     "args":null,
                     "fee_tao":null,
+                    "shielded":false,
                     "spend_tao":spend_tao,
                     "spend_unbounded":spend_unbounded,
                     "effects":[],

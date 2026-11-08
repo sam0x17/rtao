@@ -13,8 +13,8 @@ use rtao_cli::commands::extension;
 use rtao_cli::{
     application,
     commands::{
-        addresses, axon, catalog, collateral, config, conviction, crowd, generated, hparams, misc,
-        multisig, proxy, root, stake, subnets, timelock, upgrade, wallet, weights,
+        addresses, axon, catalog, collateral, config, conviction, crowd, gamma, generated, hparams,
+        misc, multisig, proxy, root, stake, subnets, timelock, upgrade, wallet, weights,
     },
     context::AppContext,
     error::CliError,
@@ -324,6 +324,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
         "root" => root::reserved(matches)?,
         "conviction" => conviction::reserved(matches)?,
         "collateral" => collateral::reserved(matches)?,
+        "gamma" => gamma::reserved(matches)?,
         #[cfg(feature = "evm")]
         "evm" => evm::reserved(matches)?,
         _ => Vec::new(),
@@ -518,29 +519,36 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                     })
                     .await
             }
-            "conviction" | "collateral" => {
+            "conviction" | "collateral" | "gamma" => {
                 enum ReadRequest {
                     Conviction(conviction::ReadRequest),
                     Collateral(collateral::ReadRequest),
+                    Gamma(gamma::ReadRequest),
                 }
-                let requests = if name == "conviction" {
-                    conviction::tx_requests(&mut app, matches, &mut invocation.history)?
-                } else {
-                    collateral::tx_requests(&mut app, matches, &mut invocation.history)?
+                let requests = match name {
+                    "conviction" => {
+                        conviction::tx_requests(&mut app, matches, &mut invocation.history)?
+                    }
+                    "gamma" => gamma::tx_requests(&mut app, matches, &mut invocation.history)?,
+                    _ => collateral::tx_requests(&mut app, matches, &mut invocation.history)?,
                 };
                 let read = if requests.is_empty() {
-                    Some(if name == "conviction" {
-                        ReadRequest::Conviction(conviction::prepare_read(
+                    Some(match name {
+                        "conviction" => ReadRequest::Conviction(conviction::prepare_read(
                             &mut app,
                             matches,
                             &mut invocation.history,
-                        )?)
-                    } else {
-                        ReadRequest::Collateral(collateral::prepare_read(
+                        )?),
+                        "gamma" => ReadRequest::Gamma(gamma::prepare_read(
                             &mut app,
                             matches,
                             &mut invocation.history,
-                        )?)
+                        )?),
+                        _ => ReadRequest::Collateral(collateral::prepare_read(
+                            &mut app,
+                            matches,
+                            &mut invocation.history,
+                        )?),
                     })
                 } else {
                     None
@@ -558,6 +566,9 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                                 }
                                 ReadRequest::Collateral(read) => {
                                     collateral::execute_prepared_read(app_ref, &client, &read).await
+                                }
+                                ReadRequest::Gamma(read) => {
+                                    gamma::execute_prepared_read(app_ref, &client, &read).await
                                 }
                             };
                         }

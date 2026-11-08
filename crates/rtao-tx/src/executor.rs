@@ -53,7 +53,7 @@ pub struct ToolSpec {
 }
 
 /// Shared planning and preflight options.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct PlanOptions {
     /// Per-operation policy replaces the executor default when present.
     pub policy: Option<Policy>,
@@ -63,6 +63,27 @@ pub struct PlanOptions {
     pub force_proxy_type: Option<ProxyType>,
     /// Bound the complete preview operation.
     pub deadline: Option<Duration>,
+    /// Select the MEV Shield route, as `ExecuteOptions::shielded` does for
+    /// execution; a required-Shield intent selects it regardless. The fee is
+    /// then the inner transaction plus its carrier (Python's
+    /// `preflight(shielded=True)` and `plan(shielded=True)`).
+    pub shielded: bool,
+    /// Mortal era period, as `ExecuteOptions::period`. On the Shield route the
+    /// default (or none) quotes the carrier at the 8-block shield era, and only
+    /// 4 or 8 blocks are accepted, as execution requires.
+    pub period: Option<u32>,
+}
+impl Default for PlanOptions {
+    fn default() -> Self {
+        Self {
+            policy: None,
+            proxy_for: None,
+            force_proxy_type: None,
+            deadline: None,
+            shielded: false,
+            period: Some(128),
+        }
+    }
 }
 
 /// Python execution defaults plus bounded waiting and fate reconciliation.
@@ -151,6 +172,8 @@ impl ExecuteOptions {
             proxy_for: self.proxy_for,
             force_proxy_type: self.force_proxy_type,
             deadline: self.deadline,
+            shielded: self.shielded,
+            period: self.period,
         }
     }
     pub(crate) fn submit_options(&self) -> SubmitOptions {
@@ -173,14 +196,20 @@ impl ExecuteOptions {
         }
     }
     fn shield_period(&self) -> Result<ShieldPeriod, TxError> {
-        match self.period {
-            None | Some(128) | Some(8) => Ok(ShieldPeriod::P8),
-            Some(4) => Ok(ShieldPeriod::P4),
-            Some(period) => Err(IntentError::InvalidArgument(format!(
-                "MEV shield period must be 4 or 8 blocks, got {period}"
-            ))
-            .into()),
-        }
+        shield_period(self.period)
+    }
+}
+
+/// The shield era for a requested period: the default (128) or none selects
+/// the 8-block shield era, as Python's `MEV_SHIELD_ERA_PERIOD` substitution.
+fn shield_period(period: Option<u32>) -> Result<ShieldPeriod, TxError> {
+    match period {
+        None | Some(128) | Some(8) => Ok(ShieldPeriod::P8),
+        Some(4) => Ok(ShieldPeriod::P4),
+        Some(period) => Err(IntentError::InvalidArgument(format!(
+            "MEV shield period must be 4 or 8 blocks, got {period}"
+        ))
+        .into()),
     }
 }
 
@@ -225,6 +254,8 @@ struct ReviewedIntent {
     preview: IntentPreflight,
     warnings: Vec<String>,
     role: SignerRole,
+    /// The selected route: requested, or required by the intent.
+    shielded: bool,
 }
 
 /// Object-safe parser injection avoiding a dependency cycle to generated intents.
@@ -391,8 +422,9 @@ impl Executor {
             preview,
             warnings,
             role,
+            shielded,
         } = self
-            .review_with_keys(intent, keys, signer_address, opts, false)
+            .review_with_keys(intent, keys, signer_address, opts)
             .await?;
         let mut plan = Plan::new(
             built.call,
@@ -402,6 +434,7 @@ impl Executor {
             signer_address,
         );
         plan.fee = preview.estimated_fee;
+        plan.shielded = shielded;
         plan.effects = preview.effects.clone();
         if let Some(real) = opts.proxy_for {
             plan.effects.push(format!(
@@ -434,8 +467,8 @@ impl Executor {
         keys: &dyn KeyView,
         signer_address: AccountId,
         opts: &PlanOptions,
-        shielded: bool,
     ) -> Result<ReviewedIntent, TxError> {
+        let shielded = opts.shielded;
         intent.validate_dyn()?;
         let semantic = intent.semantic_intent_dyn();
         let declared_safety = semantic.safety_dyn()?;
@@ -578,6 +611,11 @@ impl Executor {
         // selected route before approval, without opening keys. A required
         // Shield route is the route even when planning.
         let quote_shielded = shielded || declared_safety.mev_shield_required;
+        let carrier_period = if quote_shielded {
+            shield_period(opts.period)?.get()
+        } else {
+            0
+        };
         let inner_fee = match preview.estimated_fee {
             Some(fee) => Some(fee),
             None => match pfcx.estimate_fee().await {
@@ -591,11 +629,7 @@ impl Executor {
         if quote_shielded {
             let carrier = self
                 .client
-                .estimate_shielded_carrier_fee(
-                    signer_address,
-                    built.call.clone(),
-                    rtao_catalog::py::MEV_SHIELD_ERA_PERIOD,
-                )
+                .estimate_shielded_carrier_fee(signer_address, built.call.clone(), carrier_period)
                 .await;
             let carrier = match carrier {
                 Err(error) => {
@@ -680,6 +714,7 @@ impl Executor {
             preview,
             warnings,
             role,
+            shielded: quote_shielded,
         })
     }
 
@@ -1197,6 +1232,9 @@ impl Executor {
         let _journal_preparation = journal_preparation;
         let mut plan_opts = opts.execute.plan_options();
         plan_opts.policy = active_policy.clone();
+        // The shield route, quoted at this submission's shield era.
+        plan_opts.shielded = true;
+        plan_opts.period = u32::try_from(opts.period.get()).ok();
         let mut resolved_signer = None;
         let mut replanned = false;
         let mut owner_replanned = false;
@@ -1204,7 +1242,7 @@ impl Executor {
             let reviewed = budget
                 .run(
                     &self.client,
-                    self.review_with_keys(intent, keys, address, &plan_opts, true),
+                    self.review_with_keys(intent, keys, address, &plan_opts),
                 )
                 .await?;
             let mut violations = active_policy.as_ref().map_or_else(Vec::new, |policy| {
