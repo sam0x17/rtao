@@ -19,7 +19,7 @@ w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488"
 Adjust the path to your checkout. For a git dependency, pin `rev` to the full
 reviewed commit instead. Cargo applies `[patch.crates-io]` from your application's
 workspace root. Its Git reference kind and value must match the core pin in
-that revision's `upstream.toml`; the example above matches the current `v478`
+that revision's `upstream.toml`; the example above matches the current `v488`
 pin. The CLI checks this without connecting to a node:
 
 ```sh

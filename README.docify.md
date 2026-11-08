@@ -30,7 +30,7 @@ Replace `<full commit>` with the reviewed commit you use. Cargo applies
 `[patch.crates-io]` only from the final workspace root, so the patch belongs in
 your application's root `Cargo.toml`. Its Git reference kind and value must
 match the core pin in that revision's [upstream.toml](upstream.toml); the
-example matches the current `v478` pin. The upstream core uses a vendored BLS
+example matches the current `v488` pin. The upstream core uses a vendored BLS
 implementation while `tle` requests its registry counterpart, and the patch
 joins those sources so timelock code builds consistently. The CLI checks the
 patch without connecting to a node and prints the exact line when it is
@@ -49,8 +49,8 @@ dependency's `[patch]`, so an application decides on each of them (D-115):
 | rtao workspace patch | Why rtao carries it | Downstream |
 |---|---|---|
 | `[patch.crates-io] w3f-bls` at the core tag | joins the core's vendored BLS with the registry crate `tle` requests | required, as above |
-| `[patch."https://github.com/RaoFoundation/subtensor.git"] bittensor-core` to a fork revision | two reviewed changes on the pinned core tag ([`docs/execution/core-patch.md`](docs/execution/core-patch.md)): the Ed25519 erasure repair, which keeps signing keys in a wiping owner ([RaoFoundation/subtensor#3251](https://github.com/RaoFoundation/subtensor/issues/3251), open upstream), and the injectable Ledger APDU transport rtao's emulator tests use ([RaoFoundation/subtensor#3242](https://github.com/RaoFoundation/subtensor/pull/3242)) | recommended. Without it the core builds from the pinned tag, but Ed25519 secret material is not wiped from memory. Copy it with the next row, at the revision in the same rtao revision's `Cargo.toml` |
-| `[patch."https://github.com/sam0x17/subtensor.git"] w3f-bls, subtensor-macros` | keeps the fork's own monorepo dependencies on the pinned tag | only with the previous row; copy both or neither, at the revisions in that rtao revision's `Cargo.toml` |
+| `[patch."https://github.com/RaoFoundation/subtensor.git"] bittensor-core` to a fork revision | two reviewed changes on the pinned core tag ([`docs/execution/core-patch.md`](docs/execution/core-patch.md)): the Ed25519 erasure repair, which keeps signing keys in a wiping owner ([RaoFoundation/subtensor#3251](https://github.com/RaoFoundation/subtensor/issues/3251), open upstream) and, since the v488 core, also hashed-account Ed25519 keys ([RaoFoundation/subtensor#3317](https://github.com/RaoFoundation/subtensor/issues/3317), D-139), and the injectable Ledger APDU transport rtao's emulator tests use ([RaoFoundation/subtensor#3242](https://github.com/RaoFoundation/subtensor/pull/3242)) | recommended. Without it the core builds from the pinned tag, but Ed25519 secret material is not wiped from memory. Copy it with the next row, at the revision in the same rtao revision's `Cargo.toml` |
+| `[patch."https://github.com/sam0x17/subtensor.git"] fips204, subtensor-hashed, subtensor-macros, w3f-bls` | keeps the fork's own monorepo dependencies on the pinned tag | only with the previous row; copy both or neither, at the revisions in that rtao revision's `Cargo.toml` |
 | `[patch.crates-io] ruint = { path = "patches/ruint" }` | `ruint` 1.20.1, the release with the RUSTSEC-2026-0220 fix, with only its `rust-version` lowered to rtao's 1.89 minimum and one const loop restored (`patches/ruint/UPSTREAM.json`) | reached only through the `evm` feature (alloy). On Rust 1.90 or newer, lock crates.io `ruint` 1.20.1 or newer (`cargo update -p ruint`); on 1.89, copy `patches/ruint` from the same rtao revision and patch it by path |
 
 ## Features

@@ -8,6 +8,14 @@
 - The parity pin (v488) and the runtime are unchanged. 81 hand port(s) remain listed in `parity/port_due.toml`.
 - Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42502998044)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
 
+### Secondary lockfiles at the v488 core; Rust 1.89 build restored
+
+#### Repository maintenance
+
+- Changed: `fuzz/`, `ci/tls-two-providers/` and `ci/validator/probe/` lock the v488 core (`cargo update -p bittensor-core -p subtensor-macros -p w3f-bls`, which adds `fips204`, `subtensor-hashed`, the `fn-dsa` crates and `hkdf` at the root lock's versions); the two-provider fixture's `[patch]` tables equal the root's again (the core patch at `cd1a2e6a` with `fips204` and `subtensor-hashed`), as `verify-graph.mjs` requires. Each builds with `--locked`; a generated `templates/subnet` project builds its validator, miner, owner tool and e2e harness against this checkout.
+- Fixed: `rtao-intents` compiles on the minimum supported Rust (1.89) again: `add_collateral` used an `if let` match guard, which 1.89 does not accept.
+- Docs: the README and getting-started name the v488 core pin, and the downstream patch table lists the fork's `fips204` and `subtensor-hashed` lines and the hashed-account Ed25519 wipe (D-139).
+
 ### Since `snapshot-2026-11-07.3`
 
 Not a versioned release. Each item links to its section below.

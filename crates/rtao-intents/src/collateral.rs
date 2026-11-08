@@ -55,26 +55,25 @@ impl Intent for AddCollateral {
         let hotkey = cx.hotkey_address(self.hotkey_ss58.as_ref().map(|key| key.account()))?;
         let alpha = match self.amount_alpha.resolve(self.netuid, true)? {
             ResolvedAmount::Exact(amount) => amount.rao,
-            // A later multisig round rebuilding its call keeps round 1's amount.
-            ResolvedAmount::All
-                if let Some(approved) =
-                    rtao_tx::pinned::approved_staking_amount("add_collateral", "alpha")? =>
-            {
-                approved
-            }
             ResolvedAmount::All => {
-                let coldkey = cx.coldkey_address()?;
-                let snapshot = cx.view.pin().await?;
-                let (info, collateral) = tokio::try_join!(
+                // A later multisig round rebuilding its call keeps round 1's amount.
+                if let Some(approved) =
+                    rtao_tx::pinned::approved_staking_amount("add_collateral", "alpha")?
+                {
+                    approved
+                } else {
+                    let coldkey = cx.coldkey_address()?;
+                    let snapshot = cx.view.pin().await?;
+                    let (info, collateral) = tokio::try_join!(
                     snapshot.call(
                         &runtime_apis::stake_info_runtime_api::GET_STAKE_INFO_FOR_HOTKEY_COLDKEY_NETUID,
                         (hotkey, coldkey, self.netuid),
                     ),
                     snapshot.storage(&st::MINER_COLLATERAL, (self.netuid, hotkey, coldkey)),
                 )?;
-                let stake = info.map_or(0, |info| info.stake.0);
-                let locked = collateral.map_or(0, |state| state.locked.0);
-                stake.checked_sub(locked).filter(|free| *free > 0).ok_or_else(|| {
+                    let stake = info.map_or(0, |info| info.stake.0);
+                    let locked = collateral.map_or(0, |state| state.locked.0);
+                    stake.checked_sub(locked).filter(|free| *free > 0).ok_or_else(|| {
                     let spelling = self.hotkey_ss58.as_ref().map_or_else(
                         || hotkey.to_ss58(42),
                         |key| key.as_str().to_owned(),
@@ -84,6 +83,7 @@ impl Intent for AddCollateral {
                         self.netuid
                     ))
                 })?
+                }
             }
         };
         Ok(Built::new(
