@@ -127,6 +127,14 @@ pub struct ExecuteOptions {
     pub submit_deadline: Option<Duration>,
     /// Explicit typed/raw shield opt-in, implemented by the shield execution path.
     pub shielded: bool,
+    /// Authorize up to this permanent deposit for automatic recipient
+    /// registration, separate from the payment and fees (D-148). A larger
+    /// deposit is refused, even when the callback approves it.
+    pub max_registration_deposit: Option<Balance<Tao>>,
+    /// Consent callback for automatic recipient registration; it must return
+    /// `true` for the quote. Without it or an allowance, a call that registers
+    /// a recipient is refused before a key is unlocked.
+    pub on_registration_sponsorship: Option<crate::SponsorshipConsent>,
 }
 impl Default for ExecuteOptions {
     fn default() -> Self {
@@ -148,10 +156,27 @@ impl Default for ExecuteOptions {
             deadline: None,
             submit_deadline: None,
             shielded: false,
+            max_registration_deposit: None,
+            on_registration_sponsorship: None,
         }
     }
 }
 impl ExecuteOptions {
+    /// Authorize the composed call's automatic registration reserve, if any,
+    /// before a signer is resolved (Python's `authorize_registration_sponsorship`).
+    async fn authorize_sponsorship(
+        &self,
+        extras: &Map<String, Value>,
+        payer: AccountId,
+    ) -> Result<(), TxError> {
+        crate::sponsorship::authorize_registration_sponsorship(
+            extras,
+            payer,
+            self.max_registration_deposit,
+            self.on_registration_sponsorship.as_ref(),
+        )
+        .await
+    }
     pub(crate) fn check_expected_call(&self, call: &CallBytes) -> Result<(), TxError> {
         if let Some(expected) = &self.expected_call
             && (expected.stamp() != call.stamp()
@@ -536,12 +561,18 @@ impl Executor {
             }));
         }
         let pinned = intent.inner_call_data_dyn();
+        // Receiving addresses resolve at the call boundary, under the
+        // registration guard composed below (D-148).
+        let recipients = crate::hashed::receiving_recipients(semantic)?;
         // Later multisig rounds approve round 1's exact bytes. A rebuild is not
         // always stable (timelock commits, `ALL` balances), so the pinned bytes
         // are reused unless the semantic intent needs its build for policy
-        // metadata; then it is rebuilt with the approved dynamic inputs and
-        // must reproduce the pinned bytes exactly.
-        let verify_pinned = pinned.is_some() && semantic.requires_build_for_policy_dyn();
+        // metadata or carries recipient setup inputs (imported bytes cannot be
+        // authenticated by display metadata); then it is rebuilt with the
+        // approved dynamic inputs and must reproduce the pinned bytes exactly.
+        let verify_pinned = pinned.is_some()
+            && (semantic.requires_build_for_policy_dyn()
+                || crate::hashed::has_receiving_setup_inputs(semantic, keys)?);
         let mut built = if let Some(call) = pinned.filter(|_| !verify_pinned) {
             call.ensure_runtime(&runtime)
                 .map_err(rtao_client::ClientError::from)?;
@@ -552,10 +583,55 @@ impl Executor {
                     call.ensure_runtime(&runtime)
                         .map_err(rtao_client::ClientError::from)?;
                     let inputs = crate::pinned::PinnedInputs::decode(call, &runtime)?;
-                    crate::pinned::scope(inputs, semantic.build_dyn(&cx)).await?
+                    crate::hashed::guarded_build(
+                        &recipients,
+                        crate::pinned::scope(inputs, semantic.build_dyn(&cx)),
+                    )
+                    .await?
                 }
-                None => semantic.build_dyn(&cx).await?,
+                None => crate::hashed::guarded_build(&recipients, semantic.build_dyn(&cx)).await?,
             };
+            let finalized = if matches!(
+                semantic.spec().name,
+                "swap_coldkey_announced"
+                    | "pow_register"
+                    | "execute_proxy_announced"
+                    | "announce_coldkey_swap"
+            ) {
+                Some(self.client.at(rtao_client::BlockRef::Finalized).await?)
+            } else {
+                None
+            };
+            let (call, registration) = crate::hashed::with_recipient_registration(
+                &crate::hashed::RecipientCx {
+                    view: &snapshot,
+                    runtime: &runtime,
+                    keys,
+                    origin,
+                    finalized: finalized
+                        .as_ref()
+                        .map(|view| view as &dyn rtao_client::DynView),
+                },
+                semantic,
+                built.call,
+                &recipients,
+            )
+            .await?;
+            built.call = call;
+            let wrapped_intent = !std::ptr::addr_eq(
+                semantic as *const dyn DynIntent,
+                intent as *const dyn DynIntent,
+            );
+            if (registration.contains_key("hashed_registration")
+                || built.extras.contains_key("hashed_registration"))
+                && (opts.proxy_for.is_some() || wrapped_intent || semantic.spec().origin == "root")
+            {
+                return Err(IntentError::validation(
+                    "register the hashed recipient first using a direct sponsor wallet; initial registration cannot be wrapped in proxy, multisig or sudo",
+                )
+                .into());
+            }
+            built.extras.extend(registration);
             if semantic.spec().origin == "root" && !is_sudo(&runtime, &built.call)? {
                 built.call = rtao_runtime::calls::sudo::sudo(built.call)
                     .compose(&runtime)
@@ -606,7 +682,24 @@ impl Executor {
             fee_payer: signer_address,
             call: &built.call,
         };
-        let mut preview = intent.preflight_dyn(&pfcx).await?;
+        let mut preview =
+            crate::hashed::guarded_build(&recipients, intent.preflight_dyn(&pfcx)).await?;
+        preview.registration_sponsorship =
+            crate::sponsorship::registration_sponsorship_quote(&built.extras, dispatch_origin)?;
+        preview.account_registration = contains_account_registration(&runtime, &built.call)?;
+        // Effects name the recipient as the user wrote it.
+        for (_, recipient) in &recipients {
+            for spelling in [
+                recipient.account.to_string(),
+                recipient.account.to_ss58(runtime.core().ss58_format),
+            ] {
+                for effect in &mut preview.effects {
+                    *effect = effect.replace(&spelling, &recipient.address);
+                }
+            }
+        }
+        self.setup_reserve_preview(&snapshot, &pfcx, &built.extras, semantic, &mut preview)
+            .await;
         self.account_reserve_preview(
             &snapshot,
             &pfcx,
@@ -739,6 +832,114 @@ impl Executor {
             role,
             shielded: quote_shielded,
         })
+    }
+
+    /// Python's preview of automatic recipient setup (D-148): the maximum
+    /// reserve a guard may lock and, for a first payment, the deposit it
+    /// reserves, repricing the whole setup batch; a first `transfer` or
+    /// `transfer_all` must also leave the sender its retained balance.
+    async fn setup_reserve_preview(
+        &self,
+        view: &rtao_client::Snapshot,
+        pfcx: &PreflightCx<'_, dyn rtao_client::DynView + '_>,
+        extras: &Map<String, Value>,
+        semantic: &dyn DynIntent,
+        preview: &mut IntentPreflight,
+    ) {
+        use rtao_client::ViewExt;
+        let maximum = crate::hashed::maximum_setup_deposit(extras);
+        if maximum.rao() != 0 {
+            preview.facts.push((
+                "Account setup reserve (maximum, permanently locked if needed)".into(),
+                rtao_primitives::DynBalance::from(maximum).to_string(),
+            ));
+            if !extras.contains_key("hashed_registration") {
+                preview.effects.insert(
+                    0,
+                    "recipient is already set up; no new reserve unless chain state rolls back"
+                        .into(),
+                );
+            }
+        }
+        let Some(deposit) = extras
+            .get("hashed_registration_deposit_rao")
+            .and_then(Value::as_u64)
+            .map(Balance::<Tao>::from_rao)
+        else {
+            return;
+        };
+        let shown = rtao_primitives::DynBalance::from(deposit).to_string();
+        preview.effects.insert(
+            0,
+            format!("set up recipient and permanently reserve {shown} from the sender"),
+        );
+        preview.facts.push(("Account setup reserve".into(), shown));
+        // An intent-specific quote may have priced only the semantic call;
+        // the setup batch is repriced.
+        preview.estimated_fee = None;
+        if let Some(required) = preview.required_free {
+            preview.required_free = Some(Balance::from_rao(
+                required.rao().saturating_add(deposit.rao()),
+            ));
+        }
+        if !matches!(semantic.spec().name, "transfer" | "transfer_all") {
+            return;
+        }
+        // The runtime transfer_all runs after registration, so it sweeps only
+        // the remainder after the reserve and fee; the new reserve keeps a
+        // Balances consumer, so the existential deposit must remain funded.
+        let checked = async {
+            let account = view
+                .storage(
+                    &rtao_runtime::storage::system::ACCOUNT,
+                    (pfcx.dispatch_origin,),
+                )
+                .await
+                .map_err(IntentError::from)?
+                .to_json();
+            let data = account.get("data").cloned().unwrap_or_default();
+            let field = |name: &str| data.get(name).and_then(Value::as_u64).unwrap_or_default();
+            let (free, frozen) = (field("free"), field("frozen"));
+            let minimum = view
+                .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
+                .await
+                .map_err(IntentError::from)?
+                .0;
+            Ok::<_, IntentError>((free, frozen.max(minimum)))
+        };
+        let (free, retained) = match checked.await {
+            Ok(values) => values,
+            Err(error) => {
+                preview.blocks.push(format!(
+                    "could not quote first-payment fee before account setup: {error}"
+                ));
+                return;
+            }
+        };
+        match pfcx.estimate_fee().await {
+            Err(error) => preview.blocks.push(format!(
+                "could not quote first-payment fee before account setup: {error}"
+            )),
+            Ok(fee) => {
+                let amount = match semantic.spend_dyn() {
+                    rtao_primitives::Spend::Bounded(amount) => amount.rao(),
+                    _ => 0,
+                };
+                let required = amount
+                    .saturating_add(deposit.rao())
+                    .saturating_add(fee.rao())
+                    .saturating_add(retained);
+                preview.required_free = Some(Balance::from_rao(required));
+                preview.available_free = Some(Balance::from_rao(free));
+                preview.estimated_fee = Some(fee);
+                if free < required {
+                    preview.blocks.push(
+                        "insufficient spendable balance for payment, account setup reserve and transaction fee"
+                            .into(),
+                    );
+                }
+            }
+        }
     }
 
     /// Python's account-reserve preview for calls that create a protected
@@ -1297,6 +1498,9 @@ impl Executor {
                 return Err(TxError::Policy(PolicyError { violations }));
             }
             opts.execute.check_expected_call(&reviewed.built.call)?;
+            opts.execute
+                .authorize_sponsorship(&reviewed.built.extras, address)
+                .await?;
             let signer = match &resolved_signer {
                 Some(signer) => Arc::clone(signer),
                 None => {
@@ -1684,6 +1888,9 @@ impl Executor {
                 }));
             }
             opts.check_expected_call(plan.call())?;
+            // Registration sponsorship is authorized before any key is
+            // unlocked, for the exact composed call (D-148).
+            opts.authorize_sponsorship(&plan.extras, address).await?;
             let admission = TimeBudget::new(opts.submit_deadline)?;
             let signer = match resolved_signer.as_ref() {
                 Some(signer) => Arc::clone(signer),
@@ -2395,7 +2602,26 @@ pub async fn compose_nested_intent_call(
         clock: cx.clock,
         spec: semantic.spec(),
     };
-    let mut built = semantic.build_dyn(&inner_cx).await?;
+    let recipients = crate::hashed::receiving_recipients(semantic)?;
+    let mut built =
+        crate::hashed::guarded_build(&recipients, semantic.build_dyn(&inner_cx)).await?;
+    // The nested call carries its own recipient guard; the enclosing
+    // dispatch propagates its metadata so an outer batch can refuse it.
+    let (call, registration) = crate::hashed::with_recipient_registration(
+        &crate::hashed::RecipientCx {
+            view: cx.view,
+            runtime: cx.runtime,
+            keys: &origin,
+            origin,
+            finalized: None,
+        },
+        semantic,
+        built.call,
+        &recipients,
+    )
+    .await?;
+    built.call = call;
+    built.extras.extend(registration);
     if built.extras.contains_key("hashed_registration") {
         return Err(IntentError::validation(format!(
             "register the hashed recipient first using a direct sponsor wallet; initial registration cannot be wrapped in {wrapper}"

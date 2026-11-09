@@ -194,6 +194,7 @@ async fn build_children<V: View + ?Sized>(
 ) -> Result<Built, IntentError> {
     let mut calls = Vec::with_capacity(children.len());
     let mut extras = serde_json::Map::new();
+    let mut maximum_reserves: Vec<(String, u64)> = Vec::new();
     let borrowed = cx.view;
     for (index, child) in children.iter().enumerate() {
         let child_cx = BuildCx {
@@ -205,17 +206,78 @@ async fn build_children<V: View + ?Sized>(
         };
         // Semantic build only: Python does not run each child's executor sudo,
         // proxy or transport adapter while composing this one extrinsic.
-        let built = child.build_dyn(&child_cx).await?;
+        let recipients = rtao_tx::hashed::receiving_recipients(*child)?;
+        let built = rtao_tx::hashed::guarded_build(&recipients, child.build_dyn(&child_cx)).await?;
         if built.extras.contains_key("hashed_registration_guards") {
             return Err(IntentError::validation(
                 "this guarded account payment must be submitted directly, not inside a batch",
             ));
         }
-        calls.push(built.call);
+        let (child_calls, registration) = rtao_tx::hashed::recipient_registration_calls(
+            &rtao_tx::hashed::RecipientCx {
+                view: &borrowed as &dyn DynView,
+                runtime: cx.runtime,
+                keys: &cx.origin,
+                origin: cx.origin,
+                finalized: None,
+            },
+            *child,
+            built.call,
+            &recipients,
+        )
+        .await?;
+        if registration.contains_key("hashed_registration") {
+            return Err(IntentError::validation(
+                "first payment to this recipient must be a direct transfer; batched first-time account setup is not supported",
+            ));
+        }
+        // Guards are flattened: the runtime rejects nested batches. Existing
+        // recipients use check-only guards and never reserve funds.
+        calls.extend(child_calls);
+        if let Some(guards) = registration
+            .get("hashed_registration_guards")
+            .and_then(Value::as_array)
+            .filter(|guards| !guards.is_empty())
+        {
+            let maximum = registration
+                .get("hashed_registration_max_deposit_rao")
+                .and_then(Value::as_u64)
+                .unwrap_or_default();
+            let per_account = maximum / guards.len() as u64;
+            for address in guards.iter().filter_map(Value::as_str) {
+                match maximum_reserves
+                    .iter_mut()
+                    .find(|(account, _): &&mut (String, u64)| account == address)
+                {
+                    Some((_, reserve)) => *reserve = (*reserve).max(per_account),
+                    None => maximum_reserves.push((address.to_owned(), per_account)),
+                }
+            }
+        }
         aggregate_reserves(&mut extras, &built.extras)?;
         for (key, value) in built.extras {
             extras.insert(format!("{index}:{}.{key}", child.spec().name), value);
         }
+    }
+    if !maximum_reserves.is_empty() {
+        extras.insert(
+            "hashed_registration_guards".into(),
+            Value::from(
+                maximum_reserves
+                    .iter()
+                    .map(|(account, _)| Value::from(account.clone()))
+                    .collect::<Vec<_>>(),
+            ),
+        );
+        extras.insert(
+            "hashed_registration_max_deposit_rao".into(),
+            Value::from(
+                maximum_reserves
+                    .iter()
+                    .map(|(_, reserve)| *reserve)
+                    .fold(0u64, u64::saturating_add),
+            ),
+        );
     }
     Ok(Built {
         call: utility::batch_all(calls).compose(cx.runtime)?,
@@ -348,7 +410,15 @@ async fn preflight_children<V: View + ?Sized>(
             fee_payer: cx.fee_payer,
             call: cx.call,
         };
-        let preview = child.preflight_dyn(&child_cx).await?;
+        let recipients = rtao_tx::hashed::receiving_recipients(*child)?;
+        let mut preview =
+            rtao_tx::hashed::guarded_build(&recipients, child.preflight_dyn(&child_cx)).await?;
+        for (_, recipient) in &recipients {
+            let spelling = recipient.account.to_ss58(cx.runtime.core().ss58_format);
+            for effect in &mut preview.effects {
+                *effect = effect.replace(&spelling, &recipient.address);
+            }
+        }
         prefix(&mut out.effects, index, preview.effects);
         prefix(&mut out.warnings, index, preview.warnings);
         prefix(&mut out.blocks, index, preview.blocks);
@@ -862,19 +932,19 @@ mod tests {
             })
             .await?;
         let decoded = decode(&built.call, runtime)?;
-        let inner = &decoded["call_args"][0]["value"][0];
-        // The child's own semantic Utility.batch_all is allowed; an explicit
-        // child Batch intent is what the Python constructor prohibits.
-        assert_eq!(inner["call_module"], "Utility");
-        assert_eq!(inner["call_function"], "batch_all");
-        assert_eq!(
-            inner["call_args"][0]["value"][0]["call_module"],
-            "AdminUtils"
-        );
-        assert_eq!(
-            inner["call_args"][0]["value"][0]["call_function"],
-            "sudo_set_subnet_emission_enabled"
-        );
+        let calls = &decoded["call_args"][0]["value"];
+        // A child's own semantic Utility.batch_all is flattened into the one
+        // batch (Python v488 `atomic_calls`: the runtime rejects nested
+        // batches); an explicit child Batch intent is what the Python
+        // constructor prohibits.
+        for index in 0..2 {
+            assert_eq!(calls[index]["call_module"], "AdminUtils");
+            assert_eq!(
+                calls[index]["call_function"],
+                "sudo_set_subnet_emission_enabled"
+            );
+        }
+        assert_eq!(calls[2]["call_function"], "swap_coldkey_announced");
         assert!(view.touches().is_empty());
         assert_eq!(chain.requests().len(), requests);
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
@@ -988,6 +1058,7 @@ mod tests {
                 facts: vec![("child fact".into(), tag.to_string())],
                 facts_title: FactsTitle::Quote,
                 preview: serde_json::Map::new(),
+                ..Default::default()
             },
         }
     }

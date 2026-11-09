@@ -39,13 +39,9 @@ pub struct Recipient {
 pub fn parse_recipient(value: &str) -> Result<Recipient, rtao_core::CoreError> {
     if is_receiving_address(value) {
         let descriptor = rtao_core::keys::decode_hashed_receiving_address(value)?;
-        let public = rtao_core::keys::Keypair::from_hashed_descriptor(
-            &descriptor,
-            rtao_core::keys::DEFAULT_SS58_FORMAT,
-        )?;
         return Ok(Recipient {
             address: value.to_owned(),
-            account: AccountId(public.public_key_bytes()),
+            account: descriptor_account(&descriptor)?,
             descriptor: Some(descriptor),
         });
     }
@@ -54,6 +50,17 @@ pub fn parse_recipient(value: &str) -> Result<Recipient, rtao_core::CoreError> {
         account: value.parse()?,
         descriptor: None,
     })
+}
+
+/// The account a hashed or post-quantum public descriptor names (Python's
+/// `Keypair.from_hashed_descriptor(descriptor).ss58_address`), through the
+/// core's strict descriptor decoder.
+pub fn descriptor_account(descriptor: &[u8]) -> Result<AccountId, rtao_core::CoreError> {
+    let public = rtao_core::keys::Keypair::from_hashed_descriptor(
+        descriptor,
+        rtao_core::keys::DEFAULT_SS58_FORMAT,
+    )?;
+    Ok(AccountId(public.public_key_bytes()))
 }
 
 /// Python's `account_for_read`: the account a read uses for an address,

@@ -330,6 +330,9 @@ pub enum TxError {
         /// Failed prerequisite.
         reason: String,
     },
+    /// Automatic recipient registration was not explicitly authorized
+    /// before signing (Python `RegistrationSponsorshipRequired`, D-148).
+    RegistrationSponsorship(Box<crate::sponsorship::SponsorshipRequired>),
     /// Finality lag leaves a shield's short era unusable.
     ShieldEraExpired {
         /// Shield era period.
@@ -379,6 +382,7 @@ impl TxError {
                 ErrorCode::PolicyViolation
             }
             Self::ShieldEraExpired { .. } => ErrorCode::Expired,
+            Self::RegistrationSponsorship(_) => ErrorCode::PolicyViolation,
         }
     }
 }
@@ -404,6 +408,7 @@ impl fmt::Display for TxError {
                 detail,
             } => write!(f, "surface changed for {pallet}.{call}: {detail}"),
             Self::SigningDisabled { reason } => write!(f, "signing disabled: {reason}"),
+            Self::RegistrationSponsorship(error) => error.fmt(f),
             Self::ShieldEraExpired {
                 period,
                 finality_lag,

@@ -205,14 +205,6 @@ tag = "v488"
 symbols = ["bittensor.cli.helpers._locked_value", "bittensor.cli.helpers.account_for_read", "bittensor.cli.helpers.fetch_coldkey_balances_and_valuations", "bittensor.cli.helpers.wallet_balance_row", "bittensor.cli.helpers.wallet_inspect_data", "bittensor.cli.helpers.wallet_registration_rows"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/main.py"
-kind = "ported"
-from = "57f82d668a651b24f71174a0f26f5c91a2dea842"
-to = "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b"
-tag = "v488"
-symbols = ["bittensor.cli.main.addresses", "bittensor.cli.main.axon", "bittensor.cli.main.collateral", "bittensor.cli.main.config", "bittensor.cli.main.crowd", "bittensor.cli.main.evm", "bittensor.cli.main.extension", "bittensor.cli.main.gamma", "bittensor.cli.main.lock", "bittensor.cli.main.main_callback", "bittensor.cli.main.misc", "bittensor.cli.main.multisig", "bittensor.cli.main.parse_registration_deposit", "bittensor.cli.main.proxy", "bittensor.cli.main.root", "bittensor.cli.main.stake", "bittensor.cli.main.subnets", "bittensor.cli.main.sudo", "bittensor.cli.main.timelock", "bittensor.cli.main.upgrade", "bittensor.cli.main.wallet", "bittensor.cli.main.weights"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/multisig_helpers.py"
 kind = "ported"
 from = "21387c7cd8c95df13fb77bf33e60788236186605"
@@ -317,30 +309,6 @@ tag = "v488"
 symbols = ["bittensor.intents.association.AssociateHotkey", "bittensor.intents.association.AssociateHotkey.build", "bittensor.intents.association.public_view"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/base.py"
-kind = "ported"
-from = "fc60c057bf0fdf03298c71d26177c79ac9832b09"
-to = "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed"
-tag = "v488"
-symbols = ["bittensor.intents.base.Intent", "bittensor.intents.base.Intent.requires_build_for_policy", "bittensor.intents.base.IntentPreflight", "bittensor.intents.base.IntentPreflight.account_registration", "bittensor.intents.base.IntentPreflight.registration_sponsorship", "bittensor.intents.base.RegistrationSponsorship"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/batch.py"
-kind = "ported"
-from = "efbab058438eba1017daecfd906a623d715f441c"
-to = "2200235b75b4d2457b9b554b269afa080aeceaa2"
-tag = "v488"
-symbols = ["bittensor.intents.batch.Batch", "bittensor.intents.batch.Batch.build", "bittensor.intents.batch.Batch.preflight", "bittensor.intents.batch.Batch.requires_build_for_policy"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/coldkey.py"
-kind = "ported"
-from = "98ee9b926b96bf9dabe4a01ad3c19f8dd6d4c914"
-to = "d2882ffce64baa07576b6a0d0dafbeeb815b98aa"
-tag = "v488"
-symbols = ["bittensor.intents.coldkey.AnnounceColdkeySwap", "bittensor.intents.coldkey.AnnounceColdkeySwap.hashed_descriptor", "bittensor.intents.coldkey.Any", "bittensor.intents.coldkey.Optional"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/crowdloan.py"
 kind = "ported"
 from = "a0e8fc6981a0aa63ad5d46aa60a37d6b657567a7"
@@ -371,14 +339,6 @@ from = "30b4e4d42f161e970e1bacdad9ad2175ce6318da"
 to = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
 tag = "v488"
 symbols = ["bittensor.intents.proxy.BuiltCall", "bittensor.intents.proxy.CreatePureProxy", "bittensor.intents.proxy.CreatePureProxy.account_mode", "bittensor.intents.proxy.CreatePureProxy.build", "bittensor.intents.proxy.CreatePureProxy.requires_build_for_policy", "bittensor.intents.proxy.CreatePureProxy.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.Intent", "bittensor.intents.proxy.KillPureProxy", "bittensor.intents.proxy.KillPureProxy.account_mode", "bittensor.intents.proxy.KillPureProxy.build", "bittensor.intents.proxy.KillPureProxy.wraps", "bittensor.intents.proxy.PROXY_TYPES"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/transfer.py"
-kind = "ported"
-from = "4ef01f892de6f97d4e5a1b0528fca2a5a4b9655d"
-to = "89321c66fae0860b180ba4aef88d888aa158e48f"
-tag = "v488"
-symbols = ["bittensor.intents.transfer.Any", "bittensor.intents.transfer.ClassVar", "bittensor.intents.transfer.Optional", "bittensor.intents.transfer.Transfer", "bittensor.intents.transfer.Transfer.hashed_descriptor", "bittensor.intents.transfer.TransferAll", "bittensor.intents.transfer.TransferAll.hashed_descriptor"]
 
 [[file]]
 py = "sdk/python/bittensor/multisig.py"

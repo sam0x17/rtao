@@ -38,7 +38,6 @@ impl Intent for Transfer {
         format!("transfer {amount} to {}", self.dest_ss58)
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::account_modes::no_hashed_destination("transfer", self.hashed_descriptor.as_ref())?;
         Ok(Built::new(self.chain_call()?.compose(cx.runtime)?))
     }
     async fn warnings<V: View + ?Sized>(
@@ -62,7 +61,7 @@ impl Intent for Transfer {
         }
     }
     fn validate(&self) -> Result<(), IntentError> {
-        crate::account_modes::no_hashed_destination("transfer", self.hashed_descriptor.as_ref())?;
+        crate::account_modes::check_hashed_descriptor(self.hashed_descriptor.as_ref())?;
         self.amount_tao.resolve(NetUid::ROOT, true)?;
         Ok(())
     }
@@ -76,10 +75,6 @@ impl Intent for TransferAll {
         format!("transfer ALL TAO to {}", self.dest_ss58)
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::account_modes::no_hashed_destination(
-            "transfer_all",
-            self.hashed_descriptor.as_ref(),
-        )?;
         crate::generated::passthrough::transfer_all(self, cx).await
     }
     async fn warnings<V: View + ?Sized>(
@@ -95,10 +90,7 @@ impl Intent for TransferAll {
         self
     }
     fn validate(&self) -> Result<(), IntentError> {
-        crate::account_modes::no_hashed_destination(
-            "transfer_all",
-            self.hashed_descriptor.as_ref(),
-        )?;
+        crate::account_modes::check_hashed_descriptor(self.hashed_descriptor.as_ref())?;
         Ok(())
     }
 }

@@ -97,14 +97,24 @@ impl schemars::JsonSchema for AccountId {
     }
 }
 
-/// A validated SS58 input retaining the caller's exact address spelling.
+/// A validated SS58 or receiving-address input retaining the caller's exact
+/// spelling.
 ///
 /// Intent JSON and summaries preserve the supplied network prefix. Chain calls
 /// use [`Self::account`] and the decoded public-key bytes, independent of it.
+///
+/// A `tao_`/`bth` receiving address (Python's `is_receiving_address`) is
+/// decoded by the core's strict codec and keeps the public descriptor it
+/// carries ([`Self::descriptor`]). Its account belongs to a hashed or
+/// post-quantum wallet that may need registration before it is paid: the
+/// executor resolves such an address only together with the registration
+/// guard it requires (`rtao_tx::hashed`), and an intent build outside that
+/// guard refuses it.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Ss58Address {
     spelling: String,
     account: AccountId,
+    descriptor: Option<Vec<u8>>,
 }
 
 impl Ss58Address {
@@ -120,6 +130,14 @@ impl Ss58Address {
     pub const fn as_bytes(&self) -> &[u8; 32] {
         self.account.as_bytes()
     }
+    /// The public descriptor a receiving address carries; `None` for SS58.
+    pub fn descriptor(&self) -> Option<&[u8]> {
+        self.descriptor.as_deref()
+    }
+    /// Whether this input is a receiving address rather than SS58.
+    pub const fn is_receiving(&self) -> bool {
+        self.descriptor.is_some()
+    }
 }
 
 impl FromStr for Ss58Address {
@@ -131,8 +149,20 @@ impl FromStr for Ss58Address {
 impl TryFrom<String> for Ss58Address {
     type Error = rtao_core::CoreError;
     fn try_from(spelling: String) -> Result<Self, Self::Error> {
+        if crate::receiving::is_receiving_address(&spelling) {
+            let recipient = crate::receiving::parse_recipient(&spelling)?;
+            return Ok(Self {
+                spelling,
+                account: recipient.account,
+                descriptor: recipient.descriptor,
+            });
+        }
         let account = spelling.parse()?;
-        Ok(Self { spelling, account })
+        Ok(Self {
+            spelling,
+            account,
+            descriptor: None,
+        })
     }
 }
 impl TryFrom<&str> for Ss58Address {
@@ -146,6 +176,7 @@ impl From<AccountId> for Ss58Address {
         Self {
             spelling: account.to_string(),
             account,
+            descriptor: None,
         }
     }
 }

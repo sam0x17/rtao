@@ -89,6 +89,24 @@ pub trait KeyView: Send + Sync {
     fn bare_signer_account(&self) -> Option<AccountId> {
         None
     }
+    /// The public descriptor of an attached hotkey whose account needs
+    /// registration (a rotating hashed or post-quantum key), read without
+    /// unlocking; `None` for a classical or stateless key, or none attached.
+    ///
+    /// Python's `requires_registration(public_view(wallet, "hotkey"))`: an
+    /// operation that defaults to the wallet hotkey registers it first.
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        None
+    }
+    /// The public descriptor of a local key whose account is `account` and
+    /// needs registration, from public companion files only (never a private
+    /// key or a prompt); `None` when none is known.
+    ///
+    /// Python's `hashed._local_descriptor`: a payment to a local hashed
+    /// wallet registers it in the same atomic batch.
+    fn local_descriptor(&self, _account: &AccountId) -> Option<Vec<u8>> {
+        None
+    }
 }
 
 /// Compile-time key-source selection for one signing role.

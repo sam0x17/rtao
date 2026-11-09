@@ -9822,7 +9822,7 @@
           "rtao_cli::globals::{root_globals, Globals}; rtao_cli::context::AppContext",
           "crates/rtao-cli/tests/{startup_contract, entrypoint_contract, cli_source_tree, config_catalog, catalog_entrypoint, globals_contract}.rs"
         ],
-        "synced_blob": "57f82d668a651b24f71174a0f26f5c91a2dea842"
+        "synced_blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b"
       },
       {
         "kind": "ported",
@@ -10828,7 +10828,7 @@
         "rust": [
           "`rtao_tx::{IntentInterface, Intent, DynIntent, IntentPreflight, Built, BuildCx, PreflightCx}`"
         ],
-        "synced_blob": "fc60c057bf0fdf03298c71d26177c79ac9832b09"
+        "synced_blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed"
       },
       {
         "kind": "ported",
@@ -10839,7 +10839,7 @@
         "rust": [
           "`rtao_intents::batch` (feature `batch`)"
         ],
-        "synced_blob": "efbab058438eba1017daecfd906a623d715f441c"
+        "synced_blob": "2200235b75b4d2457b9b554b269afa080aeceaa2"
       },
       {
         "kind": "ported",
@@ -10861,7 +10861,7 @@
         "rust": [
           "`rtao_intents::coldkey` (feature `coldkey`)"
         ],
-        "synced_blob": "98ee9b926b96bf9dabe4a01ad3c19f8dd6d4c914"
+        "synced_blob": "d2882ffce64baa07576b6a0d0dafbeeb815b98aa"
       },
       {
         "kind": "ported",
@@ -11080,7 +11080,7 @@
           "rtao_intents::transfer::{Transfer, TransferAll}",
           "rtao_intents::generated::{interfaces, passthrough}"
         ],
-        "synced_blob": "4ef01f892de6f97d4e5a1b0528fca2a5a4b9655d"
+        "synced_blob": "89321c66fae0860b180ba4aef88d888aa158e48f"
       },
       {
         "kind": "ported",
@@ -12473,14 +12473,15 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/cli/registration.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_cli::globals::parse_registration_deposit",
+          "rtao_cli::context::AppContext::confirm_registration_sponsorship"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "5ed265d83a8debf17754ee585c9b16e79346687e"
       },
       {
         "kind": "ported",
@@ -12511,7 +12512,9 @@
         "python": "sdk/python/bittensor/hashed.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_tx::hashed::{with_recipient_registration, recipient_registration_calls, receiving_recipients, has_receiving_setup_inputs, guarded_build, check_build_recipients, atomic_calls, hashed_accounts_enabled, descriptor_registration_enabled, require_receiving_support, protected_account_kind, is_pq_required, quote_registration_deposit}",
+          "rtao_primitives::receiving::{descriptor_value, descriptor_bytes, descriptor_storage, registration_descriptor_value, descriptor_account, raw_bytes}",
+          "crates/rtao-intents/tests/recipient_registration.rs"
         ],
         "synced_blob": "pending"
       },
@@ -12596,14 +12599,15 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/registration_sponsorship.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_tx::sponsorship::{RegistrationSponsorship, SponsorshipConsent, SponsorshipRequired, registration_sponsorship_quote, authorize_registration_sponsorship}",
+          "rtao_tx::{ExecuteOptions::{max_registration_deposit, on_registration_sponsorship}, TxError::RegistrationSponsorship}"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "a5806dd77b2bd29020f15b04e8302724337740dc"
       },
       {
         "kind": "ported",

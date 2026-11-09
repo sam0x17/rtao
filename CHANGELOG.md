@@ -8,6 +8,37 @@
 - The parity pin (v488) and the runtime are unchanged. 81 hand port(s) remain listed in `parity/port_due.toml`.
 - Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42502998044)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
 
+### Since `snapshot-2026-11-08.5`
+
+Not a versioned release. Each item links to its section below.
+
+- Payments and ownership changes to hashed and post-quantum receiving addresses register or check the recipient in the same atomic batch, and the executor refuses to sign a first registration without explicit sponsorship consent (`max_registration_deposit`, `on_registration_sponsorship`, `rtao --max-registration-deposit`) (D-148).
+
+### Registration guards and sponsorship consent (D-148)
+
+#### rtao-primitives
+
+- `Ss58Address` accepts a `tao_`/`bth` receiving address, keeping its spelling and the descriptor it carries (`descriptor`, `is_receiving`); its `account` is the hashed or post-quantum account. New: `receiving::descriptor_account`.
+
+#### rtao-signer
+
+- `KeyView` gains `hotkey_descriptor` and `local_descriptor` (default `None`): public descriptors a wallet can supply so that an operation defaulting to its hotkey, or a payment to one of its own hashed keys, registers it. No wallet implements them yet.
+
+#### rtao-tx
+
+- New `hashed` module (Python `hashed.py`, write side): `with_recipient_registration` and its batch form `recipient_registration_calls`, `receiving_recipients`, `has_receiving_setup_inputs`, `atomic_calls`, `hashed_accounts_enabled`, `descriptor_registration_enabled`, `require_receiving_support`, the protected-account reads (`protected_account_kind`, `is_pq_required`, `quote_registration_deposit`, moved from rtao-intents) and `guarded_build`/`check_build_recipients`.
+- The executor resolves receiving addresses at the call boundary under that guard. A first payment to a registered target (`transfer`, `transfer_all`, coldkey announcement and swap, `swap_hotkey`, the registrations) is `batch_all[check_registration_deposit, register, call]`; a registered recipient adds `check_registered`; an announced coldkey swap, PoW registration or announced proxy execution requires the finalized registration and stays direct; a stateless post-quantum recipient needs only the runtime's support. Wrapping a first registration in proxy, multisig or Sudo is refused, as is a first registration in a batch (batches carry check-only guards). An intent build that names a receiving address or a `hashed_descriptor` outside such a guard refuses. A later multisig round with recipient inputs rebuilds and must reproduce the approved bytes.
+- New `sponsorship` module: `RegistrationSponsorship`, `SponsorshipConsent`, `SponsorshipRequired`, `registration_sponsorship_quote`, `authorize_registration_sponsorship`; `ExecuteOptions::{max_registration_deposit, on_registration_sponsorship}` and `TxError::RegistrationSponsorship`. Execution authorizes the composed call's reserve before any signer is resolved, on the plain and Shield routes.
+- `IntentPreflight` gains `registration_sponsorship` and `account_registration`, and previews the setup reserve (the maximum, a first payment's deposit, the repriced batch and, for a transfer, the sender's remaining balance). Source-breaking for `IntentPreflight` and `ExecuteOptions` struct literals without `..Default::default()`.
+
+#### rtao-intents
+
+- `Transfer`, `TransferAll` and `AnnounceColdkeySwap` accept `hashed_descriptor` (decoded strictly at validation) instead of refusing it. `Batch` guards each child in place.
+
+#### rtao-cli
+
+- `--max-registration-deposit` authorizes up to that much TAO for automatic recipient registration; `--yes` never does. Without it an interactive session asks, and JSON or piped sessions refuse with the flag to pass.
+
 ### Since `snapshot-2026-11-08.4`
 
 Not a versioned release. Each item links to its section below.

@@ -79,6 +79,18 @@ impl KeyView for OriginView<'_> {
             Self::Account(account) => Some(*account),
         }
     }
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        match self {
+            Self::Keys(keys) => keys.hotkey_descriptor(),
+            Self::Account(_) => None,
+        }
+    }
+    fn local_descriptor(&self, account: &AccountId) -> Option<Vec<u8>> {
+        match self {
+            Self::Keys(keys) => keys.local_descriptor(account),
+            Self::Account(_) => None,
+        }
+    }
 }
 
 /// Immutable materials for building one semantic call at one block.
@@ -185,6 +197,12 @@ pub struct IntentPreflight {
     /// Structured, JSON-native counterpart of `effects` for intents whose
     /// preview has a fixed shape; empty otherwise.
     pub preview: Map<String, Value>,
+    /// The automatic recipient registration execution must have authorized
+    /// before signing (D-148); planning never authorizes it.
+    pub registration_sponsorship: Option<crate::RegistrationSponsorship>,
+    /// The composed call establishes a protected account, including derived
+    /// accounts (Python's `contains_account_registration`).
+    pub account_registration: bool,
 }
 
 /// Effective origin, payer, state and wrapped call used by preflight hooks.
@@ -508,7 +526,12 @@ impl<I: Intent> DynIntent for I {
         &'a self,
         cx: &'a BuildCx<'a, dyn DynView + 'a>,
     ) -> BoxFuture<'a, Result<Built, IntentError>> {
-        Box::pin(self.build(cx))
+        Box::pin(async move {
+            // A receiving address resolves to its account only under the
+            // registration guard its composer adds (D-148).
+            crate::hashed::check_build_recipients(self)?;
+            self.build(cx).await
+        })
     }
     fn preflight_dyn<'a>(
         &'a self,

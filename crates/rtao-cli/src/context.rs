@@ -244,6 +244,78 @@ impl AppContext {
             })
         }
     }
+    /// Python `confirm_registration_sponsorship`: approve an automatic
+    /// recipient registration's permanent deposit. `--yes` never does;
+    /// `--max-registration-deposit` or an interactive answer must.
+    pub fn confirm_registration_sponsorship(
+        &self,
+        quote: &rtao::tx::RegistrationSponsorship,
+    ) -> Result<(), CliError> {
+        let amount = rtao::primitives::DynBalance::from(quote.deposit).to_decimal_string();
+        let amount = amount
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_owned();
+        let details = format!(
+            "register recipient account {} on {} and permanently lock {amount} TAO from {}, in addition to the transfer and transaction fees",
+            quote.recipient_account, self.globals.network, quote.payer_account
+        );
+        if let Some(maximum) = self.globals.max_registration_deposit {
+            if quote.deposit.rao() > maximum.rao() {
+                let maximum = maximum.to_decimal_string();
+                let maximum = maximum.trim_end_matches('0').trim_end_matches('.');
+                return Err(CliError::failure(format!(
+                    "registration requires {amount} TAO, exceeding --max-registration-deposit {maximum}"
+                ))
+                .with_help("review the deposit and explicitly increase the limit if you accept it"));
+            }
+            return self
+                .output
+                .message(&format!("Registration sponsorship authorized: {details}."))
+                .map_err(|error| CliError::failure(error.to_string()));
+        }
+        let interactive = !self.globals.json
+            && self
+                .terminal
+                .lock()
+                .map_err(|_| CliError::failure("terminal lock poisoned"))?
+                .stdin_is_tty();
+        if !interactive {
+            return Err(CliError::failure(format!(
+                "explicit registration sponsorship consent required to {details}"
+            ))
+            .with_help(format!(
+                "pass --max-registration-deposit {amount} to authorize this deposit; --yes alone does not authorize registration sponsorship"
+            )));
+        }
+        let mut question = details;
+        if let Some(first) = question.get_mut(0..1) {
+            first.make_ascii_uppercase();
+        }
+        let rendered = self.output.prose(&format!("{question}?"));
+        let question = crate::output::terminal_text(&rendered);
+        let mut terminal = self
+            .terminal
+            .lock()
+            .map_err(|_| CliError::failure("terminal lock poisoned"))?;
+        loop {
+            let reply = terminal
+                .read_line(&format!("{question} [y/N]: "))
+                .map_err(|error| match error {
+                    crate::prompt::PromptError::Aborted => CliError::aborted(),
+                    _ => CliError::failure("could not read confirmation"),
+                })?;
+            match crate::prompt::python_strip(&reply).to_lowercase().as_str() {
+                "y" | "yes" => return Ok(()),
+                "" | "n" | "no" => {
+                    return Err(CliError::failure("aborted; no transaction submitted."));
+                }
+                _ => terminal
+                    .message("Please enter Y or N")
+                    .map_err(|_| CliError::failure("could not write confirmation prompt"))?,
+            }
+        }
+    }
     /// Confirm a mutation, refusing without `--yes` in JSON or piped sessions.
     pub fn confirm(&self, question: &str) -> Result<(), CliError> {
         if self.globals.assume_yes {
@@ -1177,6 +1249,17 @@ impl AppContext {
             review_summary.as_str()
         };
         self.confirm(&format!("{question}?"))?;
+        // A general --yes is not permission to lock an additional deposit
+        // (D-148): the composed call's registration reserve is approved here,
+        // and execution accepts only this exact quote.
+        let approved_sponsorship = rtao::tx::sponsorship::registration_sponsorship_quote(
+            &plan.extras,
+            plan.signer_address,
+        )
+        .map_err(|error| CliError::failure(error.to_string()))?;
+        if let Some(quote) = &approved_sponsorship {
+            self.confirm_registration_sponsorship(quote)?;
+        }
         if let Some(hooks) = control.hooks {
             hooks.before_submit_with_plan(&plan).await?;
         }
@@ -1222,6 +1305,11 @@ impl AppContext {
             retries: 0,
             shielded: choice.enabled,
             progress,
+            max_registration_deposit: self.globals.max_registration_deposit,
+            on_registration_sponsorship: Some(rtao::tx::SponsorshipConsent::new(move |quote| {
+                let approved = approved_sponsorship.as_ref() == Some(&quote);
+                async move { approved }
+            })),
             ..Default::default()
         };
         // Keep the SDK future out of this frame and both progress branches;

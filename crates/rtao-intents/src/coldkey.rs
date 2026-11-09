@@ -21,10 +21,6 @@ impl Intent for AnnounceColdkeySwap {
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        crate::account_modes::no_hashed_destination(
-            "announce_coldkey_swap",
-            self.hashed_descriptor.as_ref(),
-        )?;
         crate::generated::passthrough::announce_coldkey_swap(self, cx).await
     }
 
@@ -39,10 +35,7 @@ impl Intent for AnnounceColdkeySwap {
         ])
     }
     fn validate(&self) -> Result<(), IntentError> {
-        crate::account_modes::no_hashed_destination(
-            "announce_coldkey_swap",
-            self.hashed_descriptor.as_ref(),
-        )?;
+        crate::account_modes::check_hashed_descriptor(self.hashed_descriptor.as_ref())?;
         Ok(())
     }
 }

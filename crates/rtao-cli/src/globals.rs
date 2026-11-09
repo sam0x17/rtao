@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/globals.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Additional source at the same commit/license: sdk/python/bittensor/cli/main.py.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/registration.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Shared command tiers and flag/environment/config precedence.
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -44,6 +45,9 @@ pub struct Globals {
     pub assume_yes: bool,
     /// Plan without submitting.
     pub dry_run: bool,
+    /// Explicit allowance for automatic recipient registration deposits
+    /// (D-148); `--yes` never authorizes one.
+    pub max_registration_deposit: Option<rtao::primitives::Balance<rtao::primitives::Tao>>,
     /// Explicit tri-state shield override; config stays a separate fallback.
     pub mev_shield: Option<bool>,
     /// Proxy reference; `self` bypasses configured dispatch.
@@ -184,9 +188,18 @@ fn bridge() -> Vec<Arg> {
 }
 fn tx() -> Vec<Arg> {
     vec![
-        flag("assume_yes", "yes", "Skip confirmation prompts.")
-            .short('y')
-            .alias("no-prompt"),
+        flag(
+            "assume_yes",
+            "yes",
+            "Skip transaction prompts; registration sponsorship still needs explicit consent.",
+        )
+        .short('y')
+        .alias("no-prompt"),
+        option(
+            "max_registration_deposit",
+            "max-registration-deposit",
+            "Explicitly authorize up to this much TAO to be permanently locked for automatic recipient registration, separate from transfer and fees.",
+        ),
         flag("dry_run", "dry-run", "Preview without submitting."),
         flag("mev_shield", "mev-shield", "Encrypt via the MEV shield.")
             .overrides_with_all(["mev_shield", "no_mev_shield"]),
@@ -307,6 +320,7 @@ pub fn root_globals(command: Command) -> Command {
         matches!(
             arg.get_id().as_str(),
             "assume_yes"
+                | "max_registration_deposit"
                 | "dry_run"
                 | "mev_shield"
                 | "no_mev_shield"
@@ -389,6 +403,38 @@ fn truthy(value: &Value) -> bool {
     }
 }
 
+/// Python `cli.registration.parse_registration_deposit`: an exact,
+/// non-negative native-token budget, never rounding consent.
+pub fn parse_registration_deposit(
+    value: &str,
+) -> Result<rtao::primitives::Balance<rtao::primitives::Tao>, String> {
+    let invalid = || {
+        "Invalid value for '--max-registration-deposit': use a non-negative TAO amount with at most nine decimal places".to_owned()
+    };
+    let (integer, fraction) = value.split_once('.').unwrap_or((value, ""));
+    let digits = |text: &str| text.bytes().all(|byte| byte.is_ascii_digit());
+    let shape = if value.contains('.') {
+        digits(integer) && !fraction.is_empty() && fraction.len() <= 9 && digits(fraction)
+    } else {
+        !integer.is_empty() && digits(integer)
+    };
+    if !shape {
+        return Err(invalid());
+    }
+    let whole: u128 = if integer.is_empty() {
+        0
+    } else {
+        integer.parse().map_err(|_| invalid())?
+    };
+    let fraction: u128 = format!("{fraction:0<9}").parse().map_err(|_| invalid())?;
+    let rao = whole
+        .checked_mul(1_000_000_000)
+        .and_then(|rao| rao.checked_add(fraction))
+        .and_then(|rao| u64::try_from(rao).ok())
+        .ok_or_else(invalid)?;
+    Ok(rtao::primitives::Balance::from_rao(rao))
+}
+
 impl Globals {
     /// Resolve root flag > nonempty environment > config > builtin default.
     /// Signer validation follows leaf overrides in [`Self::apply_with_env`].
@@ -444,6 +490,9 @@ impl Globals {
                 .copied()
                 .unwrap_or(0),
             assume_yes: yes(root, "assume_yes"),
+            max_registration_deposit: string(root, "max_registration_deposit")
+                .map(|value| parse_registration_deposit(&value))
+                .transpose()?,
             dry_run: yes(root, "dry_run"),
             mev_shield: if yes(root, "mev_shield") {
                 Some(true)
@@ -559,6 +608,9 @@ impl Globals {
         self.json |= enabled("json");
         self.quiet |= enabled("quiet");
         self.assume_yes |= enabled("assume_yes");
+        if let Some(v) = value("max_registration_deposit") {
+            self.max_registration_deposit = Some(parse_registration_deposit(&v)?);
+        }
         self.dry_run |= enabled("dry_run");
         if enabled("mev_shield") {
             self.mev_shield = Some(true);
@@ -716,6 +768,35 @@ mod tests {
             with_globals(Command::new("read"), Tier::Read),
         ])
         .try_get_matches_from(argv)
+    }
+    #[test]
+    fn registration_deposits_are_exact_nonnegative_tao() {
+        for (input, rao) in [
+            ("0", 0),
+            ("1", 1_000_000_000),
+            (".5", 500_000_000),
+            ("2.000000001", 2_000_000_001),
+            ("18446744073.709551615", u64::MAX),
+        ] {
+            assert_eq!(
+                parse_registration_deposit(input).map(|b| b.rao()),
+                Ok(rao),
+                "{input}"
+            );
+        }
+        for input in [
+            "",
+            ".",
+            "1.",
+            "-1",
+            "1e3",
+            "1.0000000001",
+            " 1",
+            "18446744073.709551616",
+            "0x1",
+        ] {
+            assert!(parse_registration_deposit(input).is_err(), "{input}");
+        }
     }
     #[test]
     fn flag_env_config_default_precedence_and_wallet_provenance()

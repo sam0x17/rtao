@@ -220,6 +220,7 @@ impl<M: ProbeKind> Intent for Probe<M> {
             facts: vec![("reserved".into(), "25 rao".into())],
             facts_title: FactsTitle::Custom("semantic facts".into()),
             preview: serde_json::Map::new(),
+            ..Default::default()
         })
     }
 }

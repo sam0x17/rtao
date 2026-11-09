@@ -79,3 +79,30 @@ fn input_address_schema_is_a_string() -> TestResult {
     assert_eq!(schema["type"], serde_json::json!("string"));
     Ok(())
 }
+
+#[test]
+fn receiving_addresses_keep_their_spelling_and_descriptor() -> TestResult {
+    use rtao_core::keys::{CRYPTO_HASHED, Keypair, encode_hashed_receiving_address};
+    let key = Keypair::from_seed(&[9; 32], CRYPTO_HASHED)?;
+    let descriptor = key.hashed_descriptor()?;
+    let spelling = encode_hashed_receiving_address(&descriptor)?;
+    let address: Ss58Address = spelling.parse()?;
+    assert_eq!(address.as_str(), spelling);
+    assert!(address.is_receiving());
+    assert_eq!(address.descriptor(), Some(descriptor.as_slice()));
+    assert_eq!(
+        address.account(),
+        rtao_primitives::receiving::descriptor_account(&descriptor)?
+    );
+    // The account is the same one its SS58 spelling names, without a descriptor.
+    let plain = Ss58Address::from(address.account());
+    assert!(!plain.is_receiving());
+    assert_ne!(plain, address);
+    // A malformed member of the family reaches the strict decoder.
+    let mut corrupt = spelling.clone();
+    corrupt.pop();
+    corrupt.push('x');
+    assert!(corrupt.parse::<Ss58Address>().is_err());
+    assert!("tao_".parse::<Ss58Address>().is_err());
+    Ok(())
+}

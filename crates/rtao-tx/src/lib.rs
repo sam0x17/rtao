@@ -5,6 +5,7 @@
 
 mod error;
 mod executor;
+pub mod hashed;
 mod intent;
 /// Multisig account approvals and reusable opening-deposit funding checks.
 pub mod multisig;
@@ -17,6 +18,7 @@ mod plan;
 mod policy;
 pub mod receiving;
 mod registration;
+pub mod sponsorship;
 /// Portable Quicknet timelock envelopes and asynchronous beacon decryption.
 pub mod timelock;
 
@@ -39,3 +41,4 @@ pub use policy::{IntentSafety, Policy, PolicySubject};
 pub use rtao_client::{ShieldPeriod, UnsignedExtrinsic};
 pub use rtao_primitives::Spend;
 pub use rtao_runtime::models::ProxyType;
+pub use sponsorship::{RegistrationSponsorship, SponsorshipConsent, SponsorshipRequired};
