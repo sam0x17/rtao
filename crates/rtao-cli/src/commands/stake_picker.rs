@@ -339,26 +339,27 @@ async fn fill_names(
     }
     Ok(())
 }
+/// Record a picked intent field. A complete receiving address is kept, so
+/// execution guards the destination's registration (Python v488).
 fn chosen(
     ctx: &AppContext,
     field: &str,
-    account: AccountId,
+    address: &str,
     name: Option<&str>,
     answers: &mut Map<String, Value>,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
     if let Some(name) = name {
-        ctx.output
-            .name_address(&account.to_string(), name)
-            .map_err(failure)?;
+        ctx.output.name_address(address, name).map_err(failure)?;
     }
-    answers.insert(field.into(), json!(account));
-    history.record_answers(vec![address_cli_name(field), account.to_string()]);
+    answers.insert(field.into(), json!(address));
+    history.record_answers(vec![address_cli_name(field), address.to_owned()]);
     Ok(())
 }
-fn resolve(ctx: &AppContext, field: &str, raw: &str) -> Result<Option<AccountId>, CliError> {
-    match ctx.resolve_address(field, Some(raw)) {
-        Ok(account) => Ok(account),
+/// Resolve a typed answer as the flag would, keeping a receiving address.
+fn resolve(ctx: &AppContext, field: &str, raw: &str) -> Result<Option<String>, CliError> {
+    match ctx.resolve_address_text(field, Some(raw)) {
+        Ok(address) => Ok(address),
         Err(error) => {
             message(ctx, &error.to_string())?;
             Ok(None)
@@ -554,11 +555,11 @@ pub(crate) async fn source_for_labeled_owner(
             ),
         )?;
     }
-    let selected = ask_source(ctx, hotkey_field, &rows, &visible)?;
+    let (selected, address) = ask_source(ctx, hotkey_field, &rows, &visible)?;
     chosen(
         ctx,
         hotkey_field,
-        selected,
+        &address,
         names.get(&selected).map(String::as_str),
         answers,
         history,
@@ -570,18 +571,19 @@ fn ask_source(
     hotkey_field: &str,
     rows: &[SourceRow],
     visible: &[&SourceRow],
-) -> Result<AccountId, CliError> {
+) -> Result<(AccountId, String), CliError> {
     let flag = address_cli_name(hotkey_field);
+    let row = |hotkey: AccountId| (hotkey, hotkey.to_string());
     if rows.len() == 1 {
         message(ctx, "only staked position — selected")?;
-        return Ok(rows[0].hotkey);
+        return Ok(row(rows[0].hotkey));
     }
     loop {
         let raw = read(ctx, &format!("  {} [1]: ", flag.trim_start_matches('-')))?;
         let raw = if raw.is_empty() { "1" } else { &raw };
         if numbered(raw) {
-            if let Some(row) = choice_index(raw).and_then(|i| visible.get(i)) {
-                return Ok(row.hotkey);
+            if let Some(choice) = choice_index(raw).and_then(|i| visible.get(i)) {
+                return Ok(row(choice.hotkey));
             }
             message(
                 ctx,
@@ -589,11 +591,13 @@ fn ask_source(
             )?;
             continue;
         }
-        if let Some(account) = resolve(ctx, hotkey_field, raw)? {
+        if let Some(address) = resolve(ctx, hotkey_field, raw)? {
+            // Positions are keyed by account; the answer keeps its spelling.
+            let account = crate::books::account_of(&address).map_err(failure)?;
             if !rows.iter().any(|row| row.hotkey == account) {
                 message(ctx, "note: no stake found on that hotkey — using it anyway")?;
             }
-            return Ok(account);
+            return Ok((account, address));
         }
     }
 }
@@ -670,9 +674,18 @@ pub fn target(
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
     let prefix = format!("{}/", ctx.globals.wallet_name);
+    let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
+    // Python v488: a local hotkey that needs registration is offered as its
+    // receiving address, read from its validated public companion.
     let choices = local_candidates(ctx)?
         .into_iter()
         .filter(|candidate| candidate.source == "hotkey" && candidate.name.starts_with(&prefix))
+        .filter_map(|mut candidate| {
+            let (wallet, hotkey) = candidate.name.split_once('/')?;
+            candidate.address =
+                crate::books::AccountLookup::hotkey_address(&lookup, wallet, hotkey).ok()?;
+            Some(candidate)
+        })
         .collect::<Vec<_>>();
     pick_account(ctx, field, &choices, true, answers, history)
 }
@@ -687,22 +700,33 @@ pub fn destination(
     let mut seen = BTreeSet::new();
     let mut choices = Vec::new();
     for row in &ctx.books.addresses {
+        // Python v488 `_dest_choices`: contacts in canonical form, receiving
+        // addresses included; an unparseable entry is not offered.
         if let (Some(name), Some(address)) = (row["name"].as_str(), row["address"].as_str())
             && !address.is_empty()
-            && seen.insert(address.to_owned())
+            && let Ok(recipient) = rtao::primitives::receiving::parse_recipient(address)
+            && seen.insert(recipient.address.clone())
         {
             choices.push(NameCandidate {
                 name: name.into(),
-                address: address.into(),
+                address: recipient.address,
                 source: "address-book".into(),
             });
         }
     }
-    for candidate in local_candidates(ctx)? {
-        if candidate.source == "wallet"
-            && candidate.name != ctx.globals.wallet_name
-            && seen.insert(candidate.address.clone())
-        {
+    let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
+    for mut candidate in local_candidates(ctx)? {
+        if candidate.source != "wallet" || candidate.name == ctx.globals.wallet_name {
+            continue;
+        }
+        // Never offer an unvalidated stored address, or unlock a private key
+        // to fill the public destination picker.
+        let Ok(address) = crate::books::AccountLookup::coldkey_address(&lookup, &candidate.name)
+        else {
+            continue;
+        };
+        if seen.insert(address.clone()) {
+            candidate.address = address;
             choices.push(candidate);
         }
     }
@@ -740,7 +764,7 @@ pub async fn claim_root_source(
     chosen(
         ctx,
         field,
-        selected,
+        &selected.to_string(),
         names.get(&selected).map(String::as_str),
         answers,
         history,
@@ -867,7 +891,7 @@ fn pick_account(
                     rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
                 )
             } else {
-                "no address-book contacts or other local wallets — paste the destination ss58"
+                "no address-book contacts or other local wallets — paste the receiving address"
                     .into()
             },
         )?;
@@ -877,7 +901,7 @@ fn pick_account(
             if hotkey {
                 "a number above, or any hotkey: ss58 address, address-book name, or WALLET/HOTKEY"
             } else {
-                "a number above, or any account: ss58 address, address-book name, or local wallet name"
+                "a number above, or any account: receiving address, address-book name, or local wallet name"
             },
         )?;
     }
@@ -889,8 +913,14 @@ fn pick_account(
         }
         if !choices.is_empty() && numbered(&raw) {
             if let Some(candidate) = choice_index(&raw).and_then(|i| choices.get(i)) {
-                let account = candidate.address.parse().map_err(failure)?;
-                return chosen(ctx, field, account, Some(&candidate.name), answers, history);
+                return chosen(
+                    ctx,
+                    field,
+                    &candidate.address,
+                    Some(&candidate.name),
+                    answers,
+                    history,
+                );
             }
             message(
                 ctx,
@@ -898,8 +928,8 @@ fn pick_account(
             )?;
             continue;
         }
-        if let Some(account) = resolve(ctx, field, &raw)? {
-            return chosen(ctx, field, account, None, answers, history);
+        if let Some(address) = resolve(ctx, field, &raw)? {
+            return chosen(ctx, field, &address, None, answers, history);
         }
     }
 }
@@ -1185,11 +1215,11 @@ mod tests {
         let visible = vec![&rows[0]];
         let (mut ctx, _) = context(&["dust contact"])?;
         ctx.books.addresses = vec![json!({"name":"dust contact","address":DUST})];
-        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?, DUST);
+        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?.0, DUST);
         let (ctx, _) = context(&[""])?;
-        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?, A);
+        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?.0, A);
         let (ctx, _) = context(&["١"])?;
-        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?, A);
+        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?.0, A);
         Ok(())
     }
 
@@ -1200,7 +1230,7 @@ mod tests {
         let visible = rows.iter().collect::<Vec<_>>();
         let target = B.to_string();
         let (ctx, messages) = context(&[&target])?;
-        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?, B);
+        assert_eq!(ask_source(&ctx, "hotkey_ss58", &rows, &visible)?.0, B);
         assert!(
             messages
                 .lock()

@@ -153,8 +153,12 @@ impl AppContext {
         .map(|wallet| wallet.with_password_sources(self.passwords.clone()))
         .map_err(|error| CliError::failure(error.to_string()))
     }
-    /// Resolve a target without unlocking; only canonical omitted key fields default.
-    pub fn resolve_address(
+    /// Python v488 `resolve_account`: resolve an account-identity reference
+    /// without unlocking (only canonical omitted key fields default). A
+    /// complete receiving address names its account. Payment destinations
+    /// that execution guards take [`Self::resolve_address_text`] instead
+    /// (D-157 records each consumer).
+    pub fn resolve_account(
         &self,
         param: &str,
         value: Option<&str>,
@@ -162,17 +166,19 @@ impl AppContext {
         let Some(address) = self.resolve_address_text(param, value)? else {
             return Ok(None);
         };
-        if rtao::primitives::receiving::is_receiving_address(&address) {
-            // D-156: account-identity consumers take SS58; only intent fields
-            // carry a receiving address, so its registration guard applies.
-            return Err(CliError::input(format!(
-                "{param} takes an account here, not a receiving address; pass its SS58 account"
-            )));
-        }
-        address
-            .parse()
+        crate::books::account_of(&address)
             .map(Some)
             .map_err(|error| CliError::input(format!("cannot resolve {param}: {error}")))
+    }
+
+    /// The account-identity resolution, as [`Self::resolve_account`]; kept
+    /// for source compatibility (it refused receiving addresses before D-157).
+    pub fn resolve_address(
+        &self,
+        param: &str,
+        value: Option<&str>,
+    ) -> Result<Option<AccountId>, CliError> {
+        self.resolve_account(param, value)
     }
 
     /// Python v488 `resolve_address`: resolve a CLI account reference while
@@ -714,8 +720,13 @@ impl AppContext {
         };
         let amount = rtao::primitives::DynBalance::from_rao(payout, rtao::primitives::NetUid::ROOT);
         let proxy_flag = proxy.map_or_else(|| "self".to_owned(), |proxy| proxy.to_string());
-        let command =
+        let mut command =
             format!("rtao root claim --hotkey {hotkey} --coldkey {owner} --proxy-for {proxy_flag}");
+        // Python v488 `resolve_position_wallet`: an external signer replays
+        // only with the position owner's account selected explicitly.
+        if proxy.is_none() && self.globals.uses_external_signer() {
+            command.push_str(&format!(" --signer-address {owner}"));
+        }
         let hint = format!(
             "{amount} remains claimable via `{command}` (unstaking root principal does not claim basket yield). A claim pays this validator's whole entitlement, not a slice of the unstake. Use the same signing wallet, backend and proxy type as this unstake."
         );
@@ -2676,12 +2687,32 @@ impl AppContext {
     }
     /// Resolve an ordinary target flag and register its public display name.
     /// Only omitted canonical key fields trigger the default-wallet round.
+    /// An account-identity consumer: a receiving address names its account.
     pub fn resolve_target(
         &mut self,
         param: &str,
         value: Option<&str>,
         history: &mut crate::prompt::PromptHistory,
     ) -> Result<Option<AccountId>, CliError> {
+        let Some(address) = self.resolve_target_text(param, value, history)? else {
+            return Ok(None);
+        };
+        crate::books::account_of(&address).map(Some).map_err(|e| {
+            CliError::input(format!(
+                "cannot resolve {}: {e}",
+                crate::books::address_cli_name(param)
+            ))
+        })
+    }
+    /// [`Self::resolve_target`] for an intent field: a complete receiving
+    /// address is kept (canonical SS58 otherwise), so execution applies the
+    /// recipient's registration guard, as Python v488's `resolve_address`.
+    pub fn resolve_target_text(
+        &mut self,
+        param: &str,
+        value: Option<&str>,
+        history: &mut crate::prompt::PromptHistory,
+    ) -> Result<Option<String>, CliError> {
         let mut supplied = value.map(str::to_owned);
         if supplied.is_none() && ["coldkey_ss58", "hotkey_ss58"].contains(&param) {
             let options = crate::prompt::WalletConfirmation {
@@ -2722,12 +2753,19 @@ impl AppContext {
                 .name_address(&resolved.address, &name)
                 .map_err(|e| CliError::failure(e.to_string()))?;
         }
-        resolved.address.parse().map(Some).map_err(|e| {
+        let account = crate::books::account_of(&resolved.address).map_err(|e| {
             CliError::input(format!(
                 "cannot resolve {}: {e}",
                 crate::books::address_cli_name(param)
             ))
-        })
+        })?;
+        Ok(Some(
+            if rtao::primitives::receiving::is_receiving_address(&resolved.address) {
+                resolved.address
+            } else {
+                account.to_string()
+            },
+        ))
     }
     /// Confirm the signing wallet then run a real intent through the uniform
     /// mutation path. Saved multisig routing is attached by its CLI adapter.

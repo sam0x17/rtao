@@ -339,6 +339,94 @@ pub async fn run_with_backend(
     run_with_backends(ctx, name, leaf, backend, &NativeEvmTx).await
 }
 
+/// Python v488 `_native_arguments`: resolve receiving addresses in `bytes*`
+/// arguments (and their arrays) to native accounts before the pure ABI
+/// encoder, through [`super::native_account`] (a finalized registration for
+/// a state-changing call). A wrong argument count is left to the encoder.
+async fn native_arguments(
+    ctx: &AppContext,
+    target: &CallTarget,
+    function: &str,
+    args: Vec<Value>,
+    rpc_url: Option<&str>,
+) -> Result<Vec<Value>, CliError> {
+    if !args.iter().any(|value| {
+        value
+            .as_str()
+            .is_some_and(|text| text.contains("tao_") || text.contains("bth"))
+    }) {
+        return Ok(args);
+    }
+    let Ok(abi) = target.artifact.function(function) else {
+        return Ok(args);
+    };
+    let abi = serde_json::to_value(abi).map_err(failure)?;
+    let write = !matches!(
+        abi.get("stateMutability").and_then(Value::as_str),
+        Some("view" | "pure")
+    );
+    let inputs = abi
+        .get("inputs")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if inputs.len() != args.len() {
+        return Ok(args);
+    }
+    let mut resolved = Vec::with_capacity(args.len());
+    for (param, value) in inputs.iter().zip(args) {
+        let kind = param
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        resolved.push(native_value(ctx, kind, value, rpc_url, write).await?);
+    }
+    Ok(resolved)
+}
+
+async fn native_value(
+    ctx: &AppContext,
+    kind: &str,
+    value: Value,
+    rpc_url: Option<&str>,
+    write: bool,
+) -> Result<Value, CliError> {
+    if let Some(element) = kind.strip_suffix("[]") {
+        let items = match &value {
+            Value::Array(items) => items.clone(),
+            Value::String(text) if text.trim().starts_with('[') => {
+                match serde_json::from_str::<Value>(text) {
+                    Ok(Value::Array(items)) => items,
+                    _ => return Ok(value),
+                }
+            }
+            Value::String(text) => text.split(',').map(|item| json!(item)).collect(),
+            _ => return Ok(value),
+        };
+        if !items.iter().any(|item| {
+            item.as_str()
+                .is_some_and(rtao::primitives::receiving::is_receiving_address)
+        }) {
+            return Ok(value);
+        }
+        let mut resolved = Vec::with_capacity(items.len());
+        for item in items {
+            resolved.push(Box::pin(native_value(ctx, element, item, rpc_url, write)).await?);
+        }
+        return Ok(Value::Array(resolved));
+    }
+    match value.as_str() {
+        Some(text)
+            if kind.starts_with("bytes")
+                && rtao::primitives::receiving::is_receiving_address(text) =>
+        {
+            let account = super::native_account(ctx, text, rpc_url, write).await?;
+            Ok(json!(account.to_string()))
+        }
+        _ => Ok(value),
+    }
+}
+
 // Keep read-only RPC and transaction authorization as separate injectable boundaries.
 async fn run_with_backends(
     ctx: &AppContext,
@@ -375,6 +463,7 @@ async fn run_with_backends(
         return ctx.output.table(&table).map_err(failure);
     };
     let args = arguments(leaf)?;
+    let args = native_arguments(ctx, &target, function, args, optional(leaf, "rpc_url")).await?;
     let function_owned = function.to_owned();
     let mut prepared =
         rtao::core::offload(move || PreparedCall::new(target, function_owned, &args))
@@ -407,12 +496,15 @@ async fn run_with_backends(
     if let Some(role) = prepared.caller_role {
         let info = tx_backend.key_info(ctx, optional(leaf, "evm_key")).await?;
         prepared.preview.insert(
-            "caller mirror".into(),
-            json!(format!("{} acts as the {role}", info.ss58_mirror)),
+            "caller".into(),
+            json!(format!(
+                "{}'s runtime-mapped native account acts as the {role}",
+                info.address
+            )),
         );
     }
     if prepared.registers_network {
-        ctx.output.message("warning: the caller mirror becomes the subnet owner, and some owner operations (notably start-call, which activates emissions) have no precompile — they require a native coldkey signature").map_err(failure)?;
+        ctx.output.message("warning: the caller's mapped native account becomes the subnet owner, and some owner operations (notably start-call, which activates emissions) have no precompile — they require a native coldkey signature").map_err(failure)?;
     }
     let value = optional(leaf, "value_tao")
         .filter(|value| !value.is_empty())
@@ -724,19 +816,24 @@ mod falsy_option_tests {
     #[derive(Default)]
     struct ReadProbe {
         calls: Mutex<usize>,
+        seen: Mutex<Vec<Value>>,
     }
     impl ReadBackend for ReadProbe {
         fn eth_call<'a>(
             &'a self,
             _: &'a AppContext,
             _: Option<&'a str>,
-            _: Value,
+            tx: Value,
         ) -> ReadFuture<'a> {
             Box::pin(async move {
                 *self
                     .calls
                     .lock()
                     .map_err(|_| CliError::failure("fixture poisoned"))? += 1;
+                self.seen
+                    .lock()
+                    .map_err(|_| CliError::failure("fixture poisoned"))?
+                    .push(tx);
                 let mut result = vec![0; 32];
                 result[31] = 7;
                 Ok(result)
@@ -931,6 +1028,24 @@ mod falsy_option_tests {
         word[31] = 2;
         assert_eq!(&prepared[0].2[36..68], &word);
         assert_eq!(*tx.submitted.lock().map_err(|_| "poisoned")?, 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn view_bytes_arguments_take_the_account_of_a_receiving_address() -> TestResult {
+        // Python v488 `_native_arguments`: a read resolves a receiving
+        // address in a bytes argument to its account, without a chain read.
+        let key = rtao::core::keys::Keypair::from_seed(&[22; 32], rtao::core::keys::CRYPTO_HASHED)?;
+        let receiving =
+            rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+        let account = rtao::primitives::receiving::parse_recipient(&receiving)?.account;
+        let coldkey = rtao::primitives::AccountId([3; 32]).to_string();
+        let fixture = Fixture::new("staking-v2", "getStake", &[&receiving, &coldkey, "1"], &[])?;
+        let read = ReadProbe::default();
+        fixture.run(&read, &TxProbe::default()).await?;
+        let seen = read.seen.lock().map_err(|_| "poisoned")?;
+        let data = seen[0]["data"].as_str().ok_or("call data")?;
+        assert!(data.contains(&hex::encode(account.0)), "{data}");
         Ok(())
     }
 

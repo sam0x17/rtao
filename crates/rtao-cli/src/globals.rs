@@ -743,6 +743,13 @@ impl Globals {
                 .contains(&normalize_signer_backend(v).as_str())
         })
     }
+
+    /// Whether Polkadot Vault signs (standard Sr25519/Ed25519 accounts only).
+    pub fn uses_vault_signer(&self) -> bool {
+        self.signer_backend
+            .as_deref()
+            .is_some_and(|v| normalize_signer_backend(v) == "vault")
+    }
 }
 
 /// Parse `--remote-signer-timeout` seconds within `1..=600`.

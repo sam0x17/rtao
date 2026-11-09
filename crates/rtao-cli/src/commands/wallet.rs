@@ -1937,33 +1937,48 @@ async fn list(ctx: &AppContext, offline: bool) -> Result<(), CliError> {
             .and_then(crate::books::threshold_u16)
             .unwrap_or(0);
         let refs = entry["signatories"].as_array().cloned().unwrap_or_default();
-        let signatories = refs
+        // Python v488 `multisig_list_records`: members resolve locally to
+        // their accounts (a receiving address names its account).
+        let members = refs
             .iter()
             .map(|reference| {
-                let address = reference
+                reference
                     .as_str()
                     .and_then(|name| resolver.resolve_address_ref("coldkey_ss58", name).ok())
-                    .map(|entry| entry.address);
-                json!({"name":reference,"ss58":address})
+                    .and_then(|entry| crate::books::account_of(&entry.address).ok())
             })
             .collect::<Vec<_>>();
-        // This read-only display derives from the resolvable subset. Signing
-        // and admission continue to require the complete saved member set.
-        let mut public_keys = signatories
+        let signatories = refs
             .iter()
-            .filter_map(|member| member["ss58"].as_str()?.parse::<AccountId>().ok())
-            .map(|account| account.0)
+            .zip(&members)
+            .map(|(reference, account)| json!({"name":reference,"ss58":account}))
             .collect::<Vec<_>>();
-        public_keys.sort_unstable();
-        public_keys.dedup();
-        let address = if threshold > 0 {
-            rtao::core::extrinsic::multisig_account_id(&public_keys, threshold)
-                .ok()
-                .map(|(account, _)| AccountId(account).to_string())
-        } else {
-            None
+        let account_mode = entry
+            .get("account_mode")
+            .and_then(Value::as_str)
+            .unwrap_or("legacy");
+        // Derive only a complete signer set in its saved mode; an invalid or
+        // partly unresolvable preset shows no account.
+        let mut keys = Vec::new();
+        for account in members.iter().flatten() {
+            if !keys.contains(account) {
+                keys.push(*account);
+            }
+        }
+        let address = match account_mode.parse::<rtao::primitives::AccountMode>() {
+            Ok(mode)
+                if members.iter().all(Option::is_some)
+                    && !keys.is_empty()
+                    && threshold >= 1
+                    && usize::from(threshold) <= keys.len() =>
+            {
+                rtao::primitives::multisig_account_id(&keys, threshold, mode)
+                    .ok()
+                    .map(|(account, _)| account.to_string())
+            }
+            _ => None,
         };
-        multisigs.push(json!({"name":name,"kind":"multisig","threshold":threshold,"signatory_count":refs.len(),"ss58":address,"signatories":signatories,"note":entry.get("note").cloned().unwrap_or(json!(""))}));
+        multisigs.push(json!({"name":name,"kind":"multisig","threshold":threshold,"account_mode":account_mode,"signatory_count":refs.len(),"ss58":address,"signatories":signatories,"note":entry.get("note").cloned().unwrap_or(json!(""))}));
     }
     multisigs.sort_by_key(|entry| entry["name"].as_str().unwrap_or("").to_lowercase());
     let payload = json!({"path":ctx.globals.wallet_path.to_string_lossy(),"coldkeys":records,"multisigs":multisigs,"addresses":ctx.books.addresses,"proxies":ctx.books.proxies});
@@ -2369,9 +2384,12 @@ mod chain {
             return all_balances(ctx, client, matches).await;
         }
         let address = matches.get_one::<String>("address").map(String::as_str);
-        let coldkey = ctx
-            .resolve_address("coldkey_ss58", address)?
+        // Python v488 `wallet_balance_row`: the row names the coldkey as
+        // given (a receiving address kept), the reads use its account.
+        let shown = ctx
+            .resolve_address_text("coldkey_ss58", address)?
             .ok_or_else(|| input("missing coldkey"))?;
+        let coldkey = crate::books::account_of(&shown).map_err(input)?;
         let label = address
             .filter(|address| !is_bittensor_address(address))
             .unwrap_or(&ctx.globals.wallet_name)
@@ -2393,6 +2411,7 @@ mod chain {
             pyfmt::rao_to_f64(sum(positions.iter().map(|p| p.1), "beta token holdings")?);
         let row = BalanceRow::new(label, coldkey, free, valuation, beta)?;
         let mut record = row.record();
+        record["coldkey"] = json!(shown);
         record["locked_value"] = display(&locked.0);
         record["locked_value_tao"] = json!(locked.0.amount());
         record["locked_subnets"] = json!(locked.1);

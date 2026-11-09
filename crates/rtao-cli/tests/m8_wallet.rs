@@ -1369,3 +1369,104 @@ async fn transfers_keep_receiving_destinations_and_accept_the_compatibility_desc
     client.close().await;
     Ok(())
 }
+
+// D-157 (Python v488 `AppContext.wallet_address`, `resolve_account` and
+// `_resolve_stored_signatories`): a local key that needs registration resolves
+// to its receiving address for intent fields and to its account for
+// identities; saved multisig members are identities.
+#[tokio::test]
+async fn local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_accounts()
+-> TestResult {
+    use rtao::{primitives::AuthorityType, wallet::KeyScheme};
+    let root = Root::new()?;
+    let wallet = Wallet::new("alice", "default", &root.0)?;
+    let cold = wallet
+        .create_new_coldkey_as(
+            None,
+            KeyScheme::Authority(AuthorityType::HashedSr25519),
+            unencrypted(WriteOptions::coldkey()),
+        )
+        .await?;
+    wallet
+        .create_new_hotkey_as(
+            None,
+            KeyScheme::Authority(AuthorityType::HashedEd25519),
+            unencrypted(WriteOptions::hotkey()),
+        )
+        .await?;
+    root.public("bob", COLD)?;
+    let (_, mut ctx, _) = context(&root, &["wallet", "show", "--offline"])?;
+    ctx.globals.wallet_name = "alice".into();
+    let receiving = ctx
+        .resolve_address_text("dest_ss58", Some("alice"))?
+        .ok_or("receiving")?;
+    assert!(rtao::primitives::receiving::is_receiving_address(
+        &receiving
+    ));
+    assert_eq!(
+        rtao::primitives::receiving::parse_recipient(&receiving)?.account,
+        cold.account
+    );
+    // The omitted own coldkey and hotkey default the same way.
+    assert_eq!(
+        ctx.resolve_address_text("coldkey_ss58", None)?,
+        Some(receiving.clone())
+    );
+    let hotkey = ctx
+        .resolve_address_text("hotkey_ss58", None)?
+        .ok_or("hotkey")?;
+    assert!(rtao::primitives::receiving::is_receiving_address(&hotkey));
+    // Identity consumers take the account, from a name or the address itself.
+    for value in [Some("alice"), Some(receiving.as_str()), None] {
+        assert_eq!(
+            ctx.resolve_account("coldkey_ss58", value)?,
+            Some(cold.account)
+        );
+    }
+    let mut history = PromptHistory::default();
+    assert_eq!(
+        ctx.resolve_target("coldkey_ss58", Some(&receiving), &mut history)?,
+        Some(cold.account)
+    );
+    assert_eq!(
+        ctx.resolve_target_text("coldkey_ss58", Some(&receiving), &mut history)?,
+        Some(receiving.clone())
+    );
+    // A classical wallet keeps its SS58 account in both forms.
+    assert_eq!(
+        ctx.resolve_address_text("dest_ss58", Some("bob"))?,
+        Some(COLD.to_string())
+    );
+    // A saved multisig naming a member by receiving address and another by
+    // a hashed wallet name derives from the members' accounts.
+    ctx.books.addresses = vec![json!({"name":"alice-contact","address":receiving})];
+    ctx.books.multisigs = vec![
+        json!({"name":"team","threshold":2,"signatories":[receiving, "bob"],"account_mode":"legacy"}),
+        json!({"name":"named","threshold":2,"signatories":["alice", "bob"]}),
+        json!({"name":"booked","threshold":2,"signatories":["alice-contact", "bob"]}),
+    ];
+    let (expected, _) = rtao::primitives::multisig_account_id(
+        &[cold.account, COLD],
+        2,
+        rtao::primitives::AccountMode::Legacy,
+    )?;
+    for name in ["team", "named", "booked"] {
+        assert_eq!(
+            ctx.resolve_account("coldkey_ss58", Some(name))?,
+            Some(expected),
+            "{name}"
+        );
+    }
+    // The wallet list derives the same group with member accounts.
+    let (parsed, mut ctx, sink) = context(&root, &["wallet", "list", "--offline"])?;
+    ctx.books.multisigs = vec![
+        json!({"name":"team","threshold":2,"signatories":[receiving, "bob"],"account_mode":"legacy"}),
+    ];
+    local(&mut ctx, &parsed).await?;
+    let listed = value(&sink)?;
+    let team = &listed["multisigs"][0];
+    assert_eq!(team["ss58"], json!(expected));
+    assert_eq!(team["account_mode"], "legacy");
+    assert_eq!(team["signatories"][0]["ss58"], json!(cold.account));
+    Ok(())
+}

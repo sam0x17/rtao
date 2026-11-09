@@ -6629,9 +6629,13 @@ async fn external_root_claim_reacquires_after_release_and_uses_the_effective_pro
             } else {
                 "self".to_owned()
             };
-            let command = format!(
+            let mut command = format!(
                 "rtao root claim --hotkey {hotkey} --coldkey {owner} --proxy-for {proxy_flag}"
             );
+            // The external signer replays with the owner's account selected.
+            if !proxy {
+                command.push_str(&format!(" --signer-address {owner}"));
+            }
             let stderr = sink.text(Stream::Stderr)?;
             assert!(stderr.contains(&command));
             assert!(stderr.contains("same signing wallet, backend and proxy type"));

@@ -514,7 +514,9 @@ async fn doctor(
             json!(u64::try_from(nonce).map_err(failure)?),
         ));
         if wei.is_zero() {
-            ctx.output.message(&format!("key {} has no balance — fund it with `btcli evm fund` (or transfer TAO to its mirror {})", info.name, info.ss58_mirror)).map_err(failure)?;
+            // Python v488: the legacy mirror is not where a protected
+            // alias's balance lives; point to the EVM side and `evm fund`.
+            ctx.output.message(&format!("key {} has no balance — send TAO to {} from an EVM wallet on this network. For native funding, `rtao evm fund` checks the selected network's receiving route.", info.name, info.address)).map_err(failure)?;
         }
     }
     ctx.output

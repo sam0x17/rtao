@@ -165,6 +165,14 @@ fn context(
     );
     Ok((ctx, sink))
 }
+/// Python v488 signs a position only from a context that holds its owner:
+/// a local wallet whose public key is `OWNER`.
+fn owner_wallets(ctx: &mut AppContext) -> Result<WalletRoot, Box<dyn std::error::Error>> {
+    let root = WalletRoot::new()?;
+    root.add("owner", OWNER)?;
+    ctx.globals.wallet_path = root.0.clone();
+    Ok(root)
+}
 fn parse_request(
     ctx: &mut AppContext,
     parsed: &clap::ArgMatches,
@@ -801,6 +809,7 @@ async fn root_move_selector_preserves_contact_and_nav_identity_order() -> TestRe
             "--json",
         ])?;
         let (mut ctx, _) = context(&parsed)?;
+        let _owner_wallets = owner_wallets(&mut ctx)?;
         ctx.books.addresses = if chain_names {
             vec![]
         } else {
@@ -932,6 +941,7 @@ async fn move_picker_retains_selected_name_and_only_reloads_required_identities(
             ];
             let parsed = parse(&args)?;
             let (mut ctx, _) = context(&parsed)?;
+            let _owner_wallets = owner_wallets(&mut ctx)?;
             ctx.books.addresses = vec![json!({"address":EXTRA,"name":"Extra Fund"})];
             if local_source {
                 ctx.books
@@ -1054,6 +1064,7 @@ async fn move_picker_retains_selected_name_and_only_reloads_required_identities(
         "--yes",
     ])?;
     let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
     ctx.books.addresses = vec![json!({"address":HOT,"name":"Local Source"})];
     let request = parse_request(&mut ctx, &parsed)?;
     let prepared =
@@ -1338,6 +1349,7 @@ async fn root_pickers_count_alias_prefix_keys_and_reprompt_before_recording() ->
             };
             let parsed = parse(&argv)?;
             let (mut ctx, _) = context(&parsed)?;
+            let _owner_wallets = owner_wallets(&mut ctx)?;
             ctx.books.addresses = vec![
                 json!({"address":HOT,"name":alias}),
                 json!({"address":OTHER,"name":"Destination"}),
@@ -1432,6 +1444,7 @@ async fn root_detail_holdings_keep_cached_subnet_names_units_and_machine_shape()
         }
         let parsed = parse(&args)?;
         let (mut ctx, sink) = context(&parsed)?;
+        let _owner_wallets = owner_wallets(&mut ctx)?;
         ctx.output.update_subnet_names([(4, "Targon".into())])?;
         ctx.output.update_token_symbols([(4, "γ".into())])?;
         let request = parse_request(&mut ctx, &parsed)?;
@@ -1551,6 +1564,7 @@ async fn claim_checks_accrued_yield_and_move_claims_then_moves_all_root_stake() 
         "--json",
     ])?;
     let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
     let request = parse_request(&mut ctx, &parsed)?;
     let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
         .await?
@@ -1573,6 +1587,7 @@ async fn claim_checks_accrued_yield_and_move_claims_then_moves_all_root_stake() 
         "--json",
     ])?;
     let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
     let request = parse_request(&mut ctx, &parsed)?;
     let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
         .await?
@@ -1616,6 +1631,7 @@ async fn claim_checks_accrued_yield_and_move_claims_then_moves_all_root_stake() 
         "--json",
     ])?;
     let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
     let request = parse_request(&mut ctx, &parsed)?;
     let chain_named =
         root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
@@ -1647,6 +1663,7 @@ async fn claim_checks_accrued_yield_and_move_claims_then_moves_all_root_stake() 
         "--json",
     ])?;
     let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
     let request = parse_request(&mut ctx, &parsed)?;
     let error =
         root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
@@ -2421,5 +2438,150 @@ async fn human_lists_preserve_percentages_fund_notes_dust_and_detail_returns() -
             .any(|request| request.method.starts_with("author_"))
     );
     client.close().await;
+    Ok(())
+}
+
+// D-157 (Python v488 root/root_move): validator selectors keep a complete
+// receiving address for the move and allocate intents, so execution guards
+// the destination; positions, names and the same-validator check compare
+// accounts, and a claim's hotkey is an identity.
+#[tokio::test]
+async fn root_move_and_allocate_keep_receiving_validators_and_claim_reduces_them() -> TestResult {
+    use rtao::core::keys::{CRYPTO_HASHED, Keypair, encode_hashed_receiving_address};
+    let key = Keypair::from_seed(&[19; 32], CRYPTO_HASHED)?;
+    let receiving = encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+    let account = rtao::primitives::receiving::parse_recipient(&receiving)?.account;
+    let owner = OWNER.to_string();
+    let hotkey = HOT.to_string();
+    // Move to a receiving destination.
+    let (client, chain) = client(seed()?).await?;
+    let parsed = parse(&[
+        "rtao",
+        "root",
+        "move",
+        "--from",
+        &hotkey,
+        "--to",
+        &receiving,
+        "--coldkey",
+        &owner,
+        "--json",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
+    let request = parse_request(&mut ctx, &parsed)?;
+    let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
+        .await?
+        .ok_or("move")?;
+    assert_eq!(tx.args["origin_hotkey_ss58"], json!(HOT));
+    assert_eq!(tx.args["dest_hotkey_ss58"], json!(receiving));
+    // A receiving spelling of the same validator is still the same validator.
+    let key_hot = Keypair::from_seed(&[20; 32], CRYPTO_HASHED)?;
+    let receiving_hot = encode_hashed_receiving_address(&key_hot.hashed_descriptor()?)?;
+    let hot_account = rtao::primitives::receiving::parse_recipient(&receiving_hot)?.account;
+    let parsed = parse(&[
+        "rtao",
+        "root",
+        "move",
+        "--from",
+        &hot_account.to_string(),
+        "--to",
+        &receiving_hot,
+        "--coldkey",
+        &owner,
+        "--json",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
+    let request = parse_request(&mut ctx, &parsed)?;
+    let error =
+        root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
+            .await
+            .err()
+            .ok_or("same validator")?;
+    assert!(error.message.contains("same validator"), "{error:?}");
+    // Allocate keeps the receiving validator too.
+    let parsed = parse(&[
+        "rtao", "root", "allocate", "--hotkey", &receiving, "--amount", "1", "--yes", "--json",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
+    let request = parse_request(&mut ctx, &parsed)?;
+    let tx = root::prepare_transaction(&mut ctx, &client, &request, &mut PromptHistory::default())
+        .await?
+        .ok_or("allocate")?;
+    assert_eq!(tx.op, "stake_into_basket");
+    assert_eq!(tx.args["hotkey_ss58"], json!(receiving));
+    // A claim's hotkey is an identity lookup.
+    let parsed = parse(&[
+        "rtao",
+        "root",
+        "claim",
+        "--hotkey",
+        &receiving,
+        "--coldkey",
+        &owner,
+        "--json",
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    let _owner_wallets = owner_wallets(&mut ctx)?;
+    let request = parse_request(&mut ctx, &parsed)?;
+    assert!(matches!(
+        request,
+        Request::Claim { hotkey: Some(hotkey), .. } if hotkey == account
+    ));
+    assert!(
+        chain
+            .requests()
+            .iter()
+            .all(|request| !request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+// Python v488 `resolve_position_wallet`: a position no available signer can
+// act on is refused before any chain read.
+#[test]
+fn position_owner_without_a_local_signing_wallet_is_refused() -> TestResult {
+    let owner = OWNER.to_string();
+    let parsed = parse(&[
+        "rtao",
+        "root",
+        "claim",
+        "--hotkey",
+        &HOT.to_string(),
+        "--coldkey",
+        &owner,
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    let error = parse_request(&mut ctx, &parsed)
+        .err()
+        .ok_or("no local signer")?;
+    assert_eq!(error.code, 2);
+    assert_eq!(
+        error.message,
+        "no local signing wallet matches the selected coldkey"
+    );
+    // A dispatch proxy for another account is refused the same way.
+    let parsed = parse(&[
+        "rtao",
+        "root",
+        "claim",
+        "--hotkey",
+        &HOT.to_string(),
+        "--coldkey",
+        &owner,
+        "--proxy-for",
+        &OTHER.to_string(),
+    ])?;
+    let (mut ctx, _) = context(&parsed)?;
+    let error = parse_request(&mut ctx, &parsed)
+        .err()
+        .ok_or("proxy mismatch")?;
+    assert_eq!(
+        error.message,
+        "the selected coldkey does not match the proxy dispatch account"
+    );
     Ok(())
 }

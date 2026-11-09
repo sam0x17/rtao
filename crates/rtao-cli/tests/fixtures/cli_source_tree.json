@@ -32,11 +32,11 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
-      "sha256": "5a9deb8e91ce68c5d92f15d7070cd32957809355c1fa5636a984bf309201e4bd"
+      "sha256": "8d5760a69f0dfaba5e38b3204f33dd2a1175f96f5cccdfa91e744e9a18d3a445"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root_move.py",
-      "sha256": "27d4bbb895151d971ce5be00331ae756c4103fce3a34022de2073a0533b72784"
+      "sha256": "6846daddb0448b338caf32de38c4fb13b8002bf0a414b0b6da59890502178327"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root_swap.py",
@@ -68,7 +68,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
-      "sha256": "ede41de489a50d0330b8664aeff8b2bf3844aaf0415918c177c76100e92c0c3e"
+      "sha256": "cf1ccb809ff4d9f0ff3972394edfbb9d54d8256d0887098ae0d8081043ad9fbc"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py",
@@ -96,7 +96,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/upgrade.py",
-      "sha256": "58d0ea1e527e3fcc140876ffb9c8072f05081f0b5d574f88917e7871ab87ca67"
+      "sha256": "b79e75aac8a4fa90abe9c486ad5673f0486583582de417342b25ba403ff646c1"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/timelock.py",
@@ -116,7 +116,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/stake.py",
-      "sha256": "57e761ebc64496d8f7a3f0eb8ad88302f6e226264c98c328606be5d24f9c9150"
+      "sha256": "1575b612fd7f5d91edf308b7237837109ca3b9542e47e86400f9373f938c61f5"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/address.py",
@@ -124,15 +124,15 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/money.py",
-      "sha256": "d0f7244fe545a1fdeeab0b202e80f3bfa19c97e32988eb0459d292d884cee933"
+      "sha256": "8342fe745fc83f5ca593c0605ae8aaa956bd43e8eab95d8ce4ab70f7f99babcc"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/association.py",
-      "sha256": "4043f58ee14475d4b15c580ade54c756dc0af960746a960b195f47b9394da049"
+      "sha256": "0a6e91e1a2a6d6816727f55b18433b672b2e738e66b365c54a64ca84c6a96c13"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/precompiles_cmd.py",
-      "sha256": "734caac83d4cef19a408bed901526ca69da31b13887b147a38a245fa2928df60"
+      "sha256": "a295ce21dd0b6ba07a0c7fcc63fe0958a1efd6091c126d5e3b9eac1147964537"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/contracts_cmd.py",
@@ -140,11 +140,11 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/setup.py",
-      "sha256": "f1ee4df5b90389de7cb0595a1e17e4bca31a8ee1a6789ce91103986f30eb4e83"
+      "sha256": "82b61df2313b92dd40b14de8d3d99e87f56051a9db38d6efceb3f48535a16932"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/_shared.py",
-      "sha256": "abb3a691c1da5da9fead2fb6a0de453983e3d84d2abc226dce9cae948555691f"
+      "sha256": "c113ad23dfee955f6835ad39e8cb78942d4cf4894825a8741f8e4439a054cc7a"
     }
   ],
   "aliases": {
@@ -1252,6 +1252,7 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
       "function": "multisig_add",
       "options": [
+        "--account-mode",
         "--note",
         "--overwrite",
         "--signatories",
@@ -1279,6 +1280,7 @@
         "--call-data",
         "--call-hash",
         "--multisig",
+        "--multisig-account-mode",
         "--multisig-threshold",
         "--other-signatories",
         "--signatories",

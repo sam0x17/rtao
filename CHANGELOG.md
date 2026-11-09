@@ -8,6 +8,30 @@
 - The parity pin (v488) and the runtime are unchanged. 81 hand port(s) remain listed in `parity/port_due.toml`.
 - Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42502998044)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
 
+### Since `snapshot-2026-11-09.1`
+
+Not a versioned release. Each item links to its section below.
+
+- CLI account flags accept receiving addresses: payment destinations keep them so execution guards the recipient, identity flags use the account, and local hashed or post-quantum keys resolve to their receiving address (D-157). **Migration:** `root claim` and `root move` refuse a coldkey no local signer holds.
+- EVM commands resolve receiving addresses to native accounts only after a finalized registration check on the selected network, and report the runtime's native mapping instead of the legacy mirror (D-158).
+
+### CLI account-identity flags and local receiving addresses (D-157)
+
+#### rtao-cli
+
+- `AppContext::resolve_account` and `resolve_target` reduce a receiving address to its account (`resolve_address` is kept as an alias and no longer refuses one); `resolve_target_text` keeps it. `books::account_of` and `AccountLookup::{coldkey_address, hotkey_address}` are new; `FsAccountLookup` returns a receiving address for a local key that needs registration, and refuses a companion without its descriptor.
+- `root move --from/--to`, `root allocate --hotkey`, `stake set-auto --hotkey`, `gamma spend` and `wallet associate-hotkey` keep receiving addresses in their intents; the stake pickers offer and keep them. Identity flags (proxies, multisig members, reads, `root claim --hotkey`) use the account.
+- **Migration:** `root claim` and `root move` select the position owner's signer as Python v488 does: the dispatch proxy, a saved multisig, the external signer's account (pass `--signer-address`) or a local wallet holding the owner's key, and otherwise refuse with `no local signing wallet matches the selected coldkey`.
+- `multisig add` and `multisig show` report the group's quantum-resistant protection; `wallet list` derives a saved multisig only from its complete member set in its saved account mode and reports `account_mode`; multisig follow-up records carry `account_mode`.
+
+### EVM commands with native receiving identities (D-158)
+
+#### rtao-cli
+
+- `evm send-to-ss58`, `evm stake add/remove` and state-changing `evm call` arguments resolve a receiving address only after its finalized registration on the selected network, and refuse one with `--rpc-url`; reads use its account.
+- `evm balance` reports a registered alias's native receiving address (or the legacy mirror while hashed accounts are disabled) and omits the native route with `--rpc-url`; `evm stake show` refuses `--rpc-url` and reads the EVM key's runtime mapping (`coldkey_address` or `coldkey_mirror`).
+- The precompile caller preview, the `registerNetwork` warning and `evm doctor`'s hint name the runtime-mapped native account instead of the legacy mirror.
+
 ### Since `snapshot-2026-11-08.6`
 
 Not a versioned release. Each item links to its section below.

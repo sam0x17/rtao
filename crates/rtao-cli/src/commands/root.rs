@@ -214,8 +214,9 @@ pub enum Request {
     },
     /// Buy beta with TAO, preserving the all sentinel for SDK fee/ED planning.
     Allocate {
-        /// Explicit target; absent for the terminal fund picker.
-        hotkey: Option<AccountId>,
+        /// Explicit target (a receiving address kept for the intent's guard);
+        /// absent for the terminal fund picker.
+        hotkey: Option<String>,
         /// Decimal money or all; absent for a prompt.
         amount: Option<String>,
     },
@@ -262,15 +263,94 @@ fn target(
     ctx.resolve_target(param, value, history)?
         .ok_or_else(|| CliError::input(format!("missing public {param}")))
 }
-fn position_wallet(ctx: &mut AppContext, owner: AccountId) -> Result<(), CliError> {
-    if let Some((name, _)) = local_wallets(ctx)?
-        .into_iter()
-        .find(|(_, account)| *account == owner)
+/// Python v488 `resolve_position_wallet`'s owner: the dispatch proxy's real
+/// account when no coldkey is given, otherwise the coldkey target.
+fn position_owner(
+    ctx: &mut AppContext,
+    coldkey: Option<&str>,
+    history: &mut PromptHistory,
+) -> Result<AccountId, CliError> {
+    if coldkey.is_none()
+        && let Some(proxy) = ctx.dispatch_proxy(None)?
     {
-        ctx.globals.wallet_name = name;
+        return Ok(proxy);
     }
-    ctx.globals.wallet_given = true;
-    Ok(())
+    target(ctx, "coldkey_ss58", coldkey, history)
+}
+/// Python v488 `resolve_position_wallet`: select the context that signs for
+/// the position owner (the dispatch proxy, a saved multisig, the external
+/// signer's account or a local wallet whose validated public key is the
+/// owner), refusing a position no available signer can act on.
+fn position_wallet(
+    ctx: &mut AppContext,
+    owner: AccountId,
+    coldkey: Option<&str>,
+) -> Result<(), CliError> {
+    if let Some(proxy) = ctx.dispatch_proxy(None)? {
+        if proxy != owner {
+            return Err(CliError::input(
+                "the selected coldkey does not match the proxy dispatch account",
+            ));
+        }
+        ctx.globals.wallet_given = true;
+        return Ok(());
+    }
+    let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
+    let multisig = {
+        let names = crate::books::NameResolver::new(
+            &ctx.books,
+            &lookup,
+            &ctx.globals.wallet_name,
+            &ctx.globals.hotkey_name,
+        );
+        [coldkey, Some(ctx.globals.wallet_name.as_str())]
+            .into_iter()
+            .flatten()
+            .find(|name| {
+                names
+                    .saved_multisig_address(name)
+                    .ok()
+                    .flatten()
+                    .and_then(|address| address.parse::<AccountId>().ok())
+                    == Some(owner)
+            })
+            .map(str::to_owned)
+    };
+    if let Some(name) = multisig {
+        ctx.globals.wallet_name = name;
+        ctx.globals.wallet_given = true;
+        return Ok(());
+    }
+    if ctx.globals.uses_external_signer() {
+        if ctx.external_signer_address()? == Some(owner) {
+            // Keep the later device or browser approval on the account whose
+            // positions were selected, even when it came from saved config.
+            if !ctx.globals.uses_vault_signer() || ctx.globals.signer_address.is_none() {
+                ctx.globals.signer_address = Some(owner.to_string());
+            }
+            ctx.globals.wallet_given = true;
+            return Ok(());
+        }
+        return Err(CliError::input(
+            "select the position owner's account with --signer-address",
+        ));
+    }
+    // The wallet list reads display-only JSON headers; select against each
+    // wallet's validated public key, not a stale or malformed ss58Address.
+    for (name, _) in local_wallets(ctx)? {
+        if crate::books::AccountLookup::coldkey(&lookup, &name)
+            .ok()
+            .and_then(|address| address.parse::<AccountId>().ok())
+            == Some(owner)
+        {
+            ctx.globals.wallet_name = name;
+            ctx.globals.wallet_given = true;
+            return Ok(());
+        }
+    }
+    Err(CliError::input(
+        "no local signing wallet matches the selected coldkey",
+    ))
 }
 
 impl Request {
@@ -328,10 +408,10 @@ impl Request {
                 let hotkey = raw
                     .map(|raw| target(ctx, "hotkey_ss58", Some(raw), history))
                     .transpose()?;
-                let owner = target(ctx, "coldkey_ss58", optional(leaf, "coldkey_ss58"), history)?;
-                if hotkey.is_none() {
-                    position_wallet(ctx, owner)?;
-                }
+                let coldkey = optional(leaf, "coldkey_ss58");
+                let owner = position_owner(ctx, coldkey, history)?;
+                // Python v488 selects the position's signer for both forms.
+                position_wallet(ctx, owner, coldkey)?;
                 Ok(Self::Claim { hotkey, owner })
             }
             "allocate" => {
@@ -339,8 +419,13 @@ impl Request {
                 if raw.is_none() && !interactive(ctx) {
                     return Err(missing_target("--hotkey"));
                 }
+                // D-157: the basket deposit's validator keeps a receiving
+                // address, so execution guards its registration.
                 let hotkey = raw
-                    .map(|raw| target(ctx, "hotkey_ss58", Some(raw), history))
+                    .map(|raw| {
+                        ctx.resolve_target_text("hotkey_ss58", Some(raw), history)?
+                            .ok_or_else(|| CliError::input("missing public hotkey_ss58"))
+                    })
                     .transpose()?;
                 let mut amount = optional(leaf, "amount").map(str::to_owned);
                 if flag(leaf, "all_amount") {
@@ -372,10 +457,9 @@ impl Request {
                     };
                     return Err(missing_target(missing));
                 }
-                let owner = target(ctx, "coldkey_ss58", optional(leaf, "coldkey_ss58"), history)?;
-                if origin.is_none() || dest.is_none() {
-                    position_wallet(ctx, owner)?;
-                }
+                let coldkey = optional(leaf, "coldkey_ss58");
+                let owner = position_owner(ctx, coldkey, history)?;
+                position_wallet(ctx, owner, coldkey)?;
                 Ok(Self::Move {
                     origin,
                     dest,
@@ -547,7 +631,29 @@ fn casefold(value: &str) -> String {
         })
         .collect()
 }
+/// Python v488 `resolve_validator_selector` for an intent: the account and
+/// the spelling the intent carries, a complete receiving address kept (it is
+/// validated before any chain read) so execution guards the destination.
+async fn payment_selector(
+    ctx: &AppContext,
+    client: &Client,
+    value: &str,
+) -> Result<(AccountId, String), CliError> {
+    if rtao::primitives::receiving::is_receiving_address(value) {
+        let recipient = rtao::primitives::receiving::parse_recipient(value)
+            .map_err(|error| CliError::input(error.to_string()))?;
+        return Ok((recipient.account, recipient.address));
+    }
+    let account = selector(ctx, client, value).await?;
+    Ok((account, account.to_string()))
+}
+/// An account-identity selector: a receiving address names its account.
 async fn selector(ctx: &AppContext, client: &Client, value: &str) -> Result<AccountId, CliError> {
+    if rtao::primitives::receiving::is_receiving_address(value) {
+        return rtao::primitives::receiving::parse_recipient(value)
+            .map(|recipient| recipient.account)
+            .map_err(|error| CliError::input(error.to_string()));
+    }
     if let Ok(account) = value.parse::<AccountId>() {
         return Ok(account);
     }
@@ -598,7 +704,7 @@ async fn selector(ctx: &AppContext, client: &Client, value: &str) -> Result<Acco
     }
     Err(
         failure(format!("no root validator named {value:?}")).with_help(
-            "pass a hotkey ss58, a root UID, an address-book name, or an on-chain identity name",
+            "pass a hotkey SS58 or receiving address, a root UID, an address-book name, or an on-chain identity name",
         ),
     )
 }
@@ -1141,10 +1247,14 @@ async fn prepare_transaction_inner(
             .map(Some)
         }
         Request::Allocate { hotkey, amount } => {
-            let (hotkey, picked) = match hotkey {
-                Some(key) => (*key, None),
+            let (hotkey, hotkey_text, picked) = match hotkey {
+                Some(text) => (
+                    crate::books::account_of(text).map_err(|e| CliError::input(e.to_string()))?,
+                    text.clone(),
+                    None,
+                ),
                 None => match pick_fund(ctx, client, None, "--hotkey", history).await? {
-                    Some(fund) => (fund.hotkey, Some(fund)),
+                    Some(fund) => (fund.hotkey, fund.hotkey.to_string(), Some(fund)),
                     None => return Ok(None),
                 },
             };
@@ -1245,7 +1355,7 @@ async fn prepare_transaction_inner(
             tx(
                 "stake_into_basket",
                 Map::from_iter([
-                    ("hotkey_ss58".into(), json!(hotkey)),
+                    ("hotkey_ss58".into(), json!(hotkey_text)),
                     ("amount_tao".into(), json!(amount)),
                 ]),
             )
@@ -1257,17 +1367,23 @@ async fn prepare_transaction_inner(
             owner: account,
         } => {
             let positions = root_helpers::fetch_root_positions(client, *account).await?;
-            let origin = match origin {
-                Some(value) => selector(ctx, client, value).await?,
+            // Python v488: both validators keep a receiving address for the
+            // move intent, whose execution guards the destination; positions,
+            // names and the same-validator check compare their accounts.
+            let (origin, origin_text) = match origin {
+                Some(value) => payment_selector(ctx, client, value).await?,
                 None => match pick_position(ctx, client, &positions, "--from", history).await? {
-                    Some(key) => key,
+                    Some(key) => (key, key.to_string()),
                     None => return Ok(None),
                 },
             };
-            let (dest, picked_dest_name) = match dest {
-                Some(value) => (selector(ctx, client, value).await?, None),
+            let (dest, dest_text, picked_dest_name) = match dest {
+                Some(value) => {
+                    let (account, text) = payment_selector(ctx, client, value).await?;
+                    (account, text, None)
+                }
                 None => match pick_fund(ctx, client, Some(origin), "--to", history).await? {
-                    Some(fund) => (fund.hotkey, fund.name),
+                    Some(fund) => (fund.hotkey, fund.hotkey.to_string(), fund.name),
                     None => return Ok(None),
                 },
             };
@@ -1340,9 +1456,9 @@ async fn prepare_transaction_inner(
             tx(
                 "move_stake",
                 Map::from_iter([
-                    ("origin_hotkey_ss58".into(), json!(origin)),
+                    ("origin_hotkey_ss58".into(), json!(origin_text)),
                     ("origin_netuid".into(), json!(0)),
-                    ("dest_hotkey_ss58".into(), json!(dest)),
+                    ("dest_hotkey_ss58".into(), json!(dest_text)),
                     ("dest_netuid".into(), json!(0)),
                     ("amount_alpha".into(), json!("all")),
                     ("claim".into(), json!(true)),

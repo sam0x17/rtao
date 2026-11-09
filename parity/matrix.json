@@ -9452,7 +9452,7 @@
           "crates/rtao-cli/src/commands/evm.rs",
           "crates/rtao-cli/src/commands/evm/keys.rs"
         ],
-        "synced_blob": "a5689ac25cc006e86809ac52818e083d6ca5f969"
+        "synced_blob": "e0175bea395cfcf36b0a9a690d972f47444fb089"
       },
       {
         "kind": "ported",
@@ -9474,7 +9474,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm/association.rs"
         ],
-        "synced_blob": "493e1593cc8bf78d2caf43f239f76feaab8694fb"
+        "synced_blob": "139a2f90ace9c4ac2c5ff91ed29f2b4e31e3390b"
       },
       {
         "kind": "ported",
@@ -9507,7 +9507,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm.rs"
         ],
-        "synced_blob": "85f22716ada1bc1810c194e27774146c78cbfdb1"
+        "synced_blob": "d2783c89bed88bd2322e5574c6fb2134fc477bbd"
       },
       {
         "kind": "ported",
@@ -9518,7 +9518,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm/precompiles.rs"
         ],
-        "synced_blob": "cdbc8d2a2c8c4ec7a9a84d046a35952d301fe1a6"
+        "synced_blob": "1ff33e89cd7e0cd9c50c73586645dea527c25a26"
       },
       {
         "kind": "ported",
@@ -9529,7 +9529,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm/setup.rs"
         ],
-        "synced_blob": "c5ba0b6ea1b439db781898e12d9ff42508305e88"
+        "synced_blob": "a8288455bdfcd1cf31a89fe28183bd37c88cdbd5"
       },
       {
         "kind": "ported",
@@ -9540,7 +9540,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm.rs"
         ],
-        "synced_blob": "298a0c8b32d77046c3ad5dcb65d91428fd20c95d"
+        "synced_blob": "820c2d34c8ca4c14f920e00c5659c58fa81f017d"
       },
       {
         "kind": "ported",
@@ -9586,7 +9586,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/multisig.rs"
         ],
-        "synced_blob": "1184cb186443aa8215e361dded46613e8d39478b"
+        "synced_blob": "b15a90ddad10e266c73f2f4da4b482c083265487"
       },
       {
         "kind": "ported",
@@ -9608,7 +9608,7 @@
         "rust": [
           "rtao_cli::commands::root"
         ],
-        "synced_blob": "0dd627a74cc86b1dc006536b0f26fdb1a7971cf6"
+        "synced_blob": "83af5df37df148e064fcad117fc2d49742e5d0fc"
       },
       {
         "kind": "ported",
@@ -9619,7 +9619,7 @@
         "rust": [
           "rtao_cli::commands::root"
         ],
-        "synced_blob": "2c826049b5bf3e1b4706b7e09c67cbd38e17c5fb"
+        "synced_blob": "3f5a6bd0baa9639df8aafb6e3326785403c25b35"
       },
       {
         "kind": "ported",
@@ -9697,7 +9697,7 @@
           "crates/rtao-cli/src/commands/upgrade.rs",
           "crates/rtao-cli/src/commands/multisig.rs"
         ],
-        "synced_blob": "f6878d8b9725b98213253ef5992203862ee65877"
+        "synced_blob": "e94be6f1b2d4b148df418f4872daedf05246d7d8"
       },
       {
         "kind": "ported",
@@ -9772,7 +9772,7 @@
           "crates/rtao-cli/src/commands/wallet.rs",
           "crates/rtao-cli/src/commands/wallet_m8/views.rs"
         ],
-        "synced_blob": "12b68738a9b99b03565487e9eabe550fc1d2bea4"
+        "synced_blob": "bcf33aaeaa7fb18c25067064767b7bde8bdec496"
       },
       {
         "kind": "ported",
@@ -9850,7 +9850,7 @@
           "crates/rtao-cli/src/books.rs",
           "crates/rtao-cli/src/commands/wallet.rs"
         ],
-        "synced_blob": "21387c7cd8c95df13fb77bf33e60788236186605"
+        "synced_blob": "181554458baf46525826a6e1b83d43594de87c1d"
       },
       {
         "kind": "ported",
@@ -9913,7 +9913,7 @@
           "crates/rtao-cli/src/commands/root.rs",
           "crates/rtao-cli/src/commands/stake_picker.rs"
         ],
-        "synced_blob": "20d0971e95db30a68212b7876eb99f83de43264f"
+        "synced_blob": "4a40b8ea4dca212bb35a97f78056998c5a4d68fb"
       },
       {
         "kind": "ported",
@@ -9947,7 +9947,7 @@
           "crates/rtao-cli/src/commands/stake_picker.rs",
           "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "97a20647a5f779895aaef117d0813b3b6185b2a2"
+        "synced_blob": "78579a3e84d44bd6ea999cd1501927fe785e7a9f"
       },
       {
         "kind": "ported",

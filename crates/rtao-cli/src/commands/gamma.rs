@@ -163,8 +163,10 @@ pub fn tx_requests(
             let mut spends = Vec::new();
             for entry in leaf.get_many::<String>("spend").into_iter().flatten() {
                 let (hotkey, amount, reference) = spend_entry(entry)?;
+                // D-157: a spend's hotkey is a payment destination and keeps
+                // a receiving address, so execution guards its registration.
                 let hotkey = ctx
-                    .resolve_target("hotkey_ss58", Some(hotkey), history)?
+                    .resolve_target_text("hotkey_ss58", Some(hotkey), history)?
                     .ok_or_else(|| CliError::input("--spend needs a hotkey"))?;
                 spends.push(json!({
                     "hotkey_ss58": hotkey,

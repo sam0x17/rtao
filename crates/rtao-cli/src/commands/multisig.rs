@@ -675,14 +675,35 @@ async fn execute_saved(
                 .and_then(Value::as_str)
                 .ok_or_else(|| input("missing saved name"))?;
             let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
+            let protection = multisig.protection_status(client).await.map_err(failure)?;
             let mut result = json!({"entry":saved,"path":paths.path(ConfigFile::Multisigs),"multisig_address":multisig.address,"coldkey_wallet_also_exists":lookup.coldkey(name).is_ok()});
+            // Python v488: an eligible legacy group must register its
+            // quantum-resistant authority through its quorum before funding.
+            if protection.eligible {
+                result["quantum_resistant_protection"] = json!(if protection.registered {
+                    "registered"
+                } else {
+                    "registration required"
+                });
+                if !protection.registered {
+                    result["funding_requirement"] = json!(
+                        "Approve protection_call(deposit_payer=...) through the multisig quorum and wait for finalization before funding. The final approving member pays the registration deposit, including for new unfunded accounts."
+                    );
+                }
+            }
             if sudo == Some(multisig.address) {
                 result["is_chain_sudo_key"] = json!(true);
             }
             detail(&ctx.output, Some("saved multisig"), result)
         }
         Request::Show { name, .. } => {
-            let mut result = json!({"threshold":group.threshold,"signatories":group.signatories,"multisig_address":multisig.address});
+            let protection = multisig.protection_status(client).await.map_err(failure)?;
+            let mut status =
+                json!({"eligible":protection.eligible,"registered":protection.registered});
+            if protection.safe_derivation {
+                status["safe_derivation"] = json!(true);
+            }
+            let mut result = json!({"quantum_resistant_protection":status,"threshold":group.threshold,"signatories":group.signatories,"multisig_address":multisig.address});
             if sudo == Some(multisig.address) {
                 result["is_chain_sudo_key"] = json!(true);
             }
@@ -861,7 +882,7 @@ async fn pending_records(
             && override_data.is_some()
             && spec.target.is_some()
         {
-            cache.save(hex_hash(hash), json!({"target":spec.target,"params":spec.params,"sudo":spec.sudo,"proxy_for":spec.proxy_for,"force_proxy_type":spec.force_proxy_type,"call_data":format!("0x{}",hex::encode(call.as_bytes())),"call_hash":hex_hash(hash),"threshold":group.threshold,"signatories":group.signatories,"multisig_address":multisig.address,"multisig_preset":group.preset,"network":ctx.globals.network})).await?;
+            cache.save(hex_hash(hash), json!({"target":spec.target,"params":spec.params,"sudo":spec.sudo,"proxy_for":spec.proxy_for,"force_proxy_type":spec.force_proxy_type,"call_data":format!("0x{}",hex::encode(call.as_bytes())),"call_hash":hex_hash(hash),"threshold":group.threshold,"signatories":group.signatories,"multisig_address":multisig.address,"account_mode":group.account_mode.as_str(),"multisig_preset":group.preset,"network":ctx.globals.network})).await?;
         }
         records.push(pending_record(
             ctx,
@@ -909,7 +930,7 @@ fn pending_record(
     Ok(json!({
         "status":"pending","target":spec.target,"sudo":spec.sudo,"proxy_for":spec.proxy_for,"force_proxy_type":spec.force_proxy_type,"params":spec.params,
         "approvals":pending.approvals.len(),"threshold":group.threshold,"call_hash":hex_hash(hash),"call_data":call.map(|call|format!("0x{}",hex::encode(call.as_bytes()))),
-        "timepoint":pending.when,"timepoint_display":format!("{}:{}",pending.when.height,pending.when.index),"multisig_address":address,"multisig_preset":group.preset,
+        "timepoint":pending.when,"timepoint_display":format!("{}:{}",pending.when.height,pending.when.index),"multisig_address":address,"account_mode":group.account_mode.as_str(),"multisig_preset":group.preset,
         "depositor":pending.depositor,"depositor_label":display(pending.depositor),"approvals_so_far":pending.approvals,"approval_labels":pending.approvals.iter().copied().map(display).collect::<Vec<_>>(),
         "remaining_signatories":remaining,"remaining_labels":remaining.iter().copied().map(display).collect::<Vec<_>>(),"co_signer_commands":commands,"commands_available":available,
         "decode_note":(!available).then_some("call details unknown — the opening block may be pruned on this RPC node, the op may have used approve_as_multi (hash only), or local cache may be missing"),
@@ -1939,7 +1960,7 @@ mod tests {
         .await?;
         assert_eq!(
             output(&sink)?,
-            json!({"threshold":2,"signatories":accounts(),"multisig_address":ms.address,"is_chain_sudo_key":true})
+            json!({"quantum_resistant_protection":{"eligible":false,"registered":false},"threshold":2,"signatories":accounts(),"multisig_address":ms.address,"is_chain_sudo_key":true})
         );
         assert!(
             chain

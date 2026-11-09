@@ -199,8 +199,9 @@ pub(super) async fn transaction(
     let request = if op == "set_identity" {
         identity_request(ctx, client, matches, history).await?
     } else if op == "associate_hotkey" {
+        // D-157: the intent field keeps a receiving address for its guard.
         let hotkey = ctx
-            .resolve_target("hotkey_ss58", text(matches, "hotkey_ss58"), history)?
+            .resolve_target_text("hotkey_ss58", text(matches, "hotkey_ss58"), history)?
             .ok_or_else(|| input("missing hotkey"))?;
         let request = TxRequest {
             op,

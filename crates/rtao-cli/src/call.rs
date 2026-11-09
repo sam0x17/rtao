@@ -1841,27 +1841,30 @@ fn signing_rounds(
                 .find(|(name, member)| name == reference || member.to_string() == reference)
                 .map(|(_, member)| *member)
         };
+        // Python v488 `resolve_member_ref`: a receiving address, raw or
+        // booked, names its member account.
         let member_address = || {
-            reference
-                .parse::<AccountId>()
-                .ok()
-                .filter(|address| group.signatories.contains(address))
-                .or_else(|| {
-                    ctx.books
-                        .addresses
-                        .iter()
-                        .find(|entry| entry.get("name").and_then(Json::as_str) == Some(reference))
-                        .and_then(|entry| entry.get("address"))
-                        .and_then(Json::as_str)
-                        .and_then(|address| address.parse::<AccountId>().ok())
-                        .filter(|address| group.signatories.contains(address))
-                })
-                .or_else(|| {
-                    locals
-                        .iter()
-                        .find(|(name, _)| name == reference)
-                        .map(|(_, address)| *address)
-                })
+            (rtao::primitives::receiving::is_receiving_address(reference)
+                || is_bittensor_address(reference))
+            .then(|| crate::books::account_of(reference).ok())
+            .flatten()
+            .filter(|address| group.signatories.contains(address))
+            .or_else(|| {
+                ctx.books
+                    .addresses
+                    .iter()
+                    .find(|entry| entry.get("name").and_then(Json::as_str) == Some(reference))
+                    .and_then(|entry| entry.get("address"))
+                    .and_then(Json::as_str)
+                    .and_then(|address| crate::books::account_of(address).ok())
+                    .filter(|address| group.signatories.contains(address))
+            })
+            .or_else(|| {
+                locals
+                    .iter()
+                    .find(|(name, _)| name == reference)
+                    .map(|(_, address)| *address)
+            })
         };
         let address = (exact_wallet && forced.as_deref().is_none_or(|backend| backend == "wallet"))
             .then(local_address)
@@ -1898,13 +1901,18 @@ fn signing_rounds(
             None => prompt_member_backend(ctx,reference,address)?.ok_or_else(|| CliError::input(format!("member {reference:?} has no local wallet and no saved signing backend; pass --signatory {reference}=vault (or ledger/extension)")))?,
         };
         let wallet = if selected == "wallet" {
-            local
-                .map(|(name, _)| name.clone())
-                .ok_or_else(|| CliError::input("selected member has no local wallet"))?
+            local.map(|(name, _)| name.clone()).ok_or_else(|| {
+                CliError::input(format!(
+                    "member {} has no local wallet for --signatory {reference}=wallet",
+                    rtao::primitives::pyfmt::string_repr(reference)
+                ))
+            })?
         } else {
             reference.to_owned()
         };
-        let display = if is_bittensor_address(reference) {
+        let display = if is_bittensor_address(reference)
+            || rtao::primitives::receiving::is_receiving_address(reference)
+        {
             locals
                 .iter()
                 .find(|(_, member)| *member == address)
@@ -2584,15 +2592,19 @@ fn raw_soft_resolve_coldkey(
     lookup: &FsAccountLookup,
     reference: &str,
 ) -> Option<AccountId> {
-    if is_bittensor_address(reference) {
-        return reference.parse().ok();
+    // Python v488 `_soft_resolve_coldkey`: members are identities, so a
+    // receiving address (raw or booked) names its account.
+    if rtao::primitives::receiving::is_receiving_address(reference)
+        || is_bittensor_address(reference)
+    {
+        return crate::books::account_of(reference).ok();
     }
     if let Some(address) = ctx.books.addresses.iter().find_map(|entry| {
         (entry.get("name").and_then(Json::as_str) == Some(reference))
             .then(|| entry.get("address").and_then(Json::as_str))
             .flatten()
     }) {
-        return address.parse().ok();
+        return crate::books::account_of(address).ok();
     }
     lookup.coldkey(reference).ok()?.parse().ok()
 }
@@ -2855,7 +2867,7 @@ pub fn pending_multisig_followup(
         "call_hash":format!("0x{}",hex::encode(call.hash())),
         "call_data":format!("0x{}",hex::encode(call.as_bytes())),
         "timepoint":timepoint, "timepoint_display":timepoint_display,
-        "multisig_address":ms.address.to_string(), "multisig_preset":raw.preset,
+        "multisig_address":ms.address.to_string(), "account_mode":raw.account_mode.as_str(), "multisig_preset":raw.preset,
         "depositor":depositor, "depositor_label":depositor_label,
         "approvals_so_far":approvals.iter().map(ToString::to_string).collect::<Vec<_>>(),
         "approval_labels":approvals.iter().copied().map(label).collect::<Vec<_>>(),
@@ -2928,7 +2940,7 @@ pub async fn multisig_followup_for_spec(
         "sudo":request.sudo, "proxy_for":request.proxy_for.map(|account|account.to_string()),
         "force_proxy_type":proxy_type_name(request.force_proxy_type)?, "call_data":data, "call_hash":hash,
         "threshold":raw.threshold, "signatories":raw.signatories.iter().map(ToString::to_string).collect::<Vec<_>>(),
-        "multisig_address":ms.address.to_string(), "multisig_preset":raw.preset,
+        "multisig_address":ms.address.to_string(), "account_mode":raw.account_mode.as_str(), "multisig_preset":raw.preset,
         "network":ctx.globals.network,
     });
     if request
@@ -2943,7 +2955,7 @@ pub async fn multisig_followup_for_spec(
             "status":status, "target":request.target, "sudo":request.sudo,
             "proxy_for":request.proxy_for.map(|account|account.to_string()),
             "call_hash":hash, "call_data":data,
-            "multisig_address":ms.address.to_string(), "multisig_preset":raw.preset,
+            "multisig_address":ms.address.to_string(), "account_mode":raw.account_mode.as_str(), "multisig_preset":raw.preset,
         })
     };
     if multisig_executed(result) {

@@ -256,17 +256,76 @@ async fn fund_request(
     })
 }
 
-async fn resolve_account(
+/// Resolve a native identity flag as Python v488's `resolve_address`: a
+/// complete receiving address is kept for [`native_account`].
+async fn resolve_text(
     ctx: &AppContext,
     param: &'static str,
     value: Option<&str>,
-) -> Result<rtao::primitives::AccountId, CliError> {
+) -> Result<String, CliError> {
     let ctx = ctx.clone();
     let value = value.map(str::to_owned);
-    rtao::core::offload(move || ctx.resolve_address(param, value.as_deref()))
+    rtao::core::offload(move || ctx.resolve_address_text(param, value.as_deref()))
         .await
         .map_err(failure)??
         .ok_or_else(|| CliError::input(format!("cannot resolve {param}")))
+}
+
+/// Python v488 `_native_account`: the account a native identity names in an
+/// EVM call. An EVM transaction cannot carry a recipient registration guard,
+/// so a receiving address in a write resolves only after its finalized
+/// registration (`account_for_registered_write`), on the selected network;
+/// a custom EVM endpoint need not be that chain, so a write through one is
+/// refused. Reads take the address's account.
+async fn native_account(
+    ctx: &AppContext,
+    address: &str,
+    rpc_url: Option<&str>,
+    write: bool,
+) -> Result<rtao::primitives::AccountId, CliError> {
+    if !rtao::primitives::receiving::is_receiving_address(address) {
+        return crate::books::account_of(address)
+            .map_err(|error| CliError::input(error.to_string()));
+    }
+    if write && rpc_url.is_some() {
+        return Err(CliError::input(
+            "invalid value for --rpc-url: cannot verify recipient registration for an EVM RPC override; select the chain with --network and omit --rpc-url",
+        ));
+    }
+    if !write {
+        return crate::books::account_of(address)
+            .map_err(|error| CliError::input(error.to_string()));
+    }
+    let address = address.to_owned();
+    ctx.run(move |client| async move {
+        rtao::tx::receiving::account_for_registered_write(&client, &address)
+            .await
+            .map_err(|error| CliError::input(error.to_string()))
+    })
+    .await
+}
+
+/// Python v488 `resolve_evm_recipient` on the selected network's best block.
+async fn evm_recipient(
+    ctx: &AppContext,
+    address: &str,
+) -> Result<(rtao::primitives::receiving::Recipient, Option<bool>), CliError> {
+    let address = address.to_owned();
+    ctx.run(move |client| async move {
+        let snapshot = client
+            .at(rtao::client::BlockRef::Best)
+            .await
+            .map_err(CliError::from)?;
+        let runtime = snapshot.block().runtime.clone();
+        let recipient = rtao_intents::evm::resolve_evm_recipient(&snapshot, &runtime, &address)
+            .await
+            .map_err(|error| CliError::input(error.to_string()))?;
+        let enabled = rtao::tx::hashed::hashed_accounts_enabled(&snapshot, &runtime)
+            .await
+            .map_err(|error| CliError::input(error.to_string()))?;
+        Ok((recipient, enabled))
+    })
+    .await
 }
 
 fn key_ref(ctx: &AppContext, value: Option<&str>) -> (String, String) {
@@ -700,7 +759,9 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
             )
         }
         "deposit-address" => {
-            let account = resolve_account(ctx, "coldkey_ss58", None).await?;
+            // The coldkey is an identity here: its alias is read by account.
+            let account = crate::books::account_of(&resolve_text(ctx, "coldkey_ss58", None).await?)
+                .map_err(|error| CliError::input(error.to_string()))?;
             let coldkey = account.to_string();
             let route = ctx
                 .run(move |client| async move { deposit_route(&client, account).await })
@@ -795,7 +856,6 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
         }
         name => {
             let address = address_of(ctx, optional(leaf, "address")).await?;
-            let mirror = evm::h160_to_ss58(&address).map_err(failure)?;
             if name == "balance" {
                 let (_, rpc) = rpc(ctx, optional(leaf, "rpc_url")).await?;
                 let wei = rpc
@@ -804,17 +864,35 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
                     .map_err(failure)?;
                 let balance = evm::wei_to_balance(wei).map_err(failure)?;
                 let wei: Value = serde_json::from_str(&wei.to_string()).map_err(failure)?;
-                (
-                    None,
-                    vec![
-                        ("address".into(), json!(address)),
-                        ("balance".into(), json!(balance.to_string())),
-                        ("wei".into(), wei.clone()),
-                        ("ss58 mirror".into(), json!(mirror)),
-                    ],
-                    json!({"address":address,"balance_tao":balance.to_decimal_string().trim_end_matches('0').trim_end_matches('.'),"balance_wei":wei,"ss58_mirror":mirror}),
-                )
+                // Python v488: a custom Ethereum endpoint need not be the
+                // selected Substrate network, so the native route is reported
+                // only without one: a registered alias's receiving address,
+                // else the mirror unless hashed accounts are enabled.
+                let native = if optional(leaf, "rpc_url").is_none() {
+                    let (recipient, enabled) = evm_recipient(ctx, &address).await?;
+                    if recipient.descriptor.is_some() {
+                        Some(("native_receiving_address", recipient.address))
+                    } else if enabled != Some(true) {
+                        Some(("ss58_mirror", recipient.account.to_string()))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                let mut human = vec![
+                    ("address".into(), json!(address)),
+                    ("balance".into(), json!(balance.to_string())),
+                    ("wei".into(), wei.clone()),
+                ];
+                let mut payload = json!({"address":address,"balance_tao":balance.to_decimal_string().trim_end_matches('0').trim_end_matches('.'),"balance_wei":wei});
+                if let Some((key, value)) = native {
+                    human.push((key.replace('_', " "), json!(value)));
+                    payload[key] = json!(value);
+                }
+                (None, human, payload)
             } else {
+                let mirror = evm::h160_to_ss58(&address).map_err(failure)?;
                 (
                     None,
                     vec![
@@ -895,14 +973,15 @@ async fn send(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), Cli
         let dest = address_of(ctx, Some(required(leaf, "to")?)).await?;
         (dest.clone(), vec![], format!("send {balance} to {dest}"))
     } else {
-        let dest = resolve_account(ctx, "coldkey_ss58", optional(leaf, "to"))
-            .await?
-            .to_string();
+        let dest = resolve_text(ctx, "coldkey_ss58", optional(leaf, "to")).await?;
+        let account = native_account(ctx, &dest, optional(leaf, "rpc_url"), true).await?;
         let precompile = evm::get_precompile("balance-transfer").map_err(failure)?;
         let data = precompile
             .encode_call(
                 "transfer",
-                &[json!(evm::ss58_to_pubkey(&dest).map_err(failure)?)],
+                &[json!(
+                    evm::ss58_to_pubkey(&account.to_string()).map_err(failure)?
+                )],
             )
             .map_err(failure)?;
         (
@@ -939,16 +1018,28 @@ async fn stake_with_backend(
     let netuid = *leaf
         .get_one::<u16>("netuid")
         .ok_or_else(|| CliError::input("missing --netuid"))?;
-    let hotkey = resolve_account(ctx, "hotkey_ss58", optional(leaf, "hotkey_ss58"))
-        .await?
-        .to_string();
+    let rpc_url = optional(leaf, "rpc_url");
+    if name == "show" && rpc_url.is_some() {
+        // Python v488: the stake's coldkey is the runtime's native mapping of
+        // the EVM key, read from the selected network.
+        return Err(CliError::input(
+            "invalid value for --rpc-url: cannot verify the native account mapping for an EVM RPC override; select the chain with --network and omit --rpc-url",
+        ));
+    }
+    let hotkey = resolve_text(ctx, "hotkey_ss58", optional(leaf, "hotkey_ss58")).await?;
+    let hotkey_account = native_account(ctx, &hotkey, rpc_url, name != "show").await?;
     let precompile = evm::get_precompile("staking-v2").map_err(failure)?;
     if name == "show" {
         let info = key_info(ctx, optional(leaf, "evm_key")).await?;
+        let (recipient, _) = evm_recipient(ctx, &info.address).await?;
         let data = precompile
             .encode_call(
                 "getStake",
-                &[json!(hotkey), json!(info.ss58_mirror), json!(netuid)],
+                &[
+                    json!(hotkey_account.to_string()),
+                    json!(recipient.account.to_string()),
+                    json!(netuid),
+                ],
             )
             .map_err(failure)?;
         let (_, rpc) = rpc(ctx, optional(leaf, "rpc_url")).await?;
@@ -967,7 +1058,19 @@ async fn stake_with_backend(
             })
             .ok_or_else(|| failure("staking result exceeds native u64 rao"))?;
         let amount = DynBalance::from_rao(rao, NetUid(netuid));
-        let payload = json!({"evm_key":info.name,"address":info.address,"coldkey_mirror":info.ss58_mirror,"hotkey":hotkey,"netuid":netuid,"stake_rao":rao});
+        let mut payload = json!({"evm_key":info.name,"address":info.address});
+        if recipient.descriptor.is_some() {
+            payload["coldkey_address"] = json!(recipient.address);
+        } else {
+            payload["coldkey_mirror"] = json!(recipient.account.to_string());
+        }
+        for (key, value) in [
+            ("hotkey", json!(hotkey)),
+            ("netuid", json!(netuid)),
+            ("stake_rao", json!(rao)),
+        ] {
+            payload[key] = value;
+        }
         return ctx
             .output
             .detail(
@@ -977,7 +1080,7 @@ async fn stake_with_backend(
                         "evm key".into(),
                         json!(format!("{} ({})", info.name, info.address)),
                     ),
-                    ("coldkey (mirror)".into(), json!(info.ss58_mirror)),
+                    ("coldkey".into(), json!(recipient.address)),
                     ("hotkey".into(), json!(hotkey)),
                     ("stake".into(), json!(amount.to_string())),
                 ],
@@ -1006,7 +1109,14 @@ async fn stake_with_backend(
         }
     };
     let data = precompile
-        .encode_call(function, &[json!(hotkey), json!(amount.rao), json!(netuid)])
+        .encode_call(
+            function,
+            &[
+                json!(hotkey_account.to_string()),
+                json!(amount.rao),
+                json!(netuid),
+            ],
+        )
         .map_err(failure)?;
     submit_evm_tx_with_backend(
         ctx,
@@ -1332,6 +1442,73 @@ mod input_regression_tests {
                 Err(failure("fixture must never unlock, sign or submit"))
             })
         }
+    }
+
+    #[tokio::test]
+    async fn receiving_hotkeys_refuse_an_rpc_override_before_any_backend_call() -> TestResult {
+        // Python v488 `_native_account`: an EVM write cannot carry a
+        // recipient guard and a custom endpoint need not be the selected
+        // chain, so a receiving address there is refused; stake show needs
+        // the selected chain's native mapping and refuses any override.
+        let key = rtao::core::keys::Keypair::from_seed(&[21; 32], rtao::core::keys::CRYPTO_HASHED)?;
+        let receiving =
+            rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+        for (verb, amount) in [("add", "--amount-tao"), ("remove", "--amount-alpha")] {
+            let fixture = Fixture::new(&[
+                "rtao",
+                "evm",
+                "stake",
+                verb,
+                "--netuid",
+                "1",
+                amount,
+                "1",
+                "--hotkey",
+                &receiving,
+                "--rpc-url",
+                "http://127.0.0.1:1",
+                "--json",
+                "--yes",
+            ])?;
+            let fake = FakeTx::default();
+            let error = stake_with_backend(&fixture.ctx, fixture.leaf()?, &fake)
+                .await
+                .err()
+                .ok_or("receiving hotkey with an override must refuse")?;
+            assert_eq!(error.code, 2);
+            assert!(
+                error
+                    .message
+                    .contains("cannot verify recipient registration")
+            );
+            assert!(fake.calls.lock().map_err(|_| "poisoned")?.is_empty());
+        }
+        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        let fixture = Fixture::new(&[
+            "rtao",
+            "evm",
+            "stake",
+            "show",
+            "--netuid",
+            "1",
+            "--hotkey",
+            &hotkey,
+            "--rpc-url",
+            "http://127.0.0.1:1",
+            "--json",
+        ])?;
+        let fake = FakeTx::default();
+        let error = stake_with_backend(&fixture.ctx, fixture.leaf()?, &fake)
+            .await
+            .err()
+            .ok_or("stake show with an override must refuse")?;
+        assert_eq!(error.code, 2);
+        assert!(
+            error
+                .message
+                .contains("cannot verify the native account mapping")
+        );
+        Ok(())
     }
 
     #[tokio::test]

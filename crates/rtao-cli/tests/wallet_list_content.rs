@@ -114,9 +114,10 @@ async fn actual_wallet_list_keeps_multisig_members_and_later_optional_fields_in_
             assert_eq!(payload["multisigs"][0]["ss58"], expected_address);
             assert_eq!(
                 payload["multisigs"][1],
+                // Python v488 derives only a complete member set.
                 json!({
                     "name":"safe-partial", "kind":"multisig", "threshold":2,
-                    "signatory_count":3, "ss58":expected_address,
+                    "account_mode":"legacy", "signatory_count":3, "ss58":null,
                     "signatories":[
                         {"name":"member-a","ss58":alice},
                         {"name":"member-b","ss58":bob},

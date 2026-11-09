@@ -801,6 +801,15 @@ pub trait AccountLookup {
     fn coldkey(&self, wallet: &str) -> Result<String, ResolveError>;
     /// Read a named hotkey's public account without unlocking it.
     fn hotkey(&self, wallet: &str, hotkey: &str) -> Result<String, ResolveError>;
+    /// Python v488 `AppContext.wallet_address` for a coldkey: the complete
+    /// receiving address of a key that needs registration, else its account.
+    fn coldkey_address(&self, wallet: &str) -> Result<String, ResolveError> {
+        self.coldkey(wallet)
+    }
+    /// Python v488 `AppContext.wallet_address` for a hotkey.
+    fn hotkey_address(&self, wallet: &str, hotkey: &str) -> Result<String, ResolveError> {
+        self.hotkey(wallet, hotkey)
+    }
     /// List cosmetic name candidates. An unreadable directory may return none.
     fn candidates(&self) -> Vec<NameCandidate> {
         Vec::new()
@@ -832,6 +841,42 @@ impl FsAccountLookup {
         WalletRef::new(wallet, hotkey, self.root.clone())
             .map_err(|error| ResolveError::new(error.to_string()))
     }
+
+    /// The validated public account, or for a key that needs registration
+    /// its complete receiving address from the public companion's descriptor.
+    fn wallet_address(
+        &self,
+        wallet: &str,
+        hotkey: &str,
+        role: SignerRole,
+        name: &str,
+    ) -> Result<String, ResolveError> {
+        use rtao::signer::KeyView;
+        let reference = self.reference(wallet, hotkey)?;
+        let info = reference
+            .public_info(role)
+            .map_err(|error| public_lookup_error(error, name))?;
+        if !info
+            .authority
+            .is_some_and(rtao::primitives::AuthorityType::requires_registration)
+        {
+            return Ok(info.account.to_string());
+        }
+        // A key that needs registration always publishes its descriptor; a
+        // companion without one must not fall back to the bare account, which
+        // would let a payment skip the recipient registration guard.
+        reference
+            .authority_descriptor(role)
+            .and_then(|descriptor| {
+                rtao::core::keys::encode_hashed_receiving_address(&descriptor).ok()
+            })
+            .ok_or_else(|| {
+                ResolveError::new(format!(
+                    "cannot read the receiving descriptor of {}",
+                    crate::output::terminal_text(name)
+                ))
+            })
+    }
 }
 
 impl AccountLookup for FsAccountLookup {
@@ -847,6 +892,19 @@ impl AccountLookup for FsAccountLookup {
             .public_info(SignerRole::Hotkey)
             .map(|info| info.account.to_string())
             .map_err(|error| public_lookup_error(error, &format!("{wallet}/{hotkey}")))
+    }
+
+    fn coldkey_address(&self, wallet: &str) -> Result<String, ResolveError> {
+        self.wallet_address(wallet, "default", SignerRole::Coldkey, wallet)
+    }
+
+    fn hotkey_address(&self, wallet: &str, hotkey: &str) -> Result<String, ResolveError> {
+        self.wallet_address(
+            wallet,
+            hotkey,
+            SignerRole::Hotkey,
+            &format!("{wallet}/{hotkey}"),
+        )
     }
 
     fn candidates(&self) -> Vec<NameCandidate> {
@@ -1133,14 +1191,14 @@ impl<'a> NameResolver<'a> {
                     (address, self.wallet.to_owned(), "saved multisig")
                 } else {
                     (
-                        self.accounts.coldkey(self.wallet)?,
+                        self.accounts.coldkey_address(self.wallet)?,
                         self.wallet.to_owned(),
                         "wallet",
                     )
                 }
             }
             "hotkey_ss58" => (
-                self.accounts.hotkey(self.wallet, self.hotkey)?,
+                self.accounts.hotkey_address(self.wallet, self.hotkey)?,
                 format!("{}/{}", self.wallet, self.hotkey),
                 "hotkey",
             ),
@@ -1168,7 +1226,8 @@ impl<'a> NameResolver<'a> {
         }
         let mut resolved = Vec::new();
         for value in refs {
-            let address = self.resolve_address_ref("coldkey_ss58", value)?.address;
+            let address =
+                account_of(&self.resolve_address_ref("coldkey_ss58", value)?.address)?.to_string();
             if !resolved.contains(&address) {
                 resolved.push(address);
             }
@@ -1258,7 +1317,14 @@ impl<'a> NameResolver<'a> {
             (value.to_owned(), "ss58 address".to_owned(), name)
         } else if let Some(address) = self.books.address(value) {
             (
-                address.to_owned(),
+                // Python v488: a booked receiving address in canonical form.
+                if rtao::primitives::receiving::is_receiving_address(address) {
+                    rtao::primitives::receiving::parse_recipient(address)
+                        .map_err(|error| ResolveError::new(error.to_string()))?
+                        .address
+                } else {
+                    address.to_owned()
+                },
                 format!("address-book entry {}", pyfmt::string_repr(value)),
                 Some(value.to_owned()),
             )
@@ -1282,7 +1348,7 @@ impl<'a> NameResolver<'a> {
                     Some(value.to_owned()),
                 ),
                 None => (
-                    self.accounts.coldkey(value)?,
+                    self.accounts.coldkey_address(value)?,
                     format!("wallet {}", pyfmt::string_repr(value)),
                     Some(value.to_owned()),
                 ),
@@ -1295,7 +1361,7 @@ impl<'a> NameResolver<'a> {
                 wallet
             };
             (
-                self.accounts.hotkey(wallet, hotkey)?,
+                self.accounts.hotkey_address(wallet, hotkey)?,
                 format!("hotkey {}", pyfmt::string_repr(value)),
                 Some(value.to_owned()),
             )
@@ -1376,14 +1442,15 @@ impl<'a> NameResolver<'a> {
                     addresses.push(address);
                 }
             }
-            let keys = addresses
-                .iter()
-                .map(|address| {
-                    address
-                        .parse::<AccountId>()
-                        .map_err(|error| ResolveError::new(error.to_string()))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
+            // Python v488 `_resolve_stored_signatories` (`resolve_account`):
+            // members are identities, so a receiving address names its account.
+            let mut keys = Vec::new();
+            for address in &addresses {
+                let key = account_of(address)?;
+                if !keys.contains(&key) {
+                    keys.push(key);
+                }
+            }
             let (account, _) = rtao::primitives::multisig_account_id(&keys, threshold, mode)
                 .map_err(|error| ResolveError::new(error.to_string()))?;
             Ok(account.to_string())
@@ -1401,6 +1468,14 @@ impl<'a> NameResolver<'a> {
         }
         result.map(Some)
     }
+}
+
+/// Python v488 `parse_recipient(address).account`: the account a resolved
+/// SS58 or complete receiving address names (identity consumers only).
+pub fn account_of(address: &str) -> Result<AccountId, ResolveError> {
+    rtao::primitives::receiving::parse_recipient(address)
+        .map(|recipient| recipient.account)
+        .map_err(|error| ResolveError::new(error.to_string()))
 }
 
 fn multisig_depth_error() -> ResolveError {

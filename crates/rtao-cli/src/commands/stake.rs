@@ -378,7 +378,19 @@ impl Request {
                 "set_auto_stake",
                 Map::from_iter([
                     ("netuid".into(), json!(subnet(leaf)?)),
-                    ("hotkey_ss58".into(), json!(hotkey(ctx, leaf, history)?)),
+                    // D-157: the auto-stake destination keeps a receiving
+                    // address, so execution guards its registration.
+                    (
+                        "hotkey_ss58".into(),
+                        json!(
+                            ctx.resolve_target_text(
+                                "hotkey_ss58",
+                                optional(leaf, "hotkey_ss58"),
+                                history
+                            )?
+                            .ok_or_else(|| CliError::input("missing hotkey"))?
+                        ),
+                    ),
                 ]),
                 leaf,
             )?)),
