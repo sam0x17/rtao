@@ -37,6 +37,49 @@ pub fn verify_message(message: &str, signature: &str, ss58_address: &str) -> boo
     })
 }
 
+/// Python v488 `verify_message(message, signature, address, crypto_type)`:
+/// verify with a trusted scheme, never one inferred from the signature.
+///
+/// A receiving address binds its descriptor's scheme (a different
+/// `crypto_type` fails). A bare SS58 address requires `crypto_type` from
+/// trusted configuration or the account registry and refuses without one.
+/// Malformed signatures and addresses verify as false.
+#[doc(alias = "bittensor.wallets.verify_message")]
+pub fn verify_message_as(
+    message: &str,
+    signature: &str,
+    address: &str,
+    crypto_type: Option<u8>,
+) -> Result<bool, WalletError> {
+    let Some(raw) = python_hex(signature.strip_prefix("0x").unwrap_or(signature)) else {
+        return Ok(false);
+    };
+    if rtao_primitives::receiving::is_receiving_address(address) {
+        let Ok(recipient) = rtao_primitives::receiving::parse_recipient(address) else {
+            return Ok(false);
+        };
+        let Some(descriptor) = recipient.descriptor else {
+            return Ok(false);
+        };
+        let Ok(key) = rtao_core::keys::Keypair::from_hashed_descriptor(&descriptor, 42) else {
+            return Ok(false);
+        };
+        if crypto_type.is_some_and(|crypto| crypto != key.crypto_type()) {
+            return Ok(false);
+        }
+        return Ok(key.verify(message.as_bytes(), &raw).unwrap_or(false));
+    }
+    if address.parse::<rtao_primitives::AccountId>().is_err() {
+        return Ok(false);
+    }
+    let Some(crypto) = crypto_type else {
+        return Err(WalletError::Core(rtao_core::CoreError::Crypto(
+            "bare SS58 verification requires a trusted crypto_type (--crypto-type), or use a descriptor-bearing receiving address".into(),
+        )));
+    };
+    Ok(rtao_core::keys::verify(message.as_bytes(), &raw, address, crypto).unwrap_or(false))
+}
+
 // bytes.fromhex skips ASCII whitespace between complete byte pairs, but not
 // between the two nibbles of one byte. The input remains bounded before any
 // allocation. Ciphertext and signature bytes are public.

@@ -45,14 +45,6 @@ tag = "v488"
 symbols = ["bittensor.cli.call_names._resolve_account", "bittensor.cli.call_names._resolve_value", "bittensor.cli.call_names.is_receiving_address", "bittensor.cli.call_names.parse_recipient"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/addresses.py"
-kind = "ported"
-from = "62ce928b4b2b34e188a93255df6aa7fa5151e338"
-to = "d767dc40f4a7de532b576f0294d6828df14973c8"
-tag = "v488"
-symbols = ["bittensor.cli.commands.addresses._parse_ss58", "bittensor.cli.commands.addresses._prompt_for_ss58", "bittensor.cli.commands.addresses._save", "bittensor.cli.commands.addresses.add_address", "bittensor.cli.commands.addresses.app", "bittensor.cli.commands.addresses.is_receiving_address", "bittensor.cli.commands.addresses.parse_recipient", "bittensor.cli.commands.addresses.save"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/evm/_shared.py"
 kind = "ported"
 from = "a5689ac25cc006e86809ac52818e083d6ca5f969"

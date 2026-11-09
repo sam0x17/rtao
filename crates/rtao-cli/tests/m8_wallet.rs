@@ -418,6 +418,8 @@ async fn sign_verify_uses_exact_utf8_bare_hex_and_false_exit_contract() -> TestR
                 signature,
                 "--ss58",
                 &account.to_string(),
+                "--crypto-type",
+                "sr25519",
             ],
         )?;
         let result = wallet::run(&mut ctx, group(&parsed)?, &mut PromptHistory::default()).await;
@@ -428,6 +430,30 @@ async fn sign_verify_uses_exact_utf8_bare_hex_and_false_exit_contract() -> TestR
             assert!(error.message.is_empty());
         }
     }
+    // Python v488: a bare ss58 address names no scheme; verification needs a
+    // trusted --crypto-type rather than assuming one.
+    let (parsed, mut ctx, _sink) = context(
+        &root,
+        &[
+            "wallet",
+            "verify",
+            "--message",
+            "π\nhello",
+            "--signature",
+            signature,
+            "--ss58",
+            &account.to_string(),
+        ],
+    )?;
+    let error = wallet::run(&mut ctx, group(&parsed)?, &mut PromptHistory::default())
+        .await
+        .err()
+        .ok_or("bare ss58 without a scheme")?;
+    assert!(
+        error.message.contains("requires a trusted crypto_type"),
+        "{}",
+        error.message
+    );
     Ok(())
 }
 

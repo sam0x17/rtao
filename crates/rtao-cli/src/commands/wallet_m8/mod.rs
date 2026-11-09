@@ -73,7 +73,12 @@ pub(super) fn commands() -> Vec<Command> {
                 .about("Verify a message signature against an address.")
                 .arg(message())
                 .arg(option("signature", "signature", "Bare or 0x-prefixed signature hex.").required(true))
-                .arg(option("ss58", "ss58", "Signer address.").required(true)),
+                .arg(option("ss58", "ss58", "Signer address (a receiving address binds its scheme).").required(true))
+                .arg(option(
+                    "crypto_type",
+                    "crypto-type",
+                    "Trusted signing scheme of a bare ss58 address (sr25519, ed25519, ...); a receiving address carries its own.",
+                )),
             Tier::Read,
         ),
         with_globals(
@@ -455,9 +460,14 @@ pub(super) async fn run_local(
         let message = text(matches, "message").ok_or_else(|| input("missing --message"))?;
         let signature = text(matches, "signature").ok_or_else(|| input("missing --signature"))?;
         let ss58 = text(matches, "ss58").ok_or_else(|| input("missing --ss58"))?;
-        // Python constructs a public-only Keypair with its default sr25519 scheme.
-        // Its verifier accepts exact bytes and the historical <Bytes> wrapper.
-        let valid = rtao::wallet::verify_message(message, signature, ss58);
+        // Python v488 verifies with a trusted scheme: a receiving address
+        // binds its own, a bare ss58 address needs --crypto-type. The
+        // verifier accepts exact bytes and the historical <Bytes> wrapper.
+        let crypto = text(matches, "crypto_type")
+            .map(|value| super::scheme(value, None).map(|scheme| scheme.code()))
+            .transpose()?;
+        let valid =
+            rtao::wallet::verify_message_as(message, signature, ss58, crypto).map_err(failure)?;
         ctx.output
             .detail(
                 None,

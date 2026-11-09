@@ -9384,7 +9384,7 @@
         "rust": [
           "`rtao-cli/src/commands/addresses.rs`"
         ],
-        "synced_blob": "62ce928b4b2b34e188a93255df6aa7fa5151e338"
+        "synced_blob": "d767dc40f4a7de532b576f0294d6828df14973c8"
       },
       {
         "kind": "ported",

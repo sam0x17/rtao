@@ -913,7 +913,7 @@ fn reviewed_required_address_routes_keep_real_option_spellings_and_canonical_rep
                 &public_key,
             ],
             "ss58",
-            "--ss58",
+            "--address",
         ),
         (
             vec![
@@ -924,7 +924,7 @@ fn reviewed_required_address_routes_keep_real_option_spellings_and_canonical_rep
                 &public_key,
             ],
             "ss58",
-            "--ss58",
+            "--address",
         ),
         (
             vec![

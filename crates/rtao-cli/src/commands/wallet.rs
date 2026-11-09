@@ -16,9 +16,9 @@ use crate::{
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao::{
     client::Client,
-    primitives::{AccountId, CryptoType},
+    primitives::AccountId,
     signer::SignerRole,
-    wallet::{Overwrite, RegenerateFrom, Wallet, WalletRef, WriteOptions},
+    wallet::{KeyScheme, Overwrite, RegenerateFrom, Wallet, WalletRef, WriteOptions},
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::{Value, json};
@@ -52,19 +52,23 @@ fn key_options(mut command: Command, generation: bool, cold: bool) -> Command {
             option(
                 "crypto_type",
                 "crypto-type",
-                "Key scheme: ed25519 (0) or sr25519 (1).",
+                "Signing scheme: sr/sr25519 (default), ed/ed25519, ms (ML-DSA-65), falcon512, or falcon1024. Select --type hashed to add rotation to any scheme. Legacy crypto-type names remain supported.",
             )
             .default_value("sr25519"),
-        );
+        )
+        .arg(option(
+            "account_type",
+            "type",
+            "Account mode: standard (fixed signing key) or hashed (rotating keys). New wallets default to standard; restore using the original mode.",
+        ));
     if generation {
         command = command.arg(
             option(
                 "n_words",
                 "n-words",
-                "Mnemonic words: 12, 15, 18, 21, or 24.",
+                "Number of words in the generated mnemonic: 12, 15, 18, 21, or 24. Post-quantum schemes require 24 words; sr/ed retain their existing defaults. Default: 12.",
             )
-            .value_parser(clap::value_parser!(usize))
-            .default_value("12"),
+            .value_parser(clap::value_parser!(usize)),
         );
     }
     if cold {
@@ -72,6 +76,13 @@ fn key_options(mut command: Command, generation: bool, cold: bool) -> Command {
             "no_password",
             "no-password",
             "Store the coldkey unencrypted.",
+        ));
+    }
+    if generation {
+        command = command.arg(option(
+            "registration_payer",
+            "registration-payer",
+            "Existing funded wallet whose coldkey pays the hashed account registration deposit and fees.",
         ));
     }
     with_globals(command, Tier::Read)
@@ -122,29 +133,40 @@ pub fn command() -> Command {
         true,
         true,
     );
-    create = create.arg(
-        option(
-            "hotkey_crypto_type",
-            "hotkey-crypto-type",
-            "Hotkey scheme: ed25519 or sr25519.",
+    create = create
+        .arg(
+            option(
+                "hotkey_crypto_type",
+                "hotkey-crypto-type",
+                "Hotkey signing scheme; defaults to sr25519.",
+            )
+            .default_value("sr25519"),
         )
-        .default_value("sr25519"),
-    );
+        .arg(option(
+            "hotkey_account_type",
+            "hotkey-type",
+            "Hotkey account mode; defaults to --type.",
+        ));
     let public = |name: &'static str| {
         key_options(
             Command::new(name).about("Write a public key companion without secrets."),
             false,
             false,
         )
-        .arg(option("ss58", "ss58", "Bittensor ss58 address.").required(true))
         .arg(
             option(
-                "public_key",
-                "public-key",
-                "Matching 32-byte hex public key.",
+                "ss58",
+                "address",
+                "Receiving address of the key (or a legacy ss58 address).",
             )
+            .alias("ss58")
             .required(true),
         )
+        .arg(option(
+            "public_key",
+            "public-key",
+            "Hex public key; required only for a legacy ss58 address.",
+        ))
     };
     Command::new("wallet")
         .about("Create and manage wallets.")
@@ -175,6 +197,20 @@ pub fn command() -> Command {
             ),
             public("regen-coldkeypub"),
             public("regen-hotkeypub"),
+            with_globals(
+                Command::new("register")
+                    .about("Register saved hashed keys through MEV Shield without generating new keys.")
+                    .arg(option(
+                        "registration_payer",
+                        "registration-payer",
+                        "Existing funded wallet paying the registration deposits and fees.",
+                    ))
+                    .arg(
+                        option("key", "key", "Keys to register: coldkey, hotkey, or both.")
+                            .default_value("both"),
+                    ),
+                Tier::Read,
+            ),
             with_globals(
                 Command::new("show").about("Show public keys and crypto schemes."),
                 Tier::Read,
@@ -264,6 +300,9 @@ pub async fn run(
     if name == "history" {
         return m8::history::run(ctx, leaf, history).await;
     }
+    if name == "register" {
+        return register(ctx, leaf).await;
+    }
     if matches!(name, "balance" | "inspect") || m8::is_chain(name) {
         let mut runner = ctx.clone();
         runner.track_heads = m8::transaction_op(name).is_some();
@@ -321,7 +360,23 @@ fn overwrite(matches: &ArgMatches) -> Overwrite {
         Overwrite::No
     }
 }
-fn crypto(value: &str) -> Result<CryptoType, CliError> {
+/// Python `wallets.CRYPTO_TYPE_NAMES` (v488).
+const CRYPTO_TYPE_NAMES: [(u8, &str); 10] = [
+    (0, "ed25519"),
+    (1, "sr25519"),
+    (4, "hashed"),
+    (6, "hashed-ed25519"),
+    (7, "mldsa65"),
+    (8, "ms"),
+    (9, "falcon512"),
+    (10, "hashed-falcon512"),
+    (11, "falcon1024"),
+    (12, "hashed-falcon1024"),
+];
+/// Python `wallets.parse_crypto_type(value, account_type)`: a scheme name,
+/// its short or legacy alias, or its numeric code, composed with the
+/// account type (`standard` or `hashed`).
+pub(crate) fn scheme(value: &str, account_type: Option<&str>) -> Result<KeyScheme, CliError> {
     let normalized = crate::prompt::python_strip(value).to_ascii_lowercase();
     let numeric = (!normalized.is_empty()
         && normalized.chars().all(|ch| {
@@ -330,21 +385,61 @@ fn crypto(value: &str) -> Result<CryptoType, CliError> {
         }))
     .then(|| rtao::primitives::pyfmt::parse_integer(&normalized))
     .flatten()
-    .map(|integer| integer.to_string());
-    match (normalized.as_str(), numeric.as_deref()) {
-        ("ed25519", _) | (_, Some("0")) => Ok(CryptoType::Ed25519),
-        ("sr25519", _) | (_, Some("1")) => Ok(CryptoType::Sr25519),
-        _ => Err(failure(format!(
-            "unknown crypto type {}; expected one of: ed25519, sr25519",
-            rtao::primitives::pyfmt::string_repr(value)
-        ))),
+    .and_then(|integer| integer.to_string().parse::<u8>().ok());
+    let alias = match normalized.as_str() {
+        "ed" => Some(0),
+        "sr" => Some(1),
+        "ml-dsa-65" | "mldsa" => Some(7),
+        "ml-dsa" => Some(8),
+        "falcon-512" => Some(9),
+        "falcon-1024" => Some(11),
+        _ => None,
+    };
+    let code = CRYPTO_TYPE_NAMES
+        .iter()
+        .find(|(_, name)| *name == normalized)
+        .map(|(code, _)| *code)
+        .or(alias)
+        .or(numeric.filter(|code| CRYPTO_TYPE_NAMES.iter().any(|(known, _)| known == code)))
+        .ok_or_else(|| {
+            failure(format!(
+                "unknown crypto type {}; expected one of: {}",
+                rtao::primitives::pyfmt::string_repr(value),
+                CRYPTO_TYPE_NAMES
+                    .iter()
+                    .map(|(_, name)| *name)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ))
+        })?;
+    KeyScheme::with_account_type(code, account_type).map_err(failure)
+}
+/// Python `_resolve_crypto_type`: `--type` is the account mode; a scheme
+/// name there is the former alias, accepted only with the default scheme.
+fn resolve_scheme(value: &str, account_type: Option<&str>) -> Result<KeyScheme, CliError> {
+    match account_type {
+        Some(mode) if mode != "standard" && mode != "hashed" => {
+            if value != "sr25519" {
+                return Err(failure(
+                    "--type selects standard or hashed; put the signing scheme in --crypto-type",
+                ));
+            }
+            scheme(mode, None)
+        }
+        mode => scheme(value, mode),
     }
 }
-fn crypto_name(value: CryptoType) -> &'static str {
-    match value {
-        CryptoType::Ed25519 => "ed25519",
-        CryptoType::Sr25519 => "sr25519",
-    }
+/// Python `wallets.format_crypto_type`.
+fn scheme_name(value: KeyScheme) -> &'static str {
+    let code = value.code();
+    CRYPTO_TYPE_NAMES
+        .iter()
+        .find(|(known, _)| *known == code)
+        .map_or("unknown", |(_, name)| *name)
+}
+fn info_scheme(info: &rtao::wallet::PublicKeyInfo) -> KeyScheme {
+    info.authority
+        .map_or(KeyScheme::Classical(info.crypto_type), KeyScheme::Authority)
 }
 fn prompt_error(error: crate::prompt::PromptError) -> CliError {
     CliError {
@@ -547,10 +642,17 @@ async fn run_local(
         },
         history,
     )?;
-    let scheme = crypto(text(matches, "crypto_type").unwrap_or("sr25519"))?;
+    let account_type = text(matches, "account_type");
+    let scheme = resolve_scheme(
+        text(matches, "crypto_type").unwrap_or("sr25519"),
+        account_type,
+    )?;
     // Reject both schemes before `create` can install its first keyfile.
     let hot_scheme = if both {
-        crypto(text(matches, "hotkey_crypto_type").unwrap_or("sr25519"))?
+        resolve_scheme(
+            text(matches, "hotkey_crypto_type").unwrap_or("sr25519"),
+            text(matches, "hotkey_account_type").or(account_type),
+        )?
     } else {
         scheme
     };
@@ -572,27 +674,58 @@ async fn run_local(
     }
     if public {
         let ss58 =
-            text(matches, "ss58").ok_or_else(|| input("missing required option: `--ss58`"))?;
-        let account: AccountId = ss58
-            .parse()
-            .map_err(|_| input("invalid Bittensor ss58 address"))?;
-        let key = text(matches, "public_key")
-            .ok_or_else(|| input("missing required option: `--public-key`"))?;
-        let key =
-            checked_hex(key, 32, false).map_err(|_| input("public key must be 32 bytes of hex"))?;
-        if account.0.as_slice() != key.as_slice() {
-            return Err(input("public key does not match the ss58 address"));
-        }
-        if hot {
-            wallet
-                .regenerate_hotkeypub(account, scheme, overwrite(matches))
-                .await
+            text(matches, "ss58").ok_or_else(|| input("missing required option: `--address`"))?;
+        // Python `_public_recovery_type`: a receiving address carries its
+        // descriptor and scheme; a bare account restores only a classical key.
+        let mut scheme = scheme;
+        if rtao::primitives::receiving::is_receiving_address(ss58) {
+            let account = if hot {
+                wallet
+                    .regenerate_hotkeypub_receiving(ss58, overwrite(matches))
+                    .await
+            } else {
+                wallet
+                    .regenerate_coldkeypub_receiving(ss58, overwrite(matches))
+                    .await
+            }
+            .map_err(failure)?;
+            let info = wallet
+                .public_info(if hot {
+                    SignerRole::Hotkey
+                } else {
+                    SignerRole::Coldkey
+                })
                 .map_err(failure)?;
+            debug_assert_eq!(info.account, account);
+            scheme = info_scheme(&info);
         } else {
-            wallet
-                .regenerate_coldkeypub(account, scheme, overwrite(matches))
-                .await
-                .map_err(failure)?;
+            let KeyScheme::Classical(classical) = scheme else {
+                return Err(failure(
+                    "hashed watch-only recovery requires the complete receiving address; copy it from `rtao wallet show`",
+                ));
+            };
+            let account: AccountId = ss58
+                .parse()
+                .map_err(|_| input("invalid Bittensor ss58 address"))?;
+            let key = text(matches, "public_key").ok_or_else(|| {
+                failure("--public-key is required when recovering from a legacy ss58 address")
+            })?;
+            let key = checked_hex(key, 32, false)
+                .map_err(|_| input("public key must be 32 bytes of hex"))?;
+            if account.0.as_slice() != key.as_slice() {
+                return Err(input("public key does not match the ss58 address"));
+            }
+            if hot {
+                wallet
+                    .regenerate_hotkeypub(account, classical, overwrite(matches))
+                    .await
+                    .map_err(failure)?;
+            } else {
+                wallet
+                    .regenerate_coldkeypub(account, classical, overwrite(matches))
+                    .await
+                    .map_err(failure)?;
+            }
         }
         return ctx
             .output
@@ -604,7 +737,7 @@ async fn run_local(
                 }),
                 &[
                     ("ss58".into(), json!(ss58)),
-                    ("crypto_type".into(), json!(crypto_name(scheme))),
+                    ("crypto_type".into(), json!(scheme_name(scheme))),
                 ],
                 None,
             )
@@ -617,22 +750,23 @@ async fn run_local(
     };
     if let Some(source) = source {
         let account = if hot {
-            wallet.regenerate_hotkey(source, scheme, options).await
+            wallet.regenerate_hotkey_as(source, scheme, options).await
         } else {
-            wallet.regenerate_coldkey(source, scheme, options).await
+            wallet.regenerate_coldkey_as(source, scheme, options).await
         }
         .map_err(failure)?;
-        let reported = wallet
-            .public_info(if hot {
-                SignerRole::Hotkey
-            } else {
-                SignerRole::Coldkey
-            })
-            .map_err(failure)?
-            .crypto_type;
+        let reported = info_scheme(
+            &wallet
+                .public_info(if hot {
+                    SignerRole::Hotkey
+                } else {
+                    SignerRole::Coldkey
+                })
+                .map_err(failure)?,
+        );
         let mut fields = vec![
             ("coldkey".into(), json!(ctx.globals.wallet_name)),
-            ("crypto_type".into(), json!(crypto_name(reported))),
+            ("crypto_type".into(), json!(scheme_name(reported))),
             ("ss58".into(), json!(account)),
             ("path".into(), json!(path)),
         ];
@@ -652,14 +786,40 @@ async fn run_local(
             )
             .map_err(failure);
     }
-    let words = matches.get_one::<usize>("n_words").copied().unwrap_or(12);
-    if ![12, 15, 18, 21, 24].contains(&words) {
+    // Hashed keys are registered (and their reserve approved) as they are
+    // created; the approval and the payer's unlock precede any key write.
+    let creating_roles: Vec<(SignerRole, KeyScheme)> = if both {
+        vec![
+            (SignerRole::Coldkey, scheme),
+            (SignerRole::Hotkey, hot_scheme),
+        ]
+    } else if hot {
+        vec![(SignerRole::Hotkey, scheme)]
+    } else {
+        vec![(SignerRole::Coldkey, scheme)]
+    };
+    let prepared_registration = prepare_hashed_creation(
+        ctx,
+        &creating_roles,
+        text(matches, "registration_payer"),
+        true,
+    )
+    .await?;
+    let requested = matches.get_one::<usize>("n_words").copied();
+    if requested.is_some_and(|words| ![12, 15, 18, 21, 24].contains(&words)) {
         return Err(failure("mnemonic word count must be 12, 15, 18, 21, or 24"));
     }
+    // Reject a word count either scheme refuses before any key is written.
+    let words = scheme.mnemonic_words(requested).map_err(failure)?;
+    let hot_words = hot_scheme.mnemonic_words(requested).map_err(failure)?;
     let generated = if hot {
-        wallet.create_new_hotkey(words, scheme, options).await
+        wallet
+            .create_new_hotkey_as(Some(words), scheme, options)
+            .await
     } else {
-        wallet.create_new_coldkey(words, scheme, options).await
+        wallet
+            .create_new_coldkey_as(Some(words), scheme, options)
+            .await
     }
     .map_err(failure)?;
     ctx.output
@@ -670,8 +830,8 @@ async fn run_local(
         .map_err(failure)?;
     if both {
         let created_hot = wallet
-            .create_new_hotkey(
-                words,
+            .create_new_hotkey_as(
+                Some(hot_words),
                 hot_scheme,
                 WriteOptions {
                     overwrite: overwrite(matches),
@@ -686,8 +846,8 @@ async fn run_local(
         let fields = vec![
             ("coldkey".into(), json!(ctx.globals.wallet_name)),
             ("hotkey".into(), json!(ctx.globals.hotkey_name)),
-            ("coldkey_crypto_type".into(), json!(crypto_name(scheme))),
-            ("hotkey_crypto_type".into(), json!(crypto_name(hot_scheme))),
+            ("coldkey_crypto_type".into(), json!(scheme_name(scheme))),
+            ("hotkey_crypto_type".into(), json!(scheme_name(hot_scheme))),
             ("coldkey_ss58".into(), json!(generated.account)),
             ("path".into(), json!(path)),
         ];
@@ -704,7 +864,7 @@ async fn run_local(
     } else {
         let mut fields = vec![
             ("wallet".into(), json!(ctx.globals.wallet_name)),
-            ("crypto_type".into(), json!(crypto_name(scheme))),
+            ("crypto_type".into(), json!(scheme_name(scheme))),
             ("ss58".into(), json!(generated.account)),
         ];
         if hot {
@@ -722,7 +882,306 @@ async fn run_local(
             )
             .map_err(failure)?;
     }
+    if let Some(prepared) = prepared_registration {
+        let result = finish_hashed_creation(ctx, &wallet, &prepared).await?;
+        registered_detail(ctx, &wallet, &result)?;
+    } else if creating_roles
+        .iter()
+        .any(|(_, scheme)| matches!(scheme, KeyScheme::Authority(_)))
+        && !ctx.globals.json
+    {
+        // Python `_hashed_recovery_hint`.
+        ctx.output
+            .message("Recovery: save the signing scheme and account type with each phrase; restore with matching `--crypto-type` and `--type`.")
+            .map_err(failure)?;
+    }
     ctx.output.mnemonic_clear_hint().map_err(failure)
+}
+
+/// The payer and the approved reserve of a hashed key registration.
+struct PreparedRegistration {
+    payer: crate::context::CliWalletKeys,
+    payer_name: String,
+    roles: Vec<SignerRole>,
+    deposit: rtao::primitives::Balance<rtao::primitives::Tao>,
+}
+
+fn role_name(role: SignerRole) -> &'static str {
+    match role {
+        SignerRole::Coldkey => "coldkey",
+        SignerRole::Hotkey => "hotkey",
+    }
+}
+
+/// Python `_prepare_hashed_creation`: approve the live registration reserve
+/// and unlock the payer before any key material is generated or replaced.
+///
+/// `--yes` never approves the deposit; JSON, quiet or piped sessions and
+/// `--dry-run` refuse.
+async fn prepare_hashed_creation(
+    ctx: &AppContext,
+    schemes: &[(SignerRole, KeyScheme)],
+    payer_name: Option<&str>,
+    creating: bool,
+) -> Result<Option<PreparedRegistration>, CliError> {
+    let kinds: Vec<(SignerRole, rtao::primitives::AuthorityType)> = schemes
+        .iter()
+        .filter_map(|(role, scheme)| match scheme {
+            KeyScheme::Authority(kind) if kind.requires_registration() => Some((*role, *kind)),
+            _ => None,
+        })
+        .collect();
+    if kinds.is_empty() {
+        return Ok(None);
+    }
+    if ctx.globals.dry_run {
+        return Err(failure(
+            "--dry-run is not supported for hashed account creation or registration",
+        )
+        .with_help("no keys were created and no transaction was submitted"));
+    }
+    let interactive = !ctx.globals.json
+        && !ctx.globals.quiet
+        && ctx
+            .terminal
+            .lock()
+            .map_err(|_| failure("terminal lock poisoned"))?
+            .stdin_is_tty();
+    if !interactive {
+        return Err(failure(
+            "hashed account creation or registration requires an explicit y/n registration confirmation",
+        )
+        .with_help("run interactively without --json or --quiet; --yes does not approve the deposit"));
+    }
+    let payer_name = match payer_name {
+        Some(name) if !name.trim().is_empty() => name.trim().to_owned(),
+        _ if !creating => ctx.globals.wallet_name.clone(),
+        _ => {
+            return Err(input(
+                "hashed account creation requires --registration-payer: an existing funded wallet whose coldkey pays the deposit and fees",
+            ));
+        }
+    };
+    let payer_wallet =
+        Wallet::new(&payer_name, "default", &ctx.globals.wallet_path).map_err(failure)?;
+    let target = ctx.wallet()?;
+    if creating {
+        let same = |a: &Path, b: &Path| {
+            a.canonicalize()
+                .ok()
+                .zip(b.canonicalize().ok())
+                .is_some_and(|(a, b)| a == b)
+                || a == b
+        };
+        if same(
+            &payer_wallet.reference().coldkey_path(),
+            &target.reference().coldkey_path(),
+        ) {
+            return Err(
+                failure("the registration payer must be a different existing wallet").with_help(
+                    "the new coldkey has no funds and cannot pay its own registration deposit",
+                ),
+            );
+        }
+    }
+    if !payer_wallet.reference().coldkey_path().exists() {
+        return Err(failure("registration payer has no local signing key"));
+    }
+    let payer_account = payer_wallet
+        .public_info(SignerRole::Coldkey)
+        .map_err(failure)?
+        .account;
+    let kind_list: Vec<_> = kinds.iter().map(|(_, kind)| *kind).collect();
+    let deposit = ctx
+        .run(|client| async move {
+            rtao::tx::wallet_registration::registration_deposit_for(
+                &rtao::Executor::new(client),
+                &kind_list,
+            )
+            .await
+            .map_err(|error| failure(error.to_string()))
+        })
+        .await?;
+    let roles: Vec<SignerRole> = kinds.iter().map(|(role, _)| *role).collect();
+    let names = roles
+        .iter()
+        .map(|role| role_name(*role))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let amount = deposit.to_decimal_string();
+    let amount = amount.trim_end_matches('0').trim_end_matches('.');
+    ctx.output
+        .message("WARNING: Hashed accounts must be registered and finalized before receiving funds or publicly sharing either address. Third parties can otherwise block registration, potentially making funds inaccessible. Registration is sent through MEV Shield.")
+        .map_err(failure)?;
+    ctx.output
+        .message(&format!(
+            "Register {names} on {}: {} {amount} TAO total from wallet {} ({payer_account}), plus transaction fees. The deposit cannot be withdrawn.",
+            ctx.globals.network,
+            if creating {
+                "permanently lock"
+            } else {
+                "authorize up to"
+            },
+            rtao::primitives::pyfmt::string_repr(&payer_name),
+        ))
+        .map_err(failure)?;
+    if !creating {
+        ctx.output
+            .message("Only missing registrations lock a new deposit; already registered keys are not charged.")
+            .map_err(failure)?;
+    }
+    let question = if creating {
+        "Create and register these hashed accounts and pay the deposit?"
+    } else {
+        "Register these hashed accounts and pay the deposit?"
+    };
+    let cancelled =
+        "Cancelled; no wallet keys were created or replaced and no transaction submitted.";
+    {
+        let mut terminal = ctx
+            .terminal
+            .lock()
+            .map_err(|_| failure("terminal lock poisoned"))?;
+        loop {
+            let reply = terminal
+                .read_line(&format!("{question} [y/N]: "))
+                .map_err(|error| match error {
+                    crate::prompt::PromptError::Aborted => CliError::aborted(),
+                    _ => failure("could not read confirmation"),
+                })?;
+            match crate::prompt::python_strip(&reply).to_lowercase().as_str() {
+                "y" | "yes" => break,
+                "" | "n" | "no" => return Err(failure(cancelled)),
+                _ => terminal
+                    .message("Please enter Y or N")
+                    .map_err(|_| failure("could not write confirmation prompt"))?,
+            }
+        }
+    }
+    // Unlock only after explicit deposit consent, and before writing keys.
+    let payer = crate::context::CliWalletKeys::new(payer_wallet, ctx.output.clone());
+    rtao::signer::DynKeySource::signer_for(&payer, SignerRole::Coldkey)
+        .await
+        .map_err(|error| failure(error.to_string()))?;
+    Ok(Some(PreparedRegistration {
+        payer,
+        payer_name,
+        roles,
+        deposit,
+    }))
+}
+
+/// Python `_finish_hashed_creation`: register through MEV Shield and wait
+/// for finality; on failure the saved keys stay and the retry is printed.
+async fn finish_hashed_creation(
+    ctx: &AppContext,
+    wallet: &Wallet,
+    prepared: &PreparedRegistration,
+) -> Result<rtao::tx::wallet_registration::WalletRegistrationResult, CliError> {
+    let keys = crate::context::CliWalletKeys::new(wallet.clone(), ctx.output.clone());
+    let options = rtao::tx::wallet_registration::WalletRegistrationOptions {
+        roles: prepared.roles.clone(),
+        max_registration_deposit: Some(prepared.deposit),
+        on_registration_sponsorship: None,
+    };
+    ctx.output
+        .message("registering through MEV Shield and waiting for finalization…")
+        .map_err(failure)?;
+    let payer = &prepared.payer;
+    let result = ctx
+        .run(|client| async move {
+            rtao::Executor::new(client)
+                .register_wallet(&keys, payer, &options)
+                .await
+                .map_err(|error| failure(error.to_string()))
+        })
+        .await;
+    if result.is_err() {
+        let key = if prepared.roles.len() == 2 {
+            "both"
+        } else {
+            role_name(prepared.roles[0])
+        };
+        ctx.output
+            .message(&format!(
+                "Registration was not confirmed finalized. Your key files are saved; keep the recovery phrases. Do not use or publicly share either address. Retry with the same keys:\nrtao wallet register --wallet {} --wallet-hotkey {} --wallet-path {} --network {} --registration-payer {} --key {key}",
+                ctx.globals.wallet_name,
+                ctx.globals.hotkey_name,
+                ctx.globals.wallet_path.to_string_lossy(),
+                ctx.globals.network,
+                prepared.payer_name,
+            ))
+            .map_err(failure)?;
+    }
+    result
+}
+
+/// Render the registered roles' public addresses and finalized status.
+fn registered_detail(
+    ctx: &AppContext,
+    wallet: &Wallet,
+    result: &rtao::tx::wallet_registration::WalletRegistrationResult,
+) -> Result<(), CliError> {
+    let mut fields = vec![("wallet".to_owned(), json!(ctx.globals.wallet_name))];
+    for (role, account) in &result.roles {
+        let path = match role {
+            SignerRole::Coldkey => wallet.reference().coldkeypub_path(),
+            SignerRole::Hotkey => wallet.reference().hotkeypub_path(),
+        };
+        let name = role_name(*role);
+        fields.push((format!("{name}_ss58"), json!(account)));
+        if let Ok(info) = wallet.public_info(*role) {
+            let mut extra = address_fields(&path, &info, name, &ctx.globals.network);
+            for (field, value) in &mut extra {
+                if field == &format!("{name}_registration") {
+                    *value = json!("registered");
+                }
+                if field == &format!("{name}_registration_block_hash") {
+                    *value = json!(
+                        result
+                            .finalized_block_hash
+                            .map(|hash| format!("0x{}", hex::encode(hash.0)))
+                    );
+                }
+            }
+            fields.extend(extra);
+        }
+    }
+    ctx.output
+        .detail(Some("registered wallet"), &fields, None)
+        .map_err(failure)
+}
+
+/// Python `wallet register`: register the wallet's saved hashed keys,
+/// skipping any already registered, without generating keys.
+async fn register(ctx: &mut AppContext, matches: &ArgMatches) -> Result<(), CliError> {
+    let key = text(matches, "key").unwrap_or("both");
+    let roles = match key {
+        "both" => vec![SignerRole::Coldkey, SignerRole::Hotkey],
+        "coldkey" => vec![SignerRole::Coldkey],
+        "hotkey" => vec![SignerRole::Hotkey],
+        _ => {
+            return Err(input(
+                "Invalid value for '--key': choose coldkey, hotkey, or both",
+            ));
+        }
+    };
+    let wallet = ctx.wallet()?;
+    let mut schemes = Vec::new();
+    for role in &roles {
+        let info = wallet.public_info(*role).map_err(failure)?;
+        schemes.push((*role, info_scheme(&info)));
+    }
+    let Some(prepared) =
+        prepare_hashed_creation(ctx, &schemes, text(matches, "registration_payer"), false).await?
+    else {
+        return ctx
+            .output
+            .message("These standard keys do not require hashed-account registration.")
+            .map_err(failure);
+    };
+    let result = finish_hashed_creation(ctx, &wallet, &prepared).await?;
+    registered_detail(ctx, &wallet, &result)
 }
 
 /// Run a Keychain leaf with an injectable subprocess runner and platform.
@@ -893,7 +1352,13 @@ fn show(ctx: &mut AppContext, history: &mut PromptHistory) -> Result<(), CliErro
         fields.push(("coldkey_ss58".into(), json!(info.account)));
         fields.push((
             "coldkey_crypto_type".into(),
-            json!(crypto_name(info.crypto_type)),
+            json!(scheme_name(info_scheme(info))),
+        ));
+        fields.extend(address_fields(
+            &wallet.reference().coldkeypub_path(),
+            info,
+            "coldkey",
+            &ctx.globals.network,
         ));
     } else {
         fields.push((
@@ -907,7 +1372,13 @@ fn show(ctx: &mut AppContext, history: &mut PromptHistory) -> Result<(), CliErro
         fields.push(("hotkey_ss58".into(), json!(info.account)));
         fields.push((
             "hotkey_crypto_type".into(),
-            json!(crypto_name(info.crypto_type)),
+            json!(scheme_name(info_scheme(info))),
+        ));
+        fields.extend(address_fields(
+            &wallet.reference().hotkeypub_path(),
+            info,
+            "hotkey",
+            &ctx.globals.network,
         ));
     } else if let Some((_, value)) = fields.iter_mut().find(|(name, _)| name == "hotkey") {
         *value = json!(format!(
@@ -1113,10 +1584,46 @@ fn public_fields(path: &Path) -> PublicFile {
 }
 fn stored_crypto(value: Option<i128>) -> String {
     match value {
-        None | Some(1) => "sr25519".into(),
-        Some(0) => "ed25519".into(),
-        Some(value) => format!("unknown({value})"),
+        None => "sr25519".into(),
+        Some(value) => CRYPTO_TYPE_NAMES
+            .iter()
+            .find(|(code, _)| i128::from(*code) == value)
+            .map_or_else(|| format!("unknown({value})"), |(_, name)| (*name).into()),
     }
+}
+/// Python `wallet_addresses.address_fields` without the on-chain check: a
+/// key that needs registration shows its complete receiving address as its
+/// primary address (`registration` is `not_checked`).
+fn address_fields(
+    public_path: &Path,
+    info: &rtao::wallet::PublicKeyInfo,
+    role: &str,
+    network: &str,
+) -> Vec<(String, Value)> {
+    if !info
+        .authority
+        .is_some_and(rtao::primitives::AuthorityType::requires_registration)
+    {
+        return Vec::new();
+    }
+    let address = rtao::wallet::public_descriptor(public_path)
+        .ok()
+        .flatten()
+        .and_then(|descriptor| rtao::core::keys::encode_hashed_receiving_address(&descriptor).ok());
+    let Some(address) = address else {
+        return Vec::new();
+    };
+    [
+        ("address", json!(address)),
+        ("receiving_address", json!(address)),
+        ("primary_address", json!(address)),
+        ("registration", json!("not_checked")),
+        ("registration_network", json!(network)),
+        ("registration_block_hash", Value::Null),
+    ]
+    .into_iter()
+    .map(|(name, value)| (format!("{role}_{name}"), value))
+    .collect()
 }
 /// Read only public fields from local files, retaining missing/encrypted entries.
 /// Lock artifacts and public hotkey companions are excluded as in Python.

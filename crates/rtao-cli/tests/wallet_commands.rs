@@ -156,6 +156,7 @@ fn wallet_surface_exposes_wallet_commands_and_supports_compatibility_aliases() -
             "regen-hotkey",
             "regen-coldkeypub",
             "regen-hotkeypub",
+            "register",
             "show",
             "list",
             "balance",
@@ -1077,5 +1078,226 @@ fn fifo_json_import_and_public_listing_refuse_without_a_writer() -> TestResult {
     let value: Value = serde_json::from_slice(&result.stdout)?;
     assert_eq!(value["coldkeys"][0]["ss58"], Value::Null);
     assert!(std::fs::symlink_metadata(import)?.file_type().is_fifo());
+    Ok(())
+}
+
+// v488 (D-152): hashed and post-quantum keys through the wallet commands.
+#[tokio::test]
+async fn post_quantum_schemes_and_hashed_registration_refusals() -> TestResult {
+    let root = Root::new()?;
+    let path = root.0.to_string_lossy().into_owned();
+    // A standard post-quantum hotkey needs no registration; 24 words by default.
+    let (matches, mut ctx, sink, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "new-hotkey",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "pq",
+            "--wallet-hotkey",
+            "hot",
+            "--crypto-type",
+            "ms",
+            "--json",
+        ],
+        true,
+        false,
+        &[],
+    )?;
+    run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
+    let created = payload(&sink)?;
+    assert_eq!(created["crypto_type"], "ms");
+    assert_eq!(
+        created["mnemonic"]
+            .as_str()
+            .map(|phrase| phrase.split_whitespace().count()),
+        Some(24)
+    );
+    let wallet = Wallet::new("pq", "hot", &root.0)?;
+    assert!(wallet.authority_descriptor(SignerRole::Hotkey).is_some());
+    // A post-quantum scheme refuses a shorter phrase before writing.
+    let (matches, mut ctx, _, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "new-coldkey",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "short",
+            "--crypto-type",
+            "ms",
+            "--n-words",
+            "12",
+            "--no-password",
+            "--json",
+        ],
+        true,
+        false,
+        &[],
+    )?;
+    let error = run(&mut ctx, &matches, &mut PromptHistory::default())
+        .await
+        .err()
+        .ok_or("12-word post-quantum phrase")?;
+    assert!(error.message.contains("24-word"), "{}", error.message);
+    // A hashed key must be registered as it is created: JSON sessions and
+    // dry runs refuse before any key is written, and --yes never approves.
+    for extra in [vec!["--json"], vec!["--dry-run"], vec!["--yes", "--json"]] {
+        let mut args = vec!["rtao"];
+        args.extend(extra.iter().copied());
+        args.extend([
+            "wallet",
+            "new-coldkey",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "hashed",
+            "--type",
+            "hashed",
+            "--no-password",
+            "--registration-payer",
+            "payer",
+        ]);
+        let (matches, mut ctx, _, _) = fixture(&root, &args, true, false, &[])?;
+        let error = run(&mut ctx, &matches, &mut PromptHistory::default())
+            .await
+            .err()
+            .ok_or("hashed creation needs explicit consent")?;
+        assert!(
+            error.message.contains("dry-run") || error.message.contains("y/n registration"),
+            "{}",
+            error.message
+        );
+        assert!(!root.0.join("hashed").join("coldkey").exists());
+    }
+    // --type takes an account mode; a scheme belongs in --crypto-type.
+    let (matches, mut ctx, _, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "new-coldkey",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "mode",
+            "--type",
+            "ms",
+            "--crypto-type",
+            "ed25519",
+            "--no-password",
+            "--json",
+        ],
+        true,
+        false,
+        &[],
+    )?;
+    let error = run(&mut ctx, &matches, &mut PromptHistory::default())
+        .await
+        .err()
+        .ok_or("scheme in --type")?;
+    assert!(error.message.contains("--type selects standard or hashed"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn watch_only_hashed_companions_need_the_receiving_address() -> TestResult {
+    let root = Root::new()?;
+    let path = root.0.to_string_lossy().into_owned();
+    let source = Wallet::new("source", "default", &root.0)?;
+    let created = source
+        .create_new_coldkey_as(
+            None,
+            rtao::wallet::KeyScheme::Authority(rtao::primitives::AuthorityType::HashedSr25519),
+            rtao::wallet::WriteOptions {
+                encrypt: false,
+                password: None,
+                ..rtao::wallet::WriteOptions::coldkey()
+            },
+        )
+        .await?;
+    let descriptor = source
+        .authority_descriptor(SignerRole::Coldkey)
+        .ok_or("descriptor")?;
+    let address = rtao::core::keys::encode_hashed_receiving_address(&descriptor)?;
+    let (matches, mut ctx, sink, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "regen-coldkeypub",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "watch",
+            "--address",
+            &address,
+            "--json",
+        ],
+        true,
+        false,
+        &[],
+    )?;
+    run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
+    assert_eq!(payload(&sink)?["crypto_type"], "hashed");
+    let watch = Wallet::new("watch", "default", &root.0)?;
+    assert_eq!(watch.coldkey_address()?, created.account);
+    // A bare account cannot restore a hashed companion.
+    let (matches, mut ctx, _, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "regen-coldkeypub",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "watch2",
+            "--address",
+            &created.account.to_string(),
+            "--type",
+            "hashed",
+            "--json",
+        ],
+        true,
+        false,
+        &[],
+    )?;
+    let error = run(&mut ctx, &matches, &mut PromptHistory::default())
+        .await
+        .err()
+        .ok_or("bare account")?;
+    assert!(
+        error.message.contains("complete receiving address"),
+        "{}",
+        error.message
+    );
+    // `wallet show` lists the receiving address as the primary address.
+    let (matches, mut ctx, sink, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "show",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "watch",
+            "--json",
+        ],
+        true,
+        false,
+        &[],
+    )?;
+    run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
+    let shown = payload(&sink)?;
+    assert_eq!(shown["coldkey_primary_address"], json!(address));
+    assert_eq!(shown["coldkey_registration"], "not_checked");
+    assert_eq!(shown["coldkey_crypto_type"], "hashed");
     Ok(())
 }

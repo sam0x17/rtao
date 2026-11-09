@@ -23,7 +23,7 @@ pub use keyfile::{
 #[cfg(feature = "encrypted")]
 #[cfg_attr(docsrs, doc(cfg(feature = "encrypted")))]
 pub use messages::{EncryptedMessage, encrypt_message};
-pub use messages::{SignedMessage, verify_message};
+pub use messages::{SignedMessage, verify_message, verify_message_as};
 pub use password::{
     NativePasswordFuture, NativePasswordProvider, PasswordPrompt, PasswordSource, PasswordSources,
     PromptPolicy, env_var_name, resolve_wallet_password,

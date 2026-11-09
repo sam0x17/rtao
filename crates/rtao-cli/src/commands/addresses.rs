@@ -471,7 +471,17 @@ pub async fn run_with_source(
                 Some(address) => address,
                 None => prompt_address(ctx)?,
             };
-            if !is_bittensor_address(&address) {
+            // Python v488: a receiving address is saved complete, with its
+            // descriptor, after the core's strict decoder accepts it.
+            if rtao::primitives::receiving::is_receiving_address(&address) {
+                rtao::primitives::receiving::parse_recipient(&address)
+                    .map_err(|error| failure(error.to_string()))?;
+                if signer.is_some() {
+                    return Err(failure(
+                        "hashed receiving contacts cannot use vault, ledger or extension signer tags",
+                    ));
+                }
+            } else if !is_bittensor_address(&address) {
                 return Err(failure(format!(
                     "invalid ss58 address {}",
                     rtao::primitives::pyfmt::string_repr(&address)
@@ -497,16 +507,21 @@ fn prompt_address(ctx: &AppContext) -> Result<String, CliError> {
         .lock()
         .map_err(|_| failure("terminal lock poisoned"))?;
     if !ctx.prompt_context().interactive(&**terminal) {
-        return Err(CliError::input("missing address").with_help("pass the ss58, --vault to scan it from your phone, or --extension to pick it from your browser extension"));
+        return Err(CliError::input("missing address").with_help("pass the receiving address, --vault to scan it from your phone, or --extension to pick it from your browser extension"));
     }
     loop {
-        let address = terminal.read_line("SS58 address: ").map_err(prompt_error)?;
+        let address = terminal
+            .read_line("Receiving address or SS58: ")
+            .map_err(prompt_error)?;
         let address = python_strip(&address);
-        if is_bittensor_address(address) {
+        if is_bittensor_address(address)
+            || (rtao::primitives::receiving::is_receiving_address(address)
+                && rtao::primitives::receiving::parse_recipient(address).is_ok())
+        {
             return Ok(address.to_owned());
         }
         terminal
-            .message("Enter a valid Bittensor SS58 address.")
+            .message("Enter a valid receiving address or Bittensor SS58 address.")
             .map_err(prompt_error)?;
     }
 }

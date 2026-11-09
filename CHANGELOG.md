@@ -8,6 +8,27 @@
 - The parity pin (v488) and the runtime are unchanged. 81 hand port(s) remain listed in `parity/port_due.toml`.
 - Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42502998044)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
 
+### Since `snapshot-2026-11-08.6`
+
+Not a versioned release. Each item links to its section below.
+
+- `rtao wallet` creates, restores, shows and registers hashed and post-quantum keys; contacts accept receiving addresses; `rtao wallet verify` needs `--crypto-type` for a bare ss58 address (D-152).
+
+### CLI wallet and address surface for hashed and post-quantum keys (D-152)
+
+#### rtao-cli
+
+- `--crypto-type` accepts the v488 scheme names (`hashed`, `hashed-ed25519`, `mldsa65`, `ms`, `falcon512`, `hashed-falcon512`, `falcon1024`, `hashed-falcon1024`) and aliases; `--type`/`--hotkey-type` select `standard` or `hashed`; post-quantum phrases are 24 words.
+- Creating a hashed key states the permanent registration reserve, asks for an explicit y/n answer (`--yes` does not approve; JSON, quiet, piped and `--dry-run` sessions refuse), unlocks the `--registration-payer` wallet and registers through MEV Shield after writing the keys. New: `rtao wallet register`.
+- `regen-coldkeypub`/`regen-hotkeypub` take `--address` (alias `--ss58`): a receiving address restores a hashed companion; `--public-key` is needed only for a legacy ss58 address.
+- `rtao wallet show` shows a registering key's receiving address as its primary address.
+- Behavior change: `rtao wallet verify` refuses a bare ss58 address without `--crypto-type`, as Python v488; a receiving address carries its scheme.
+- `rtao addr` contacts accept receiving addresses.
+
+#### rtao-wallet
+
+- New: `verify_message_as` (a trusted scheme, or a receiving address's own).
+
 ### Since `snapshot-2026-11-08.5`
 
 Not a versioned release. Each item links to its section below.
