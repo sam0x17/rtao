@@ -455,7 +455,7 @@ fn json_to_core(value: &Value) -> CoreValue {
     }
 }
 
-fn descriptor_call_value(descriptor: &[u8]) -> Result<rtao_core::DynValue, IntentError> {
+pub(crate) fn descriptor_call_value(descriptor: &[u8]) -> Result<rtao_core::DynValue, IntentError> {
     Ok(rtao_core::DynValue::new(json_to_core(
         &registration_descriptor_value(descriptor)?,
     )))
@@ -846,7 +846,7 @@ async fn guard<V: View + ?Sized>(
 }
 
 /// The descriptor the account's own registry holds for it, if registered.
-async fn registered_record<V: View + ?Sized>(
+pub(crate) async fn registered_record<V: View + ?Sized>(
     view: &V,
     account: AccountId,
     descriptor: &[u8],

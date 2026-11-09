@@ -7,7 +7,10 @@
 //! Finality-anchored transaction preparation and typed submission.
 
 mod authority;
-pub use authority::{AuthorizedExtrinsic, HashedSigningSnapshot, ProbeSigner};
+pub use authority::{
+    AuthorizedExtrinsic, HashedSigningSnapshot, MLDSA_REQUEST_FORMAT, PQ_REQUEST_FORMAT,
+    PreparedPqExtrinsic, ProbeSigner, sign_prepared_pq,
+};
 
 use crate::{BlockRef, Client, ClientError, NonceLease, View, ViewExt};
 use bytes::Bytes;

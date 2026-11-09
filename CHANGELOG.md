@@ -15,6 +15,22 @@ Not a versioned release. Each item links to its section below.
 - Payments and ownership changes to hashed and post-quantum receiving addresses register or check the recipient in the same atomic batch, and the executor refuses to sign a first registration without explicit sponsorship consent (`max_registration_deposit`, `on_registration_sponsorship`, `rtao --max-registration-deposit`) (D-148).
 - Hashed and post-quantum signers pass through the ordinary `Signer` seam: `Client::submit` (journal included), Shield pairs and fee quotes sign and price them from chain-read authority, and the executor submits for them like any key (D-149).
 - Wallets create, store and unlock hashed and post-quantum keys (`KeyScheme`, `Wallet::create_new_coldkey_as` and friends), and expose their public descriptors to registration guards and fee quotes (D-150).
+- `Executor::register_wallet` registers a wallet's rotating keys through a required MEV Shield submission after explicit approval, and `Client::prepare_pq_call`, `sign_prepared_pq` and `Client::submit_pq_proof` sign post-quantum transactions offline (D-151).
+
+### Wallet registration and offline post-quantum requests (D-151)
+
+#### rtao-tx
+
+- New `wallet_registration` module: `Executor::register_wallet`, `WalletRegistrationOptions`, `WalletRegistrationQuote`, `WalletRegistrationResult`, `WalletRegistrationError`, `registration_targets` and `registration_deposit_for`. New `TxError::WalletRegistration`.
+
+#### rtao-client
+
+- New: `PreparedPqExtrinsic` (Python's versioned request JSON), `Client::prepare_pq_call`, `sign_prepared_pq`, `Client::submit_pq_proof`, `MLDSA_REQUEST_FORMAT` and `PQ_REQUEST_FORMAT`.
+
+#### rtao
+
+- New: `SyncClient::{register_wallet, prepare_pq_call}`.
+
 
 ### Hashed and post-quantum wallets (D-150)
 

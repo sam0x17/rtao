@@ -21,6 +21,7 @@ mod registration;
 pub mod sponsorship;
 /// Portable Quicknet timelock envelopes and asynchronous beacon decryption.
 pub mod timelock;
+pub mod wallet_registration;
 
 pub use error::{ChainError, IntentError, PolicyError, TxError, classify};
 pub use executor::{

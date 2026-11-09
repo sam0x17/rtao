@@ -9983,7 +9983,7 @@
         "rust": [
           "rtao_client::{Client,BlockHeader,BlockInfo,EpochEvent,WaitError}; rtao::blocking::SyncClient"
         ],
-        "synced_blob": "18b103c8717b60b5fa00c695991712aba747e0f0"
+        "synced_blob": "a20c5a4cb61d18b052ca57f82ffab8584541d786"
       },
       {
         "kind": "ported",
@@ -11501,7 +11501,7 @@
         "rust": [
           "rtao::blocking::{SyncClient,SyncSnapshot,SyncView,Blocks,SyncMultisig}"
         ],
-        "synced_blob": "016c553c25af0acd871346968934cf0bc1a535c6"
+        "synced_blob": "e6c93496802b43aaae09ee551a054e9317f6bcc1"
       },
       {
         "kind": "ported",
@@ -12566,14 +12566,16 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/mldsa_signing.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_client::{PreparedPqExtrinsic, sign_prepared_pq, MLDSA_REQUEST_FORMAT, PQ_REQUEST_FORMAT}",
+          "rtao_client::Client::{prepare_pq_call, submit_pq_proof}",
+          "crates/rtao-client/tests/authority.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "9934454574b6388de759bd3954bd1b89d3a0b27f"
       },
       {
         "kind": "ported",
@@ -12623,14 +12625,17 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "v488",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/wallet_registration.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_tx::wallet_registration::{WalletRegistrationQuote, WalletRegistrationResult, WalletRegistrationError, WalletRegistrationOptions, WalletRegistrationCallback, registration_targets, registration_deposit_for}",
+          "rtao_tx::Executor::register_wallet",
+          "rtao::blocking::SyncClient::register_wallet",
+          "crates/rtao-tx/tests/wallet_registration.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "18701823aed3d7df5902d2f6bf7fdf195c97f3f8"
       },
       {
         "kind": "ported",

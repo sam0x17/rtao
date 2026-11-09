@@ -1,6 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/client.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_subtensor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/wallet_registration.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Blocking access to the single asynchronous SDK implementation.
 //!
 //! Construction is cold. The first chain operation creates a private runtime
@@ -870,6 +871,53 @@ impl SyncClient {
         self.view.with_view(move |view| async move {
             view.client()
                 .estimate_weight(call, address, crypto_type)
+                .await
+        })
+    }
+
+    /// Register a wallet's rotating keys with a funded payer through a
+    /// required MEV Shield submission (Python `register_wallet`, D-151).
+    ///
+    /// A wallet whose keys need no registration returns at once without
+    /// connecting. A failure is `TxError::WalletRegistration`, with any
+    /// receipt and quote.
+    pub fn register_wallet(
+        &self,
+        wallet: Arc<dyn rtao_signer::KeyView>,
+        payer: Arc<dyn DynKeySource>,
+        options: rtao_tx::wallet_registration::WalletRegistrationOptions,
+    ) -> Result<rtao_tx::wallet_registration::WalletRegistrationResult, Error> {
+        let (_, descriptors) =
+            rtao_tx::wallet_registration::registration_targets(wallet.as_ref(), &options.roles)
+                .map_err(TxError::from)?;
+        if descriptors.is_empty() {
+            return Ok(rtao_tx::wallet_registration::WalletRegistrationResult {
+                roles: Vec::new(),
+                accounts: Vec::new(),
+                finalized_block_hash: None,
+                result: None,
+                deposit: rtao_primitives::Balance::from_rao(0),
+            });
+        }
+        self.view.with_executor(move |executor| async move {
+            executor
+                .register_wallet(wallet.as_ref(), payer.as_ref(), &options)
+                .await
+                .map_err(TxError::WalletRegistration)
+        })
+    }
+
+    /// Prepare a full-payload request for an offline post-quantum signer
+    /// (Python `prepare_mldsa_call` / `prepare_pq_call`).
+    pub fn prepare_pq_call(
+        &self,
+        call: rtao_client::CallBytes,
+        descriptor: Vec<u8>,
+        options: rtao_client::SubmitOptions,
+    ) -> Result<rtao_client::PreparedPqExtrinsic, Error> {
+        self.view.with_view(move |view| async move {
+            view.client()
+                .prepare_pq_call(call, &descriptor, &options)
                 .await
         })
     }

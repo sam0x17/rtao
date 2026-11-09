@@ -73,8 +73,9 @@ pub use shield::{
     ShieldPeriod, ShieldReport, shielded_ciphertext_size,
 };
 pub use submit::{
-    AuthorizedExtrinsic, ExtrinsicReport, HashedSigningSnapshot, Inclusion, Mortality, NoncePolicy,
-    Period, PoolRejection, ProbeSigner, SubmitFailure, SubmitOptions, UnsignedExtrinsic, Wait,
+    AuthorizedExtrinsic, ExtrinsicReport, HashedSigningSnapshot, Inclusion, MLDSA_REQUEST_FORMAT,
+    Mortality, NoncePolicy, PQ_REQUEST_FORMAT, Period, PoolRejection, PreparedPqExtrinsic,
+    ProbeSigner, SubmitFailure, SubmitOptions, UnsignedExtrinsic, Wait, sign_prepared_pq,
 };
 pub use view::{
     BlockRef, DynView, Fetch, FromStorage, HeadPolicy, IntoCoreValues, KeyArgs, PinnedBlock,

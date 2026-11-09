@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/mldsa_signing.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Hashed and post-quantum signing from chain-read authority (D-147).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -497,4 +498,142 @@ async fn fee_probes_price_the_signing_scheme_proof_length() {
         authority - classical >= 2 * (MLDSA_PROOF_LENGTH - 64),
         "{classical} {authority}"
     );
+}
+
+#[tokio::test]
+async fn offline_post_quantum_requests_round_trip_sign_and_submit() {
+    use rtao_client::{PreparedPqExtrinsic, sign_prepared_pq};
+    use rtao_core::keys::CRYPTO_MLDSA65;
+    for crypto in [CRYPTO_MLDSA65_FIXED, CRYPTO_MLDSA65] {
+        let signer = signer(crypto);
+        let (client, fake) = connect(state(&signer, 2, 6)).await;
+        let prepared = client
+            .prepare_pq_call(
+                remark(&client).await,
+                signer.descriptor(),
+                &SubmitOptions::default(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(prepared.authority.nonce, 6);
+        assert_eq!(
+            prepared.authority.generation,
+            if signer.authority_type().is_stateless() {
+                0
+            } else {
+                2
+            }
+        );
+        // The exported request is Python's format and parses back unchanged.
+        let json = prepared.to_json().unwrap();
+        assert_eq!(json["format"], rtao_client::MLDSA_REQUEST_FORMAT);
+        let parsed = PreparedPqExtrinsic::from_json(&json).unwrap();
+        assert_eq!(parsed, prepared);
+        // An inconsistent payload or field set is refused on parse.
+        let mut payload = json.clone();
+        payload["unsigned"]["payload"] = json!("0x00");
+        assert!(PreparedPqExtrinsic::from_json(&payload).is_err());
+        let mut extra = json.clone();
+        extra["extra"] = json!(1);
+        assert!(PreparedPqExtrinsic::from_json(&extra).is_err());
+        // A changed reviewed field no longer matches the extension bytes the
+        // trusted metadata rebuilds, so it is never signed.
+        let runtime = client.refresh_runtime().await.unwrap();
+        let mut tampered = json.clone();
+        tampered["unsigned"]["tip"] = json!(1);
+        let tampered = PreparedPqExtrinsic::from_json(&tampered).unwrap();
+        assert!(
+            sign_prepared_pq(&tampered, &signer, &runtime, prepared.genesis_hash)
+                .await
+                .is_err()
+        );
+        // Offline signing needs the trusted chain identity.
+        assert!(
+            sign_prepared_pq(&parsed, &signer, &runtime, rtao_primitives::H256([0; 32]))
+                .await
+                .is_err()
+        );
+        let proof = sign_prepared_pq(&parsed, &signer, &runtime, prepared.genesis_hash)
+            .await
+            .unwrap();
+        // A proof for another payload never verifies.
+        let request = AuthorizationRequest {
+            payload: b"other",
+            call: b"",
+            generation: parsed.authority.generation,
+            purpose: rtao_signer::SignPurpose::Extrinsic,
+        };
+        let other = signer.sign_authorization(&request).await.unwrap();
+        assert!(
+            client
+                .submit_pq_proof(&parsed, &other.bytes, &SubmitOptions::default())
+                .await
+                .is_err()
+        );
+        fake.mutate_state(|state| {
+            state.queue_submit(SubmitScript::InBlockThenFinalized { events: json!([]) })
+        });
+        client
+            .submit_pq_proof(&parsed, &proof.bytes, &SubmitOptions::default())
+            .await
+            .unwrap();
+        let submitted = fake.mutate_state(|state| state.submissions.clone());
+        assert_eq!(submitted.len(), 1);
+        assert_eq!(decoded_nonce(&runtime, &submitted[0]), 6);
+    }
+}
+
+#[tokio::test]
+async fn offline_requests_refuse_classical_descriptors_and_changed_authority() {
+    let classical = signer(CRYPTO_HASHED);
+    let (client, _fake) = connect(state(&classical, 0, 0)).await;
+    assert!(
+        client
+            .prepare_pq_call(
+                remark(&client).await,
+                classical.descriptor(),
+                &SubmitOptions::default()
+            )
+            .await
+            .is_err()
+    );
+    let signer = signer(rtao_core::keys::CRYPTO_MLDSA65);
+    let (client, fake) = connect(state(&signer, 1, 0)).await;
+    let prepared = client
+        .prepare_pq_call(
+            remark(&client).await,
+            signer.descriptor(),
+            &SubmitOptions::default(),
+        )
+        .await
+        .unwrap();
+    let runtime = client.refresh_runtime().await.unwrap();
+    let proof = rtao_client::sign_prepared_pq(&prepared, &signer, &runtime, prepared.genesis_hash)
+        .await
+        .unwrap();
+    // The account rotated since preparation: the proof is not submitted.
+    let account = signer.account();
+    fake.mutate_state(|state| {
+        state
+            .seed_python(
+                "HashedAccounts",
+                signer.authority_type().records_storage(),
+                &[json!(account)],
+                json!({
+                    "descriptor": descriptor_value(signer.descriptor()).unwrap(),
+                    "generation": 2,
+                    "commitment": format!("0x{}", hex::encode(signer.commitment(2).unwrap())),
+                }),
+            )
+            .unwrap();
+    });
+    let error = client
+        .submit_pq_proof(&prepared, &proof.bytes, &SubmitOptions::default())
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("changed since preparation"),
+        "{error}"
+    );
+    assert!(fake.mutate_state(|state| state.submissions.is_empty()));
 }

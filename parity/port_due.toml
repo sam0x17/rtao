@@ -237,14 +237,6 @@ tag = "v488"
 symbols = ["bittensor.cli.tx.BittensorError", "bittensor.cli.tx._list_note", "bittensor.cli.tx._make_command", "bittensor.cli.tx._placeholder", "bittensor.cli.tx.apply_intent_prompt_policy", "bittensor.cli.tx.falls_back_to_wallet", "bittensor.cli.tx.validate_intent_prompt_policy"]
 
 [[file]]
-py = "sdk/python/bittensor/client.py"
-kind = "ported"
-from = "18b103c8717b60b5fa00c695991712aba747e0f0"
-to = "a20c5a4cb61d18b052ca57f82ffab8584541d786"
-tag = "v488"
-symbols = ["bittensor.client.Balances", "bittensor.client.Chain", "bittensor.client.Client", "bittensor.client.Client.__init__", "bittensor.client.Client.estimate_shielded_carrier_fee", "bittensor.client.Client.execute", "bittensor.client.Client.multisig", "bittensor.client.Client.preflight", "bittensor.client.Client.prepare_mldsa_call", "bittensor.client.Client.prepare_pq_call", "bittensor.client.Client.register_wallet", "bittensor.client.Client.submit_call", "bittensor.client.Client.submit_shielded", "bittensor.client.Collateral", "bittensor.client.DEFAULT_ERA_PERIOD", "bittensor.client.DEFAULT_NETWORK", "bittensor.client.Delegation", "bittensor.client.Epochs", "bittensor.client.Gamma", "bittensor.client.Hyperparameters", "bittensor.client.Identity", "bittensor.client.Leasing", "bittensor.client.LimitOrders", "bittensor.client.Locks", "bittensor.client.MEV_SHIELD_ERA_PERIOD", "bittensor.client.Neurons", "bittensor.client.Prices", "bittensor.client.Staking", "bittensor.client.Subnets", "bittensor.client.Weights", "bittensor.client.default_archive_endpoints", "bittensor.client.default_fallback_endpoints", "bittensor.client.explorer_block_url", "bittensor.client.resolve_endpoint"]
-
-[[file]]
 py = "sdk/python/bittensor/evm/__init__.py"
 kind = "n/a"
 from = "e73671b64f25c4a5ab33bdc9c144bf6626ce3caf"
@@ -339,14 +331,6 @@ from = "e406e347c5a39e668c9583ca8bef8cf37c7e8c42"
 to = "ad6b3b82cbe3e8d312a20cbf872dde3097a5bb36"
 tag = "v488"
 symbols = ["bittensor.pow_registration.mine_registration", "bittensor.pow_registration.parse_recipient"]
-
-[[file]]
-py = "sdk/python/bittensor/sync.py"
-kind = "ported"
-from = "016c553c25af0acd871346968934cf0bc1a535c6"
-to = "e6c93496802b43aaae09ee551a054e9317f6bcc1"
-tag = "v488"
-symbols = ["bittensor.sync.DEFAULT_ERA_PERIOD", "bittensor.sync.DEFAULT_NETWORK", "bittensor.sync.MEV_SHIELD_ERA_PERIOD", "bittensor.sync.SyncClient", "bittensor.sync.SyncClient.__init__", "bittensor.sync.SyncClient.estimate_shielded_carrier_fee", "bittensor.sync.SyncClient.gamma", "bittensor.sync.SyncClient.multisig", "bittensor.sync.SyncClient.preflight", "bittensor.sync.SyncClient.prepare_mldsa_call", "bittensor.sync.SyncClient.prepare_pq_call", "bittensor.sync.SyncClient.register_wallet"]
 
 [[file]]
 py = "sdk/python/bittensor/wallets.py"
