@@ -338,6 +338,8 @@ pub async fn run_with_client(
         name if m8::transaction_op(name).is_some() => {
             m8::transaction(ctx, client, name, leaf, history).await
         }
+        // A hashed key signs at its finalized generation, read here.
+        "sign" => m8::run_local_with(ctx, Some(client), name, leaf, history).await,
         _ => run_local(ctx, name, leaf, history).await,
     }
 }
@@ -511,7 +513,32 @@ fn recovery_secret(
         });
     }
     if let Some(value) = text(matches, "private_key") {
-        checked_hex(value, 64, true)?;
+        // Python v488 `_resolve_key_secret`: a hashed or post-quantum key's
+        // private key is its 32-byte seed, Ed25519 takes 32 or 64 bytes and
+        // Sr25519 its 64-byte expanded key.
+        let scheme = scheme(
+            text(matches, "crypto_type").unwrap_or("sr25519"),
+            text(matches, "account_type"),
+        )?;
+        let lengths: &[usize] = match scheme.code() {
+            4 | 6..=12 => &[32],
+            0 => &[32, 64],
+            _ => &[64],
+        };
+        if !lengths
+            .iter()
+            .any(|length| checked_hex(value, *length, true).is_ok())
+        {
+            let expected = lengths
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(" or ");
+            return Err(input(format!(
+                "private key must be {expected} bytes of hex for {} (optional 0x prefix)",
+                scheme_name(scheme)
+            )));
+        }
         return Ok(RegenerateFrom::PrivateKey(SecretString::new(value.into())));
     }
     if let Some(value) = text(matches, "seed") {
@@ -969,7 +996,9 @@ async fn prepare_hashed_creation(
     let payer_wallet =
         Wallet::new(&payer_name, "default", &ctx.globals.wallet_path).map_err(failure)?;
     let target = ctx.wallet()?;
-    if creating {
+    // Only a coldkey being created has no funds to pay its own registration:
+    // a new hashed hotkey may be paid by its wallet's existing coldkey.
+    if creating && schemes.iter().any(|(role, _)| *role == SignerRole::Coldkey) {
         let same = |a: &Path, b: &Path| {
             a.canonicalize()
                 .ok()
@@ -1437,7 +1466,7 @@ async fn show(
         json!(ctx.globals.wallet_path.to_string_lossy()),
     ));
     ctx.output
-        .detail(Some(&ctx.globals.wallet_name), &fields, None)
+        .wallet_detail(Some(&ctx.globals.wallet_name), &fields)
         .map_err(failure)
 }
 
@@ -1985,26 +2014,42 @@ async fn list(ctx: &AppContext, offline: bool) -> Result<(), CliError> {
     if ctx.output.options.json_mode {
         return ctx.output.value(&payload).map_err(failure);
     }
+    // Python v488 `_wallet_node`: a key's scheme and account type, and for a
+    // key that needs registration its receiving address, account and status.
+    let node = |name: &str, record: &Value, indent: &str| {
+        let kind = match (
+            record["signing_scheme"].as_str(),
+            record["account_type"].as_str(),
+        ) {
+            (Some(scheme), Some(account_type)) if !account_type.is_empty() => {
+                format!("{scheme}, {account_type}")
+            }
+            _ => record["crypto_type"].as_str().unwrap_or("").to_owned(),
+        };
+        let lines = ctx.output.wallet_node_address_lines(record);
+        if lines.is_empty() {
+            format!(
+                "{name}  {}  {kind}",
+                record["ss58"].as_str().unwrap_or("unavailable")
+            )
+        } else {
+            let mut text = format!("{name}  {kind}");
+            for line in lines {
+                text.push('\n');
+                text.push_str(indent);
+                text.push_str(&line);
+            }
+            text
+        }
+    };
     let mut nodes = Vec::new();
     for record in payload["coldkeys"].as_array().into_iter().flatten() {
-        let branch = format!(
-            "{}  {}  {}",
-            record["coldkey"].as_str().unwrap_or(""),
-            record["ss58"].as_str().unwrap_or("unavailable"),
-            record["crypto_type"].as_str().unwrap_or("")
-        );
+        let branch = node(record["coldkey"].as_str().unwrap_or(""), record, "    ");
         let mut leaves: Vec<String> = record["hotkeys"]
             .as_array()
             .into_iter()
             .flatten()
-            .map(|hot| {
-                format!(
-                    "{}  {}  {}",
-                    hot["name"].as_str().unwrap_or(""),
-                    hot["ss58"].as_str().unwrap_or("unavailable"),
-                    hot["crypto_type"].as_str().unwrap_or("")
-                )
-            })
+            .map(|hot| node(hot["name"].as_str().unwrap_or(""), hot, "      "))
             .collect();
         if leaves.is_empty() {
             leaves.push("no hotkeys".into());

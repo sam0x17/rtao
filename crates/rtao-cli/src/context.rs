@@ -25,6 +25,9 @@ use std::{
 mod direct_multisig;
 mod registration;
 
+/// Python v488 `_vault_account_address`: Polkadot Vault signs standard keys.
+const VAULT_STANDARD_ONLY: &str = "Polkadot Vault signing supports standard sr25519/ed25519 accounts only; use --signer wallet (or --signatory NAME=wallet) for hashed members. A standard Vault account can still co-sign the same multisig.";
+
 /// The resolved shield choice and whether it can be downgraded.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ShieldChoice {
@@ -919,10 +922,26 @@ impl AppContext {
                 return Err(CliError::input("MEV shield period must be 4 or 8 blocks"));
             }
         }
-        let plan_options = PlanOptions {
+        // Python v488: the review quotes the route execution takes, so a
+        // Shield route's fees are both transactions (`_shielded_preview`).
+        if choice.enabled
+            && !self.globals.dry_run
+            && control.period.is_none()
+            && control.execution.is_none()
+        {
+            choice = self
+                .honor_shield(client, payer, choice, required_shield, spec.name)
+                .await?;
+        }
+        let mut plan_options = PlanOptions {
             proxy_for,
             force_proxy_type,
             deadline: control.deadline,
+            shielded: choice.enabled,
+            period: control
+                .period
+                .filter(|_| choice.enabled)
+                .or(PlanOptions::default().period),
             ..Default::default()
         };
         // Strict SDK planning validates PoW freshness. Actual direct requests
@@ -944,10 +963,51 @@ impl AppContext {
         if let Some(review) = control.review {
             review.validate(intent)?;
         }
-        let (mut plan, preflight) = executor
+        let (mut plan, mut preflight) = executor
             .plan_and_preflight_dyn(intent, keys, &plan_options)
             .await
             .map_err(CliError::transaction)?;
+        // Python v488: account registration shields by default, unless the
+        // flag or config opts out, MEV Shield is inactive, or free TAO cannot
+        // cover the carrier (local signers; external ones are checked below).
+        if !choice.enabled
+            && preflight.account_registration
+            && self.resolve_mev_shield(true, false, spec.name)?.enabled
+        {
+            let candidate = self
+                .honor_shield(
+                    client,
+                    payer,
+                    ShieldChoice {
+                        enabled: true,
+                        forced: false,
+                    },
+                    false,
+                    spec.name,
+                )
+                .await?;
+            let candidate = if candidate.enabled && !self.globals.uses_external_signer() {
+                self.preflight_shield_fee(
+                    client,
+                    payer,
+                    Some(plan.call()),
+                    candidate,
+                    false,
+                    spec.name,
+                )
+                .await?
+            } else {
+                candidate
+            };
+            if candidate.enabled {
+                choice = candidate;
+                plan_options.shielded = true;
+                (plan, preflight) = executor
+                    .plan_and_preflight_dyn(intent, keys, &plan_options)
+                    .await
+                    .map_err(CliError::transaction)?;
+            }
+        }
         // A saved approval signs an outer multisig operation. Keep that round's
         // summary and effects, while its command context stays semantic below.
         if control.factory.is_none()
@@ -1266,10 +1326,17 @@ impl AppContext {
                 } else {
                     self.output.review_value(name, value)
                 };
-                transaction.push((
-                    name.strip_suffix("_ss58").unwrap_or(name).replace('_', " "),
-                    Value::String(display),
-                ));
+                let label = name.strip_suffix("_ss58").unwrap_or(name).replace('_', " ");
+                // Python v488 `record_rows`: one card row per record (spends).
+                if let Some(records) = crate::output::record_list(value) {
+                    transaction.extend(crate::output::record_rows(
+                        &label,
+                        records,
+                        |key, value| self.output.review_value(key, value),
+                    ));
+                    continue;
+                }
+                transaction.push((label, Value::String(display)));
             }
         }
         sections.push(ReviewSection {
@@ -1330,12 +1397,21 @@ impl AppContext {
         } else {
             (None, None)
         };
+        // Python v488: a rotating account signs only from finalized authority,
+        // so a local one waits for finality and the next command can use its
+        // next generation.
+        let rotating = !self.globals.uses_external_signer()
+            && signing
+                .authority_descriptor(role)
+                .is_some_and(|descriptor| {
+                    !rtao::primitives::receiving::is_stateless_pq_descriptor(&descriptor)
+                });
         let opts = ExecuteOptions {
             expected_call: control.bind_reviewed_call.then(|| plan.call().clone()),
             period: control.period.or(ExecuteOptions::default().period),
             proxy_for,
             force_proxy_type,
-            wait_for_finalization: control.wait_for_finalization,
+            wait_for_finalization: control.wait_for_finalization || rotating,
             replan_owner_rate_limit: control.replan_owner_rate_limit,
             deadline: control.deadline,
             // Durable callers own any replay decision. No additional pool
@@ -2928,21 +3004,68 @@ impl AppContext {
         if !self.globals.uses_external_signer() {
             return Ok(None);
         }
+        Ok(self.external_signer_account()?.map(|(account, _)| account))
+    }
+
+    /// The external signer's account and, for Polkadot Vault, the key scheme
+    /// of the public wallet that named it (Python v488 `_vault_crypto_type`;
+    /// a raw SS58 or contact is Sr25519). A receiving address cannot name an
+    /// external signer, and Vault signs standard Sr25519/Ed25519 keys only.
+    pub fn external_signer_account(
+        &self,
+    ) -> Result<Option<(AccountId, rtao::primitives::CryptoType)>, CliError> {
+        use rtao::primitives::CryptoType;
+        if !self.globals.uses_external_signer() {
+            return Ok(None);
+        }
+        let vault = self.globals.uses_vault_signer();
         let lookup = FsAccountLookup::new(self.globals.wallet_path.clone())
             .map_err(|e| CliError::failure(e.to_string()))?;
-        let resolve = |value: &str| -> Option<AccountId> {
+        let refuse_receiving = |address: &str| -> CliError {
+            if let Err(error) = rtao::primitives::receiving::parse_recipient(address) {
+                return CliError::input(error.to_string());
+            }
+            CliError::input(if vault {
+                VAULT_STANDARD_ONLY
+            } else {
+                "hashed receiving addresses cannot use an external signer backend"
+            })
+        };
+        let wallet = |name: &str| -> Result<Option<(AccountId, CryptoType)>, CliError> {
+            let Ok(reference) =
+                rtao::wallet::WalletRef::new(name, "default", lookup.root().to_owned())
+            else {
+                return Ok(None);
+            };
+            let Ok(info) = reference.public_info(SignerRole::Coldkey) else {
+                return Ok(None);
+            };
+            if vault && info.authority.is_some() {
+                return Err(CliError::input(VAULT_STANDARD_ONLY));
+            }
+            Ok(Some((info.account, info.crypto_type)))
+        };
+        let resolve = |value: &str| -> Result<Option<(AccountId, CryptoType)>, CliError> {
+            if rtao::primitives::receiving::is_receiving_address(value) {
+                return Err(refuse_receiving(value));
+            }
             if crate::books::is_bittensor_address(value) {
-                return value.parse().ok();
+                return Ok(value
+                    .parse()
+                    .ok()
+                    .map(|account| (account, CryptoType::Sr25519)));
             }
             if let Some(entry) = self.books.address_entry(value)
                 && let Some(address) = entry.get("address").and_then(Value::as_str)
-                && let Ok(account) = address.parse()
             {
-                return Some(account);
+                if rtao::primitives::receiving::is_receiving_address(address) {
+                    return Err(refuse_receiving(address));
+                }
+                if let Ok(account) = address.parse() {
+                    return Ok(Some((account, CryptoType::Sr25519)));
+                }
             }
-            crate::books::AccountLookup::coldkey(&lookup, value)
-                .ok()
-                .and_then(|address| address.parse().ok())
+            wallet(value)
         };
         if let Some(explicit) = self
             .globals
@@ -2950,10 +3073,10 @@ impl AppContext {
             .as_deref()
             .filter(|value| !value.is_empty())
         {
-            return Ok(resolve(explicit));
+            return resolve(explicit);
         }
         if let Some(member) = self.globals.signatories.first()
-            && let Some(address) = resolve(member)
+            && let Some(address) = resolve(member)?
         {
             return Ok(Some(address));
         }
@@ -2963,21 +3086,12 @@ impl AppContext {
             .filter(|value| json_truthy(value))
         {
             let spelling = crate::globals::config_string(configured);
-            if let Some(address) = resolve(&spelling) {
+            if let Some(address) = resolve(&spelling)? {
                 return Ok(Some(address));
             }
         }
-        if self
-            .globals
-            .signer_backend
-            .as_deref()
-            .is_some_and(|backend| crate::globals::normalize_signer_backend(backend) == "vault")
-        {
-            return Ok(
-                crate::books::AccountLookup::coldkey(&lookup, &self.globals.wallet_name)
-                    .ok()
-                    .and_then(|address| address.parse().ok()),
-            );
+        if vault {
+            return wallet(&self.globals.wallet_name);
         }
         Ok(None)
     }

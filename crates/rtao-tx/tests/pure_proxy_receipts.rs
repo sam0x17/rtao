@@ -220,6 +220,9 @@ async fn pure_proxy_clear_and_explicit_shield_receipts_preserve_python_data_shap
         let expected_shield = json!({
             "shielded": true,
             "inner_extrinsic_hash": format!("0x{}", hex::encode(inner_hash.0)),
+            // Python v488 `_resolve_shielded_inner`: both fees of the pair.
+            "shield_carrier_fee_rao": 0,
+            "shield_inner_fee_rao": 0,
             "pure_proxy": PURE,
             "spawner": signer.account(),
             "height": 101,

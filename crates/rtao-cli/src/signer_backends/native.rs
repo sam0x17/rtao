@@ -128,9 +128,18 @@ impl SigningBackend for NativeBackend {
                 #[cfg(feature = "vault")]
                 "vault" => {
                     let output = self.context.output.clone();
+                    // Python v488 `_vault_crypto_type`: the scheme of the public
+                    // wallet that named this account (an Ed25519 Vault key).
+                    let mut selected = self.context.clone();
+                    selected.globals = request.globals.clone();
+                    let crypto_type = selected
+                        .external_signer_account()?
+                        .filter(|(account, _)| *account == reviewed)
+                        .map_or(rtao::primitives::CryptoType::Sr25519, |(_, crypto)| crypto);
                     let signer = rtao::signer::vault::VaultSigner::with_options(
                         &reviewed.to_string(),
                         rtao::signer::vault::VaultOptions {
+                            crypto_type,
                             server: rtao::signer::vault::VaultServerOptions {
                                 open_browser: request.open_browser,
                                 browser: self.browser(request),

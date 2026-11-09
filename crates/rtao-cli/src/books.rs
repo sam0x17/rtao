@@ -1524,19 +1524,20 @@ pub fn ss58_param_help(param: &str) -> String {
 pub fn ss58_param_help_for(param: &str, wallet_default: bool) -> String {
     let book = "address-book or proxy-book name, ";
     if param.contains("hotkey") {
-        let mut text =
-            format!("ss58 address, {book}or a local hotkey name (HOTKEY or WALLET/HOTKEY).");
+        let mut text = format!(
+            "receiving address or ss58, {book}or a local hotkey name (HOTKEY or WALLET/HOTKEY)."
+        );
         if param == "hotkey_ss58" && wallet_default {
             text.push_str(" Defaults to your wallet's hotkey.");
         }
         text
     } else if matches!(param, "dest_ss58" | "dest_coldkey_ss58") {
         format!(
-            "Destination account (a coldkey, not a hotkey): ss58 address, {book}saved multisig name, or a local wallet name. Omit this flag on a terminal to pick from the address book."
+            "Destination account (a coldkey, not a hotkey): receiving address or ss58, {book}saved multisig name, or a local wallet name. Omit this flag on a terminal to pick from the address book."
         )
     } else {
         let mut text = format!(
-            "ss58 address, {book}saved multisig name, or a local wallet name (uses its coldkey)."
+            "receiving address or ss58, {book}saved multisig name, or a local wallet name (uses its coldkey)."
         );
         if param == "coldkey_ss58" && wallet_default {
             text.push_str(" Defaults to your wallet's coldkey.");

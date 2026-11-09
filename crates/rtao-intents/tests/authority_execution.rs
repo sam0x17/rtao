@@ -137,3 +137,92 @@ async fn plans_quote_the_proof_and_execution_submits_an_authorized_extrinsic() -
     }
     Ok(())
 }
+
+// Python v488 `test_mldsa_orders.py` (D-160): a hashed, ML-DSA or Falcon owner
+// approves, cancels and relays its own account-approved orders through the
+// ordinary authority signing path; classical signatures and account approvals
+// mix in one relay; another origin cannot approve the owner's terms.
+#[cfg(feature = "limit_orders")]
+#[tokio::test]
+async fn authority_owners_approve_cancel_and_relay_account_approved_orders() -> Result<()> {
+    use rtao_intents::limit_orders::PreparedOrder;
+    let mut cryptos = vec![rtao_core::keys::CRYPTO_HASHED_ED25519];
+    cryptos.extend(7..=12);
+    for crypto in cryptos {
+        let (executor, chain, keys) = fixture(crypto).await?;
+        let owner = AuthoritySigner::account(&keys.0);
+        let runtime = executor.client().refresh_runtime().await?;
+        let genesis = executor.client().genesis().0;
+        let order = json!({"V1": {
+            "signer": owner.to_string(), "hotkey": DEST.to_string(), "netuid": 1,
+            "order_type": "LimitBuy", "amount": 100, "limit_price": 1_000_000_000_u64,
+            "expiry": 2_000_000_000_000_u64, "fee_rate": 0, "fee_recipient": DEST.to_string(),
+            "relayer": [DEST.to_string()], "max_slippage": 1000, "chain_id": 42,
+            "partial_fills_enabled": true,
+        }});
+        let prepared = PreparedOrder::prepare(&runtime, genesis, 9, &order)?;
+        assert_eq!(prepared.owner()?, owner);
+        let approve = AnyIntent::from_tool(
+            "authorize_order",
+            serde_json::to_value(prepared.authorize())?,
+        )?;
+        let cancel =
+            AnyIntent::from_tool("cancel_order", serde_json::to_value(prepared.cancel())?)?;
+        let classical = json!({
+            "order": {"V1": {"signer": DEST.to_string(), "hotkey": DEST.to_string(), "netuid": 1,
+                "order_type": "LimitBuy", "amount": 1, "limit_price": 1, "expiry": 1, "fee_rate": 0,
+                "fee_recipient": DEST.to_string(), "relayer": null, "max_slippage": null,
+                "chain_id": 42, "partial_fills_enabled": false}},
+            "signature": {"Sr25519": format!("0x{}", "11".repeat(64))},
+            "partial_fill": null,
+        });
+        let relay = AnyIntent::from_tool(
+            "execute_orders",
+            json!({"orders": [classical, prepared.account_approved(Some(10))]}),
+        )?;
+        let netted = AnyIntent::from_tool(
+            "execute_batched_orders",
+            json!({"orders": [prepared.account_approved(None)], "netuid": 1}),
+        )?;
+        for intent in [&approve, &cancel, &relay, &netted] {
+            let plan = executor
+                .plan_dyn(intent.as_dyn(), &keys, &PlanOptions::default())
+                .await?;
+            assert!(plan.ok(), "{crypto}: {:?}", plan.violations);
+            assert_eq!(plan.signer_address, owner);
+        }
+        // The owner's approval is an authorized extrinsic carrying the pinned
+        // terms (prepared bytes) and the owner's account.
+        chain.mutate_state(|state| {
+            state.queue_submit(SubmitScript::InBlockThenFinalized {
+                events: json!([{"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}]),
+            })
+        });
+        let result = executor
+            .execute_dyn(approve.as_dyn(), &keys, &ExecuteOptions::default())
+            .await?;
+        assert!(result.success, "{crypto}: {result:?}");
+        let submitted = chain.mutate_state(|state| state.submissions.clone());
+        assert_eq!(submitted.len(), 1);
+        let decoded =
+            rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submitted[0], true)?)
+                .to_json();
+        assert_eq!(
+            decoded["call"]["call_function"], "authorize_order",
+            "{crypto}"
+        );
+        assert!(submitted[0].len() > keys.0.authority_type().proof_length());
+        let encoded = hex::encode(&prepared.encoded);
+        assert!(hex::encode(&submitted[0]).contains(&encoded), "{crypto}");
+        // Another account cannot approve the owner's terms.
+        let (other, _, other_keys) = fixture(if crypto == 7 { 8 } else { 7 }).await?;
+        let error = other
+            .plan_dyn(approve.as_dyn(), &other_keys, &PlanOptions::default())
+            .await
+            .expect_err("another origin must refuse");
+        assert!(error.to_string().contains("order owner"), "{error}");
+        other.client().close().await;
+        executor.client().close().await;
+    }
+    Ok(())
+}

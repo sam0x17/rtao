@@ -484,3 +484,82 @@ async fn a_standard_post_quantum_recipient_needs_no_guard() -> Result<()> {
     executor.client().close().await;
     Ok(())
 }
+
+// Python v488 `MultisigIntentAdapter.preflight` (D-160): a payment approved
+// through a multisig previews its recipient as the receiving address written,
+// not the bare account the guarded call pays.
+#[cfg(feature = "multisig")]
+#[tokio::test]
+async fn multisig_previews_name_the_receiving_address_of_a_guarded_payment() -> Result<()> {
+    let (descriptor, address, account) = hashed();
+    let (executor, _chain, keys) = fixture(Some((&descriptor, account)), true).await?;
+    let group = executor.multisig(&[AccountId([42; 32]), COLD], 2).await?;
+    let transfer: rtao_intents::Transfer =
+        serde_json::from_value(json!({"dest_ss58": address, "amount_tao": "1"}))?;
+    let adapter = rtao_intents::MultisigAdapter::new(
+        transfer,
+        executor.client(),
+        group,
+        COLD,
+        rtao_primitives::CryptoType::Sr25519,
+        None,
+    )
+    .await?;
+    let (plan, preview) = executor
+        .plan_and_preflight_dyn(&adapter, &keys, &PlanOptions::default())
+        .await?;
+    let effects = [plan.effects.clone(), preview.effects.clone()].concat();
+    assert!(
+        effects.iter().any(|effect| effect.contains(&address)),
+        "{effects:?}"
+    );
+    let ss58 = account.to_string();
+    assert!(
+        effects.iter().all(|effect| !effect.contains(&ss58)),
+        "{effects:?}"
+    );
+    executor.client().close().await;
+    Ok(())
+}
+
+// Python v488 `test_child_set_submits_guarded_hashed_receiving_address`
+// (D-160): a registered hashed child named by its receiving address is
+// checked in the same batch, and set_children takes its account.
+#[cfg(feature = "children")]
+#[tokio::test]
+async fn set_children_checks_a_receiving_child_and_assigns_its_account() -> Result<()> {
+    let (descriptor, address, account) = hashed();
+    let (executor, _chain, keys) = fixture(Some((&descriptor, account)), true).await?;
+    let runtime = executor.client().refresh_runtime().await?;
+    let intent = AnyIntent::from_tool(
+        "set_children",
+        json!({"hotkey_ss58": HOT.to_string(), "netuid": 1, "children": [[0.5, address]]}),
+    )?;
+    let plan = executor
+        .plan_dyn(intent.as_dyn(), &keys, &PlanOptions::default())
+        .await?;
+    let decoded = rtao_core::DynValue::new(runtime.core().decode_spec(
+        &rtao_core::runtime::TypeSpec::Call,
+        plan.call().as_bytes(),
+        true,
+    )?)
+    .to_json();
+    assert_eq!(decoded["call_function"], "batch_all", "{decoded}");
+    let calls = decoded["call_args"][0]["value"].as_array().unwrap();
+    assert_eq!(calls.len(), 2, "{decoded}");
+    assert_eq!(calls[0]["call_function"], "check_registered");
+    assert_eq!(calls[1]["call_function"], "set_children");
+    let children = calls[1]["call_args"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|arg| arg["name"] == "children")
+        .unwrap()["value"]
+        .clone();
+    assert_eq!(
+        children,
+        json!([[(0.5 * u64::MAX as f64).round() as u64, account.to_string()]])
+    );
+    executor.client().close().await;
+    Ok(())
+}

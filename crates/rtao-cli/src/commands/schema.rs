@@ -127,6 +127,9 @@ fn field(
     } else if kind == "array" {
         help.push_str(if query {
             " Comma-separated list."
+        } else if annotation_base == "list[dict]" {
+            // Python v488 `_list_note`: records (spend entries) are JSON.
+            " A JSON list."
         } else {
             " Comma-separated values or a JSON list."
         });
@@ -211,13 +214,16 @@ pub fn read_fields(name: ReadName) -> Result<Vec<Field>, CliError> {
 pub fn arguments(mut command: Command, fields: &[Field], tx: bool) -> Command {
     let amount_fields = fields
         .iter()
-        .filter(|f| matches!(f.name, "amount_tao" | "amount_alpha"))
+        .filter(|f| matches!(f.name, "amount_tao" | "amount_alpha" | "amount_gamma"))
         .count();
     for field in fields {
         let mut arg = Arg::new(field.name)
             .long(field.flag().trim_start_matches("--").to_owned())
             .help(field.help.clone());
-        if tx && amount_fields == 1 && matches!(field.name, "amount_tao" | "amount_alpha") {
+        if tx
+            && amount_fields == 1
+            && matches!(field.name, "amount_tao" | "amount_alpha" | "amount_gamma")
+        {
             arg = arg.alias("amount");
         }
         if tx && field.name == "dest_coldkey_ss58" && !fields.iter().any(|f| f.name == "dest_ss58")

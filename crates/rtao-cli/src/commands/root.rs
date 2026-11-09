@@ -325,7 +325,9 @@ fn position_wallet(
         if ctx.external_signer_address()? == Some(owner) {
             // Keep the later device or browser approval on the account whose
             // positions were selected, even when it came from saved config.
-            if !ctx.globals.uses_vault_signer() || ctx.globals.signer_address.is_none() {
+            // A Vault approval keeps the reference that named its key scheme;
+            // the same resolution selects it again.
+            if !ctx.globals.uses_vault_signer() {
                 ctx.globals.signer_address = Some(owner.to_string());
             }
             ctx.globals.wallet_given = true;

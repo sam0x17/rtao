@@ -9736,7 +9736,7 @@
           "crates/rtao-cli/src/error.rs",
           "crates/rtao-cli/src/output.rs"
         ],
-        "synced_blob": "081eed0005c58f9834e804b388a135702c07de8d"
+        "synced_blob": "c26602dfcf62ff0a376116493f2a86bdd0863570"
       },
       {
         "kind": "ported",
@@ -9748,7 +9748,7 @@
           "crates/rtao-cli/src/globals.rs",
           "crates/rtao-cli/tests/globals_contract.rs"
         ],
-        "synced_blob": "7d092d75f82f31449c0a9b425d01968dfbad7f73"
+        "synced_blob": "759bb059868b44dc147a31dc3f8a957522ae930e"
       },
       {
         "kind": "n/a",
@@ -9874,7 +9874,7 @@
           "crates/rtao-cli/src/output.rs",
           "rtao_cli::commands specialized human renderers"
         ],
-        "synced_blob": "fd879cd7e1915c7d29eae04c78114b59dc4c5ce9"
+        "synced_blob": "21c53bb40fa8cba2edde7851087bc8ac23a0f93b"
       },
       {
         "kind": "ported",
@@ -9887,7 +9887,7 @@
           "crates/rtao-cli/src/application.rs",
           "crates/rtao-cli/src/main.rs"
         ],
-        "synced_blob": "a360f0cdcde1f1d32ae5dff8dd69623af0157d45"
+        "synced_blob": "ca813ed10b6c3833c255aea22c11b08cf0ae1cb2"
       },
       {
         "kind": "ported",
@@ -9959,7 +9959,7 @@
           "crates/rtao-cli/src/commands/schema.rs",
           "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "0036e8de67dd82e7f4eead7c9ad5dbb383f35670"
+        "synced_blob": "633ce1c94de7b26f1466426801811bc8b4bcc8bf"
       },
       {
         "kind": "ported",
@@ -11927,7 +11927,7 @@
           "crates/rtao-cli/tests/subnets_commands.rs",
           "crates/rtao-cli/tests/hparams_commands.rs"
         ],
-        "synced_blob": "584295b9a001b4ecbf6694113a8ffaf099362008"
+        "synced_blob": "7d24ce73f322515db1bebb0c81ec1f724ba879af"
       },
       {
         "kind": "ported",
@@ -11939,7 +11939,7 @@
           "crates/rtao-cli/tests/generated_commands.rs",
           "crates/rtao-cli/tests/m8_help_theme.rs"
         ],
-        "synced_blob": "155e2380f0111e4e1c617e7d3cd1ed8282d4566b"
+        "synced_blob": "fc8ab506628b2ac956117ba602f0644dad3453c2"
       },
       {
         "kind": "ported",
@@ -12110,7 +12110,7 @@
           "crates/rtao-intents/src/staking_claims.rs",
           "crates/rtao-intents/src/children.rs"
         ],
-        "synced_blob": "4968a1ce1c156c3fe47195781635672e441d2009"
+        "synced_blob": "bb18ed8f10f037a48ed6c6b1feb658445191819b"
       },
       {
         "kind": "oracle-only",
@@ -12236,7 +12236,7 @@
         "rust": [
           "rtao_intents::root_claim::tests"
         ],
-        "synced_blob": "f890c50fa7609820e844c026bd16c24be15a180b"
+        "synced_blob": "94ee9459724c56ca3344f81fe9f49822ccad1e06"
       },
       {
         "kind": "ported",
@@ -12251,7 +12251,7 @@
           "xtask/src/extract_rpc_test_fixtures.rs",
           "crates/rtao-catalog/src/py.rs"
         ],
-        "synced_blob": "655aa3ba498aeae6e061e73f8db6fb4f12e7e743"
+        "synced_blob": "47ecc619720512a599ed8107f947f2dbee7d71f8"
       },
       {
         "kind": "ported",
@@ -12913,7 +12913,8 @@
         "python": "sdk/python/tests/unit/test_evm_wallet_types.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_cli::commands::evm::tests::receiving_hotkeys_refuse_an_rpc_override_before_any_backend_call",
+          "rtao_cli::commands::evm::precompiles::tests::view_bytes_arguments_take_the_account_of_a_receiving_address"
         ],
         "synced_blob": "pending"
       },
@@ -12924,7 +12925,12 @@
         "python": "sdk/python/tests/unit/test_falcon_accounts.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_primitives::authority::tests::codes_classes_and_lengths_follow_python",
+          "rtao_primitives::authority::tests::descriptors_name_their_scheme",
+          "crates/rtao-intents/tests/recipient_registration.rs::a_standard_post_quantum_recipient_needs_no_guard",
+          "rtao_intents::limit_orders::tests::prepare_checked_resolves_only_a_finalized_matching_registration",
+          "crates/rtao-cli/tests/wallet_commands.rs::falcon_cli_recovery_restores_the_authority_in_every_profile",
+          "crates/rtao-intents/tests/authority_execution.rs::authority_owners_approve_cancel_and_relay_account_approved_orders"
         ],
         "synced_blob": "pending"
       },
@@ -12935,7 +12941,14 @@
         "python": "sdk/python/tests/unit/test_gamma.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-primitives/src/gamma.rs::amounts_normalize_like_python_decimal",
+          "crates/rtao-primitives/src/gamma.rs::units_round_trip",
+          "crates/rtao-intents/tests/gamma.rs",
+          "crates/rtao-intents/src/serving.rs::set_service_checks_urls_and_names_the_spender",
+          "crates/rtao-reads/tests/gamma.rs",
+          "crates/rtao-cli/src/intent_prompts.rs::gamma_deposit_hotkeys_never_fall_back_to_the_wallet",
+          "crates/rtao-cli/src/commands/gamma.rs::spend_entries_split_as_python_does",
+          "crates/rtao-tx/src/executor.rs::gamma_receipt_amounts_and_skip_reasons_follow_python"
         ],
         "synced_blob": "pending"
       },
@@ -12946,7 +12959,10 @@
         "python": "sdk/python/tests/unit/test_hashed_accounts.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-client/tests/authority.rs",
+          "crates/rtao-intents/tests/recipient_registration.rs",
+          "crates/rtao-wallet/tests/authority_wallets.rs::hashed_wallets_publish_descriptors_and_unlock_into_authority_signers",
+          "crates/rtao-core/tests/keyfile_json_diff.rs::hashed_and_post_quantum_keyfiles_match_core"
         ],
         "synced_blob": "pending"
       },
@@ -12957,7 +12973,8 @@
         "python": "sdk/python/tests/unit/test_hashed_children.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/m8_stake_commands.rs::child_arguments_use_the_real_constructor_and_revoke_is_an_empty_child_set",
+          "crates/rtao-intents/tests/recipient_registration.rs::set_children_checks_a_receiving_child_and_assigns_its_account"
         ],
         "synced_blob": "pending"
       },
@@ -12979,7 +12996,13 @@
         "python": "sdk/python/tests/unit/test_hashed_messages.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/m8_wallet.rs::sign_verify_uses_exact_utf8_bare_hex_and_false_exit_contract",
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically",
+          "crates/rtao/tests/http_auth.rs::hashed_hotkeys_sign_at_their_finalized_generation_only",
+          "crates/rtao-btauth/tests/conformance.rs::hashed_hotkeys_sign_at_a_retired_generation_and_verify_with_their_trusted_scheme",
+          "crates/rtao-btauth/tests/conformance.rs::trusted_sender_schemes_fail_closed_and_bind_the_declared_scheme",
+          "crates/rtao-wallet/src/files.rs::unlock_refuses_a_secret_that_is_not_the_public_companions_key",
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallet_sign_reads_its_finalized_generation_from_chain_state"
         ],
         "synced_blob": "pending"
       },
@@ -12990,7 +13013,12 @@
         "python": "sdk/python/tests/unit/test_hashed_receiving.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/tests/recipient_registration.rs",
+          "rtao_primitives::receiving::tests::receiving_addresses_resolve_to_their_descriptor_account",
+          "crates/rtao-primitives/tests/address_input.rs::receiving_addresses_keep_their_spelling_and_descriptor",
+          "rtao_reads::receiving::tests::address_parameters_read_the_receiving_address_account",
+          "crates/rtao-cli/tests/m8_wallet.rs::local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_accounts",
+          "rtao_intents::evm::tests::registered_hashed_aliases_resolve_to_their_native_account_and_fail_closed"
         ],
         "synced_blob": "pending"
       },
@@ -13001,7 +13029,16 @@
         "python": "sdk/python/tests/unit/test_hashed_receiving_cli.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically",
+          "crates/rtao-cli/tests/m8_wallet.rs::local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_accounts",
+          "crates/rtao-cli/tests/m8_wallet.rs::transfers_keep_receiving_destinations_and_accept_the_compatibility_descriptor",
+          "crates/rtao-cli/tests/wallet_commands.rs::watch_only_hashed_companions_need_the_receiving_address",
+          "crates/rtao-cli/tests/wallet_commands.rs::list_retains_partial_wallets_without_deriving_or_unlocking_secret_files",
+          "crates/rtao-cli/tests/root_commands.rs::root_move_and_allocate_keep_receiving_validators_and_claim_reduces_them",
+          "crates/rtao-cli/tests/root_commands.rs::position_owner_without_a_local_signing_wallet_is_refused",
+          "rtao_cli::books::tests::public_wallet_adapter_reads_companions_and_skips_non_hotkey_artifacts",
+          "rtao_primitives::receiving::tests::receiving_addresses_resolve_to_their_descriptor_account",
+          "crates/rtao-intents/tests/recipient_registration.rs::a_first_payment_registers_the_recipient_in_one_batch"
         ],
         "synced_blob": "pending"
       },
@@ -13012,7 +13049,11 @@
         "python": "sdk/python/tests/unit/test_keyfile_atomicity.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-wallet/tests/wallet.rs::overwrite_refusal_preserves_both_files_and_regeneration_invalidates_cache",
+          "crates/rtao-wallet/tests/wallet.rs::independent_wallets_racing_with_no_overwrite_install_one_complete_key",
+          "crates/rtao-wallet/tests/wallet.rs::owner_only_modes_and_symlink_writes_preserve_targets",
+          "crates/rtao-wallet/tests/keyfile.rs::generic_overwrite_clamps_loose_file_mode_and_preserves_key_identity",
+          "crates/rtao-cli/tests/wallet_commands.rs::new_key_commands_refuse_overwrite_and_create_rejects_bad_hot_scheme_before_writes"
         ],
         "synced_blob": "pending"
       },
@@ -13051,7 +13092,8 @@
         "python": "sdk/python/tests/unit/test_mldsa_orders.py",
         "rtao": "pending",
         "rust": [
-          "crates/rtao-intents/src/limit_orders.rs"
+          "crates/rtao-intents/src/limit_orders.rs",
+          "crates/rtao-intents/tests/authority_execution.rs::authority_owners_approve_cancel_and_relay_account_approved_orders"
         ],
         "synced_blob": "pending"
       },
@@ -13097,7 +13139,8 @@
         "python": "sdk/python/tests/unit/test_order_subnet_policy.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/limit_orders.rs::owner_orders_validate_summarize_and_scope_their_subnet",
+          "crates/rtao-intents/src/limit_orders.rs::netted_batches_are_atomic_and_share_one_subnet"
         ],
         "synced_blob": "pending"
       },
@@ -13108,7 +13151,8 @@
         "python": "sdk/python/tests/unit/test_pq_release_adversarial.py",
         "rtao": "pending",
         "rust": [
-          "rtao-client tests/authority.rs (proofs_that_do_not_verify_against_chain_authority_are_never_sent)"
+          "rtao-client tests/authority.rs (proofs_that_do_not_verify_against_chain_authority_are_never_sent)",
+          "crates/rtao-cli/tests/wallet_commands.rs::falcon_cli_recovery_restores_the_authority_in_every_profile"
         ],
         "synced_blob": "pending"
       },
@@ -13153,7 +13197,12 @@
         "python": "sdk/python/tests/unit/test_registration_sponsorship_cli.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_cli::globals::tests::registration_deposits_are_exact_nonnegative_tao",
+          "crates/rtao-intents/tests/recipient_registration.rs::execution_needs_consent_before_any_key_is_unlocked",
+          "crates/rtao-intents/tests/recipient_registration.rs::a_first_payment_registers_the_recipient_in_one_batch",
+          "crates/rtao-intents/tests/recipient_registration.rs::a_registered_recipient_is_checked_and_reserves_nothing",
+          "crates/rtao-intents/tests/recipient_registration.rs::a_standard_post_quantum_recipient_needs_no_guard",
+          "rtao_tx::sponsorship::tests::consent_requires_an_allowance_or_an_exact_true"
         ],
         "synced_blob": "pending"
       },
@@ -13164,7 +13213,16 @@
         "python": "sdk/python/tests/unit/test_safe_composites.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-primitives/src/account_mode.rs::safe_derivation_is_order_independent_and_differs_from_legacy",
+          "crates/rtao-primitives/src/account_mode.rs::only_the_two_python_modes_parse",
+          "crates/rtao-intents/src/multisig.rs::safe_groups_compose_the_safe_calls_from_their_safe_account",
+          "crates/rtao-intents/src/proxy.rs::pure_proxy_safe_mode_protected_payers_and_kill_modes_follow_python",
+          "crates/rtao-tx/tests/multisig_protection.rs::a_quorum_with_a_finalized_quantum_resistant_member_registers_then_checks_its_authority",
+          "crates/rtao-tx/tests/multisig_protection.rs::derivatives_follow_the_parent_derivation_and_protection",
+          "crates/rtao-cli/src/commands/multisig.rs::account_modes_default_new_groups_to_safe_and_keep_saved_ones",
+          "crates/rtao-cli/src/commands/multisig.rs::safe_group_pending_reads_its_safe_account_and_replays_its_mode",
+          "crates/rtao-cli/src/books.rs::saved_safe_multisigs_resolve_to_the_safe_account_never_the_legacy_one",
+          "crates/rtao-intents/src/proxy.rs::stateless_post_quantum_creators_default_to_safe_pure_proxies"
         ],
         "synced_blob": "pending"
       },
@@ -13175,7 +13233,10 @@
         "python": "sdk/python/tests/unit/test_shield_fee.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-client/tests/shield.rs::carrier_probe_is_sized_from_the_actual_inner_call_and_does_not_mutate_nonce",
+          "crates/rtao-client/tests/shield.rs::ciphertext_and_period_bounds_are_closed",
+          "crates/rtao-client/tests/shield.rs::oversized_inner_ciphertext_is_rejected_before_carrier_signature",
+          "crates/rtao/tests/facade_contract.rs (estimate_shielded_carrier_fee forwarding signature)"
         ],
         "synced_blob": "pending"
       },
@@ -13186,7 +13247,12 @@
         "python": "sdk/python/tests/unit/test_shield_receipt_fees.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-client/tests/authority.rs::fee_probes_price_the_signing_scheme_proof_length",
+          "crates/rtao-tx/tests/shield_raw.rs::explicit_shield_dyn_honors_fee_cap_role_and_period",
+          "crates/rtao-core-ext/tests/receipt_protocol.rs::fee_paid_last_wins_and_prevents_native_fallback_overflow",
+          "rtao_client::shield::shield_fee_tests::resolved_inner_receipts_total_both_known_fees_and_keep_the_inner_outcome",
+          "rtao_tx::output::tests::included_receipts_keep_a_known_fee_and_an_unknown_one_stays_unknown",
+          "crates/rtao-tx/tests/pure_proxy_receipts.rs::pure_proxy_clear_and_explicit_shield_receipts_preserve_python_data_shapes"
         ],
         "synced_blob": "pending"
       },
@@ -13210,7 +13276,14 @@
         "python": "sdk/python/tests/unit/test_submission_admission.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-client/tests/submission.rs::author_internal_error_is_unresolved_but_exact_pool_refusal_remains_definite",
+          "crates/rtao-client/tests/submission.rs::malformed_watch_and_wrong_pool_acknowledgement_keep_attempted_identity",
+          "crates/rtao-client/tests/submission.rs::transient_receipt_rpc_failure_reconciles_without_rebroadcast_or_a_reserved_nonce",
+          "crates/rtao-client/tests/submission.rs::aborted_live_watch_unsubscribes_and_clears_its_nonce_synchronously",
+          "crates/rtao-client/tests/submission.rs::pool_acceptance_and_dispatch_failure_both_settle_nonce_leases",
+          "crates/rtao-client/tests/submission.rs::lost_acknowledgement_reconciles_actual_inclusion_without_retaining_nonce",
+          "crates/rtao-client/tests/nonces.rs::concurrent_clones_reserve_unique_consecutive_nonces_with_one_query",
+          "crates/rtao-client/tests/nonces.rs::explicit_pin_during_first_query_cannot_be_overwritten_by_stale_response"
         ],
         "synced_blob": "pending"
       },
@@ -13221,7 +13294,13 @@
         "python": "sdk/python/tests/unit/test_submission_costs.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/proxy.rs::pure_proxy_safe_mode_protected_payers_and_kill_modes_follow_python",
+          "crates/rtao-tx/src/policy.rs::setup_reserves_count_as_spend_unless_the_spend_is_unbounded",
+          "crates/rtao-tx/tests/shield_raw.rs::shield_unavailable_inner_fee_is_a_policy_error_before_unlock",
+          "crates/rtao-tx/tests/shield_raw.rs::shield_semantic_policy_and_carrier_funds_fail_before_unlock",
+          "crates/rtao-tx/tests/shield_raw.rs::explicit_shield_dyn_honors_fee_cap_role_and_period",
+          "crates/rtao-intents/src/multisig.rs::raw_multisig_build_checks_the_approval_members_opening_deposit_only",
+          "crates/rtao-intents/src/multisig.rs::raw_multisig_opening_warning_and_preflight_keep_base_policy"
         ],
         "synced_blob": "pending"
       },
@@ -13232,7 +13311,9 @@
         "python": "sdk/python/tests/unit/test_vault_signer.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_signer::vault::uos::tests::signing_frame_validates_keys_hashes_and_crypto_in_python_order",
+          "rtao_signer::vault::tests::returned_signatures_authenticate_payload_identity_and_version",
+          "crates/rtao-cli/tests/m8_wallet.rs::external_signers_refuse_receiving_addresses_and_vault_keeps_standard_schemes"
         ],
         "synced_blob": "pending"
       },
@@ -13243,7 +13324,9 @@
         "python": "sdk/python/tests/unit/test_wallet_address_output.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically",
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallet_human_views_label_both_address_forms_and_their_status",
+          "rtao_cli::output::record_row_tests::records_render_one_numbered_row_each"
         ],
         "synced_blob": "pending"
       },
@@ -13254,7 +13337,9 @@
         "python": "sdk/python/tests/unit/test_wallet_address_status.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically",
+          "crates/rtao-cli/tests/wallet_commands.rs::show_reads_watch_only_companions_and_saved_multisigs_without_secret_prompts",
+          "crates/rtao-wallet/src/files.rs::plaintext_hotkey_public_fallback_validates_whole_json_and_preserves_alias_precedence"
         ],
         "synced_blob": "pending"
       },
@@ -13265,7 +13350,10 @@
         "python": "sdk/python/tests/unit/test_wallet_creation_registration_cli.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/wallet_commands.rs::post_quantum_schemes_and_hashed_registration_refusals",
+          "crates/rtao-cli/tests/wallet_commands.rs::creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payload",
+          "crates/rtao-tx/tests/wallet_registration.rs::only_rotating_keys_are_registration_targets",
+          "crates/rtao-tx/tests/wallet_registration.rs::registration_refuses_without_an_approved_and_funded_quote"
         ],
         "synced_blob": "pending"
       },
@@ -13276,7 +13364,16 @@
         "python": "sdk/python/tests/unit/test_wallet_crypto_types.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/wallet_commands.rs::creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payload",
+          "crates/rtao-cli/tests/wallet_commands.rs::new_key_commands_refuse_overwrite_and_create_rejects_bad_hot_scheme_before_writes",
+          "crates/rtao-cli/tests/wallet_commands.rs::seed_and_private_key_recovery_do_not_echo_material_or_put_it_in_replay",
+          "crates/rtao-cli/tests/wallet_commands.rs::post_quantum_schemes_and_hashed_registration_refusals",
+          "crates/rtao-wallet/tests/authority_wallets.rs::post_quantum_wallets_need_24_words_and_stateless_keys_need_no_registration",
+          "crates/rtao-wallet/tests/authority_wallets.rs::hashed_wallets_publish_descriptors_and_unlock_into_authority_signers",
+          "crates/rtao-wallet/tests/wallet.rs::mnemonic_seed_and_private_key_regeneration_preserve_core_identity",
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically",
+          "crates/rtao-cli/tests/wallet_commands.rs::falcon_cli_recovery_restores_the_authority_in_every_profile",
+          "rtao_cli::application::scheme_hint_tests::missing_scheme_values_name_their_choices"
         ],
         "synced_blob": "pending"
       },
@@ -13287,7 +13384,9 @@
         "python": "sdk/python/tests/unit/test_wallet_list_multisig_offline.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/m8_wallet.rs::local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_accounts",
+          "crates/rtao-cli/tests/wallet_list_content.rs::actual_wallet_list_keeps_multisig_members_and_later_optional_fields_in_human_and_json",
+          "rtao_cli::books::tests::public_wallet_adapter_reads_companions_and_skips_non_hotkey_artifacts"
         ],
         "synced_blob": "pending"
       },
@@ -13298,7 +13397,13 @@
         "python": "sdk/python/tests/unit/test_wallet_pair_atomicity.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-wallet/src/files.rs::failed_pair_replacement_publishes_neither_file_and_discards_the_cached_signer",
+          "crates/rtao-wallet/src/files.rs::cancelled_earlier_replacement_cannot_overwrite_a_later_completed_replacement",
+          "crates/rtao-wallet/src/files.rs::cancelled_replacement_keeps_worker_lock_and_unlocks_only_the_installed_key",
+          "crates/rtao-wallet/tests/wallet.rs::overwrite_refusal_preserves_both_files_and_regeneration_invalidates_cache",
+          "crates/rtao-wallet/tests/wallet.rs::owner_only_modes_and_symlink_writes_preserve_targets",
+          "crates/rtao-cli/tests/wallet_commands.rs::creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payload",
+          "crates/rtao-cli/tests/wallet_commands.rs::new_key_commands_refuse_overwrite_and_create_rejects_bad_hot_scheme_before_writes"
         ],
         "synced_blob": "pending"
       },
@@ -13309,7 +13414,11 @@
         "python": "sdk/python/tests/unit/test_wallet_registration.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-tx/tests/wallet_registration.rs::only_rotating_keys_are_registration_targets",
+          "crates/rtao-tx/tests/wallet_registration.rs::registration_refuses_without_an_approved_and_funded_quote",
+          "crates/rtao-tx/tests/wallet_registration.rs::registered_keys_are_skipped_without_submission",
+          "rtao_tx::sponsorship::tests::consent_requires_an_allowance_or_an_exact_true",
+          "rtao_cli::globals::tests::registration_deposits_are_exact_nonnegative_tao"
         ],
         "synced_blob": "pending"
       },
@@ -13320,7 +13429,8 @@
         "python": "sdk/python/tests/unit/test_wallet_review_regressions.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically",
+          "crates/rtao-intents/tests/recipient_registration.rs::a_first_payment_registers_the_recipient_in_one_batch"
         ],
         "synced_blob": "pending"
       },
@@ -13331,7 +13441,15 @@
         "python": "sdk/python/tests/unit/test_wallet_security_swarm.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-wallet/src/files.rs::unlock_refuses_a_secret_that_is_not_the_public_companions_key",
+          "crates/rtao-wallet/tests/authority_wallets.rs::hashed_wallets_publish_descriptors_and_unlock_into_authority_signers",
+          "crates/rtao-wallet/tests/authority_wallets.rs::watch_only_companions_restore_from_receiving_addresses_only",
+          "crates/rtao-core/tests/keyfile_json_diff.rs::hashed_and_post_quantum_keyfiles_match_core",
+          "crates/rtao-client/tests/authority.rs::proofs_that_do_not_verify_against_chain_authority_are_never_sent",
+          "crates/rtao-client/tests/authority.rs::keypair_authority_signers_refuse_classical_keys",
+          "crates/rtao-client/tests/authority.rs::authority_signers_submit_through_the_ordinary_signer_path",
+          "crates/rtao-client/tests/authority.rs::fee_probes_price_the_signing_scheme_proof_length",
+          "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically"
         ],
         "synced_blob": "pending"
       }

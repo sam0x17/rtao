@@ -147,7 +147,16 @@ async fn qualified_negative_exact_window_budget_repeated_recovery_and_private_re
         .await
         .unwrap();
     assert_eq!(repeated.hash, report.hash);
-    assert_eq!(repeated.shield, report.shield);
+    // The journal recovers the pair's identities; only a live resolution
+    // observed both fees.
+    assert_eq!(
+        repeated
+            .shield
+            .map(|shield| (shield.carrier_hash, shield.inner_hash)),
+        report
+            .shield
+            .map(|shield| (shield.carrier_hash, shield.inner_hash))
+    );
     assert_eq!(author_reads(&f), 2);
     f.client.close().await;
 }
@@ -424,7 +433,16 @@ async fn qualified_negative_total_pair_limit_and_finalized_effect_do_not_require
         .await
         .unwrap();
     assert_eq!(recovered.hash, report.hash);
-    assert_eq!(recovered.shield, report.shield);
+    // The journal recovers the pair's identities; only a live resolution
+    // observed both fees.
+    assert_eq!(
+        recovered
+            .shield
+            .map(|shield| (shield.carrier_hash, shield.inner_hash)),
+        report
+            .shield
+            .map(|shield| (shield.carrier_hash, shield.inner_hash))
+    );
     assert_eq!(signer.signs.load(Ordering::SeqCst), signs);
     assert_eq!(author_reads(&f), 1);
     f.client.close().await;

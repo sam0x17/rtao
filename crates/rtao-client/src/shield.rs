@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use rtao_core::CoreError;
-use rtao_primitives::{AccountId, Balance, CryptoType, H256, Tao};
+use rtao_primitives::{AccountId, Balance, CryptoType, H256, Tao, TaoBalance};
 use rtao_signer::{SignPurpose, Signer};
 use serde_json::json;
 use std::{
@@ -110,6 +110,20 @@ pub struct ShieldReport {
     pub carrier_hash: H256,
     /// Identity scanned for after carrier inclusion.
     pub inner_hash: H256,
+    /// Both transactions' fees when this client resolved the inner receipt
+    /// (Python v488 `shield_carrier_fee_rao`/`shield_inner_fee_rao`); `None`
+    /// for a receipt recovered from the journal.
+    pub fees: Option<ShieldFees>,
+}
+
+/// The fees of a resolved Shield pair: the report's own `fee` is their sum
+/// when both are known (Python v488 `_resolve_shielded_inner`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ShieldFees {
+    /// The carrier's event-derived fee.
+    pub carrier: Option<TaoBalance>,
+    /// The inner extrinsic's event-derived fee; zero when it expired unincluded.
+    pub inner: Option<TaoBalance>,
 }
 
 /// Shield preparation, admission and receipt-wait options.
@@ -1168,6 +1182,7 @@ impl Client {
             carrier_report.shield = Some(ShieldReport {
                 carrier_hash: hash,
                 inner_hash,
+                fees: None,
             });
             if opts.wait == Wait::Pool && carrier_report.block_number.is_none() {
                 limits.full.check(self)?;
@@ -1204,6 +1219,7 @@ impl Client {
                     carrier_report.shield = Some(ShieldReport {
                         carrier_hash: hash,
                         inner_hash,
+                        fees: None,
                     });
                 }
                 if !carrier_report.success {
@@ -1438,11 +1454,10 @@ impl Client {
                     continue;
                 }
             }
-            let mut inner = chain
+            let inner = chain
                 .resolve_extrinsic(inner_hash, resolved_hash, wait == Wait::Finalization)
                 .await?;
-            inner.shield = outer.shield;
-            return Ok(inner);
+            return Ok(with_shield_fees(&outer, inner));
         }
         // Seeing every best-chain height does not prove absence: an earlier
         // lookup may have inspected an orphan. First establish finalized
@@ -1463,9 +1478,8 @@ impl Client {
                 .await?
                 .is_some()
             {
-                let mut inner = chain.resolve_extrinsic(inner_hash, hash, true).await?;
-                inner.shield = outer.shield;
-                return Ok(inner);
+                let inner = chain.resolve_extrinsic(inner_hash, hash, true).await?;
+                return Ok(with_shield_fees(&outer, inner));
             }
         }
         outer.success = false;
@@ -1473,6 +1487,13 @@ impl Client {
             "{DROPPED_INNER}{}) was not included before its era expired",
             crate::hash_hex(inner_hash)
         );
+        // Only the carrier was paid (Python v488).
+        if let Some(shield) = &mut outer.shield {
+            shield.fees = Some(ShieldFees {
+                carrier: outer.fee,
+                inner: Some(TaoBalance(0)),
+            });
+        }
         Ok(outer)
     }
 
@@ -1556,3 +1577,81 @@ fn check_era(period: ShieldPeriod, best: u64, finalized: u64) -> Result<(), Subm
 
 #[cfg(test)]
 mod durable_tests;
+
+/// Python v488 `_resolve_shielded_inner`: the inner receipt carries the
+/// carrier's shield metadata, and its fee totals both transactions when both
+/// are known.
+fn with_shield_fees(outer: &ExtrinsicReport, mut inner: ExtrinsicReport) -> ExtrinsicReport {
+    let fees = ShieldFees {
+        carrier: outer.fee,
+        inner: inner.fee,
+    };
+    inner.fee = match (fees.carrier, fees.inner) {
+        (Some(carrier), Some(own)) => carrier.0.checked_add(own.0).map(TaoBalance),
+        _ => None,
+    };
+    inner.shield = outer.shield.map(|shield| ShieldReport {
+        fees: Some(fees),
+        ..shield
+    });
+    inner
+}
+
+#[cfg(test)]
+mod shield_fee_tests {
+    use super::*;
+
+    fn report(hash: u8, fee: Option<u64>, success: bool) -> ExtrinsicReport {
+        ExtrinsicReport {
+            hash: H256([hash; 32]),
+            success,
+            message: if success { "Success" } else { "failed" }.into(),
+            inclusion: crate::Inclusion::InBlock,
+            block_hash: Some(H256([9; 32])),
+            block_number: Some(26),
+            extrinsic_index: Some(u32::from(hash)),
+            extrinsic_id: Some(format!("26-{hash:04}")),
+            fee: fee.map(TaoBalance),
+            weight: rtao_core::DynValue::new(rtao_core::codec::Value::Null),
+            events: Vec::new(),
+            error: None,
+            shield: None,
+        }
+    }
+
+    // Python v488 `test_shield_receipt_totals_both_fees_without_changing_inner_outcome`.
+    #[test]
+    fn resolved_inner_receipts_total_both_known_fees_and_keep_the_inner_outcome() {
+        for success in [false, true] {
+            for (outer_fee, inner_fee) in [
+                (Some(350_181), Some(1_320_116)),
+                (Some(0), Some(0)),
+                (None, Some(7)),
+                (Some(9), None),
+            ] {
+                let mut outer = report(6, outer_fee, true);
+                outer.shield = Some(ShieldReport {
+                    carrier_hash: H256([6; 32]),
+                    inner_hash: H256([7; 32]),
+                    fees: None,
+                });
+                let resolved = with_shield_fees(&outer, report(7, inner_fee, success));
+                let expected = match (outer_fee, inner_fee) {
+                    (Some(outer), Some(inner)) => Some(TaoBalance(outer + inner)),
+                    _ => None,
+                };
+                assert_eq!(resolved.fee, expected);
+                assert_eq!(resolved.success, success);
+                assert_eq!(resolved.hash, H256([7; 32]));
+                assert_eq!(resolved.extrinsic_id.as_deref(), Some("26-0007"));
+                assert_eq!(
+                    resolved.shield.and_then(|shield| shield.fees),
+                    Some(ShieldFees {
+                        carrier: outer_fee.map(TaoBalance),
+                        inner: inner_fee.map(TaoBalance),
+                    })
+                );
+            }
+        }
+    }
+}

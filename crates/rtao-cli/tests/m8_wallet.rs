@@ -1470,3 +1470,214 @@ async fn local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_a
     assert_eq!(team["signatories"][0]["ss58"], json!(cold.account));
     Ok(())
 }
+
+// D-160 (Python v488 `wallet sign` with a hashed key): against chain state
+// served by the fake node, a hashed SR25519 coldkey signs at the generation
+// its finalized registration records and the signature verifies against its
+// receiving address; an unregistered or mismatched registration refuses.
+#[tokio::test]
+async fn hashed_wallet_sign_reads_its_finalized_generation_from_chain_state() -> TestResult {
+    use rtao::{
+        core::keys::{CRYPTO_HASHED, Keypair, encode_hashed_receiving_address},
+        primitives::{AuthorityType, receiving::descriptor_value},
+        signer::{AuthoritySigner, KeypairAuthoritySigner},
+        wallet::{KeyScheme, RegenerateFrom},
+    };
+    let seed = [61u8; 32];
+    let root = Root::new()?;
+    let wallet = Wallet::new("alice", "default", &root.0)?;
+    let account = wallet
+        .regenerate_coldkey_as(
+            RegenerateFrom::Seed(zeroize::Zeroizing::new(seed.to_vec())),
+            KeyScheme::Authority(AuthorityType::HashedSr25519),
+            unencrypted(WriteOptions::coldkey()),
+        )
+        .await?;
+    let authority = KeypairAuthoritySigner::new(Keypair::from_seed(&seed, CRYPTO_HASHED)?)?;
+    assert_eq!(authority.account(), account);
+    let receiving = encode_hashed_receiving_address(authority.descriptor())?;
+    let record = |descriptor: &[u8], generation: u64| -> Result<Value, Box<dyn Error>> {
+        Ok(json!({
+            "descriptor": descriptor_value(descriptor)?,
+            "generation": generation,
+            "commitment": format!("0x{}", hex::encode(authority.commitment(generation)?)),
+        }))
+    };
+    let root = &root;
+    let sign = |state: FakeState| async move {
+        let (client, _chain) = client(state).await?;
+        let (parsed, mut ctx, sink) =
+            context(root, &["wallet", "sign", "--message", "hello hashed"])?;
+        let result = wallet::run_with_client(
+            &mut ctx,
+            &client,
+            group(&parsed)?,
+            &mut PromptHistory::default(),
+        )
+        .await;
+        client.close().await;
+        Ok::<_, Box<dyn Error>>((result, sink))
+    };
+    // Registered at generation 2: the signature verifies for the address.
+    let mut state = FakeState::default();
+    state.seed_python("AdminUtils", "HashedAccountsEnabled", &[], json!(true))?;
+    state.seed_python(
+        "HashedAccounts",
+        "Accounts",
+        &[json!(account)],
+        record(authority.descriptor(), 2)?,
+    )?;
+    let (result, sink) = sign(state).await?;
+    result?;
+    let signed = value(&sink)?;
+    assert_eq!(signed["signer_address"], json!(account));
+    let signature = signed["signed_message"].as_str().ok_or("signature")?;
+    assert!(rtao::wallet::verify_message_as(
+        "hello hashed",
+        signature,
+        &receiving,
+        None
+    )?);
+    assert!(!rtao::wallet::verify_message_as(
+        "another message",
+        signature,
+        &receiving,
+        None
+    )?);
+    // Unregistered, or registered under another descriptor: refused.
+    let other = KeypairAuthoritySigner::new(Keypair::from_seed(&[62; 32], CRYPTO_HASHED)?)?;
+    for state in [FakeState::default(), {
+        let mut state = FakeState::default();
+        state.seed_python(
+            "HashedAccounts",
+            "Accounts",
+            &[json!(account)],
+            record(other.descriptor(), 2)?,
+        )?;
+        state
+    }] {
+        let (result, _) = sign(state).await?;
+        let error = result.err().ok_or("unregistered key must refuse")?;
+        assert!(error.message.contains("not registered"), "{error:?}");
+    }
+    Ok(())
+}
+
+// D-159 (Python v488 `output.wallet_detail` and `_wallet_node`): human wallet
+// show and list put a key's receiving address first, its explorer account and
+// what its registration status means for sharing, with one Type row per key.
+#[tokio::test]
+async fn hashed_wallet_human_views_label_both_address_forms_and_their_status() -> TestResult {
+    use rtao::{primitives::AuthorityType, wallet::KeyScheme};
+    let root = Root::new()?;
+    let wallet = Wallet::new("alice", "default", &root.0)?;
+    let cold = wallet
+        .create_new_coldkey_as(
+            None,
+            KeyScheme::Authority(AuthorityType::HashedSr25519),
+            unencrypted(WriteOptions::coldkey()),
+        )
+        .await?;
+    for command in ["show", "list"] {
+        let (parsed, mut ctx, sink) = context(&root, &["wallet", command, "--offline"])?;
+        ctx.globals.json = false;
+        ctx.output = Output::with_sink(
+            OutputOptions {
+                json_mode: false,
+                quiet: false,
+                network: Some("finney".into()),
+            },
+            Arc::new(sink.clone()),
+        );
+        local(&mut ctx, &parsed).await?;
+        let text = sink.text(Stream::Stdout)?;
+        let (receiving, account, info) = if command == "show" {
+            (
+                "coldkey Receiving address",
+                "coldkey Account ID (SS58)",
+                "coldkey Address info",
+            )
+        } else {
+            (
+                "Receiving address: ",
+                "Account ID (SS58): ",
+                "Address info: ",
+            )
+        };
+        for expected in [
+            receiving,
+            account,
+            info,
+            "Registration not checked on finney",
+        ] {
+            assert!(text.contains(expected), "{command}: {expected}\n{text}");
+        }
+        assert!(text.contains(&cold.account.to_string()), "{text}");
+        assert!(text.contains("sr25519, hashed"), "{text}");
+        // The receiving address precedes the explorer account.
+        assert!(text.find(receiving) < text.find(account), "{text}");
+    }
+    Ok(())
+}
+
+// D-159 (Python v488 `_resolve_signer_account_ref` and `_vault_account_address`):
+// an external signer cannot be named by a receiving address, Polkadot Vault
+// signs only standard Sr25519/Ed25519 wallets, and an Ed25519 wallet keeps its
+// scheme for the Vault signer.
+#[tokio::test]
+async fn external_signers_refuse_receiving_addresses_and_vault_keeps_standard_schemes() -> TestResult
+{
+    use rtao::{
+        primitives::AuthorityType,
+        wallet::{KeyScheme, RegenerateFrom},
+    };
+    let root = Root::new()?;
+    let ed = Wallet::new("ed", "default", &root.0)?
+        .regenerate_coldkey(
+            RegenerateFrom::Seed(zeroize::Zeroizing::new(vec![5; 32])),
+            CryptoType::Ed25519,
+            unencrypted(WriteOptions::coldkey()),
+        )
+        .await?;
+    Wallet::new("alice", "default", &root.0)?
+        .create_new_coldkey_as(
+            None,
+            KeyScheme::Authority(AuthorityType::HashedSr25519),
+            unencrypted(WriteOptions::coldkey()),
+        )
+        .await?;
+    let key = Keypair::from_seed(&[9; 32], rtao::core::keys::CRYPTO_HASHED)?;
+    let receiving = rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+    let (_, mut ctx, _) = context(&root, &["wallet", "show", "--offline"])?;
+    ctx.globals.signer_backend = Some("vault".into());
+    ctx.globals.wallet_name = "ed".into();
+    assert_eq!(
+        ctx.external_signer_account()?,
+        Some((ed, CryptoType::Ed25519))
+    );
+    for (wallet, signer) in [("alice", None), ("ed", Some(receiving.clone()))] {
+        ctx.globals.wallet_name = wallet.into();
+        ctx.globals.signer_address = signer;
+        let error = ctx
+            .external_signer_account()
+            .err()
+            .ok_or("vault must refuse a hashed key")?;
+        assert!(
+            error.message.starts_with(
+                "Polkadot Vault signing supports standard sr25519/ed25519 accounts only"
+            ),
+            "{error:?}"
+        );
+    }
+    ctx.globals.signer_backend = Some("ledger".into());
+    ctx.globals.signer_address = Some(receiving);
+    let error = ctx
+        .external_signer_address()
+        .err()
+        .ok_or("an external signer cannot be a receiving address")?;
+    assert_eq!(
+        error.message,
+        "hashed receiving addresses cannot use an external signer backend"
+    );
+    Ok(())
+}

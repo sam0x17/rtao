@@ -2774,3 +2774,37 @@ fn factory_backed_cli_defaults_are_fresh_per_parse() -> TestResult {
     }
     Ok(())
 }
+
+// D-159 (Python v488 `tx._list_note`, `_placeholder` and the amount alias):
+// a list of records (gamma spends) is a JSON list, and a single gamma amount
+// also takes the bare --amount.
+#[test]
+fn gamma_records_are_json_lists_and_gamma_amounts_take_the_bare_alias() -> TestResult {
+    let spec = |name: &str| {
+        rtao_catalog::INTENTS
+            .iter()
+            .find(|spec| spec.name == name)
+            .ok_or("gamma intent")
+    };
+    let spends = schema::intent_fields(spec("spend_gamma")?)?
+        .into_iter()
+        .find(|field| field.name == "spends")
+        .ok_or("spends")?;
+    assert!(
+        spends.help.ends_with("A JSON list. (required)"),
+        "{}",
+        spends.help
+    );
+    let fields = schema::intent_fields(spec("move_gamma")?)?;
+    let command = schema::arguments(clap::Command::new("move-gamma"), &fields, true);
+    let amount = command
+        .get_arguments()
+        .find(|argument| argument.get_id() == "amount_gamma")
+        .ok_or("amount_gamma")?;
+    assert!(
+        amount
+            .get_all_aliases()
+            .is_some_and(|aliases| aliases.contains(&"amount"))
+    );
+    Ok(())
+}

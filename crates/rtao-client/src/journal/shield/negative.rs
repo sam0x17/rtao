@@ -958,6 +958,7 @@ impl JournalBinding {
                             report.shield = Some(ShieldReport {
                                 carrier_hash: carrier.hash,
                                 inner_hash: inner.hash,
+                                fees: None,
                             });
                             return Ok(RecoveryStatus::Finalized(Box::new(report)));
                         }

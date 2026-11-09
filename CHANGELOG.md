@@ -14,6 +14,37 @@ Not a versioned release. Each item links to its section below.
 
 - CLI account flags accept receiving addresses: payment destinations keep them so execution guards the recipient, identity flags use the account, and local hashed or post-quantum keys resolve to their receiving address (D-157). **Migration:** `root claim` and `root move` refuse a coldkey no local signer holds.
 - EVM commands resolve receiving addresses to native accounts only after a finalized registration check on the selected network, and report the runtime's native mapping instead of the legacy mirror (D-158).
+- Account registrations are submitted MEV-shielded by default and reviews of shielded submissions quote both fees; Polkadot Vault signs Ed25519 wallets with their scheme and refuses hashed keys; wallet show/list label the receiving address and its registration status (D-159).
+- Shield receipts total the carrier and inner fees; Falcon keys recover from a private key; stateless post-quantum creators make safe pure proxies; the remaining v488 test rows are classified, and no hand port is due (D-160, D-161). **Migration:** `ShieldReport` has a new `fees` field, and a failed receipt without a fee event reports no fee instead of zero.
+
+### CLI submission context and output (D-159)
+
+#### rtao-cli
+
+- An operation that registers an account is submitted MEV-shielded unless `--no-mev-shield` or the `mev_shield` config opts out, the shield is inactive, or free TAO cannot cover the carrier; a shielded review is planned and quoted as a Shield submission (inner and carrier fees).
+- A local hashed or rotating post-quantum signer waits for finality.
+- External signers refuse receiving addresses; Polkadot Vault refuses hashed and post-quantum wallets and signs an Ed25519 wallet as Ed25519 (`AppContext::external_signer_account`).
+- `wallet show` and `wallet list` show a key's receiving address first, its Account ID (SS58) and what its registration status means for sharing, with one Type row per key; review cards and receipts render record lists (gamma spends) one row per record.
+- Account option help names receiving addresses; gamma amounts take `--amount`; `--crypto-type`/`--type` without a value list the choices.
+
+### Remaining v488 behaviors and tests (D-160, D-161)
+
+#### rtao-client and rtao-tx
+
+- A resolved Shield receipt's `fee` is the carrier's plus the inner's, with `shield_carrier_fee_rao` and `shield_inner_fee_rao` in the receipt data (`ShieldReport::fees`, `ShieldFees`); an inner that expired unincluded reports the carrier's fee and `ShieldInnerExpired`. An included failure without a fee event reports no fee (it reported zero).
+
+#### rtao-intents
+
+- A stateless post-quantum creator (fixed ML-DSA or Falcon) creates a safe pure proxy unless `account_mode` is given.
+
+#### rtao-cli
+
+- `wallet regen-coldkey/regen-hotkey --private-key` accepts the 32-byte private key of hashed and post-quantum keys (Falcon included) and 32 or 64 bytes for Ed25519.
+- `wallet new-hotkey --type hashed` may be paid by its own wallet's coldkey.
+
+#### Parity
+
+- The 24 remaining v488 hand ports are blessed; `parity/port_due.toml` is gone (nothing is due). The 26 new v488 test rows name their covering Rust tests and the cases not ported.
 
 ### CLI account-identity flags and local receiving addresses (D-157)
 

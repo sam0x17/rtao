@@ -1302,3 +1302,81 @@ async fn watch_only_hashed_companions_need_the_receiving_address() -> TestResult
     assert_eq!(shown["coldkey_crypto_type"], "hashed");
     Ok(())
 }
+
+// D-160 (Python v488 `test_falcon_cli_recovery_restores_authority_in_every_profile`):
+// `wallet regen-coldkey/regen-hotkey` restore Falcon-512/1024 keys in both
+// account modes from a mnemonic, a seed or a private key, and the restored
+// wallet signs as the original authority (same account, descriptor and
+// generation commitment).
+#[tokio::test]
+async fn falcon_cli_recovery_restores_the_authority_in_every_profile() -> TestResult {
+    use rtao::{
+        core::keys::Keypair,
+        signer::{AuthoritySigner, DynKeySource, KeypairAuthoritySigner},
+    };
+    let seed = "5b".repeat(32);
+    let phrase = Keypair::generate_mnemonic(24)?;
+    for (scheme, mode, code) in [
+        ("falcon512", "standard", 9u8),
+        ("falcon512", "hashed", 10),
+        ("falcon1024", "standard", 11),
+        ("falcon1024", "hashed", 12),
+    ] {
+        for (source, secret) in [
+            ("--mnemonic", phrase.as_str()),
+            ("--seed", seed.as_str()),
+            ("--private-key", seed.as_str()),
+        ] {
+            let original = KeypairAuthoritySigner::new(if source == "--mnemonic" {
+                Keypair::from_mnemonic(&phrase, code, None)?
+            } else {
+                Keypair::from_seed(&[0x5b; 32], code)?
+            })?;
+            for role in ["coldkey", "hotkey"] {
+                let root = Root::new()?;
+                let command = format!("regen-{role}");
+                let mut args = vec![
+                    "rtao",
+                    "wallet",
+                    &command,
+                    "-w",
+                    "schemes",
+                    "--crypto-type",
+                    scheme,
+                    "--type",
+                    mode,
+                    source,
+                    secret,
+                ];
+                if role == "coldkey" {
+                    args.push("--no-password");
+                }
+                let (matches, mut ctx, sink, _) = fixture(&root, &args, true, false, &[])?;
+                run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
+                let label = format!("{scheme} {mode} {source} {role}");
+                assert_eq!(
+                    payload(&sink)?["ss58"],
+                    json!(original.account()),
+                    "{label}"
+                );
+                let wallet = Wallet::new("schemes", "default", &root.0)?;
+                let role = if role == "coldkey" {
+                    SignerRole::Coldkey
+                } else {
+                    SignerRole::Hotkey
+                };
+                let signer = wallet.signer_for(role).await?;
+                let restored = signer.authority().ok_or("restored authority signer")?;
+                assert_eq!(restored.account(), original.account(), "{label}");
+                assert_eq!(restored.descriptor(), original.descriptor(), "{label}");
+                let generation = if mode == "standard" { 0 } else { 3 };
+                assert_eq!(
+                    restored.commitment(generation)?,
+                    original.commitment(generation)?,
+                    "{label}"
+                );
+            }
+        }
+    }
+    Ok(())
+}

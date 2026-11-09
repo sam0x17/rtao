@@ -156,13 +156,9 @@ impl ExtrinsicResult {
             block_hash: report.block_hash,
             extrinsic_id: report.extrinsic_id,
             explorer_url,
-            // An included failure still paid its fee; Python reports zero when
-            // the receipt carries no fee event. Pool rejections never reach here.
-            fee: if report.success {
-                report.fee.map(|fee| Balance::<Tao>::from_rao(fee.0))
-            } else {
-                Some(Balance::<Tao>::from_rao(report.fee.map_or(0, |fee| fee.0)))
-            },
+            // Python v488 `_result_from_report`: an included receipt keeps its
+            // known fee, success or failure, and an unknown one stays unknown.
+            fee: report.fee.map(|fee| Balance::<Tao>::from_rao(fee.0)),
             events: report.events,
             error,
             data: if report.success { data } else { Map::new() },
@@ -263,6 +259,34 @@ pub(crate) fn tao_json(balance: Balance<Tao>) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Python v488 `test_included_receipt_retains_known_fee_and_events`.
+    #[test]
+    fn included_receipts_keep_a_known_fee_and_an_unknown_one_stays_unknown() {
+        for success in [false, true] {
+            for fee in [None, Some(0), Some(1_320_116)] {
+                let report = ExtrinsicReport {
+                    hash: H256([1; 32]),
+                    success,
+                    message: "Success".into(),
+                    inclusion: Inclusion::InBlock,
+                    block_hash: Some(H256([2; 32])),
+                    block_number: Some(26),
+                    extrinsic_index: Some(7),
+                    extrinsic_id: Some("26-0007".into()),
+                    fee: fee.map(rtao_primitives::TaoBalance),
+                    weight: rtao_core::DynValue::new(rtao_core::codec::Value::Null),
+                    events: Vec::new(),
+                    error: None,
+                    shield: None,
+                };
+                let result = ExtrinsicResult::from_report(report, "finney", Map::new());
+                assert_eq!(result.success, success);
+                assert_eq!(result.extrinsic_id.as_deref(), Some("26-0007"));
+                assert_eq!(result.fee.map(|fee| fee.rao()), fee);
+            }
+        }
+    }
     #[test]
     fn typed_outputs_read_python_keys_and_preserve_extra_data() -> Result<(), IntentError> {
         let data = Map::from_iter([

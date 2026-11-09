@@ -84,6 +84,8 @@ fn pinned_source_inventory_has_current_hashes_and_no_unresolved_parameters() -> 
     );
     assert_eq!(inventory.commands.len(), 180);
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    // The file is absent when no hand port is due.
+    let port_due = fs::read_to_string(root.join("parity/port_due.toml")).unwrap_or_default();
     for source in inventory.sources {
         assert!(
             source
@@ -96,7 +98,7 @@ fn pinned_source_inventory_has_current_hashes_and_no_unresolved_parameters() -> 
             .path
             .strip_prefix("vendor/upstream/src/")
             .unwrap_or(&source.path);
-        if include_str!("../../../parity/port_due.toml").contains(&format!("py = \"{upstream}\"")) {
+        if port_due.contains(&format!("py = \"{upstream}\"")) {
             continue;
         }
         assert_eq!(

@@ -197,13 +197,22 @@ impl Intent for CreatePureProxy {
         let payer = cx.coldkey_address()?;
         let proxy_type: rtao_runtime::models::ProxyType =
             serde_json::from_value(Value::String(self.proxy_type.clone()))?;
-        // Python also infers `safe` for a stateless post-quantum coldkey;
-        // classical keys have no such inference.
-        let mode = self
+        // Python v488 infers `safe` for a stateless post-quantum coldkey (its
+        // legacy derivation does not guarantee an off-curve account); classical
+        // and rotating keys have no such inference.
+        let mut mode = self
             .account_mode
             .as_deref()
             .map(crate::account_modes::validate_account_mode)
             .transpose()?;
+        if mode.is_none()
+            && rtao_signer::KeyView::authority_descriptor(&cx.origin, SignerRole::Coldkey)
+                .is_some_and(|descriptor| {
+                    rtao_primitives::receiving::is_stateless_pq_descriptor(&descriptor)
+                })
+        {
+            mode = Some(crate::account_modes::AccountMode::Safe);
+        }
         if mode == Some(crate::account_modes::AccountMode::Safe) {
             let call =
                 proxy::create_safe_pure(proxy_type, self.delay, self.index).compose(cx.runtime)?;
@@ -1213,6 +1222,59 @@ mod tests {
         assert!(view.touches().is_empty());
         assert_eq!(chain.requests().len(), requests);
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    // Python v488 `CreatePureProxy.build`: a stateless post-quantum coldkey
+    // (fixed ML-DSA or Falcon) creates a safe pure proxy unless a mode is
+    // given; rotating and classical keys keep the legacy derivation.
+    #[tokio::test]
+    async fn stateless_post_quantum_creators_default_to_safe_pure_proxies() -> anyhow::Result<()> {
+        use rtao_signer::{KeyView, SignerError};
+
+        struct Creator(Vec<u8>);
+        impl KeyView for Creator {
+            fn hotkey_address(&self) -> Result<AccountId, SignerError> {
+                Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+            }
+            fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
+                Err(SignerError::KeyUnavailable(SignerRole::Hotkey))
+            }
+            fn coldkey_address(&self) -> Result<AccountId, SignerError> {
+                Ok(ORIGIN)
+            }
+            fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+                (role == SignerRole::Coldkey).then(|| self.0.clone())
+            }
+        }
+
+        let (_chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        for (code, inferred) in [(8u8, true), (9, true), (11, true), (7, false), (4, false)] {
+            let key = rtao_core::keys::Keypair::from_seed(&[3; 32], code)?;
+            let keys = Creator(key.authorization_descriptor()?);
+            let cx = BuildCx {
+                view: &snapshot,
+                origin: OriginView::Keys(&keys),
+                runtime,
+                clock: &SystemClock,
+                spec: CreatePureProxy::SPEC,
+            };
+            for (mode, safe) in [
+                (None, inferred),
+                (Some("legacy"), false),
+                (Some("safe"), true),
+            ] {
+                let built = pure(mode).build(&cx).await?;
+                let decoded = decode(&built.call, runtime)?;
+                assert_eq!(
+                    decoded["call_function"] == "create_safe_pure",
+                    safe,
+                    "{code} {mode:?}: {decoded}"
+                );
+            }
+        }
         client.close().await;
         Ok(())
     }

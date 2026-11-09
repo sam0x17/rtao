@@ -238,6 +238,7 @@ impl OperationRecord {
                 self.attempt(id).map(|carrier| crate::ShieldReport {
                     carrier_hash: carrier.hash,
                     inner_hash: attempt.hash,
+                    fees: None,
                 })
             })
             .transpose()

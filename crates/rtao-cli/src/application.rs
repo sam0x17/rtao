@@ -1045,9 +1045,74 @@ fn clap_error(error: clap::Error) -> crate::error::CliError {
     let informational = error.kind()
         == clap::error::ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
         || !error.use_stderr();
+    let mut message = error.to_string();
+    // Python v488 `prompt._run_app`: a scheme option given without a value
+    // names the choices.
+    if error.kind() == clap::error::ErrorKind::InvalidValue
+        && let Some(clap::error::ContextValue::String(argument)) =
+            error.get(clap::error::ContextKind::InvalidArg)
+        && matches!(
+            error.get(clap::error::ContextKind::InvalidValue),
+            Some(clap::error::ContextValue::String(value)) if value.is_empty()
+        )
+    {
+        let flag = argument.split_whitespace().next().unwrap_or_default();
+        let hint = match flag {
+            "--crypto-type" | "--hotkey-crypto-type" => Some(
+                " Choose sr (sr25519), ed (ed25519), ms (ML-DSA-65), falcon512, or falcon1024; use --type hashed for rotation.",
+            ),
+            "--type" | "--hotkey-type" => {
+                Some(" Choose standard (fixed key) or hashed (rotating keys).")
+            }
+            _ => None,
+        };
+        if let Some(hint) = hint {
+            let end = message.find('\n').unwrap_or(message.len());
+            message.insert_str(end, hint);
+        }
+    }
     crate::error::CliError {
         code: if informational { 0 } else { 2 },
-        ..crate::error::CliError::failure(error.to_string())
+        ..crate::error::CliError::failure(message)
+    }
+}
+
+#[cfg(test)]
+mod scheme_hint_tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    // Python v488 `prompt._run_app`: a scheme or account-mode option given
+    // without a value names its choices; other missing values are unchanged.
+    #[test]
+    fn missing_scheme_values_name_their_choices() {
+        let message = |args: &[&str]| {
+            let error = command_tree([crate::commands::wallet::command()])
+                .try_get_matches_from(args)
+                .unwrap_err();
+            clap_error(error).message
+        };
+        for flag in ["--crypto-type", "--hotkey-crypto-type"] {
+            let text = message(&["rtao", "wallet", "create", flag]);
+            assert!(
+                text.contains("Choose sr (sr25519), ed (ed25519), ms (ML-DSA-65), falcon512, or falcon1024; use --type hashed for rotation."),
+                "{text}"
+            );
+            assert_eq!(
+                text.lines().count(),
+                message(&["rtao", "wallet", "create", "--n-words"])
+                    .lines()
+                    .count()
+            );
+        }
+        for flag in ["--type", "--hotkey-type"] {
+            let text = message(&["rtao", "wallet", "create", flag]);
+            assert!(
+                text.contains("Choose standard (fixed key) or hashed (rotating keys)."),
+                "{text}"
+            );
+        }
+        assert!(!message(&["rtao", "wallet", "create", "--n-words"]).contains("Choose"));
     }
 }
 

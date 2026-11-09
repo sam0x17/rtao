@@ -8,7 +8,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/globals.py",
-      "sha256": "7a415c6dcbb3566d138f5fad0b8b7f560c45749918f993bea3a7f03170a9e31f"
+      "sha256": "8711c5238711d4e46c6769d9256c542572429040958c6a74b84a1f90b7029423"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/call.py",

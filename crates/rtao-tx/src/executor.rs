@@ -1720,6 +1720,10 @@ impl Executor {
                 let shield = report.shield.filter(|shield| {
                     report.success || report.hash == shield.inner_hash || report.error.is_none()
                 });
+                // A successful carrier whose inner never landed in its era.
+                let inner_expired = shield.is_some_and(|shield| {
+                    !report.success && report.hash == shield.carrier_hash && report.error.is_none()
+                });
                 let mut result =
                     ExtrinsicResult::from_report(report, self.client.network().label(), Map::new());
                 if result.success || shield.is_some() {
@@ -1730,10 +1734,24 @@ impl Executor {
                             "inner_extrinsic_hash".into(),
                             json!(format!("0x{}", hex::encode(shield.inner_hash.0))),
                         );
+                        // Python v488: both fees of a resolved Shield pair.
+                        if let Some(fees) = shield.fees {
+                            result.data.insert(
+                                "shield_carrier_fee_rao".into(),
+                                json!(fees.carrier.map(|fee| fee.0)),
+                            );
+                            result.data.insert(
+                                "shield_inner_fee_rao".into(),
+                                json!(fees.inner.map(|fee| fee.0)),
+                            );
+                        }
                     }
                 }
                 if !result.success && result.error.is_none() {
-                    result.error = Some(ChainError::new(result.message.clone(), None));
+                    result.error = Some(ChainError::new(
+                        result.message.clone(),
+                        inner_expired.then(|| "ShieldInnerExpired".to_owned()),
+                    ));
                 }
                 Ok(result)
             }

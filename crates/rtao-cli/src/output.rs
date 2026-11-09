@@ -1606,10 +1606,21 @@ impl Output {
 
     // py: sdk/python/bittensor/cli/output.py:2240-2262
     // Receipt rows use card prose; generic detail fields retain their own format.
+    // A list of records (spend entries) renders one row per record (v488).
     fn result_fields(&self, fields: &[(String, Value)]) -> Result<(), OutputError> {
-        let fields = fields
+        let mut rows = Vec::new();
+        for (key, value) in fields {
+            let label = key.replace('_', " ");
+            match record_list(value) {
+                Some(records) => {
+                    rows.extend(record_rows(&label, records, |_, value| python_value(value)))
+                }
+                None => rows.push((label, value.clone())),
+            }
+        }
+        let fields = rows
             .iter()
-            .map(|(key, value)| (key.replace('_', " "), value))
+            .map(|(key, value)| (key, value))
             .collect::<Vec<_>>();
         let width = fields
             .iter()
@@ -1630,6 +1641,169 @@ impl Output {
             )?;
         }
         Ok(())
+    }
+
+    // py: sdk/python/bittensor/cli/output.py:850-882
+    /// Python v488 `_wallet_address_rows`: a key's shareable receiving
+    /// address first, its explorer account, and what its registration status
+    /// means for sharing either form.
+    fn wallet_address_rows(&self, record: &Map<String, Value>) -> Vec<(String, Value)> {
+        let text = |key: &str| record.get(key).and_then(Value::as_str).map(str::to_owned);
+        let status = text("registration").unwrap_or_else(|| "not_checked".into());
+        let network = text("registration_network")
+            .filter(|network| !network.is_empty())
+            .or_else(|| self.options.network.clone())
+            .unwrap_or_else(|| "selected network".into());
+        let mut note = match status.as_str() {
+            "registered" => format!("Registered on {network} (finalized)."),
+            "not_checked" => format!("Registration not checked on {network}"),
+            "unregistered" => format!("Not registered on {network}"),
+            "unavailable" => format!("Registration check unavailable on {network}"),
+            "mismatch" => format!(
+                "Registration on {network} does not match this wallet; do not use or publicly share either address."
+            ),
+            _ => format!("Registration unconfirmed on {network}"),
+        };
+        if status == "unregistered" {
+            note.push_str("; finalize registration before publicly sharing either address.");
+        } else if !matches!(status.as_str(), "registered" | "mismatch") {
+            note.push_str(
+                "; confirm finalized registration before publicly sharing either address.",
+            );
+        }
+        if status != "mismatch" {
+            note.push_str(
+                " Use the receiving address for transactions; explorers display the same account as SS58.",
+            );
+        }
+        vec![
+            (
+                "Receiving address".into(),
+                json!(text("receiving_address").unwrap_or_default()),
+            ),
+            (
+                "Account ID (SS58)".into(),
+                json!(text("ss58").unwrap_or_else(|| "unavailable".into())),
+            ),
+            ("Address info".into(), json!(note)),
+        ]
+    }
+
+    // py: sdk/python/bittensor/cli/output.py:884-942
+    /// Python v488 `wallet_detail`: a wallet's keys with both address forms
+    /// (receiving address first) and one Type row per key, without repeating
+    /// the machine aliases; JSON keeps every field.
+    pub fn wallet_detail(
+        &self,
+        title: Option<&str>,
+        fields: &[(String, Value)],
+    ) -> Result<(), OutputError> {
+        if self.options.json_mode {
+            return self.detail(title, fields, None);
+        }
+        let get = |key: &str| fields.iter().find(|(name, _)| name == key).map(|(_, v)| v);
+        let truthy = |key: &str| {
+            get(key).is_some_and(|value| match value {
+                Value::Null => false,
+                Value::String(text) => !text.is_empty(),
+                _ => true,
+            })
+        };
+        const SUFFIXES: [&str; 7] = [
+            "ss58",
+            "address",
+            "receiving_address",
+            "primary_address",
+            "registration",
+            "registration_network",
+            "registration_block_hash",
+        ];
+        const TYPES: [&str; 3] = ["crypto_type", "account_type", "signing_scheme"];
+        let prefixes = ["", "coldkey_", "hotkey_"];
+        let address_prefix = |key: &str| {
+            prefixes.iter().copied().find(|prefix| {
+                truthy(&format!("{prefix}receiving_address"))
+                    && SUFFIXES
+                        .iter()
+                        .any(|suffix| key == format!("{prefix}{suffix}"))
+            })
+        };
+        let type_prefix = |key: &str| {
+            prefixes.iter().copied().find(|prefix| {
+                TYPES
+                    .iter()
+                    .all(|suffix| truthy(&format!("{prefix}{suffix}")))
+                    && TYPES
+                        .iter()
+                        .any(|suffix| key == format!("{prefix}{suffix}"))
+            })
+        };
+        let role = |prefix: &str, label: &str| {
+            let role = prefix.trim_end_matches('_');
+            if role.is_empty() {
+                label.to_owned()
+            } else {
+                format!("{role} {label}")
+            }
+        };
+        let mut shown = BTreeSet::new();
+        let mut shown_types = BTreeSet::new();
+        let mut display = Vec::new();
+        for (key, value) in fields {
+            if let Some(prefix) = type_prefix(key) {
+                if shown_types.insert(prefix) {
+                    let text = |suffix: &str| {
+                        get(&format!("{prefix}{suffix}"))
+                            .map(python_value)
+                            .unwrap_or_default()
+                    };
+                    display.push((
+                        role(prefix, "Type"),
+                        json!(format!(
+                            "{}, {}",
+                            text("signing_scheme"),
+                            text("account_type")
+                        )),
+                    ));
+                }
+                continue;
+            }
+            let Some(prefix) = address_prefix(key) else {
+                display.push((key.clone(), value.clone()));
+                continue;
+            };
+            if !shown.insert(prefix) {
+                continue;
+            }
+            let record = SUFFIXES
+                .iter()
+                .filter_map(|suffix| {
+                    get(&format!("{prefix}{suffix}"))
+                        .map(|value| ((*suffix).to_owned(), value.clone()))
+                })
+                .collect::<Map<String, Value>>();
+            for (label, value) in self.wallet_address_rows(&record) {
+                display.push((role(prefix, &label), value));
+            }
+        }
+        self.detail(title, &display, None)
+    }
+
+    /// Python v488 `_wallet_node` address lines for one listed key (empty
+    /// without a receiving address).
+    pub fn wallet_node_address_lines(&self, record: &Value) -> Vec<String> {
+        let Some(record) = record.as_object().filter(|record| {
+            record
+                .get("receiving_address")
+                .and_then(Value::as_str)
+                .is_some_and(|address| !address.is_empty())
+        }) else {
+            return Vec::new();
+        };
+        self.wallet_address_rows(record)
+            .into_iter()
+            .map(|(label, value)| format!("{label}: {}", python_value(&value)))
+            .collect()
     }
 
     /// Render a raised CLI failure with its retained typed diagnostic.
@@ -2049,6 +2223,46 @@ fn review_json(value: &Value) -> String {
 
 // Receipt scalars use Python str and containers use Python json.dumps.
 // Their shared number spelling comes from the existing Python JSON formatter.
+/// The records of a nonempty list whose items are all objects.
+pub(crate) fn record_list(value: &Value) -> Option<&[Value]> {
+    value
+        .as_array()
+        .filter(|items| !items.is_empty() && items.iter().all(Value::is_object))
+        .map(Vec::as_slice)
+}
+
+// py: sdk/python/bittensor/cli/output.py:225-236
+/// Python v488 `record_rows`: a list of records (spend entries) as one card
+/// row per record, `label 1`, `label 2`, ..., each `key value` pair in order.
+pub fn record_rows(
+    label: &str,
+    records: &[Value],
+    text: impl Fn(&str, &Value) -> String,
+) -> Vec<(String, Value)> {
+    records
+        .iter()
+        .enumerate()
+        .map(|(index, record)| {
+            let parts = record
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|(key, value)| {
+                    format!(
+                        "{} {}",
+                        key.strip_suffix("_ss58").unwrap_or(key).replace('_', " "),
+                        text(key, value)
+                    )
+                })
+                .collect::<Vec<_>>();
+            (
+                format!("{label} {}", index + 1),
+                Value::String(parts.join("  ")),
+            )
+        })
+        .collect()
+}
+
 fn result_json(value: &Value) -> Result<String, OutputError> {
     let mut serialized = Vec::new();
     PyJsonFormatter::to_writer(&mut serialized, value)?;
@@ -2149,6 +2363,37 @@ fn python_bytes_repr(bytes: &[u8]) -> String {
     }
     out.push(quote);
     out
+}
+
+#[cfg(test)]
+mod record_row_tests {
+    use super::*;
+
+    // Python v488 `record_rows`: one row per record, `_ss58` dropped from
+    // keys and underscores spaced, each value through the caller's renderer.
+    #[test]
+    fn records_render_one_numbered_row_each() {
+        let records = vec![
+            json!({"hotkey_ss58": "5Hot", "amount_gamma": "1.5", "reference": null}),
+            json!({"hotkey_ss58": "5Other", "amount_gamma": "2"}),
+        ];
+        assert_eq!(record_list(&json!(records)), Some(records.as_slice()));
+        assert_eq!(record_list(&json!([])), None);
+        assert_eq!(record_list(&json!([{"a": 1}, 2])), None);
+        assert_eq!(
+            record_rows("spends", &records, |_, value| python_value(value)),
+            vec![
+                (
+                    "spends 1".to_owned(),
+                    json!("hotkey 5Hot  amount gamma 1.5  reference None")
+                ),
+                (
+                    "spends 2".to_owned(),
+                    json!("hotkey 5Other  amount gamma 2")
+                ),
+            ]
+        );
+    }
 }
 
 #[cfg(test)]

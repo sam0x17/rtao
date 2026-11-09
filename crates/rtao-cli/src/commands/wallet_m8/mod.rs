@@ -464,6 +464,18 @@ pub(super) async fn run_local(
     matches: &ArgMatches,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
+    run_local_with(ctx, None, name, matches, history).await
+}
+
+/// [`run_local`] with an injected client for the operations that read the
+/// chain (`sign`'s finalized hashed generation); without one they connect.
+pub(super) async fn run_local_with(
+    ctx: &mut AppContext,
+    client: Option<&Client>,
+    name: &str,
+    matches: &ArgMatches,
+    history: &mut PromptHistory,
+) -> Result<(), CliError> {
     if name == "verify" {
         let message = text(matches, "message").ok_or_else(|| input("missing --message"))?;
         let signature = text(matches, "signature").ok_or_else(|| input("missing --signature"))?;
@@ -573,9 +585,13 @@ pub(super) async fn run_local(
                         "post-quantum arbitrary message signing is not supported",
                     ));
                 }
-                let generation =
-                    finalized_hashed_generation(ctx, authority.account(), authority.descriptor())
-                        .await?;
+                let generation = finalized_hashed_generation(
+                    ctx,
+                    client,
+                    authority.account(),
+                    authority.descriptor(),
+                )
+                .await?;
                 authority
                     .sign_message(generation, message.as_bytes())
                     .await
@@ -637,11 +653,24 @@ pub(super) async fn run_local(
 /// key's own descriptor.
 async fn finalized_hashed_generation(
     ctx: &AppContext,
+    client: Option<&Client>,
     account: AccountId,
     descriptor: &[u8],
 ) -> Result<u64, CliError> {
     let descriptor = descriptor.to_vec();
-    ctx.run(move |client| async move {
+    if let Some(client) = client {
+        return finalized_generation_at(client.clone(), account, descriptor).await;
+    }
+    ctx.run(move |client| finalized_generation_at(client, account, descriptor))
+        .await
+}
+
+async fn finalized_generation_at(
+    client: Client,
+    account: AccountId,
+    descriptor: Vec<u8>,
+) -> Result<u64, CliError> {
+    {
         use rtao::client::ViewExt;
         let finalized = client
             .at(rtao::client::BlockRef::Finalized)
@@ -668,8 +697,7 @@ async fn finalized_hashed_generation(
             .get("generation")
             .and_then(Value::as_u64)
             .ok_or_else(unregistered)
-    })
-    .await
+    }
 }
 
 async fn local_signer(

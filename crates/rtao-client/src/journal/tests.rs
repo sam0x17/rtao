@@ -1037,7 +1037,8 @@ async fn schema3_actual_signed_pair_recovers_inner_not_vector_tail_or_carrier_re
                 receipt.shield,
                 Some(crate::ShieldReport {
                     carrier_hash,
-                    inner_hash
+                    inner_hash,
+                    fees: None,
                 })
             );
         }
