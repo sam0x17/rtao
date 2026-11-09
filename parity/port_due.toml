@@ -341,28 +341,12 @@ tag = "v488"
 symbols = ["bittensor.pow_registration.mine_registration", "bittensor.pow_registration.parse_recipient"]
 
 [[file]]
-py = "sdk/python/bittensor/signing.py"
-kind = "ported"
-from = "25e9a4a9dcbe5ac7fadcc8dedb41c011e904adcd"
-to = "98e1ec5934be865830ee493ec6e54f7820803d88"
-tag = "v488"
-symbols = ["bittensor.signing.REGISTERED_CRYPTO_TYPES", "bittensor.signing.WalletSigner", "bittensor.signing.WalletSigner.__init__", "bittensor.signing.WalletSigner._public", "bittensor.signing.WalletSigner._unlock", "bittensor.signing.WalletSigner.at_generation", "bittensor.signing.WalletSigner.hashed_descriptor", "bittensor.signing._check_signer_identity", "bittensor.signing._signer_identity", "bittensor.signing.is_stateless_pq", "bittensor.signing.resolve_signer", "bittensor.signing.ss58_decode"]
-
-[[file]]
 py = "sdk/python/bittensor/sync.py"
 kind = "ported"
 from = "016c553c25af0acd871346968934cf0bc1a535c6"
 to = "e6c93496802b43aaae09ee551a054e9317f6bcc1"
 tag = "v488"
 symbols = ["bittensor.sync.DEFAULT_ERA_PERIOD", "bittensor.sync.DEFAULT_NETWORK", "bittensor.sync.MEV_SHIELD_ERA_PERIOD", "bittensor.sync.SyncClient", "bittensor.sync.SyncClient.__init__", "bittensor.sync.SyncClient.estimate_shielded_carrier_fee", "bittensor.sync.SyncClient.gamma", "bittensor.sync.SyncClient.multisig", "bittensor.sync.SyncClient.preflight", "bittensor.sync.SyncClient.prepare_mldsa_call", "bittensor.sync.SyncClient.prepare_pq_call", "bittensor.sync.SyncClient.register_wallet"]
-
-[[file]]
-py = "sdk/python/bittensor/wallet.py"
-kind = "ported"
-from = "8206e3b032184f52506ce38abb5ca6b4cf75b9a3"
-to = "0cbaa72e41976d784655d5bfa9509169351eb241"
-tag = "v488"
-symbols = ["bittensor.wallet.CRYPTO_SR25519", "bittensor.wallet.FIXED_PQ_CRYPTO_TYPES", "bittensor.wallet.PQ_CRYPTO_TYPES", "bittensor.wallet.REGISTERED_CRYPTO_TYPES", "bittensor.wallet.Wallet", "bittensor.wallet.Wallet.__init__", "bittensor.wallet.Wallet._set_coldkey", "bittensor.wallet.Wallet._set_coldkeypub", "bittensor.wallet.Wallet._set_hotkey", "bittensor.wallet.Wallet._set_hotkeypub", "bittensor.wallet.Wallet._set_keypair_with_public", "bittensor.wallet.Wallet._set_keypair_with_public_locked", "bittensor.wallet.Wallet.create_new_coldkey", "bittensor.wallet.Wallet.create_new_hotkey", "bittensor.wallet.Wallet.regenerate_coldkey", "bittensor.wallet.Wallet.regenerate_coldkeypub", "bittensor.wallet.Wallet.regenerate_hotkey", "bittensor.wallet.Wallet.regenerate_hotkeypub", "bittensor.wallet._DIRECTORY_LOCKS", "bittensor.wallet._DIRECTORY_LOCKS_GUARD", "bittensor.wallet._DIRECTORY_LOCK_DEPTH", "bittensor.wallet._cleanup_backups", "bittensor.wallet._keyfile_inode", "bittensor.wallet._public_only", "bittensor.wallet._restore_public_key", "bittensor.wallet._wallet_directory_lock", "bittensor.wallet.account_crypto_type", "bittensor.wallet.contextmanager", "bittensor.wallet.logging", "bittensor.wallet.os", "bittensor.wallet.tempfile", "bittensor.wallet.threading"]
 
 [[file]]
 py = "sdk/python/bittensor/wallets.py"

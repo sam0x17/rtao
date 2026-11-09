@@ -2286,6 +2286,15 @@ impl rtao::signer::KeyView for CliWalletKeys {
     fn coldkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
         self.wallet.coldkey_address()
     }
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        self.wallet.hotkey_descriptor()
+    }
+    fn local_descriptor(&self, account: &AccountId) -> Option<Vec<u8>> {
+        self.wallet.local_descriptor(account)
+    }
+    fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+        self.wallet.authority_descriptor(role)
+    }
 }
 impl DynKeySource for CliWalletKeys {
     fn signer_for<'a>(

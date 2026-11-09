@@ -13,7 +13,9 @@ mod testsupport;
 mod wallet;
 
 pub use files::read_data as read_keyfile_data;
-pub use files::{ColdkeyFile, HotkeyFile, Overwrite, PublicKeyInfo, WriteOptions};
+pub use files::{
+    ColdkeyFile, HotkeyFile, Overwrite, PublicKeyInfo, WriteOptions, public_descriptor,
+};
 pub use keyfile::{
     KeyPasswordSources, Keyfile, KeyfileEnvironment, KeyfileEnvironmentOverlay,
     resolve_key_password,
@@ -27,7 +29,7 @@ pub use password::{
     PromptPolicy, env_var_name, resolve_wallet_password,
 };
 pub use secrecy::{ExposeSecret, SecretString};
-pub use wallet::{GeneratedKey, RegenerateFrom, Wallet, WalletRef};
+pub use wallet::{GeneratedKey, KeyScheme, RegenerateFrom, Wallet, WalletRef, local_descriptor};
 
 use rtao_core::CoreError;
 use std::{fmt, path::PathBuf};

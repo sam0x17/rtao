@@ -35,7 +35,13 @@ pub struct PublicKeyInfo {
     /// Exact public account bytes.
     pub account: AccountId,
     /// Stored scheme, defaulting to sr25519 for legacy files as in the core.
+    ///
+    /// For a hashed or post-quantum key this is the nominal Sr25519 that no
+    /// 64-byte path signs with; [`Self::authority`] names its scheme.
     pub crypto_type: CryptoType,
+    /// The hashed or post-quantum scheme of the key, if it is one (D-150).
+    /// Its public descriptor comes from [`public_descriptor`].
+    pub authority: Option<rtao_primitives::AuthorityType>,
 }
 
 /// Whether an existing keyfile may be replaced.
@@ -135,17 +141,41 @@ impl FileState {
         // WalletSigner does: a secret file that decrypts to another key must
         // not sign for the account the public companion names.
         let expected = self.expected_identity()?;
+        let expected_descriptor = match expected {
+            Some(PublicKeyInfo {
+                authority: Some(_), ..
+            }) => self.public_descriptor()?,
+            _ => None,
+        };
         let keypair = self.load_keypair().await?;
-        if let Some(expected) = expected
-            && (AccountId(keypair.public_key_bytes()) != expected.account
-                || keypair.crypto_type() != u8::from(expected.crypto_type))
-        {
-            return Err(WalletError::IdentityMismatch(self.path.clone()));
+        let code = keypair.crypto_type();
+        if let Some(expected) = expected {
+            let expected_code = expected
+                .authority
+                .map_or(u8::from(expected.crypto_type), u8::from);
+            if AccountId(keypair.public_key_bytes()) != expected.account || code != expected_code {
+                return Err(WalletError::IdentityMismatch(self.path.clone()));
+            }
         }
-        let signer: Arc<dyn Signer> = Arc::new(
-            KeypairSigner::new(keypair)
-                .map_err(|error| WalletError::Blocking(error.to_string()))?,
-        );
+        // A hashed or post-quantum key signs authorization proofs through
+        // the same Signer seam (D-149, D-150).
+        let signer: Arc<dyn Signer> = if rtao_primitives::AuthorityType::try_from(code).is_ok() {
+            let signer = rtao_signer::KeypairAuthoritySigner::new(keypair)
+                .map_err(|_| WalletError::IdentityMismatch(self.path.clone()))?;
+            if let (Some(expected), Some(descriptor)) = (expected, expected_descriptor.as_deref())
+                && signer
+                    .expect_identity(expected.account, descriptor)
+                    .is_err()
+            {
+                return Err(WalletError::IdentityMismatch(self.path.clone()));
+            }
+            Arc::new(signer)
+        } else {
+            Arc::new(
+                KeypairSigner::new(keypair)
+                    .map_err(|error| WalletError::Blocking(error.to_string()))?,
+            )
+        };
         *cached = Some(signer.clone());
         Ok(signer)
     }
@@ -280,12 +310,19 @@ impl FileState {
         rtao_core::offload(move || {
             let result = (|| {
                 let _installation = before_install()?;
-                let public = Keypair::new(
-                    None,
-                    Some(&keypair.public_key_bytes()),
-                    keypair.crypto_type(),
-                    keypair.ss58_format(),
-                )?;
+                // A hashed or post-quantum public companion keeps its descriptor
+                // (Python `_public_only` -> `Keypair.public_only`).
+                let public =
+                    if rtao_primitives::AuthorityType::try_from(keypair.crypto_type()).is_ok() {
+                        keypair.public_only()?
+                    } else {
+                        Keypair::new(
+                            None,
+                            Some(&keypair.public_key_bytes()),
+                            keypair.crypto_type(),
+                            keypair.ss58_format(),
+                        )?
+                    };
                 let bytes =
                     Zeroizing::new(keyfile_json::serialized_keypair_to_keyfile_data(&keypair)?);
                 #[cfg(feature = "encrypted")]
@@ -350,6 +387,39 @@ impl FileState {
                 Ok(None)
             }
             Err(error) => Err(error),
+        }
+    }
+    /// The public descriptor of this role's hashed or post-quantum key, from
+    /// its public companion (or a plaintext legacy hotkey file).
+    pub(crate) fn public_descriptor(&self) -> Result<Option<Vec<u8>>, WalletError> {
+        match public_descriptor(&self.public) {
+            Ok(descriptor) => Ok(descriptor),
+            Err(WalletError::Io { error, .. })
+                if self.role == SignerRole::Hotkey
+                    && error.kind() == std::io::ErrorKind::NotFound =>
+            {
+                public_descriptor(&self.path)
+            }
+            Err(error) => Err(error),
+        }
+    }
+    /// [`Self::public_descriptor`] when this key is one, without errors.
+    pub(crate) fn authority_descriptor(&self) -> Option<Vec<u8>> {
+        match self.public_info() {
+            Ok(PublicKeyInfo {
+                authority: Some(_), ..
+            }) => self.public_descriptor().ok().flatten(),
+            _ => None,
+        }
+    }
+    /// The descriptor when this key needs registration (rotating schemes).
+    pub(crate) fn registration_descriptor(&self) -> Option<Vec<u8>> {
+        match self.public_info() {
+            Ok(PublicKeyInfo {
+                authority: Some(kind),
+                ..
+            }) if kind.requires_registration() => self.public_descriptor().ok().flatten(),
+            _ => None,
         }
     }
     pub(crate) fn public_info(&self) -> Result<PublicKeyInfo, WalletError> {
@@ -495,6 +565,16 @@ macro_rules! file_roles {
             fn coldkey_address(&self) -> Result<AccountId, SignerError> {
                 self.0.cold_address()
             }
+            fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+                (self.0.role == SignerRole::Hotkey)
+                    .then(|| self.0.registration_descriptor())
+                    .flatten()
+            }
+            fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+                (self.0.role == role)
+                    .then(|| self.0.authority_descriptor())
+                    .flatten()
+            }
         }
         impl KeySource<$role> for $file {
             fn address(&self) -> Result<AccountId, SignerError> {
@@ -631,17 +711,22 @@ pub(crate) fn public_info(path: &Path) -> Result<PublicKeyInfo, WalletError> {
         return Err(WalletError::PublicKeyUnavailable(path.to_owned()));
     }
     keyfile_json::with_public_keyfile_fields(&bytes, |crypto_type, address, public| {
-        let crypto_type = CryptoType::try_from(crypto_type).map_err(|_| {
-            WalletError::Core(rtao_core::CoreError::Crypto(
-                "unsupported public keyfile crypto type".into(),
-            ))
-        })?;
+        let authority = rtao_primitives::AuthorityType::try_from(crypto_type).ok();
+        let crypto_type = match authority {
+            Some(_) => CryptoType::Sr25519,
+            None => CryptoType::try_from(crypto_type).map_err(|_| {
+                WalletError::Core(rtao_core::CoreError::Crypto(
+                    "unsupported public keyfile crypto type".into(),
+                ))
+            })?,
+        };
         if let Some(address) = address {
             return address
                 .parse()
                 .map(|account| PublicKeyInfo {
                     account,
                     crypto_type,
+                    authority,
                 })
                 .map_err(WalletError::from);
         }
@@ -653,6 +738,7 @@ pub(crate) fn public_info(path: &Path) -> Result<PublicKeyInfo, WalletError> {
                 .map(|bytes| PublicKeyInfo {
                     account: AccountId(bytes),
                     crypto_type,
+                    authority,
                 })
                 .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()));
         }
@@ -660,6 +746,21 @@ pub(crate) fn public_info(path: &Path) -> Result<PublicKeyInfo, WalletError> {
     })
     .map_err(|_| WalletError::PublicKeyUnavailable(path.to_owned()))?
 }
+/// The public descriptor of a plaintext public keyfile's hashed or
+/// post-quantum key, parsed with the core's descriptor and address checks;
+/// `None` for a classical key. Never decrypts or reads a secret.
+pub fn public_descriptor(path: &Path) -> Result<Option<Vec<u8>>, WalletError> {
+    let bytes = read_data(path)?;
+    if keyfile_json::keyfile_data_is_encrypted(&bytes) {
+        return Err(WalletError::PublicKeyUnavailable(path.to_owned()));
+    }
+    let keypair = keyfile_json::deserialize_keypair_from_keyfile_data(&bytes)?;
+    if rtao_primitives::AuthorityType::try_from(keypair.crypto_type()).is_err() {
+        return Ok(None);
+    }
+    Ok(Some(keypair.authorization_descriptor()?))
+}
+
 fn preflight(path: &Path, overwrite: Overwrite) -> Result<(), WalletError> {
     match fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
@@ -1406,7 +1507,8 @@ mod read_security_tests {
             file.public_info().unwrap(),
             PublicKeyInfo {
                 account,
-                crypto_type: CryptoType::Ed25519
+                crypto_type: CryptoType::Ed25519,
+                authority: None,
             }
         );
         for malformed in [

@@ -11467,7 +11467,7 @@
           "crates/rtao-wallet/src/files.rs",
           "crates/rtao-wallet/src/wallet.rs"
         ],
-        "synced_blob": "25e9a4a9dcbe5ac7fadcc8dedb41c011e904adcd"
+        "synced_blob": "98e1ec5934be865830ee493ec6e54f7820803d88"
       },
       {
         "kind": "ported",
@@ -11612,10 +11612,11 @@
         "python": "sdk/python/bittensor/wallet.py",
         "rtao": "reconciled",
         "rust": [
-          "rtao_wallet::{Wallet,WalletRef,GeneratedKey,RegenerateFrom}",
-          "rtao_wallet::{ColdkeyFile,HotkeyFile,WriteOptions,Overwrite}"
+          "rtao_wallet::{Wallet,WalletRef,GeneratedKey,RegenerateFrom,KeyScheme,local_descriptor}",
+          "rtao_wallet::{ColdkeyFile,HotkeyFile,WriteOptions,Overwrite,PublicKeyInfo,public_descriptor}",
+          "crates/rtao-wallet/tests/authority_wallets.rs"
         ],
-        "synced_blob": "8206e3b032184f52506ce38abb5ca6b4cf75b9a3"
+        "synced_blob": "0cbaa72e41976d784655d5bfa9509169351eb241"
       },
       {
         "kind": "ported",

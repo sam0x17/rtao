@@ -142,6 +142,57 @@ impl KeyView for WalletRef {
     fn coldkey_address(&self) -> Result<AccountId, SignerError> {
         public_account(&self.coldkeypub_path()).map_err(signer_error)
     }
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        HotkeyFile::new(self.hotkey_path()).hotkey_descriptor()
+    }
+    fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+        match role {
+            SignerRole::Coldkey => ColdkeyFile::new(self.coldkey_path()).authority_descriptor(role),
+            SignerRole::Hotkey => HotkeyFile::new(self.hotkey_path()).authority_descriptor(role),
+        }
+    }
+    fn local_descriptor(&self, account: &AccountId) -> Option<Vec<u8>> {
+        local_descriptor(self.path(), account)
+    }
+}
+
+/// Python's `hashed._local_descriptor`: the public descriptor of a key under
+/// the wallets directory `root` whose account is `account` and needs
+/// registration, from plaintext public companions only (`*/coldkeypub.txt`,
+/// `*/hotkeys/*pub.txt`), in sorted order; never a private key or a prompt.
+pub fn local_descriptor(root: &std::path::Path, account: &AccountId) -> Option<Vec<u8>> {
+    let mut candidates = Vec::new();
+    for wallet in sorted_dir(root) {
+        candidates.push(wallet.join("coldkeypub.txt"));
+        candidates.extend(
+            sorted_dir(&wallet.join("hotkeys"))
+                .into_iter()
+                .filter(|path| {
+                    path.file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| name.ends_with("pub.txt"))
+                }),
+        );
+    }
+    candidates.into_iter().find_map(|path| {
+        let info = crate::files::public_info(&path).ok()?;
+        if info.account != *account || !info.authority?.requires_registration() {
+            return None;
+        }
+        crate::files::public_descriptor(&path).ok().flatten()
+    })
+}
+
+fn sorted_dir(path: &std::path::Path) -> Vec<PathBuf> {
+    let mut entries: Vec<PathBuf> = std::fs::read_dir(path)
+        .map(|entries| {
+            entries
+                .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+                .collect()
+        })
+        .unwrap_or_default();
+    entries.sort();
+    entries
 }
 /// A wallet with independent, shared hotkey/coldkey unlock caches.
 ///
@@ -264,9 +315,43 @@ impl Wallet {
         crypto: CryptoType,
         options: WriteOptions,
     ) -> Result<GeneratedKey, WalletError> {
+        self.create_key_as(role, Some(n_words), KeyScheme::Classical(crypto), options)
+            .await
+    }
+    /// Create a new coldkey of any scheme, hashed and post-quantum included
+    /// (D-150). `n_words` defaults to 12, or 24 for post-quantum schemes,
+    /// which require a fresh 24-word phrase (Python v488).
+    pub async fn create_new_coldkey_as(
+        &self,
+        n_words: Option<usize>,
+        scheme: KeyScheme,
+        options: WriteOptions,
+    ) -> Result<GeneratedKey, WalletError> {
+        self.create_key_as(SignerRole::Coldkey, n_words, scheme, options)
+            .await
+    }
+    /// [`Self::create_new_coldkey_as`] for the hotkey.
+    pub async fn create_new_hotkey_as(
+        &self,
+        n_words: Option<usize>,
+        scheme: KeyScheme,
+        options: WriteOptions,
+    ) -> Result<GeneratedKey, WalletError> {
+        self.create_key_as(SignerRole::Hotkey, n_words, scheme, options)
+            .await
+    }
+    async fn create_key_as(
+        &self,
+        role: SignerRole,
+        n_words: Option<usize>,
+        scheme: KeyScheme,
+        options: WriteOptions,
+    ) -> Result<GeneratedKey, WalletError> {
+        let words = scheme.mnemonic_words(n_words)?;
+        let code = scheme.code();
         let (keypair, mnemonic) = rtao_core::offload(move || {
-            let mnemonic = SecretString::new(Keypair::generate_mnemonic(n_words)?);
-            let keypair = Keypair::from_mnemonic(mnemonic.expose_secret(), u8::from(crypto), None)
+            let mnemonic = SecretString::new(Keypair::generate_mnemonic(words)?);
+            let keypair = Keypair::from_mnemonic(mnemonic.expose_secret(), code, None)
                 .map_err(|error| redacted_derivation_error(error, SecretInput::Mnemonic))?;
             Ok::<_, WalletError>((keypair, mnemonic))
         })
@@ -276,7 +361,8 @@ impl Wallet {
         Ok(GeneratedKey {
             mnemonic,
             account,
-            crypto,
+            crypto: scheme.crypto_type(),
+            scheme,
         })
     }
     pub(crate) fn state(&self, role: SignerRole) -> &crate::files::FileState {
@@ -312,7 +398,38 @@ impl Wallet {
         crypto: CryptoType,
         options: WriteOptions,
     ) -> Result<AccountId, WalletError> {
-        let keypair = rtao_core::offload(move || source.derive(crypto))
+        self.regenerate_as(role, source, KeyScheme::Classical(crypto), options)
+            .await
+    }
+    /// Regenerate a coldkey of any scheme (D-150).
+    pub async fn regenerate_coldkey_as(
+        &self,
+        source: RegenerateFrom,
+        scheme: KeyScheme,
+        options: WriteOptions,
+    ) -> Result<AccountId, WalletError> {
+        self.regenerate_as(SignerRole::Coldkey, source, scheme, options)
+            .await
+    }
+    /// Regenerate a hotkey of any scheme (D-150).
+    pub async fn regenerate_hotkey_as(
+        &self,
+        source: RegenerateFrom,
+        scheme: KeyScheme,
+        options: WriteOptions,
+    ) -> Result<AccountId, WalletError> {
+        self.regenerate_as(SignerRole::Hotkey, source, scheme, options)
+            .await
+    }
+    async fn regenerate_as(
+        &self,
+        role: SignerRole,
+        source: RegenerateFrom,
+        scheme: KeyScheme,
+        options: WriteOptions,
+    ) -> Result<AccountId, WalletError> {
+        let code = scheme.code();
+        let keypair = rtao_core::offload(move || source.derive(code))
             .await
             .map_err(|_| WalletError::Blocking("key derivation task failed".into()))??;
         self.state(role).store(keypair, options).await
@@ -336,6 +453,48 @@ impl Wallet {
     ) -> Result<(), WalletError> {
         self.regenerate_public(self.reference.hotkeypub_path(), account, crypto, overwrite)
             .await
+    }
+    /// Python `_restore_public_key` for a hashed or post-quantum key: create
+    /// or replace the coldkey public companion from its complete receiving
+    /// address (the descriptor it carries), never from a bare account.
+    pub async fn regenerate_coldkeypub_receiving(
+        &self,
+        address: &str,
+        overwrite: Overwrite,
+    ) -> Result<AccountId, WalletError> {
+        self.regenerate_public_receiving(self.reference.coldkeypub_path(), address, overwrite)
+            .await
+    }
+    /// [`Self::regenerate_coldkeypub_receiving`] for the hotkey companion.
+    pub async fn regenerate_hotkeypub_receiving(
+        &self,
+        address: &str,
+        overwrite: Overwrite,
+    ) -> Result<AccountId, WalletError> {
+        self.regenerate_public_receiving(self.reference.hotkeypub_path(), address, overwrite)
+            .await
+    }
+    async fn regenerate_public_receiving(
+        &self,
+        path: PathBuf,
+        address: &str,
+        overwrite: Overwrite,
+    ) -> Result<AccountId, WalletError> {
+        let recipient = rtao_primitives::receiving::parse_recipient(address)?;
+        let descriptor = recipient.descriptor.ok_or_else(|| {
+            WalletError::Core(rtao_core::CoreError::Crypto(
+                "hashed watch-only recovery requires the complete receiving address; copy it from `rtao wallet show`".into(),
+            ))
+        })?;
+        let account = recipient.account;
+        rtao_core::offload(move || {
+            let keypair = Keypair::from_hashed_descriptor(&descriptor, 42)?;
+            let bytes = rtao_core::keyfile_json::serialized_keypair_to_keyfile_data(&keypair)?;
+            atomic_write_locked(&path, &bytes, overwrite)
+        })
+        .await
+        .map_err(|error| WalletError::Blocking(error.to_string()))??;
+        Ok(account)
     }
     async fn regenerate_public(
         &self,
@@ -362,6 +521,18 @@ impl KeyView for Wallet {
     }
     fn coldkey_address(&self) -> Result<AccountId, SignerError> {
         self.coldkey.coldkey_address()
+    }
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        self.hotkey.hotkey_descriptor()
+    }
+    fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+        match role {
+            SignerRole::Coldkey => self.coldkey.authority_descriptor(role),
+            SignerRole::Hotkey => self.hotkey.authority_descriptor(role),
+        }
+    }
+    fn local_descriptor(&self, account: &AccountId) -> Option<Vec<u8>> {
+        local_descriptor(self.reference.path(), account)
     }
 }
 impl KeySource<Coldkey> for Wallet {
@@ -395,8 +566,69 @@ pub struct GeneratedKey {
     pub mnemonic: SecretString,
     /// Created account's public identity.
     pub account: AccountId,
-    /// Signature algorithm.
+    /// Signature algorithm (the nominal Sr25519 for a hashed or
+    /// post-quantum key; see `scheme`).
     pub crypto: CryptoType,
+    /// The key's scheme, hashed and post-quantum included (D-150).
+    pub scheme: KeyScheme,
+}
+
+/// A wallet key's signing scheme: classical Ed25519/Sr25519, or a hashed or
+/// post-quantum scheme whose key signs authorization proofs (D-150).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeyScheme {
+    /// Ed25519 or Sr25519.
+    Classical(CryptoType),
+    /// A hashed or post-quantum scheme.
+    Authority(rtao_primitives::AuthorityType),
+}
+
+impl KeyScheme {
+    /// The core crypto code.
+    pub fn code(self) -> u8 {
+        match self {
+            Self::Classical(crypto) => u8::from(crypto),
+            Self::Authority(kind) => kind.code(),
+        }
+    }
+    /// The scheme for a core crypto code.
+    pub fn from_code(code: u8) -> Result<Self, WalletError> {
+        if let Ok(kind) = rtao_primitives::AuthorityType::try_from(code) {
+            return Ok(Self::Authority(kind));
+        }
+        CryptoType::try_from(code)
+            .map(Self::Classical)
+            .map_err(|_| {
+                WalletError::Core(rtao_core::CoreError::Crypto(format!(
+                    "unsupported wallet crypto type {code}"
+                )))
+            })
+    }
+    /// Python `account_crypto_type`: compose a signing scheme with an account
+    /// type (`standard` or `hashed`; `None` keeps the scheme as given).
+    pub fn with_account_type(code: u8, account_type: Option<&str>) -> Result<Self, WalletError> {
+        Self::from_code(rtao_core::keys::account_crypto_type(code, account_type)?)
+    }
+    /// The nominal classical type: the type itself, or Sr25519 for an
+    /// authority scheme.
+    pub fn crypto_type(self) -> CryptoType {
+        match self {
+            Self::Classical(crypto) => crypto,
+            Self::Authority(_) => CryptoType::Sr25519,
+        }
+    }
+    /// The recovery phrase length: `requested`, or 12 (24 for a post-quantum
+    /// scheme, which refuses any other length).
+    pub fn mnemonic_words(self, requested: Option<usize>) -> Result<usize, WalletError> {
+        let post_quantum = matches!(self, Self::Authority(kind) if kind.is_post_quantum());
+        let words = requested.unwrap_or(if post_quantum { 24 } else { 12 });
+        if post_quantum && words != 24 {
+            return Err(WalletError::Core(rtao_core::CoreError::Crypto(
+                "post-quantum wallets require a fresh 24-word mnemonic".into(),
+            )));
+        }
+        Ok(words)
+    }
 }
 /// An explicit recovery source; no source is printed or logged.
 pub enum RegenerateFrom {
@@ -422,18 +654,16 @@ impl fmt::Debug for RegenerateFrom {
     }
 }
 impl RegenerateFrom {
-    fn derive(self, crypto: CryptoType) -> Result<Keypair, WalletError> {
+    fn derive(self, crypto: u8) -> Result<Keypair, WalletError> {
         Ok(match self {
-            Self::Mnemonic(secret) => {
-                Keypair::from_mnemonic(secret.expose_secret(), u8::from(crypto), None)
-                    .map_err(|error| redacted_derivation_error(error, SecretInput::Mnemonic))?
-            }
-            Self::Seed(secret) => Keypair::from_seed(&secret, u8::from(crypto))
+            Self::Mnemonic(secret) => Keypair::from_mnemonic(secret.expose_secret(), crypto, None)
+                .map_err(|error| redacted_derivation_error(error, SecretInput::Mnemonic))?,
+            Self::Seed(secret) => Keypair::from_seed(&secret, crypto)
                 .map_err(|error| redacted_derivation_error(error, SecretInput::Seed))?,
-            Self::Uri(secret) => Keypair::from_uri(secret.expose_secret(), u8::from(crypto))
+            Self::Uri(secret) => Keypair::from_uri(secret.expose_secret(), crypto)
                 .map_err(|error| redacted_derivation_error(error, SecretInput::Uri))?,
             Self::PrivateKey(secret) => {
-                Keypair::from_private_key(secret.expose_secret(), u8::from(crypto))
+                Keypair::from_private_key(secret.expose_secret(), crypto)
                     .map_err(|error| redacted_derivation_error(error, SecretInput::PrivateKey))?
             }
             Self::EncryptedJson { json, passphrase } => {

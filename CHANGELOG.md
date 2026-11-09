@@ -14,6 +14,20 @@ Not a versioned release. Each item links to its section below.
 
 - Payments and ownership changes to hashed and post-quantum receiving addresses register or check the recipient in the same atomic batch, and the executor refuses to sign a first registration without explicit sponsorship consent (`max_registration_deposit`, `on_registration_sponsorship`, `rtao --max-registration-deposit`) (D-148).
 - Hashed and post-quantum signers pass through the ordinary `Signer` seam: `Client::submit` (journal included), Shield pairs and fee quotes sign and price them from chain-read authority, and the executor submits for them like any key (D-149).
+- Wallets create, store and unlock hashed and post-quantum keys (`KeyScheme`, `Wallet::create_new_coldkey_as` and friends), and expose their public descriptors to registration guards and fee quotes (D-150).
+
+### Hashed and post-quantum wallets (D-150)
+
+#### rtao-wallet
+
+- New: `KeyScheme` and `Wallet::{create_new_coldkey_as, create_new_hotkey_as, regenerate_coldkey_as, regenerate_hotkey_as}`; post-quantum phrases are 24 words. New: `Wallet::{regenerate_coldkeypub_receiving, regenerate_hotkeypub_receiving}` (watch-only from a complete receiving address), `public_descriptor` and `local_descriptor`.
+- An authority key's public companion keeps its descriptor; `PublicKeyInfo::authority` names its scheme (source-breaking for struct literals, as is `GeneratedKey::scheme`). Unlocking it yields a `KeypairAuthoritySigner` checked against the companion's account and descriptor.
+- `HotkeyFile`, `ColdkeyFile`, `WalletRef` and `Wallet` implement `KeyView::{hotkey_descriptor, authority_descriptor, local_descriptor}`.
+
+#### rtao-cli
+
+- The CLI's wallet keys forward those hooks, so payments to the user's own hashed wallets register them and fee quotes price a hashed or post-quantum signer.
+
 
 ### Authority signers through the ordinary signing seam (D-149)
 
