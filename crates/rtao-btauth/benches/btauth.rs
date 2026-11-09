@@ -44,6 +44,9 @@ fn btauth(c: &mut Criterion) {
             VerifyConfig::default(),
             Arc::new(InMemoryNonceStore::new()),
         )
+        .map(|verifier| {
+            verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+        })
         .expect("verifier");
         group.bench_function(format!("sign_{name}"), |b| {
             b.iter(|| {
@@ -85,6 +88,11 @@ fn btauth(c: &mut Criterion) {
                         VerifyConfig::default(),
                         Arc::new(InMemoryNonceStore::new()),
                     )
+                    .map(|verifier| {
+                        verifier.with_sender_schemes(std::sync::Arc::new(
+                            rtao_btauth::DeclaredClassical,
+                        ))
+                    })
                     .expect("fresh verifier")
                 },
                 |verifier| {

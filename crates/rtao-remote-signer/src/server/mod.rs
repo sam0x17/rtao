@@ -270,8 +270,11 @@ impl RemoteSignerServer {
         if cfg.body_limit == 0 {
             return Err(config_error("body_limit must be positive"));
         }
+        // Allowlisted clients sign with classical btauth keys; hashed
+        // senders are refused (D-153).
         let verifier = Verifier::new(server_key, cfg.verify.clone(), store)
-            .map_err(|error| config_error(error.to_string()))?;
+            .map_err(|error| config_error(error.to_string()))?
+            .with_sender_schemes(Arc::new(rtao_btauth::DeclaredClassical));
         let allowlist = ClientAllowlist::new(grants);
         let mut layer = BtAuthLayer::new(Arc::new(verifier))
             .with_policy(Arc::new(allowlist.clone()))

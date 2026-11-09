@@ -157,6 +157,7 @@ pub(crate) fn btauth_caller(caller: &EpistulaCaller) -> Caller {
         hotkey: caller.hotkey,
         nonce_ns: BigInt::from(caller.timestamp_ms) * 1_000_000,
         crypto: CryptoType::Sr25519,
+        scheme: 1,
     }
 }
 

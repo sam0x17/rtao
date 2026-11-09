@@ -29,6 +29,7 @@ wallet-encrypted = ["wallet","rtao-wallet/encrypted"]
 btauth = ["dep:rtao-btauth"]
 btauth-server = ["btauth","rtao-btauth/server","rtao-btauth/metagraph-policy","metagraph"]
 btauth-client = ["btauth","rtao-btauth/client"]
+http-auth = ["btauth","tx","dep:rtao-runtime","dep:serde_json","dep:http"]
 redis = ["rtao-btauth/redis"]
 neuron = ["intents","metagraph","wallet","btauth-client","dep:rtao-neuron"]
 validator = ["neuron","rtao-intents/weights","rtao-intents/serving","rtao-intents/commitments","rtao-neuron/validator"]
@@ -50,7 +51,7 @@ compat-epistula = ["dep:rtao-compat-epistula","rtao-compat-epistula/server","rta
 transport-quic = ["dep:rtao-transport-quic","rtao-transport-quic/client","rtao-transport-quic/server"]
 remote-signer = ["tx","btauth-client","dep:rtao-remote-signer","rtao-remote-signer/client"]
 remote-signer-server = ["remote-signer","rtao-remote-signer/server-online"]
-full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-client","redis","neuron","rtao-neuron/validator","rtao-neuron/miner","rtao-neuron/owner","pow","ledger","vault","extension","keychain","evm","blocking","prometheus","compat-synapse","compat-epistula","transport-quic","remote-signer","remote-signer-server"]
+full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-client","http-auth","redis","neuron","rtao-neuron/validator","rtao-neuron/miner","rtao-neuron/owner","pow","ledger","vault","extension","keychain","evm","blocking","prometheus","compat-synapse","compat-epistula","transport-quic","remote-signer","remote-signer-server"]
 
 [dependencies]
 rtao-core.workspace = true
@@ -71,6 +72,7 @@ rtao-catalog = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 rtao-compat-synapse = { workspace = true, optional = true }
 rtao-compat-epistula = { workspace = true, optional = true }

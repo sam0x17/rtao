@@ -13,6 +13,29 @@
 Not a versioned release. Each item links to its section below.
 
 - `rtao wallet` creates, restores, shows and registers hashed and post-quantum keys; contacts accept receiving addresses; `rtao wallet verify` needs `--crypto-type` for a bare ss58 address (D-152).
+- btauth verification takes each sender's signature scheme from trusted configuration, refusing unconfigured senders; hashed SR/ED hotkeys sign and verify (D-153). **Migration:** see below.
+
+### HTTP authentication: trusted sender schemes and hashed hotkeys (D-141, D-153)
+
+**Migration (behavior change).** A `rtao_btauth::Verifier` built with `Verifier::new` now refuses every request until it knows the sender's scheme: configure it with `configure_verifier` (sender SS58 to crypto code, from trusted configuration or a registry), pass `authenticate_expecting(.., Some(code))`, or opt into `with_sender_schemes(Arc::new(DeclaredClassical))`, which trusts a declared Sr25519/Ed25519 scheme (the previous behavior) and refuses hashed senders. Unconfigured senders that verified before are refused (`no trusted signature scheme configured for sender`). Miners (`MinerRuntime`) and the remote-signer server default to `DeclaredClassical`; `MinerRuntime::with_sender_schemes` admits hashed validator hotkeys.
+
+#### rtao-btauth
+
+- New: `SenderSchemes`, `TrustedSchemes`, `DeclaredClassical`, `Verifier::{with_sender_schemes, configure_verifier, clear_verifier, authenticate_expecting}`, `validate_trusted_crypto_type`, `CRYPTO_TYPE_NAMES`, `HashedHttpSigner` and `sign_hashed`. `Caller` gains `scheme` (source-breaking for struct literals). The crypto header accepts the v488 scheme names; post-quantum schemes are never trusted.
+- `sign` refuses hashed and post-quantum signers.
+
+#### rtao-signer
+
+- `AuthoritySigner::sign_message` (default unsupported) and `KeypairAuthoritySigner::sign_message_at`: hashed SR/ED message signing at a finalized generation of at least one.
+
+#### rtao
+
+- New feature `http-auth`: `http_auth::{prepare_signer, PreparedHttpSigner}`.
+
+#### rtao-neuron
+
+- `MinerRuntime::with_sender_schemes`.
+
 
 ### CLI wallet and address surface for hashed and post-quantum keys (D-152)
 

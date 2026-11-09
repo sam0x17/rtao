@@ -68,7 +68,10 @@ fn verifier(receiver: AccountId) -> TestResult<Verifier<InMemoryNonceStore>> {
             ..VerifyConfig::default()
         },
         Arc::new(InMemoryNonceStore::new()),
-    )?)
+    )
+    .map(|verifier| {
+        verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+    })?)
 }
 
 async fn verify_requests(

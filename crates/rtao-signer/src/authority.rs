@@ -86,6 +86,16 @@ pub trait AuthoritySigner: Send + Sync + 'static {
         &'a self,
         request: &'a AuthorizationRequest<'a>,
     ) -> BoxFuture<'a, Result<AuthorizationProof, SignerError>>;
+    /// Sign an arbitrary message at a chain-read generation (Python
+    /// `sign_message_key`; hashed SR/ED keys only, generation at least one).
+    /// Unsupported by default.
+    fn sign_message<'a>(
+        &'a self,
+        _generation: u64,
+        _message: &'a [u8],
+    ) -> BoxFuture<'a, Result<Vec<u8>, SignerError>> {
+        Box::pin(async { Err(SignerError::RawSigningUnsupported) })
+    }
 }
 
 impl<S: AuthoritySigner + ?Sized> AuthoritySigner for Arc<S> {
@@ -106,6 +116,13 @@ impl<S: AuthoritySigner + ?Sized> AuthoritySigner for Arc<S> {
         request: &'a AuthorizationRequest<'a>,
     ) -> BoxFuture<'a, Result<AuthorizationProof, SignerError>> {
         (**self).sign_authorization(request)
+    }
+    fn sign_message<'a>(
+        &'a self,
+        generation: u64,
+        message: &'a [u8],
+    ) -> BoxFuture<'a, Result<Vec<u8>, SignerError>> {
+        (**self).sign_message(generation, message)
     }
 }
 
@@ -166,6 +183,29 @@ impl KeypairAuthoritySigner {
             ));
         }
         Ok(())
+    }
+
+    /// Python `sign_message_key` for a hashed (rotating) SR/ED key: sign an
+    /// arbitrary message at `generation`, which the caller read from
+    /// finalized chain state. The core's envelope carries the original
+    /// identity key, so generation zero must already be retired
+    /// (`generation >= 1`); post-quantum message signing is refused.
+    pub fn sign_message_at(&self, generation: u64, message: &[u8]) -> Result<Vec<u8>, SignerError> {
+        if self.scheme.is_post_quantum() {
+            return Err(SignerError::InvalidSignature(
+                "post-quantum arbitrary message signing is not supported".into(),
+            ));
+        }
+        if generation < 1 {
+            return Err(SignerError::InvalidSignature(
+                "hashed message signing requires a finalized transaction retiring generation zero first"
+                    .into(),
+            ));
+        }
+        Ok(self
+            .at(generation)?
+            .sign(message)
+            .map_err(CoreError::from)?)
     }
 
     fn at(&self, generation: u64) -> Result<Keypair, SignerError> {
@@ -236,6 +276,13 @@ impl AuthoritySigner for KeypairAuthoritySigner {
             proof.check(self.scheme)?;
             Ok(proof)
         })
+    }
+    fn sign_message<'a>(
+        &'a self,
+        generation: u64,
+        message: &'a [u8],
+    ) -> BoxFuture<'a, Result<Vec<u8>, SignerError>> {
+        Box::pin(async move { self.sign_message_at(generation, message) })
     }
 }
 

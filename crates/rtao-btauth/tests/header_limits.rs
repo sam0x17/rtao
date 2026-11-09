@@ -73,7 +73,11 @@ fn maximum_length_native_sender_addresses_verify_under_both_policies_and_algorit
                         ..Default::default()
                     },
                     Arc::new(InMemoryNonceStore::new()),
-                )?;
+                )
+                .map(|verifier| {
+                    verifier
+                        .with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+                })?;
                 assert_eq!(
                     verifier
                         .authenticate(&headers, &Method::POST, "/", b"body", 1)?
@@ -108,7 +112,10 @@ fn oversized_sender_and_hex_key_claims_fail_without_changing_the_native_address_
                 ..Default::default()
             },
             Arc::new(InMemoryNonceStore::new()),
-        )?;
+        )
+        .map(|verifier| {
+            verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+        })?;
         for address in [
             "z".repeat(50),
             format!("0x{}", hex::encode(sender.account().0)),

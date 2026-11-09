@@ -62,6 +62,7 @@ pub struct MinerRuntime<M: Miner> {
     body_limit: usize,
     nonce_store: Arc<dyn NonceStore>,
     verify: VerifyConfig,
+    sender_schemes: Arc<dyn rtao_btauth::SenderSchemes>,
     limiter: Arc<PerHotkeyLimiter>,
     listener: Option<tokio::net::TcpListener>,
 }
@@ -80,6 +81,9 @@ impl NeuronRuntime<()> {
             body_limit: DEFAULT_BODY_LIMIT,
             nonce_store: Arc::new(InMemoryNonceStore::new()),
             verify: VerifyConfig::default(),
+            // Validators sign with classical hotkeys unless configured; a
+            // hashed sender needs a trusted scheme (D-153).
+            sender_schemes: Arc::new(rtao_btauth::DeclaredClassical),
             limiter: Arc::new(PerHotkeyLimiter::default()),
             listener: None,
         }
@@ -126,6 +130,14 @@ impl<M: Miner> MinerRuntime<M> {
         self.verify = verify;
         self
     }
+    /// Trusted sender signature schemes (D-153). The default trusts a
+    /// declared Sr25519 or Ed25519 scheme and refuses hashed senders; pass
+    /// `rtao_btauth::TrustedSchemes` from a registry to admit hashed SR/ED
+    /// validator hotkeys.
+    pub fn with_sender_schemes(mut self, schemes: Arc<dyn rtao_btauth::SenderSchemes>) -> Self {
+        self.sender_schemes = schemes;
+        self
+    }
     /// Replace the default bounded per-hotkey rate limiter.
     pub fn with_limiter(mut self, limiter: Arc<PerHotkeyLimiter>) -> Self {
         self.limiter = limiter;
@@ -167,8 +179,10 @@ impl<M: Miner> MinerRuntime<M> {
                 None => M::State::default(),
             });
             self.miner.on_start(&cx, &state).await?;
-            let verifier: Arc<Verifier<dyn NonceStore>> =
-                Arc::new(Verifier::new(account, self.verify, self.nonce_store)?);
+            let verifier: Arc<Verifier<dyn NonceStore>> = Arc::new(
+                Verifier::new(account, self.verify, self.nonce_store)?
+                    .with_sender_schemes(self.sender_schemes),
+            );
             let router = self
                 .miner
                 .router(&cx, state.clone())

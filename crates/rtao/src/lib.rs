@@ -22,6 +22,10 @@ pub use executor::Executor;
 #[cfg(feature = "btauth")]
 #[cfg_attr(docsrs, doc(cfg(feature = "btauth")))]
 pub use rtao_btauth as btauth;
+/// btauth signing for hashed hotkeys from finalized chain state (D-153).
+#[cfg(feature = "http-auth")]
+#[cfg_attr(docsrs, doc(cfg(feature = "http-auth")))]
+pub mod http_auth;
 #[cfg(feature = "client")]
 #[cfg_attr(docsrs, doc(cfg(feature = "client")))]
 pub use rtao_client as client;

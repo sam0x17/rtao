@@ -524,11 +524,13 @@ async fn dual_layer_routes_by_protocol() -> TestResult {
     let bob_account = bob();
     let bob = bob_account.to_string();
     let store: Arc<dyn NonceStore> = Arc::new(InMemoryNonceStore::new());
-    let btauth = BtAuthLayer::new(Arc::new(rtao_btauth::Verifier::new(
-        bob_account,
-        VerifyConfig::default(),
-        store.clone(),
-    )?))
+    let btauth = BtAuthLayer::new(Arc::new(
+        rtao_btauth::Verifier::new(bob_account, VerifyConfig::default(), store.clone()).map(
+            |verifier| {
+                verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+            },
+        )?,
+    ))
     .with_clock(Arc::new(FixedClock(NOW_MS)));
     let dual_router = |epistula: EpistulaLayer| {
         Router::new()

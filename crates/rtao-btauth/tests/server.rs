@@ -61,7 +61,11 @@ impl Fixture {
     fn new(store: Arc<dyn NonceStore>) -> TestResult<Self> {
         let alice = KeypairSigner::from_uri("//Alice", CryptoType::Sr25519)?;
         let bob = KeypairSigner::from_uri("//Bob", CryptoType::Sr25519)?.account();
-        let verifier = Arc::new(Verifier::new(bob, VerifyConfig::default(), store)?);
+        let verifier = Arc::new(Verifier::new(bob, VerifyConfig::default(), store).map(
+            |verifier| {
+                verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+            },
+        )?);
         Ok(Self {
             alice,
             bob,

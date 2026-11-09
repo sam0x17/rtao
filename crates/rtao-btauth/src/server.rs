@@ -841,6 +841,7 @@ mod tests {
             hotkey: AccountId([key; 32]),
             nonce_ns: 1.into(),
             crypto: CryptoType::Sr25519,
+            scheme: 1,
         };
         assert_eq!(
             metagraph_admission(&graph, &caller(1), true, true, Some(StakeWeight(1000)))?,

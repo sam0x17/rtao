@@ -74,7 +74,9 @@ fn verifier(
     receiver: AccountId,
     cfg: VerifyConfig,
 ) -> Result<Verifier<InMemoryNonceStore>, ConfigError> {
-    Verifier::new(receiver, cfg, Arc::new(InMemoryNonceStore::new()))
+    Verifier::new(receiver, cfg, Arc::new(InMemoryNonceStore::new())).map(|verifier| {
+        verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+    })
 }
 
 fn check(headers: &HeaderMap, receiver: AccountId) -> Result<Caller, Box<dyn Error>> {
@@ -244,7 +246,8 @@ fn test_round_trip() -> TestResult {
             Caller {
                 hotkey: sender.account(),
                 nonce_ns: BigInt::from(FIXED_NONCE),
-                crypto
+                crypto,
+                scheme: u8::from(crypto),
             }
         );
         assert_eq!(header_text(&headers, HEADER_VERSION)?, VERSION);
@@ -730,7 +733,11 @@ fn genuinely_signed_fresh_nonce_values_outside_u64_are_accepted_and_replay_prote
             );
             assert!(u64::try_from(&exact_nonce).is_err());
             let store = Arc::new(ObservedStore::default());
-            let verifier = Verifier::new(receiver, VerifyConfig::default(), Arc::clone(&store))?;
+            let verifier = Verifier::new(receiver, VerifyConfig::default(), Arc::clone(&store))
+                .map(|verifier| {
+                    verifier
+                        .with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+                })?;
             let authenticated =
                 verifier.authenticate(&request, &Method::POST, TARGET, BODY, now)?;
             assert_eq!(authenticated.caller().nonce_ns, exact_nonce);
@@ -845,7 +852,21 @@ fn unicode_decimal_crypto_aliases_choose_only_the_declared_algorithm() -> TestRe
             replace(&mut request, HEADER_CRYPTO, alias)?;
             assert_eq!(check(&request, receiver)?.crypto, crypto);
         }
-        for invalid in ["²", "①", "½", "٠_١", "١_", "+١", "-٠", "٢", "𝟡"] {
+        // A post-quantum code (here Falcon-512, `𝟡`) is a known scheme in
+        // v488 but never a trusted HTTP one (D-153).
+        let mut falcon = headers(&sender, Some(&receiver))?;
+        replace(&mut falcon, HEADER_CRYPTO, "𝟡")?;
+        assert_error(
+            verifier(receiver, VerifyConfig::default())?.authenticate(
+                &falcon,
+                &Method::POST,
+                TARGET,
+                BODY,
+                NOW,
+            ),
+            AuthError::BadSignature("no trusted signature scheme configured for sender".into()),
+        )?;
+        for invalid in ["²", "①", "½", "٠_١", "١_", "+١", "-٠", "٢"] {
             let mut request = headers(&sender, Some(&receiver))?;
             replace(&mut request, HEADER_CRYPTO, invalid)?;
             assert_error(
@@ -936,7 +957,8 @@ fn concurrent_authenticated_requests_have_exactly_one_replay_commit_winner() -> 
                     Caller {
                         hotkey: sender.account(),
                         nonce_ns: BigInt::from(FIXED_NONCE),
-                        crypto: CryptoType::Sr25519
+                        crypto: CryptoType::Sr25519,
+                        scheme: 1,
                     }
                 );
             }
@@ -969,7 +991,9 @@ fn test_window_wider_than_store_retention_refused() -> TestResult {
         retention: Duration::from_secs(300),
         ..Default::default()
     })?);
-    let verifier = Verifier::new(receiver, cfg, store)?;
+    let verifier = Verifier::new(receiver, cfg, store).map(|verifier| {
+        verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+    })?;
     let sender = alice(CryptoType::Sr25519)?;
     let headers = headers(&sender, Some(&receiver))?;
     assert_eq!(
@@ -983,6 +1007,9 @@ fn test_window_wider_than_store_retention_refused() -> TestResult {
         ..Default::default()
     })?);
     let error = Verifier::new(receiver, VerifyConfig::default(), exact_store)
+        .map(|verifier| {
+            verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+        })
         .err()
         .ok_or_else(|| io::Error::other("inclusive retention boundary accepted"))?;
     assert_eq!(
@@ -993,12 +1020,22 @@ fn test_window_wider_than_store_retention_refused() -> TestResult {
         retention: Duration::from_secs(12) + Duration::from_nanos(1),
         ..Default::default()
     })?);
-    assert!(Verifier::new(receiver, VerifyConfig::default(), protected_store).is_ok());
+    assert!(
+        Verifier::new(receiver, VerifyConfig::default(), protected_store)
+            .map(|verifier| verifier
+                .with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical)))
+            .is_ok()
+    );
     let short_store = Arc::new(InMemoryNonceStore::with_config(NonceStoreConfig {
         retention: Duration::from_secs(12) - Duration::from_nanos(1),
         ..Default::default()
     })?);
-    assert!(Verifier::new(receiver, VerifyConfig::default(), short_store).is_err());
+    assert!(
+        Verifier::new(receiver, VerifyConfig::default(), short_store)
+            .map(|verifier| verifier
+                .with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical)))
+            .is_err()
+    );
     Ok(())
 }
 
@@ -1542,7 +1579,10 @@ fn no_replay_store_access_occurs_before_authenticity() -> TestResult {
     let receiver = bob()?;
     let original = headers(&sender, Some(&receiver))?;
     let store = Arc::new(ObservedStore::default());
-    let verifier = Verifier::new(receiver, VerifyConfig::default(), store.clone())?;
+    let verifier =
+        Verifier::new(receiver, VerifyConfig::default(), store.clone()).map(|verifier| {
+            verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+        })?;
     let mut malformed = original.clone();
     malformed.remove(HEADER_SIGNATURE);
     assert_error(
@@ -1596,7 +1636,10 @@ fn authenticate_then_policy_then_commit_preserves_denied_requests_and_checks_rep
     let receiver = bob()?;
     let headers = headers(&sender, Some(&receiver))?;
     let store = Arc::new(ObservedStore::default());
-    let verifier = Verifier::new(receiver, VerifyConfig::default(), store.clone())?;
+    let verifier =
+        Verifier::new(receiver, VerifyConfig::default(), store.clone()).map(|verifier| {
+            verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+        })?;
     {
         let denied = verifier.authenticate(&headers, &Method::POST, TARGET, BODY, NOW)?;
         assert_eq!(
@@ -1604,7 +1647,8 @@ fn authenticate_then_policy_then_commit_preserves_denied_requests_and_checks_rep
             Caller {
                 hotkey: sender.account(),
                 nonce_ns: BigInt::from(FIXED_NONCE),
-                crypto: CryptoType::Ed25519
+                crypto: CryptoType::Ed25519,
+                scheme: 0,
             }
         );
         assert_eq!(store.calls.load(Ordering::SeqCst), 0);
@@ -1886,7 +1930,9 @@ fn full_store_fails_closed_without_evicting_an_accepted_request() -> TestResult 
         max_per_hotkey: 1,
         ..Default::default()
     })?);
-    let verifier = Verifier::new(receiver, VerifyConfig::default(), store)?;
+    let verifier = Verifier::new(receiver, VerifyConfig::default(), store).map(|verifier| {
+        verifier.with_sender_schemes(std::sync::Arc::new(rtao_btauth::DeclaredClassical))
+    })?;
     let first = headers(&sender, Some(&receiver))?;
     let second = block_on(sign(
         &sender,
@@ -1910,6 +1956,144 @@ fn full_store_fails_closed_without_evicting_an_accepted_request() -> TestResult 
     assert_eq!(
         error.source().map(ToString::to_string),
         Some(error.to_string())
+    );
+    Ok(())
+}
+
+// D-153 (Python v488): the signature scheme of a sender comes from trusted
+// configuration, never from the request alone.
+#[test]
+fn trusted_sender_schemes_fail_closed_and_bind_the_declared_scheme() -> TestResult {
+    let receiver = bob()?;
+    let sender = alice(CryptoType::Sr25519)?;
+    let request = headers(&sender, Some(&receiver))?;
+    let unconfigured = Verifier::new(
+        receiver,
+        VerifyConfig::default(),
+        Arc::new(InMemoryNonceStore::new()),
+    )?;
+    assert_error(
+        unconfigured.authenticate(&request, &Method::POST, TARGET, BODY, NOW),
+        AuthError::BadSignature("no trusted signature scheme configured for sender".into()),
+    )?;
+    // An explicit expected scheme takes precedence and must match.
+    assert!(
+        unconfigured
+            .authenticate_expecting(&request, &Method::POST, TARGET, BODY, NOW, Some(1))
+            .is_ok()
+    );
+    assert_error(
+        unconfigured.authenticate_expecting(&request, &Method::POST, TARGET, BODY, NOW, Some(0)),
+        AuthError::BadSignature(
+            "declared signature scheme does not match the trusted sender scheme".into(),
+        ),
+    )?;
+    // A post-quantum expected scheme is refused as configuration.
+    assert!(matches!(
+        unconfigured.authenticate_expecting(&request, &Method::POST, TARGET, BODY, NOW, Some(8)),
+        Err(AuthError::MalformedAuth(message)) if message.contains("post-quantum")
+    ));
+    // Configured mapping: exact sender text to its scheme; others refuse.
+    let sender_text = sender.account().to_string();
+    unconfigured.configure_verifier([(sender_text.clone(), 0)])?;
+    assert_error(
+        unconfigured.authenticate(&request, &Method::POST, TARGET, BODY, NOW),
+        AuthError::BadSignature(
+            "declared signature scheme does not match the trusted sender scheme".into(),
+        ),
+    )?;
+    unconfigured.configure_verifier([(sender_text, 1)])?;
+    assert!(
+        unconfigured
+            .authenticate(&request, &Method::POST, TARGET, BODY, NOW)
+            .is_ok()
+    );
+    assert!(
+        unconfigured
+            .configure_verifier([("x".to_owned(), 8)])
+            .is_err()
+    );
+    assert!(
+        unconfigured
+            .configure_verifier([(String::new(), 1)])
+            .is_err()
+    );
+    unconfigured.clear_verifier();
+    assert!(
+        unconfigured
+            .authenticate(&request, &Method::POST, TARGET, BODY, NOW)
+            .is_err()
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn hashed_hotkeys_sign_at_a_retired_generation_and_verify_with_their_trusted_scheme()
+-> TestResult {
+    use rtao_btauth::{HashedHttpSigner, sign_hashed};
+    let receiver = bob()?;
+    let key = rtao_core::keys::Keypair::from_seed(&[3; 32], rtao_core::keys::CRYPTO_HASHED)?;
+    let signer: Arc<dyn rtao_signer::Signer> =
+        Arc::new(rtao_signer::KeypairAuthoritySigner::new(key)?);
+    // Generation zero is never used for HTTP signing.
+    assert!(HashedHttpSigner::new(Arc::clone(&signer), 0).is_err());
+    let prepared = HashedHttpSigner::new(Arc::clone(&signer), 2)?;
+    struct Fixed;
+    impl rtao_btauth::Clock for Fixed {
+        fn now_ns(&self) -> Result<u64, rtao_btauth::ClockError> {
+            Ok(NOW)
+        }
+    }
+    let request = sign_hashed(
+        &prepared,
+        &Method::POST,
+        TARGET,
+        BODY,
+        Some(&receiver),
+        &Fixed,
+    )
+    .await?;
+    assert_eq!(
+        request.get(HEADER_CRYPTO).map(|value| value.as_bytes()),
+        Some(&b"hashed"[..])
+    );
+    let verifier = Verifier::new(
+        receiver,
+        VerifyConfig::default(),
+        Arc::new(InMemoryNonceStore::new()),
+    )?;
+    // A classical-only policy refuses the hashed sender.
+    let classical = Verifier::new(
+        receiver,
+        VerifyConfig::default(),
+        Arc::new(InMemoryNonceStore::new()),
+    )?
+    .with_sender_schemes(Arc::new(rtao_btauth::DeclaredClassical));
+    assert!(
+        classical
+            .authenticate(&request, &Method::POST, TARGET, BODY, NOW)
+            .is_err()
+    );
+    verifier.configure_verifier([(signer.account().to_string(), 4)])?;
+    let caller = verifier
+        .verify(&request, &Method::POST, TARGET, BODY, NOW)
+        .await?;
+    assert_eq!(
+        (caller.hotkey, caller.scheme, caller.crypto),
+        (signer.account(), 4, CryptoType::Sr25519)
+    );
+    // The ordinary signing path refuses an authority signer.
+    assert!(
+        rtao_btauth::sign(
+            signer.as_ref(),
+            &Method::POST,
+            TARGET,
+            BODY,
+            Some(&receiver),
+            &Fixed
+        )
+        .await
+        .is_err()
     );
     Ok(())
 }

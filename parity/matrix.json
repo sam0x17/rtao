@@ -7095,13 +7095,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.clear_verifier",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.http_auth.configure_verifier",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/http_auth.py"
       },
       {
@@ -10758,7 +10758,7 @@
           "rtao_btauth::{build_payload, sign, Verifier, VerifyConfig, Caller, AuthError, WrappedPolicy}",
           "rtao_btauth::{NonceStore, InMemoryNonceStore, NonceStoreConfig}"
         ],
-        "synced_blob": "d4b608768fa32f16618fcd8d9d468eaca79cedc1"
+        "synced_blob": "52320132b82502d1c821f2309e92e0d1a2128c05"
       },
       {
         "kind": "extracted",
@@ -12075,7 +12075,7 @@
           "rtao_btauth::nonce::tests",
           "vendor/upstream/extracted/btauth.json"
         ],
-        "synced_blob": "0a2fdf4710f4c6a3868aad7f300414775e218d71"
+        "synced_blob": "e6d1251fa5b1b33ce7370546081e2a5ec19527c7"
       },
       {
         "kind": "ported",

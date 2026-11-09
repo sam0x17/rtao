@@ -325,6 +325,7 @@ impl EpistulaLayer {
                 hotkey: claimed,
                 nonce_ns: timestamp * 1_000_000,
                 crypto: CryptoType::Sr25519,
+                scheme: 1,
             };
             let admission = policy
                 .admit(&claimed)

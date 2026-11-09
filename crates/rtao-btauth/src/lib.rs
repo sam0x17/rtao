@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/http_auth.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/http_auth.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Signed HTTP authentication (btauth/1).
 //!
 //! The core uses no runtime or network I/O. Hash raw received body bytes and
@@ -36,9 +36,10 @@ use rtao_primitives::{AccountId, CryptoType, pyfmt};
 use rtao_signer::{Signer, SignerError};
 use sha2::{Digest, Sha256};
 use std::{
+    collections::HashMap,
     fmt,
     sync::{
-        Arc,
+        Arc, RwLock,
         atomic::{AtomicU64, Ordering},
     },
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -149,7 +150,7 @@ pub fn build_payload(
     receiver: Option<&AccountId>,
 ) -> Vec<u8> {
     build_payload_text(
-        scheme,
+        scheme_name(scheme),
         method,
         target,
         body,
@@ -166,8 +167,108 @@ fn scheme_name(scheme: CryptoType) -> &'static str {
     }
 }
 
+/// Python `wallets.CRYPTO_TYPE_NAMES` (v488): the header and payload name of
+/// each crypto code.
+pub const CRYPTO_TYPE_NAMES: [(u8, &str); 10] = [
+    (0, "ed25519"),
+    (1, "sr25519"),
+    (4, "hashed"),
+    (6, "hashed-ed25519"),
+    (7, "mldsa65"),
+    (8, "ms"),
+    (9, "falcon512"),
+    (10, "hashed-falcon512"),
+    (11, "falcon1024"),
+    (12, "hashed-falcon1024"),
+];
+
+fn code_name(code: u8) -> Option<&'static str> {
+    CRYPTO_TYPE_NAMES
+        .iter()
+        .find(|(known, _)| *known == code)
+        .map(|(_, name)| *name)
+}
+
+/// Python `_validate_trusted_crypto_type`: a known classical or classical
+/// hashed (rotating SR/ED) scheme; post-quantum HTTP authentication is not
+/// supported.
+pub fn validate_trusted_crypto_type(code: u8) -> Result<(), ConfigError> {
+    if code_name(code).is_none() {
+        return Err(ConfigError("unsupported trusted sender crypto type".into()));
+    }
+    if code > 1 && code != 4 && code != 6 {
+        return Err(ConfigError(
+            "post-quantum HTTP authentication is not supported".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Trusted signature schemes of senders (D-153), from configuration or a
+/// registry, never from a request's crypto header.
+///
+/// Bare SS58 identities do not encode a scheme: Python v488 refuses a sender
+/// without a trusted one. `scheme` returns the sender's crypto code for the
+/// declared one, or `None` to refuse.
+pub trait SenderSchemes: Send + Sync {
+    /// The trusted crypto code of `sender` (its exact SS58 text), given the
+    /// scheme the request declares.
+    fn scheme(&self, sender: &str, declared: u8) -> Option<u8>;
+}
+
+/// Python `configure_verifier`'s mapping: exact sender SS58 strings to their
+/// trusted crypto codes.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TrustedSchemes(HashMap<String, u8>);
+
+impl TrustedSchemes {
+    /// Validate and copy a mapping (Python's checks: nonempty senders,
+    /// supported classical or hashed schemes).
+    pub fn new(schemes: impl IntoIterator<Item = (String, u8)>) -> Result<Self, ConfigError> {
+        let mut map = HashMap::new();
+        for (sender, code) in schemes {
+            if sender.is_empty() {
+                return Err(ConfigError(
+                    "sender hotkey must be a nonempty SS58 string".into(),
+                ));
+            }
+            validate_trusted_crypto_type(code)?;
+            map.insert(sender, code);
+        }
+        Ok(Self(map))
+    }
+}
+
+impl SenderSchemes for TrustedSchemes {
+    fn scheme(&self, sender: &str, _declared: u8) -> Option<u8> {
+        self.0.get(sender).copied()
+    }
+}
+
+/// An explicit classical-only policy: a declared Sr25519 or Ed25519 scheme
+/// is trusted for any sender, and a hashed or post-quantum declaration is
+/// refused (it needs a trusted scheme). This is rtao's pre-v488 behaviour,
+/// for servers whose senders are classical keys; a classical signature can
+/// verify only against a key's own public account.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DeclaredClassical;
+
+impl SenderSchemes for DeclaredClassical {
+    fn scheme(&self, _sender: &str, declared: u8) -> Option<u8> {
+        (declared <= 1).then_some(declared)
+    }
+}
+
+fn base_crypto(code: u8) -> CryptoType {
+    if code == 0 || code == 6 {
+        CryptoType::Ed25519
+    } else {
+        CryptoType::Sr25519
+    }
+}
+
 fn build_payload_text<N: fmt::Display>(
-    scheme: CryptoType,
+    scheme: &str,
     method: &Method,
     target: &str,
     body: &[u8],
@@ -177,7 +278,7 @@ fn build_payload_text<N: fmt::Display>(
 ) -> Vec<u8> {
     format!(
         "{PROTOCOL}\n{}\n{}\n{target}\n{}\n{nonce_ns}\n{sender}\n{}",
-        scheme_name(scheme),
+        scheme,
         method.as_str().to_uppercase(),
         hex::encode(Sha256::digest(body)),
         receiver
@@ -200,6 +301,11 @@ pub async fn sign(
     receiver: Option<&AccountId>,
     now: &dyn Clock,
 ) -> Result<HeaderMap, AuthError> {
+    if signer.authority().is_some() {
+        return Err(AuthError::Signing(SignerError::InvalidSignature(
+            "hashed HTTP signing requires a prepared signer (HashedHttpSigner); post-quantum HTTP signing is not supported".into(),
+        )));
+    }
     let nonce = now.now_ns().map_err(AuthError::Clock)?;
     let sender = signer.account();
     let crypto = signer.crypto_type();
@@ -219,6 +325,108 @@ pub async fn sign(
     }
     if crypto != CryptoType::Sr25519 {
         insert_header(&mut headers, HEADER_CRYPTO, scheme_name(crypto).into())?;
+    }
+    if let Some(receiver) = receiver {
+        insert_header(&mut headers, HEADER_RECEIVER, receiver.to_string())?;
+    }
+    Ok(headers)
+}
+
+/// Python `prepare_signer`'s result for a hashed (rotating) SR/ED hotkey:
+/// the signer at a generation the caller read from finalized chain state,
+/// at least one (hashed signatures reveal the original identity key, so
+/// generation zero must already be retired by a finalized transaction).
+///
+/// `rtao::btauth_prepare_signer` reads the generation from a client.
+pub struct HashedHttpSigner {
+    signer: Arc<dyn Signer>,
+    generation: u64,
+}
+
+impl HashedHttpSigner {
+    /// Bind a hashed SR/ED signer (a [`Signer`] whose `authority()` is set)
+    /// to its finalized generation. Refuses a classical or post-quantum
+    /// signer and generation zero.
+    pub fn new(signer: Arc<dyn Signer>, generation: u64) -> Result<Self, SignerError> {
+        let Some(authority) = signer.authority() else {
+            return Err(SignerError::InvalidSignature(
+                "a classical signer signs btauth requests directly".into(),
+            ));
+        };
+        if authority.authority_type().is_post_quantum() {
+            return Err(SignerError::InvalidSignature(
+                "post-quantum HTTP signing is not supported".into(),
+            ));
+        }
+        if generation < 1 {
+            return Err(SignerError::InvalidSignature(
+                "hashed HTTP signing requires generation zero to be retired by a finalized on-chain transaction first".into(),
+            ));
+        }
+        Ok(Self { signer, generation })
+    }
+    /// The signing account.
+    pub fn account(&self) -> AccountId {
+        self.signer.account()
+    }
+    /// The finalized generation it signs at.
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+    fn code(&self) -> u8 {
+        self.signer
+            .authority()
+            .map_or(0, |authority| authority.authority_type().code())
+    }
+}
+
+/// [`sign`] for a prepared hashed SR/ED hotkey: the crypto header names its
+/// scheme (`hashed` or `hashed-ed25519`) and the signature is the core's
+/// hashed message envelope.
+#[doc(alias = "bittensor.http_auth.sign")]
+pub async fn sign_hashed(
+    signer: &HashedHttpSigner,
+    method: &Method,
+    target: &str,
+    body: &[u8],
+    receiver: Option<&AccountId>,
+    now: &dyn Clock,
+) -> Result<HeaderMap, AuthError> {
+    let nonce = now.now_ns().map_err(AuthError::Clock)?;
+    let sender = signer.account();
+    let code = signer.code();
+    let scheme = code_name(code).ok_or_else(|| {
+        AuthError::Signing(SignerError::InvalidSignature(format!(
+            "cannot sign btauth requests with crypto type {code}"
+        )))
+    })?;
+    let payload = build_payload_text(
+        scheme,
+        method,
+        target,
+        body,
+        nonce,
+        &sender.to_string(),
+        receiver.map(|receiver| receiver.to_string()).as_deref(),
+    );
+    let authority = signer.signer.authority().ok_or_else(|| {
+        AuthError::Signing(SignerError::InvalidSignature(
+            "hashed HTTP signer lost its authority".into(),
+        ))
+    })?;
+    let signature = authority
+        .sign_message(signer.generation, &payload)
+        .await
+        .map_err(AuthError::Signing)?;
+    let mut headers = HeaderMap::new();
+    for (name, value) in [
+        (HEADER_VERSION, VERSION.to_string()),
+        (HEADER_HOTKEY, sender.to_string()),
+        (HEADER_NONCE, nonce.to_string()),
+        (HEADER_SIGNATURE, format!("0x{}", hex::encode(signature))),
+        (HEADER_CRYPTO, scheme.to_owned()),
+    ] {
+        insert_header(&mut headers, name, value)?;
     }
     if let Some(receiver) = receiver {
         insert_header(&mut headers, HEADER_RECEIVER, receiver.to_string())?;
@@ -346,8 +554,11 @@ pub struct Caller {
     /// Locally generated nonces fit `u64`. Verification also accepts signed
     /// and larger values when they are fresh, without truncation or wrapping.
     pub nonce_ns: BigInt,
-    /// Declared and verified cryptographic algorithm.
+    /// The verified signature algorithm: Sr25519 or Ed25519, the base of a
+    /// hashed scheme.
     pub crypto: CryptoType,
+    /// The exact verified crypto code (0, 1, or 4/6 for hashed SR/ED).
+    pub scheme: u8,
 }
 
 /// A signature-verified request awaiting replay commitment and policy approval.
@@ -380,6 +591,7 @@ pub struct Verifier<S: NonceStore + ?Sized> {
     me: AccountId,
     cfg: VerifyConfig,
     store: Arc<S>,
+    schemes: RwLock<Option<Arc<dyn SenderSchemes>>>,
 }
 impl<S: NonceStore + ?Sized> Verifier<S> {
     /// Construct only when store retention exceeds the inclusive freshness window.
@@ -395,7 +607,47 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
                 pyfmt::fmt_g(freshness.as_secs_f64())
             )));
         }
-        Ok(Self { me, cfg, store })
+        Ok(Self {
+            me,
+            cfg,
+            store,
+            schemes: RwLock::new(None),
+        })
+    }
+
+    /// Use `schemes` for the trusted sender scheme of calls that give none
+    /// (D-153). Without a source, every such call fails closed.
+    pub fn with_sender_schemes(self, schemes: Arc<dyn SenderSchemes>) -> Self {
+        *self
+            .schemes
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(schemes);
+        self
+    }
+
+    /// Python `configure_verifier`: atomically replace the trusted sender
+    /// schemes with a validated copy of `schemes`.
+    #[doc(alias = "bittensor.http_auth.configure_verifier")]
+    pub fn configure_verifier(
+        &self,
+        schemes: impl IntoIterator<Item = (String, u8)>,
+    ) -> Result<(), ConfigError> {
+        let schemes: Arc<dyn SenderSchemes> = Arc::new(TrustedSchemes::new(schemes)?);
+        *self
+            .schemes
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(schemes);
+        Ok(())
+    }
+
+    /// Python `clear_verifier`: remove the trusted sender schemes; calls
+    /// without an expected scheme then fail closed.
+    #[doc(alias = "bittensor.http_auth.clear_verifier")]
+    pub fn clear_verifier(&self) {
+        *self
+            .schemes
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
     }
 
     /// Check shape, receiver, freshness, and signature without touching a store.
@@ -413,13 +665,41 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
         body: &[u8],
         now_ns: u64,
     ) -> Result<Authenticated, AuthError> {
+        self.authenticate_expecting(headers, method, target, body, now_ns, None)
+    }
+
+    /// [`Self::authenticate`] with an `expected_crypto_type` from trusted
+    /// configuration, taking precedence over the configured sender schemes
+    /// (Python `verify(..., expected_crypto_type=)`).
+    pub fn authenticate_expecting(
+        &self,
+        headers: &HeaderMap,
+        method: &Method,
+        target: &str,
+        body: &[u8],
+        now_ns: u64,
+        expected_crypto_type: Option<u8>,
+    ) -> Result<Authenticated, AuthError> {
+        if let Some(expected) = expected_crypto_type {
+            validate_trusted_crypto_type(expected)
+                .map_err(|error| AuthError::MalformedAuth(error.to_string()))?;
+        }
         let verify = match self.cfg.wrapped {
             WrappedPolicy::AcceptLikePython => rtao_core::keys::verify,
             WrappedPolicy::Strict => rtao_core::keys::verify_strict,
         };
-        self.authenticate_with_verifier(headers, method, target, body, now_ns, verify)
+        self.authenticate_with_verifier(
+            headers,
+            method,
+            target,
+            body,
+            now_ns,
+            expected_crypto_type,
+            verify,
+        )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn authenticate_with_verifier<E>(
         &self,
         headers: &HeaderMap,
@@ -427,6 +707,7 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
         target: &str,
         body: &[u8],
         now_ns: u64,
+        expected_crypto_type: Option<u8>,
         verify: impl FnOnce(&[u8], &[u8], &str, u8) -> Result<bool, E>,
     ) -> Result<Authenticated, AuthError> {
         check_auth_header_budget(
@@ -456,6 +737,35 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
         })?;
         let crypto = parse_crypto(text_header(headers, HEADER_CRYPTO)?.unwrap_or("sr25519"))
             .ok_or_else(|| AuthError::MalformedAuth("unsupported X-Bittensor-Crypto".into()))?;
+        // Rebuild the canonical scheme name rather than echoing the header.
+        let scheme = code_name(crypto)
+            .ok_or_else(|| AuthError::MalformedAuth("unsupported X-Bittensor-Crypto".into()))?;
+        // D-153 (Python v488): the scheme comes from trusted configuration,
+        // never from the request alone; there is no implicit fallback.
+        let expected = match expected_crypto_type {
+            Some(expected) => Some(expected),
+            None => self
+                .schemes
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .as_ref()
+                .and_then(|schemes| schemes.scheme(sender, crypto)),
+        };
+        let Some(expected) = expected else {
+            return Err(AuthError::BadSignature(
+                "no trusted signature scheme configured for sender".into(),
+            ));
+        };
+        if crypto != expected {
+            return Err(AuthError::BadSignature(
+                "declared signature scheme does not match the trusted sender scheme".into(),
+            ));
+        }
+        if self.cfg.wrapped == WrappedPolicy::Strict && crypto > 1 {
+            return Err(AuthError::MalformedAuth(
+                "strict verification supports only sr25519 and ed25519 signatures".into(),
+            ));
+        }
         let signature = text_header(headers, HEADER_SIGNATURE)?
             .ok_or_else(|| AuthError::MalformedAuth("missing X-Bittensor-Signature".into()))?;
         let signature = decode_signature(signature)
@@ -483,8 +793,8 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
                 "invalid hotkey address or signature encoding".into(),
             ));
         }
-        let payload = build_payload_text(crypto, method, target, body, &nonce, sender, receiver);
-        let valid = verify(&payload, &signature, sender, u8::from(crypto)).map_err(|_| {
+        let payload = build_payload_text(scheme, method, target, body, &nonce, sender, receiver);
+        let valid = verify(&payload, &signature, sender, crypto).map_err(|_| {
             AuthError::MalformedAuth("invalid hotkey address or signature encoding".into())
         })?;
         if !valid {
@@ -499,7 +809,8 @@ impl<S: NonceStore + ?Sized> Verifier<S> {
             caller: Caller {
                 hotkey,
                 nonce_ns: nonce,
-                crypto,
+                crypto: base_crypto(crypto),
+                scheme: crypto,
             },
         })
     }
@@ -574,18 +885,27 @@ pub fn check_auth_header_budget(
     Ok(())
 }
 
-fn parse_crypto(value: &str) -> Option<CryptoType> {
+/// Python `parse_crypto_type` for the header: a v488 scheme name, a short
+/// or legacy alias, or a known numeric code.
+fn parse_crypto(value: &str) -> Option<u8> {
     let value = value.trim().to_ascii_lowercase();
+    if let Some((code, _)) = CRYPTO_TYPE_NAMES.iter().find(|(_, name)| *name == value) {
+        return Some(*code);
+    }
     match value.as_str() {
-        "ed25519" => Some(CryptoType::Ed25519),
-        "sr25519" => Some(CryptoType::Sr25519),
+        "ed" => Some(0),
+        "sr" => Some(1),
+        "ml-dsa-65" | "mldsa" => Some(7),
+        "ml-dsa" => Some(8),
+        "falcon-512" => Some(9),
+        "falcon-1024" => Some(11),
         _ if !value.is_empty()
             && value
                 .chars()
                 .all(|character| decimal_digit(character).is_some()) =>
         {
             let code = u8::try_from(parse_nonce(&value)?).ok()?;
-            CryptoType::try_from(code).ok()
+            code_name(code).map(|_| code)
         }
         _ => None,
     }
@@ -673,7 +993,10 @@ mod tests {
             receiver,
             VerifyConfig::default(),
             Arc::new(InMemoryNonceStore::new()),
-        )?;
+        )
+        .map(|verifier| {
+            verifier.with_sender_schemes(std::sync::Arc::new(crate::DeclaredClassical))
+        })?;
         for length in [MAX_SENDER_SS58_BYTES + 1, 100_000] {
             let mut headers = HeaderMap::new();
             for (name, value) in [
@@ -692,6 +1015,7 @@ mod tests {
                 "/",
                 b"body",
                 0,
+                Some(1),
                 |_, _, _, _| {
                     calls.set(calls.get() + 1);
                     Ok::<bool, ()>(false)
@@ -721,7 +1045,10 @@ mod tests {
             receiver,
             VerifyConfig::default(),
             Arc::new(InMemoryNonceStore::new()),
-        )?;
+        )
+        .map(|verifier| {
+            verifier.with_sender_schemes(std::sync::Arc::new(crate::DeclaredClassical))
+        })?;
         for field in [
             HEADER_NONCE,
             HEADER_CRYPTO,
@@ -736,6 +1063,7 @@ mod tests {
                 "/",
                 b"",
                 0,
+                Some(1),
                 |_, _, _, _| Ok::<bool, ()>(false),
             );
             assert_eq!(
@@ -778,10 +1106,7 @@ mod tests {
         );
         let zeros = "0".repeat(3_000);
         assert_eq!(parse_nonce(&format!("{zeros}1")), Some(BigInt::from(1)));
-        assert_eq!(
-            parse_crypto(&format!("{zeros}1")),
-            Some(CryptoType::Sr25519)
-        );
+        assert_eq!(parse_crypto(&format!("{zeros}1")), Some(1));
         assert_eq!(
             decode_signature(&format!("0x{zeros}")),
             Some(vec![0; 1_500])
@@ -869,7 +1194,7 @@ mod tests {
         ] {
             assert_eq!(parse_nonce(spelling), None, "{spelling:?}");
         }
-        assert_eq!(parse_crypto("\u{1e4f1}"), Some(CryptoType::Sr25519));
+        assert_eq!(parse_crypto("\u{1e4f1}"), Some(1));
         assert_eq!(parse_crypto("\u{10d41}"), None);
     }
 
