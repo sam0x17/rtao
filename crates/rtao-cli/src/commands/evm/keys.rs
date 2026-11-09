@@ -505,8 +505,8 @@ async fn import_source(ctx: &AppContext, leaf: &ArgMatches) -> Result<KeyImport,
 fn display_info(ctx: &AppContext, title: &str, info: &EvmKeyInfo) -> Result<(), CliError> {
     ctx.output.detail(Some(title), &[
         ("name".into(), json!(info.name)), ("address".into(), json!(info.address)),
-        ("ss58 mirror".into(), json!(info.ss58_mirror)), ("keystore".into(), json!(info.path)),
-    ], Some(&json!({"name": info.name, "address": info.address, "ss58_mirror": info.ss58_mirror, "keystore": info.path}))).map_err(failure)
+        ("legacy ss58 mirror (internal)".into(), json!(info.ss58_mirror)), ("native receiving address".into(), json!("use `rtao evm mirror` to resolve the current chain mapping")), ("keystore".into(), json!(info.path)),
+    ], Some(&json!({"name": info.name, "address": info.address, "ss58_mirror": info.ss58_mirror, "ss58_mirror_is_legacy": true, "keystore": info.path}))).map_err(failure)
 }
 
 fn private_key_hex(account: &EvmAccount) -> Result<Zeroizing<String>, CliError> {
@@ -589,7 +589,7 @@ async fn run_with_backend(
                 .map_err(failure)??;
             let mut table = TableSpec::new(
                 format!("EVM keys in wallet {}", ctx.globals.wallet_name),
-                ["name", "address", "ss58 mirror"]
+                ["name", "address", "legacy ss58 mirror (internal)"]
                     .map(String::from)
                     .to_vec(),
                 records
@@ -603,7 +603,7 @@ async fn run_with_backend(
                     })
                     .collect(),
             );
-            table.records = Some(Value::Array(records.iter().map(|info| json!({"name":info.name,"address":info.address,"ss58_mirror":info.ss58_mirror})).collect()));
+            table.records = Some(Value::Array(records.iter().map(|info| json!({"name":info.name,"address":info.address,"ss58_mirror":info.ss58_mirror,"ss58_mirror_is_legacy":true})).collect()));
             ctx.output.table(&table).map_err(failure)
         }
         "show" | "export" => {
@@ -958,13 +958,14 @@ mod tests {
             if command == "list" {
                 assert_eq!(
                     value,
-                    json!([{"name":"default","address":FakeKeys::info_for("default").address,"ss58_mirror":"fixture-mirror"}])
+                    json!([{"name":"default","address":FakeKeys::info_for("default").address,"ss58_mirror":"fixture-mirror","ss58_mirror_is_legacy":true}])
                 );
                 assert_eq!(backend.calls(), ["list:default"]);
             } else {
                 assert_eq!(value["keystore"], "/fixture/wallet/evmkeys/default");
                 assert!(value.get("ss58_mirror").is_some());
                 assert!(value.get("ss58 mirror").is_none());
+                assert_eq!(value["ss58_mirror_is_legacy"], true);
                 assert_eq!(backend.calls(), ["info:default/default"]);
             }
             assert!(terminal.lock().unwrap().secret_labels.is_empty());

@@ -212,11 +212,15 @@ pub fn command() -> Command {
                 Tier::Read,
             ),
             with_globals(
-                Command::new("show").about("Show public keys and crypto schemes."),
+                Command::new("show")
+                    .about("Show public addresses and finalized registration on the selected network.")
+                    .arg(flag("offline", "offline", "Show public addresses without checking on-chain registration.")),
                 Tier::Read,
             ),
             with_globals(
-                Command::new("list").about("List local wallets and shared account books."),
+                Command::new("list")
+                    .about("List wallets on disk, saved multisigs, the address book, and the proxy book.")
+                    .arg(flag("offline", "offline", "Show public addresses without checking on-chain registration.")),
                 Tier::Read,
             ),
             with_globals(
@@ -568,10 +572,10 @@ async fn run_local(
         return m8::run_local(ctx, name, matches, history).await;
     }
     if name == "list" {
-        return list(ctx).await;
+        return list(ctx, enabled(matches, "offline")).await;
     }
     if name == "show" {
-        return show(ctx, history);
+        return show(ctx, history, enabled(matches, "offline")).await;
     }
     if name == "save-password-env" {
         return save_password_env(ctx).await;
@@ -1318,7 +1322,11 @@ async fn save_password_env(ctx: &AppContext) -> Result<(), CliError> {
     }
 }
 
-fn show(ctx: &mut AppContext, history: &mut PromptHistory) -> Result<(), CliError> {
+async fn show(
+    ctx: &mut AppContext,
+    history: &mut PromptHistory,
+    offline: bool,
+) -> Result<(), CliError> {
     ctx.confirm_wallet(
         &WalletConfirmation {
             help: "Wallet to show.".into(),
@@ -1354,6 +1362,7 @@ fn show(ctx: &mut AppContext, history: &mut PromptHistory) -> Result<(), CliErro
             "coldkey_crypto_type".into(),
             json!(scheme_name(info_scheme(info))),
         ));
+        fields.extend(scheme_fields(info_scheme(info), "coldkey"));
         fields.extend(address_fields(
             &wallet.reference().coldkeypub_path(),
             info,
@@ -1374,6 +1383,7 @@ fn show(ctx: &mut AppContext, history: &mut PromptHistory) -> Result<(), CliErro
             "hotkey_crypto_type".into(),
             json!(scheme_name(info_scheme(info))),
         ));
+        fields.extend(scheme_fields(info_scheme(info), "hotkey"));
         fields.extend(address_fields(
             &wallet.reference().hotkeypub_path(),
             info,
@@ -1392,6 +1402,36 @@ fn show(ctx: &mut AppContext, history: &mut PromptHistory) -> Result<(), CliErro
             rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
         )));
     }
+    let mut records = ["coldkey", "hotkey"]
+        .into_iter()
+        .filter_map(|role| {
+            let field = |name: &str| {
+                fields
+                    .iter()
+                    .find(|(key, _)| *key == format!("{role}_{name}"))
+                    .and_then(|(_, value)| value.as_str())
+                    .map(str::to_owned)
+            };
+            Some((role, field("receiving_address")?, field("ss58")?))
+        })
+        .collect::<Vec<_>>();
+    let statuses = check_registration(
+        ctx,
+        records
+            .iter()
+            .map(|(_, address, ss58)| (address.clone(), ss58.clone()))
+            .collect(),
+        offline,
+    )
+    .await;
+    for ((role, _, _), status) in records.drain(..).zip(statuses) {
+        for (name, value) in status {
+            let key = format!("{role}_{name}");
+            if let Some((_, slot)) = fields.iter_mut().find(|(field, _)| *field == key) {
+                *slot = value;
+            }
+        }
+    }
     fields.push((
         "path".into(),
         json!(ctx.globals.wallet_path.to_string_lossy()),
@@ -1399,6 +1439,126 @@ fn show(ctx: &mut AppContext, history: &mut PromptHistory) -> Result<(), CliErro
     ctx.output
         .detail(Some(&ctx.globals.wallet_name), &fields, None)
         .map_err(failure)
+}
+
+/// Python `wallets.account_type_name` and `signing_scheme_name`.
+fn scheme_fields(scheme: KeyScheme, role: &str) -> Vec<(String, Value)> {
+    let code = scheme.code();
+    let account_type = if matches!(code, 4 | 6 | 7 | 10 | 12) {
+        "hashed"
+    } else {
+        "standard"
+    };
+    let signing = match code {
+        0 | 6 => "ed25519",
+        7 | 8 => "mldsa65",
+        9 | 10 => "falcon512",
+        11 | 12 => "falcon1024",
+        _ => "sr25519",
+    };
+    vec![
+        (format!("{role}_account_type"), json!(account_type)),
+        (format!("{role}_signing_scheme"), json!(signing)),
+    ]
+}
+
+const REGISTRATION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Python `wallet_addresses.check_registration`: a best-effort, bounded
+/// display lookup of each receiving address's registration at one finalized
+/// snapshot. Each result replaces `registration`, `registration_network` and
+/// `registration_block_hash`; the primary address never changes. `offline`
+/// (or any failure, timeout or malformed record) reports `not_checked` or
+/// `unavailable`, never registered or unregistered.
+async fn check_registration(
+    ctx: &AppContext,
+    identities: Vec<(String, String)>,
+    offline: bool,
+) -> Vec<Vec<(&'static str, Value)>> {
+    let network = ctx.globals.network.clone();
+    let base = |status: &str, hash: Value| {
+        vec![
+            ("registration", json!(status)),
+            ("registration_network", json!(network)),
+            ("registration_block_hash", hash),
+        ]
+    };
+    let mut results = identities
+        .iter()
+        .map(|_| {
+            base(
+                if offline {
+                    "not_checked"
+                } else {
+                    "unavailable"
+                },
+                Value::Null,
+            )
+        })
+        .collect::<Vec<_>>();
+    if offline || identities.is_empty() {
+        return results;
+    }
+    let lookup = ctx.run(move |client| async move {
+        use rtao::client::ViewExt;
+        let finalized = client
+            .at(rtao::client::BlockRef::Finalized)
+            .await
+            .map_err(CliError::from)?;
+        let hash = format!("0x{}", hex::encode(finalized.block().hash.0));
+        let mut statuses = Vec::new();
+        for (address, ss58) in identities {
+            let status = async {
+                let recipient = rtao::primitives::receiving::parse_recipient(&address).ok()?;
+                let descriptor = recipient.descriptor?;
+                if recipient.account.to_string() != ss58 {
+                    return None;
+                }
+                let storage = rtao::primitives::receiving::descriptor_storage(&descriptor).ok()?;
+                let record = if storage == "MlDsaAccounts" {
+                    finalized
+                        .storage(
+                            &rtao_runtime::storage::hashed_accounts::ML_DSA_ACCOUNTS,
+                            (recipient.account,),
+                        )
+                        .await
+                } else {
+                    finalized
+                        .storage(
+                            &rtao_runtime::storage::hashed_accounts::ACCOUNTS,
+                            (recipient.account,),
+                        )
+                        .await
+                }
+                .ok()?;
+                Some(match record {
+                    None => "unregistered",
+                    Some(record) => {
+                        let stored = record.to_json().get("descriptor").and_then(|stored| {
+                            rtao::primitives::receiving::descriptor_bytes(stored).ok()
+                        })?;
+                        if stored == descriptor {
+                            "registered"
+                        } else {
+                            "mismatch"
+                        }
+                    }
+                })
+            }
+            .await;
+            statuses.push(status);
+        }
+        Ok::<_, CliError>((hash, statuses))
+    });
+    let Ok(Ok((hash, statuses))) = tokio::time::timeout(REGISTRATION_TIMEOUT, lookup).await else {
+        return results;
+    };
+    for (result, status) in results.iter_mut().zip(statuses) {
+        if let Some(status) = status {
+            *result = base(status, json!(hash));
+        }
+    }
+    results
 }
 
 // Unicode 16 folding has a stable mapping for Unicode 15 assigned characters.
@@ -1656,8 +1816,110 @@ pub async fn list_records(path: &Path) -> Result<Vec<Value>, CliError> {
         Ok::<_,CliError>(records)
     }).await.map_err(|_|failure("wallet listing task failed"))?
 }
-async fn list(ctx: &AppContext) -> Result<(), CliError> {
-    let records = list_records(&ctx.globals.wallet_path).await?;
+/// Python `wallet list`'s account type, signing scheme and, for a key that
+/// needs registration, its receiving address as the primary address.
+fn listed_address_fields(record: &mut Value, public_path: &Path, crypto: Option<i128>) {
+    let Some(code) = crypto.map_or(Some(1u8), |code| u8::try_from(code).ok()) else {
+        return;
+    };
+    let Some(fields) = record.as_object_mut() else {
+        return;
+    };
+    let Ok(scheme) = KeyScheme::from_code(code) else {
+        return;
+    };
+    for (name, value) in scheme_fields(scheme, "") {
+        fields.insert(name.trim_start_matches('_').to_owned(), value);
+    }
+    if !matches!(scheme, KeyScheme::Authority(kind) if kind.requires_registration()) {
+        return;
+    }
+    let Some(address) = rtao::wallet::public_descriptor(public_path)
+        .ok()
+        .flatten()
+        .and_then(|descriptor| rtao::core::keys::encode_hashed_receiving_address(&descriptor).ok())
+    else {
+        return;
+    };
+    for name in ["address", "receiving_address", "primary_address"] {
+        fields.insert(name.into(), json!(address));
+    }
+    fields.insert("registration".into(), json!("not_checked"));
+}
+
+async fn list(ctx: &AppContext, offline: bool) -> Result<(), CliError> {
+    let mut records = list_records(&ctx.globals.wallet_path).await?;
+    // Python `wallet list`'s listed_key fields, from public files only.
+    let root = WalletRef::new("default", "default", &ctx.globals.wallet_path)
+        .map_err(failure)?
+        .path()
+        .to_owned();
+    for record in &mut records {
+        let Some(coldkey) = record["coldkey"].as_str().map(str::to_owned) else {
+            continue;
+        };
+        let public = root.join(&coldkey).join("coldkeypub.txt");
+        listed_address_fields(record, &public, public_fields(&public).crypto);
+        for hotkey in record["hotkeys"].as_array_mut().into_iter().flatten() {
+            let Some(name) = hotkey["name"].as_str().map(str::to_owned) else {
+                continue;
+            };
+            let hotkeys = root.join(&coldkey).join("hotkeys");
+            // Prefer the public companion; older wallets keep public metadata
+            // only in the hotkey file, which is never unlocked here.
+            let companion = hotkeys.join(format!("{name}pub.txt"));
+            let file = if companion.exists() {
+                companion
+            } else {
+                hotkeys.join(&name)
+            };
+            listed_address_fields(hotkey, &file, public_fields(&file).crypto);
+        }
+    }
+    // Python `check_registration` over every listed key with a receiving
+    // address; the lookup is informational and bounded.
+    let mut slots = Vec::new();
+    for (index, record) in records.iter().enumerate() {
+        if record.get("receiving_address").is_some() {
+            slots.push((index, None));
+        }
+        for (child, hotkey) in record["hotkeys"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .enumerate()
+        {
+            if hotkey.get("receiving_address").is_some() {
+                slots.push((index, Some(child)));
+            }
+        }
+    }
+    let at = |records: &[Value], (index, child): (usize, Option<usize>)| -> (String, String) {
+        let record = match child {
+            Some(child) => &records[index]["hotkeys"][child],
+            None => &records[index],
+        };
+        (
+            record["receiving_address"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
+            record["ss58"].as_str().unwrap_or_default().to_owned(),
+        )
+    };
+    let identities = slots.iter().map(|slot| at(&records, *slot)).collect();
+    let statuses = check_registration(ctx, identities, offline).await;
+    for ((index, child), status) in slots.into_iter().zip(statuses) {
+        let record = match child {
+            Some(child) => &mut records[index]["hotkeys"][child],
+            None => &mut records[index],
+        };
+        if let Some(fields) = record.as_object_mut() {
+            for (name, value) in status {
+                fields.insert(name.into(), value);
+            }
+        }
+    }
     let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
     let resolver = NameResolver::new(
         &ctx.books,

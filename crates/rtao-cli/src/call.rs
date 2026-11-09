@@ -1600,12 +1600,15 @@ fn public_signer(keys: &dyn DynKeySource, role: SignerRole) -> Result<AccountId,
 fn resolve_members(names: &NameResolver<'_>, refs: &[String]) -> Result<Vec<AccountId>, CliError> {
     let mut members = Vec::new();
     for reference in refs {
-        let member = names
-            .resolve_address_ref("coldkey_ss58", reference)
-            .map_err(public_input)?
-            .address
-            .parse()
-            .map_err(public_input)?;
+        // Members are identities: a receiving address names its account.
+        let member = rtao::primitives::receiving::parse_recipient(
+            &names
+                .resolve_address_ref("coldkey_ss58", reference)
+                .map_err(public_input)?
+                .address,
+        )
+        .map_err(public_input)?
+        .account;
         if !members.contains(&member) {
             members.push(member);
         }

@@ -12,7 +12,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/call.py",
-      "sha256": "53effd047f64966d68c9f52abbe3cb6019147d1bde08ef8c190ef5c065ab3d0d"
+      "sha256": "e713ff510e95f9dbc8569fd2adb3558bb9105a89a656a215082c406f1113f656"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/stake_exit.py",
@@ -20,7 +20,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
-      "sha256": "a6aec2bfb73c83c0de56db4578b434d22839fd4e14e880a248b11c972c798e76"
+      "sha256": "e0bc9533ae6b6be101b9540c583ea96f188d60dcc1ee63047e848b5e3d8dc963"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
@@ -64,7 +64,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
-      "sha256": "8c0745db9143f51cc611c54fad088cec7278eb73d3a00b7b171e021767990b4e"
+      "sha256": "134d593f7b83b5567ca05eda374b12bd5ae4cccf1ce90ec0292c0c59afdb218e"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py",
@@ -112,7 +112,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/keys.py",
-      "sha256": "df300fc4e65be08f0ebc6613710841208dc1c48c6980c65f6edbfe6fb0b0ff71"
+      "sha256": "12ee35bdbca73ebe3362affc1b27b3af08d1efe082f3a243b6f8f9bffe0fa097"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/stake.py",
@@ -120,7 +120,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/address.py",
-      "sha256": "1017816707b812c83b383b09372190d254dfe4dc232db36b6ad7211912235254"
+      "sha256": "b8da3266e9307939ee4e0f09275026c47e8525500308067557c260dc61c94fb2"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/money.py",
@@ -244,6 +244,7 @@
         "--args-file",
         "--key",
         "--multisig",
+        "--multisig-account-mode",
         "--multisig-threshold",
         "--other-signatories",
         "--signatories",
@@ -1323,6 +1324,7 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
       "function": "book_add",
       "options": [
+        "--account-mode",
         "--address",
         "--delay",
         "--ext-index",
@@ -1382,6 +1384,7 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
       "function": "create_proxy",
       "options": [
+        "--account-mode",
         "--delay",
         "--index",
         "--name",
@@ -1409,6 +1412,7 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
       "function": "kill_proxy",
       "options": [
+        "--account-mode",
         "--ext-index",
         "--height",
         "--index",
@@ -1898,6 +1902,7 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
       "function": "announce_coldkey_swap",
       "options": [
+        "--hashed-descriptor",
         "--new-coldkey"
       ],
       "positionals": [],
@@ -1935,9 +1940,12 @@
       "options": [
         "--crypto-type",
         "--hotkey-crypto-type",
+        "--hotkey-type",
         "--n-words",
         "--no-password",
-        "--overwrite"
+        "--overwrite",
+        "--registration-payer",
+        "--type"
       ],
       "positionals": [],
       "unresolved": []
@@ -2025,7 +2033,9 @@
       "path": "wallet list",
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
       "function": "list_wallets",
-      "options": [],
+      "options": [
+        "--offline"
+      ],
       "positionals": [],
       "unresolved": []
     },
@@ -2037,7 +2047,9 @@
         "--crypto-type",
         "--n-words",
         "--no-password",
-        "--overwrite"
+        "--overwrite",
+        "--registration-payer",
+        "--type"
       ],
       "positionals": [],
       "unresolved": []
@@ -2049,7 +2061,9 @@
       "options": [
         "--crypto-type",
         "--n-words",
-        "--overwrite"
+        "--overwrite",
+        "--registration-payer",
+        "--type"
       ],
       "positionals": [],
       "unresolved": []
@@ -2080,6 +2094,7 @@
         "--overwrite",
         "--private-key",
         "--seed",
+        "--type",
         "-j"
       ],
       "positionals": [],
@@ -2090,10 +2105,12 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
       "function": "regen_coldkey_pub",
       "options": [
+        "--address",
         "--crypto-type",
         "--overwrite",
         "--public-key",
-        "--ss58"
+        "--ss58",
+        "--type"
       ],
       "positionals": [],
       "unresolved": []
@@ -2107,7 +2124,8 @@
         "--mnemonic",
         "--overwrite",
         "--private-key",
-        "--seed"
+        "--seed",
+        "--type"
       ],
       "positionals": [],
       "unresolved": []
@@ -2117,10 +2135,23 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
       "function": "regen_hotkey_pub",
       "options": [
+        "--address",
         "--crypto-type",
         "--overwrite",
         "--public-key",
-        "--ss58"
+        "--ss58",
+        "--type"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "wallet register",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
+      "function": "register_wallet",
+      "options": [
+        "--key",
+        "--registration-payer"
       ],
       "positionals": [],
       "unresolved": []
@@ -2157,7 +2188,9 @@
       "path": "wallet show",
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
       "function": "show_wallet",
-      "options": [],
+      "options": [
+        "--offline"
+      ],
       "positionals": [],
       "unresolved": []
     },
@@ -2211,7 +2244,8 @@
         "--all",
         "--amount",
         "--amount-tao",
-        "--dest"
+        "--dest",
+        "--hashed-descriptor"
       ],
       "positionals": [],
       "unresolved": []
@@ -2229,9 +2263,11 @@
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py",
       "function": "verify",
       "options": [
+        "--crypto-type",
         "--message",
         "--signature",
-        "--ss58"
+        "--ss58",
+        "--type"
       ],
       "positionals": [],
       "unresolved": []

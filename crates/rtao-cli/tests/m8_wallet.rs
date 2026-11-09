@@ -1,6 +1,6 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_subnet_lifecycle.py @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/wallet.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/helpers.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_subnet_lifecycle.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Wallet parity exercises actual command dispatch, keyfile policy and fake RPC.
 
 use rtao::{
@@ -1231,6 +1231,140 @@ async fn overview_human_subnet_stake_overflow_refuses_before_output_while_json_k
             .requests()
             .iter()
             .any(|request| request.method.starts_with("author_"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+fn unencrypted(options: WriteOptions) -> WriteOptions {
+    WriteOptions {
+        encrypt: false,
+        password: None,
+        ..options
+    }
+}
+
+// D-156 (Python v488 wallet show/list --offline, wallet sign, transfer
+// --hashed-descriptor and receiving destinations).
+#[tokio::test]
+async fn hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically()
+-> TestResult {
+    use rtao::{primitives::AuthorityType, wallet::KeyScheme};
+    let root = Root::new()?;
+    let wallet = Wallet::new("alice", "default", &root.0)?;
+    let cold = wallet
+        .create_new_coldkey_as(
+            None,
+            KeyScheme::Authority(AuthorityType::HashedSr25519),
+            unencrypted(WriteOptions::coldkey()),
+        )
+        .await?;
+    wallet
+        .create_new_hotkey_as(
+            None,
+            KeyScheme::Authority(AuthorityType::MlDsa65Fixed),
+            unencrypted(WriteOptions::hotkey()),
+        )
+        .await?;
+    let (parsed, mut ctx, sink) = context(&root, &["wallet", "show", "--offline"])?;
+    local(&mut ctx, &parsed).await?;
+    let shown = value(&sink)?;
+    assert_eq!(shown["coldkey_ss58"], cold.account.to_string());
+    assert_eq!(shown["coldkey_account_type"], "hashed");
+    assert_eq!(shown["coldkey_signing_scheme"], "sr25519");
+    assert_eq!(shown["coldkey_registration"], "not_checked");
+    let receiving = shown["coldkey_receiving_address"]
+        .as_str()
+        .ok_or("receiving address")?
+        .to_owned();
+    assert_eq!(shown["coldkey_primary_address"], receiving);
+    assert_eq!(shown["hotkey_account_type"], "standard");
+    assert_eq!(shown["hotkey_signing_scheme"], "mldsa65");
+    assert!(shown.get("hotkey_receiving_address").is_none());
+    let (parsed, mut ctx, sink) = context(&root, &["wallet", "list", "--offline"])?;
+    local(&mut ctx, &parsed).await?;
+    let listed = value(&sink)?;
+    let alice = &listed["coldkeys"][0];
+    assert_eq!(alice["receiving_address"], receiving);
+    assert_eq!(alice["registration"], "not_checked");
+    assert_eq!(alice["account_type"], "hashed");
+    // A standard post-quantum key never signs arbitrary messages, and that
+    // refusal needs no chain.
+    let (parsed, mut ctx, _) = context(
+        &root,
+        &["wallet", "sign", "--message", "hello", "--use-hotkey"],
+    )?;
+    let error = local(&mut ctx, &parsed)
+        .await
+        .err()
+        .ok_or("post-quantum signing must refuse")?;
+    assert!(error.to_string().contains("post-quantum"), "{error}");
+    Ok(())
+}
+
+#[tokio::test]
+async fn transfers_keep_receiving_destinations_and_accept_the_compatibility_descriptor()
+-> TestResult {
+    let root = Root::new()?;
+    root.public("alice", COLD)?;
+    let key = Keypair::from_seed(&[9; 32], rtao::core::keys::CRYPTO_HASHED)?;
+    let receiving = rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+    let mut state = FakeState::default();
+    state.seed_python(
+        "System",
+        "Account",
+        &[json!(COLD)],
+        json!({"data":{"free":10_000_000_000u64}}),
+    )?;
+    state.seed_python("AdminUtils", "HashedAccountsEnabled", &[], json!(true))?;
+    let (client, chain) = client(state).await?;
+    let (parsed, mut ctx, sink) = context(
+        &root,
+        &[
+            "wallet",
+            "transfer",
+            "--dest",
+            &receiving,
+            "--amount",
+            "1",
+            "--dry-run",
+            "--yes",
+        ],
+    )?;
+    wallet::run_with_client(
+        &mut ctx,
+        &client,
+        group(&parsed)?,
+        &mut PromptHistory::default(),
+    )
+    .await?;
+    let plan = value(&sink)?;
+    assert_eq!(plan["args"]["dest_ss58"], receiving);
+    // The compatibility option parses into the intent's field.
+    let (parsed, _, _) = context(
+        &root,
+        &[
+            "wallet",
+            "announce-coldkey-swap",
+            "--new-coldkey",
+            &OWNED.to_string(),
+            "--hashed-descriptor",
+            "0x00",
+        ],
+    )?;
+    let leaf = group(&parsed)?.subcommand().ok_or("leaf")?.1;
+    assert_eq!(
+        leaf.get_one::<String>("hashed_descriptor")
+            .map(String::as_str),
+        Some("0x00")
+    );
+    assert!(
+        chain
+            .state()
+            .lock()
+            .map_err(|_| "poisoned")?
+            .submissions
+            .is_empty()
     );
     client.close().await;
     Ok(())

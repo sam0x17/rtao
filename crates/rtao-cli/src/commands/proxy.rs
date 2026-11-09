@@ -663,7 +663,13 @@ fn book_command() -> Command {
                 .long("ext-index")
                 .allow_hyphen_values(true),
         )
-        .arg(Arg::new("note").long("note").default_value(""));
+        .arg(Arg::new("note").long("note").default_value(""))
+        .arg(
+            Arg::new("account_mode")
+                .long("account-mode")
+                .default_value("legacy")
+                .help("Derivation mode used at creation: legacy or safe."),
+        );
     Command::new("book")
         .about("Local proxy address book (named pure/delegate proxies).")
         .subcommand_required(true)
@@ -732,7 +738,11 @@ pub async fn book_execute(
     let name_arg = || text(leaf, "name").ok_or_else(|| CliError::input("missing proxy book name"));
     match name {
         "add" => {
-            let mut entry = json!({"name":name_arg()?,"address":text(leaf,"address").ok_or_else(|| CliError::input("missing proxy address"))?,"spawner":text(leaf,"spawner").unwrap_or_default(),"proxy_type":text(leaf,"proxy_type").unwrap_or("Staking"),"note":text(leaf,"note").unwrap_or_default()});
+            let account_mode = match text(leaf, "account_mode").unwrap_or("legacy") {
+                mode @ ("legacy" | "safe") => mode,
+                _ => return Err(CliError::input("account_mode must be 'legacy' or 'safe'")),
+            };
+            let mut entry = json!({"name":name_arg()?,"address":text(leaf,"address").ok_or_else(|| CliError::input("missing proxy address"))?,"spawner":text(leaf,"spawner").unwrap_or_default(),"proxy_type":text(leaf,"proxy_type").unwrap_or("Staking"),"note":text(leaf,"note").unwrap_or_default(),"account_mode":account_mode});
             for field in ["delay", "index", "height", "ext_index"] {
                 if let Some(raw) = text(leaf, field) {
                     let value = rtao::primitives::pyfmt::parse_integer(raw).ok_or_else(|| {
@@ -965,7 +975,8 @@ async fn after_submit(
                 let mut entry = json!({"name":name,"address":pure,"spawner":receipt.data.get("spawner").cloned().unwrap_or_else(|| json!("")),
                     "proxy_type":tx.args.get("proxy_type").cloned().unwrap_or_else(|| json!("Staking")),
                     "delay":tx.args.get("delay").cloned().unwrap_or_else(|| json!(0)),
-                    "index":tx.args.get("index").cloned().unwrap_or_else(|| json!(0)),"note":""});
+                    "index":tx.args.get("index").cloned().unwrap_or_else(|| json!(0)),"note":"",
+                    "account_mode":receipt.data.get("pure_proxy_account_mode").cloned().unwrap_or_else(|| json!("legacy"))});
                 for field in ["height", "ext_index"] {
                     if let Some(value) = receipt.data.get(field).filter(|value| !value.is_null()) {
                         entry[field] = value.clone();
@@ -985,7 +996,29 @@ async fn after_submit(
                     ))
                     .map_err(failure)
             } else {
-                ctx.output.message(&format!("tip: save this pure proxy for later with `rtao proxy book add --name NAME --address {pure}` (or pass --name on create to do it automatically)")).map_err(failure)
+                // Python v488: the hint restores everything kill-pure needs.
+                let text_of = |value: Option<&Value>, default: &str| match value {
+                    Some(Value::String(text)) => text.clone(),
+                    Some(value) if !value.is_null() => value.to_string(),
+                    _ => default.to_owned(),
+                };
+                let mut restore = format!(
+                    "rtao proxy book add --name NAME --address {pure} --account-mode {} --proxy-type {} --delay {} --index {}",
+                    text_of(receipt.data.get("pure_proxy_account_mode"), "legacy"),
+                    text_of(tx.args.get("proxy_type"), "Staking"),
+                    text_of(tx.args.get("delay"), "0"),
+                    text_of(tx.args.get("index"), "0"),
+                );
+                for key in ["spawner", "height", "ext_index"] {
+                    if let Some(value) = receipt.data.get(key).filter(|value| !value.is_null()) {
+                        restore.push_str(&format!(
+                            " --{} {}",
+                            key.replace('_', "-"),
+                            text_of(Some(value), "")
+                        ));
+                    }
+                }
+                ctx.output.message(&format!("tip: save this pure proxy for later with `{restore}` (or pass --name on create to do it automatically)")).map_err(failure)
             }
         }
     }

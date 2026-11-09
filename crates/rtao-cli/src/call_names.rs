@@ -202,7 +202,8 @@ impl RawResolver<'_, '_> {
         if let Value::String(value) = value
             && matches!(annotation, Some("AccountId32" | "MultiAddress"))
         {
-            return resolve_account(self.names, param, value, hint, self.report).map(Value::String);
+            return resolve_account(self.names, param, value, hint, self.report, false)
+                .map(Value::String);
         }
         if is_nested_call(self.schema, value) {
             return self.nested_call(value, hint);
@@ -228,7 +229,7 @@ impl RawResolver<'_, '_> {
                         let Some(value) = value.as_str() else {
                             return Ok(value.clone());
                         };
-                        resolve_account(self.names, param, value, hint, self.report)
+                        resolve_account(self.names, param, value, hint, self.report, false)
                             .map(Value::String)
                     })
                     .collect::<Result<Vec<_>, _>>()
@@ -325,7 +326,14 @@ impl IntentResolver<'_, '_> {
             let resolved = if let Value::String(value) = value
                 && name.ends_with("_ss58")
             {
-                Value::String(resolve_account(self.names, name, value, hint, self.report)?)
+                Value::String(resolve_account(
+                    self.names,
+                    name,
+                    value,
+                    hint,
+                    self.report,
+                    true,
+                )?)
             } else if SIGNATORY_FIELDS.contains(&name.as_str()) && value.is_array() {
                 let mut resolved = Vec::new();
                 if let Some(values) = value.as_array() {
@@ -337,6 +345,7 @@ impl IntentResolver<'_, '_> {
                                 value,
                                 hint,
                                 self.report,
+                                true,
                             )?),
                             _ => item.clone(),
                         });
@@ -393,15 +402,38 @@ fn resolve_account(
     value: &str,
     hint: &str,
     report: &mut dyn FnMut(&str, &ResolvedAddress),
+    allow_receiving: bool,
 ) -> Result<String, CallNameError> {
     if is_bittensor_address(value) {
         return Ok(value.to_owned());
     }
+    let receiving_value = rtao::primitives::receiving::is_receiving_address(value);
+    let receiving = || {
+        CallNameError {
+        param_hint: hint.to_owned(),
+        message: "raw calls cannot safely register a receiving address; use `wallet transfer` or a supported `tx` intent so its network and registration are checked".to_owned(),
+    }
+    };
     match names.resolve_address_ref(param, value) {
+        // Python v488: a raw call cannot carry a recipient guard.
+        Ok(resolved)
+            if !allow_receiving
+                && rtao::primitives::receiving::is_receiving_address(&resolved.address) =>
+        {
+            Err(receiving())
+        }
         Ok(resolved) => {
             report(param, &resolved);
             Ok(resolved.address)
         }
+        Err(error) if receiving_value => Err(if allow_receiving {
+            CallNameError {
+                param_hint: hint.to_owned(),
+                message: error.to_string(),
+            }
+        } else {
+            receiving()
+        }),
         Err(_) => {
             let base = format!(
                 "{param}: {} is not a valid ss58 address",

@@ -9349,7 +9349,7 @@
           "crates/rtao-cli/tests/raw_call_contract.rs",
           "crates/rtao-cli/tests/call_contract.rs"
         ],
-        "synced_blob": "4b05fe2a6d40baeaeea4ed11f49998f80d2615bb"
+        "synced_blob": "e47a4149465fa6f147b5c6701a43097111fb2c66"
       },
       {
         "kind": "ported",
@@ -9362,7 +9362,7 @@
           "rtao_cli::call_names::report_resolved_account (crate-private)",
           "rtao_cli::books::NameResolver::closest_name"
         ],
-        "synced_blob": "729db3207778374a3f3d908a3ace48416569af24"
+        "synced_blob": "5141d0b0b641a073764abbf7487607e2af2b4385"
       },
       {
         "kind": "n/a",
@@ -9463,7 +9463,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm.rs"
         ],
-        "synced_blob": "fddc33ddc279c43d7e423b21dc635bae817665b8"
+        "synced_blob": "f770388c9b78d20370ff3c9b3ba371d929c10ef1"
       },
       {
         "kind": "ported",
@@ -9496,7 +9496,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/evm/keys.rs"
         ],
-        "synced_blob": "5bd75ff7f952c3fa746f1ced32b3b23bb3e91426"
+        "synced_blob": "e7602dcffc9b6c89c46cb93216bbe2ef914974c3"
       },
       {
         "kind": "ported",
@@ -9597,7 +9597,7 @@
         "rust": [
           "`rtao-cli/src/commands/proxy.rs`"
         ],
-        "synced_blob": "0b4ef6dec16aa4923a8f87fbadc879a98f96c702"
+        "synced_blob": "805279ee0c84b2162d372ac03f002b91d3aa516b"
       },
       {
         "kind": "ported",
@@ -9711,7 +9711,7 @@
           "crates/rtao-cli/src/commands/wallet_m8/views.rs",
           "crates/rtao-cli/src/commands/wallet_m8/history.rs"
         ],
-        "synced_blob": "15d5ddaede7cbfa33fc6f5da3a305b76ad53f3d4"
+        "synced_blob": "8283ddf15eae1edcb7228d969c856047874f0ebc"
       },
       {
         "kind": "ported",
@@ -11629,7 +11629,7 @@
           "rtao_wallet::{SignedMessage,EncryptedMessage,verify_message,encrypt_message}; rtao_wallet::Wallet::{sign_message,decrypt_message}",
           "rtao_cli::commands::wallet::{natural_cmp,list_records}; wallet CLI create/regenerate and private crypto helpers"
         ],
-        "synced_blob": "cf6d9e094eb73e45923f73a7603e15cf75504626"
+        "synced_blob": "f0abfe2498f2938c5bdeb25a22c4e415847f97bc"
       },
       {
         "kind": "n/a",
@@ -12494,7 +12494,7 @@
         "python": "sdk/python/bittensor/cli/wallet_addresses.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-cli/src/commands/wallet.rs (address_fields, scheme_fields, check_registration, listed_address_fields)"
         ],
         "synced_blob": "pending"
       },

@@ -1231,7 +1231,22 @@ impl<'a> NameResolver<'a> {
         resolving: &mut ResolutionState,
     ) -> Result<ResolvedAddress, ResolveError> {
         let kind = AccountKind::for_param(param);
-        let (address, source, name) = if is_bittensor_address(value) {
+        let (address, source, name) = if rtao::primitives::receiving::is_receiving_address(value) {
+            // Python v488: a complete receiving address keeps its descriptor.
+            let recipient = rtao::primitives::receiving::parse_recipient(value)
+                .map_err(|error| ResolveError::new(error.to_string()))?;
+            let name = self
+                .books
+                .addresses
+                .iter()
+                .find(|entry| {
+                    entry.get("address").and_then(Value::as_str) == Some(&recipient.address)
+                })
+                .and_then(|entry| entry.get("name"))
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+            (recipient.address, "receiving address".to_owned(), name)
+        } else if is_bittensor_address(value) {
             let name = self
                 .books
                 .addresses

@@ -78,6 +78,11 @@ pub(super) fn commands() -> Vec<Command> {
                     "crypto_type",
                     "crypto-type",
                     "Trusted signing scheme of a bare ss58 address (sr25519, ed25519, ...); a receiving address carries its own.",
+                ))
+                .arg(option(
+                    "account_type",
+                    "type",
+                    "Account type of --crypto-type: standard (fixed key) or hashed (rotating keys).",
                 )),
             Tier::Read,
         ),
@@ -129,7 +134,8 @@ pub(super) fn commands() -> Vec<Command> {
                 // Retain every catalog field identifier for the shared parser.
                 // Python's hand-written transfer keeps keep_alive at its default.
                 .arg(flag("keep_alive", "keep-alive", "Keep the sender alive.").hide(true))
-                .arg(flag("__no_keep_alive", "no-keep-alive", "Permit reaping the sender.").hide(true))),
+                .arg(flag("__no_keep_alive", "no-keep-alive", "Permit reaping the sender.").hide(true))
+                .arg(option("hashed_descriptor", "hashed-descriptor", "Compatibility option for an old hashed SS58 destination; complete receiving addresses include this information automatically."))),
             Tier::Tx,
         ),
         with_globals(period(identity), Tier::Tx),
@@ -154,7 +160,8 @@ pub(super) fn commands() -> Vec<Command> {
         with_globals(Command::new("swap-check").about("Check a pending coldkey swap announcement and recovery lock.").arg(coldkey()), Tier::Read),
         with_globals(
             period(Command::new("announce-coldkey-swap").about("Announce a replacement coldkey and start the waiting period.")
-                .arg(option("new_coldkey_ss58", "new-coldkey", "Replacement coldkey.").alias("new-coldkey-ss58").required(true))),
+                .arg(option("new_coldkey_ss58", "new-coldkey", "Replacement coldkey.").alias("new-coldkey-ss58").required(true))
+                .arg(option("hashed_descriptor", "hashed-descriptor", "Compatibility option for an old hashed SS58 destination; complete receiving addresses include this information automatically."))),
             Tier::Tx,
         ),
     ]
@@ -464,7 +471,9 @@ pub(super) async fn run_local(
         // binds its own, a bare ss58 address needs --crypto-type. The
         // verifier accepts exact bytes and the historical <Bytes> wrapper.
         let crypto = text(matches, "crypto_type")
-            .map(|value| super::scheme(value, None).map(|scheme| scheme.code()))
+            .map(|value| {
+                super::scheme(value, text(matches, "account_type")).map(|scheme| scheme.code())
+            })
             .transpose()?;
         let valid =
             rtao::wallet::verify_message_as(message, signature, ss58, crypto).map_err(failure)?;
@@ -553,8 +562,30 @@ pub(super) async fn run_local(
     }
     if name == "sign" {
         let message = text(matches, "message").ok_or_else(|| input("missing --message"))?;
+        // Resolve the actual signing key first, so a stale companion file
+        // can never supply another account's generation.
         let signer = local_signer(ctx, wallet, hotkey).await?;
-        let signature = signer.sign_raw(message.as_bytes()).await.map_err(failure)?;
+        let signature = match signer.authority() {
+            Some(authority) => {
+                if authority.authority_type().is_post_quantum() {
+                    return Err(failure(
+                        "post-quantum arbitrary message signing is not supported",
+                    ));
+                }
+                let generation =
+                    finalized_hashed_generation(ctx, authority.account(), authority.descriptor())
+                        .await?;
+                authority
+                    .sign_message(generation, message.as_bytes())
+                    .await
+                    .map_err(failure)?
+            }
+            None => signer
+                .sign_raw(message.as_bytes())
+                .await
+                .map_err(failure)?
+                .to_vec(),
+        };
         return ctx
             .output
             .detail(
@@ -598,6 +629,46 @@ pub(super) async fn run_local(
         };
     }
     Err(input("unknown local wallet operation"))
+}
+
+/// Python `wallet sign`'s `retired_generation`: a hashed SR/ED key signs at
+/// the generation its finalized registration records, which must carry the
+/// key's own descriptor.
+async fn finalized_hashed_generation(
+    ctx: &AppContext,
+    account: AccountId,
+    descriptor: &[u8],
+) -> Result<u64, CliError> {
+    let descriptor = descriptor.to_vec();
+    ctx.run(move |client| async move {
+        use rtao::client::ViewExt;
+        let finalized = client
+            .at(rtao::client::BlockRef::Finalized)
+            .await
+            .map_err(CliError::from)?;
+        let record = finalized
+            .storage(
+                &rtao_runtime::storage::hashed_accounts::ACCOUNTS,
+                (account,),
+            )
+            .await
+            .map_err(CliError::from)?
+            .map(|record| record.to_json());
+        let unregistered = || failure("hashed wallet is not registered on the selected chain");
+        let record = record.ok_or_else(unregistered)?;
+        let stored = record
+            .get("descriptor")
+            .and_then(|stored| rtao::primitives::receiving::descriptor_bytes(stored).ok())
+            .ok_or_else(unregistered)?;
+        if stored != descriptor {
+            return Err(unregistered());
+        }
+        record
+            .get("generation")
+            .and_then(Value::as_u64)
+            .ok_or_else(unregistered)
+    })
+    .await
 }
 
 async fn local_signer(

@@ -1284,6 +1284,7 @@ async fn watch_only_hashed_companions_need_the_receiving_address() -> TestResult
             "rtao",
             "wallet",
             "show",
+            "--offline",
             "--wallet-path",
             &path,
             "--wallet",

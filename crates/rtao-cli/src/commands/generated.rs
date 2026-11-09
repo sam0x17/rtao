@@ -307,7 +307,7 @@ impl PromptResolver for ArgumentResolver<'_> {
         if field.name.ends_with("_ss58") {
             return self
                 .ctx
-                .resolve_address(field.name, Some(raw))
+                .resolve_address_text(field.name, Some(raw))
                 .map(|value| json!(value))
                 .map_err(|e| PromptValidation::Message(e.message));
         }
@@ -475,7 +475,7 @@ fn names(
             continue;
         }
         if let Some(address) = ctx
-            .resolve_address(field.name, raw)
+            .resolve_address_text(field.name, raw)
             .map_err(|e| CliError { code: 2, ..e })?
         {
             answers.insert(field.name.into(), json!(address));
@@ -505,7 +505,7 @@ fn names(
                         index + 1
                     ))
                 })?;
-                ctx.resolve_address(scalar, Some(raw))
+                ctx.resolve_address_text(scalar, Some(raw))
                     .map_err(|error| CliError { code: 2, ..error })?
                     .map(|address| json!(address))
                     .ok_or_else(|| input(format!("cannot resolve {}", field.flag())))

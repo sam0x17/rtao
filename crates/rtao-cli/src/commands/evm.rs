@@ -295,6 +295,15 @@ async fn key_info(ctx: &AppContext, value: Option<&str>) -> Result<EvmKeyInfo, C
 }
 async fn address_of(ctx: &AppContext, value: Option<&str>) -> Result<String, CliError> {
     if let Some(value) = value
+        && rtao::primitives::receiving::is_receiving_address(value)
+    {
+        rtao::primitives::receiving::parse_recipient(value)
+            .map_err(|error| CliError::input(error.to_string()))?;
+        return Err(CliError::input(
+            "EVM routes cannot set up a receiving address; use `wallet transfer` with the complete receiving address",
+        ));
+    }
+    if let Some(value) = value
         && (value.starts_with("0x") || evm::is_h160(&format!("0x{value}")))
     {
         return evm::normalize_h160(value).map_err(|error| CliError::input(error.to_string()));
@@ -691,11 +700,52 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
             )
         }
         "deposit-address" => {
-            let coldkey = resolve_account(ctx, "coldkey_ss58", None)
-                .await?
-                .to_string();
-            let truncated = evm::ss58_to_h160_truncated(&coldkey).map_err(failure)?;
-            let mirror = evm::h160_to_ss58(&truncated).map_err(failure)?;
+            let account = resolve_account(ctx, "coldkey_ss58", None).await?;
+            let coldkey = account.to_string();
+            let route = ctx
+                .run(move |client| async move { deposit_route(&client, account).await })
+                .await?;
+            let truncated = route.alias.clone();
+            let title = format!("EVM deposit address for {}", ctx.globals.wallet_name);
+            if route.direct {
+                ctx.output
+                    .detail(
+                        Some(&title),
+                        &[
+                            ("coldkey".into(), json!(coldkey)),
+                            ("evm deposit address".into(), json!(truncated)),
+                            ("native receiving address".into(), json!(route.recipient)),
+                            ("claim required".into(), json!(false)),
+                        ],
+                        Some(&json!({"coldkey":coldkey,"evm_deposit_address":truncated,"native_receiving_address":route.recipient,"claim_required":false})),
+                    )
+                    .map_err(failure)?;
+                return ctx
+                    .output
+                    .message("EVM deposits are credited directly to this native account; no claim is needed")
+                    .map_err(failure);
+            }
+            if route.hashed_enabled {
+                let funding = if route.native_deposit {
+                    format!("use `rtao evm fund --evm-key {truncated}`")
+                } else {
+                    "unsupported; send from an EVM wallet to the H160 address".to_owned()
+                };
+                return ctx
+                    .output
+                    .detail(
+                        Some(&title),
+                        &[
+                            ("coldkey".into(), json!(coldkey)),
+                            ("evm deposit address".into(), json!(truncated)),
+                            ("claim required".into(), json!(true)),
+                            ("native mirror funding".into(), json!(funding)),
+                        ],
+                        Some(&json!({"coldkey":coldkey,"evm_deposit_address":truncated,"claim_required":true,"native_mirror_funding":funding})),
+                    )
+                    .map_err(failure);
+            }
+            let mirror = route.recipient;
             (
                 Some(format!(
                     "EVM deposit address for {}",
@@ -707,6 +757,40 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
                     ("its ss58 mirror".into(), json!(mirror)),
                 ],
                 json!({"coldkey":coldkey,"evm_deposit_address":truncated,"mirror_ss58":mirror}),
+            )
+        }
+        "mirror" => {
+            let address = address_of(ctx, optional(leaf, "address")).await?;
+            let lookup = address.clone();
+            // Python v488: the current native receiving address of the EVM
+            // account, refusing an unprotected alias while hashed aliases are
+            // enabled.
+            let recipient = ctx
+                .run(move |client| async move {
+                    let snapshot = client
+                        .at(rtao::client::BlockRef::Best)
+                        .await
+                        .map_err(CliError::from)?;
+                    let runtime = snapshot.block().runtime.clone();
+                    rtao_intents::evm::resolve_evm_funding_recipient(&snapshot, &runtime, &lookup)
+                        .await
+                        .map_err(|error| CliError::input(error.to_string()))
+                })
+                .await?;
+            let direct = recipient.account
+                != rtao::primitives::evm::mirror_account(&address).map_err(failure)?;
+            let (label, key) = if direct {
+                ("native receiving address", "native_receiving_address")
+            } else {
+                ("ss58 mirror", "ss58_mirror")
+            };
+            (
+                None,
+                vec![
+                    ("address".into(), json!(address)),
+                    (label.into(), json!(recipient.address)),
+                ],
+                json!({"address":address, key:recipient.address}),
             )
         }
         name => {
@@ -750,6 +834,59 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
     }
     Ok(())
 }
+/// Python `evm deposit-address`'s route: the coldkey's truncated alias, the
+/// recipient its EVM deposits reach, and whether native mirror funding is
+/// available.
+struct DepositRoute {
+    alias: String,
+    recipient: String,
+    direct: bool,
+    hashed_enabled: bool,
+    native_deposit: bool,
+}
+
+async fn deposit_route(
+    client: &Client,
+    account: rtao::primitives::AccountId,
+) -> Result<DepositRoute, CliError> {
+    use rtao::client::ViewExt;
+    let snapshot = client
+        .at(rtao::client::BlockRef::Best)
+        .await
+        .map_err(CliError::from)?;
+    let runtime = snapshot.block().runtime.clone();
+    let invalid = |error: rtao::tx::IntentError| CliError::input(error.to_string());
+    let (alias, recipient) =
+        rtao_intents::evm::resolve_evm_deposit(&snapshot, &runtime, account, None)
+            .await
+            .map_err(invalid)?;
+    let direct =
+        recipient.account != rtao::primitives::evm::mirror_account(&alias).map_err(failure)?;
+    let hashed_enabled = rtao::tx::hashed::hashed_accounts_enabled(&snapshot, &runtime)
+        .await
+        .map_err(invalid)?
+        == Some(true);
+    let native_deposit = runtime
+        .core()
+        .constant("EVM", "NativeDepositSupported")
+        .is_some()
+        && snapshot
+            .constant(&rtao_runtime::constants::evm::NATIVE_DEPOSIT_SUPPORTED)
+            .await
+            .map_err(CliError::from)?;
+    Ok(DepositRoute {
+        alias,
+        recipient: if direct {
+            recipient.address
+        } else {
+            recipient.account.to_string()
+        },
+        direct,
+        hashed_enabled,
+        native_deposit,
+    })
+}
+
 async fn send(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), CliError> {
     let amount = required(leaf, "amount_tao")?;
     let value = tao_to_wei(amount)?;

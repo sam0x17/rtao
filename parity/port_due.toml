@@ -5,22 +5,6 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "sdk/python/bittensor/cli/call.py"
-kind = "ported"
-from = "4b05fe2a6d40baeaeea4ed11f49998f80d2615bb"
-to = "e47a4149465fa6f147b5c6701a43097111fb2c66"
-tag = "v488"
-symbols = ["bittensor.cli.call.ACCOUNT_REGISTRATION_CALLS", "bittensor.cli.call._multisig_address", "bittensor.cli.call._shield_policy_for_target", "bittensor.cli.call.call", "bittensor.cli.call.contains_account_registration"]
-
-[[file]]
-py = "sdk/python/bittensor/cli/call_names.py"
-kind = "ported"
-from = "729db3207778374a3f3d908a3ace48416569af24"
-to = "5141d0b0b641a073764abbf7487607e2af2b4385"
-tag = "v488"
-symbols = ["bittensor.cli.call_names._resolve_account", "bittensor.cli.call_names._resolve_value", "bittensor.cli.call_names.is_receiving_address", "bittensor.cli.call_names.parse_recipient"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/evm/_shared.py"
 kind = "ported"
 from = "a5689ac25cc006e86809ac52818e083d6ca5f969"
@@ -29,28 +13,12 @@ tag = "v488"
 symbols = ["bittensor.cli.commands.evm._shared._address_of", "bittensor.cli.commands.evm._shared._key_fields", "bittensor.cli.commands.evm._shared._key_json", "bittensor.cli.commands.evm._shared._native_account", "bittensor.cli.commands.evm._shared._native_arguments", "bittensor.cli.commands.evm._shared.account_for_read", "bittensor.cli.commands.evm._shared.account_for_registered_write", "bittensor.cli.commands.evm._shared.is_receiving_address"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/evm/address.py"
-kind = "ported"
-from = "fddc33ddc279c43d7e423b21dc635bae817665b8"
-to = "f770388c9b78d20370ff3c9b3ba371d929c10ef1"
-tag = "v488"
-symbols = ["bittensor.cli.commands.evm.address.deposit_address", "bittensor.cli.commands.evm.address.hashed_accounts_enabled", "bittensor.cli.commands.evm.address.mirror", "bittensor.cli.commands.evm.address.pubkey"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/evm/association.py"
 kind = "ported"
 from = "493e1593cc8bf78d2caf43f239f76feaab8694fb"
 to = "139a2f90ace9c4ac2c5ff91ed29f2b4e31e3390b"
 tag = "v488"
 symbols = ["bittensor.cli.commands.evm.association.associate"]
-
-[[file]]
-py = "sdk/python/bittensor/cli/commands/evm/keys.py"
-kind = "ported"
-from = "5bd75ff7f952c3fa746f1ced32b3b23bb3e91426"
-to = "e7602dcffc9b6c89c46cb93216bbe2ef914974c3"
-tag = "v488"
-symbols = ["bittensor.cli.commands.evm.keys.key_list", "bittensor.cli.commands.evm.keys.key_show"]
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/evm/money.py"
@@ -93,14 +61,6 @@ tag = "v488"
 symbols = ["bittensor.cli.commands.multisig._parse_signatory_refs", "bittensor.cli.commands.multisig.multisig_account", "bittensor.cli.commands.multisig.multisig_add", "bittensor.cli.commands.multisig.multisig_pending", "bittensor.cli.commands.multisig.multisig_show", "bittensor.cli.commands.multisig.validate_account_mode"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/proxy.py"
-kind = "ported"
-from = "0b4ef6dec16aa4923a8f87fbadc879a98f96c702"
-to = "805279ee0c84b2162d372ac03f002b91d3aa516b"
-tag = "v488"
-symbols = ["bittensor.cli.commands.proxy.book_add", "bittensor.cli.commands.proxy.create_proxy", "bittensor.cli.commands.proxy.kill_proxy", "bittensor.cli.commands.proxy.validate_account_mode"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/root.py"
 kind = "ported"
 from = "0dd627a74cc86b1dc006536b0f26fdb1a7971cf6"
@@ -123,14 +83,6 @@ from = "f6878d8b9725b98213253ef5992203862ee65877"
 to = "e94be6f1b2d4b148df418f4872daedf05246d7d8"
 tag = "v488"
 symbols = ["bittensor.cli.commands.upgrade._resolve_sudo_signer_set", "bittensor.cli.commands.upgrade.calls", "bittensor.cli.commands.upgrade.multisig_call", "bittensor.cli.commands.upgrade.upgrade_sign", "bittensor.cli.commands.upgrade.validate_account_mode"]
-
-[[file]]
-py = "sdk/python/bittensor/cli/commands/wallet.py"
-kind = "ported"
-from = "15d5ddaede7cbfa33fc6f5da3a305b76ad53f3d4"
-to = "8283ddf15eae1edcb7228d969c856047874f0ebc"
-tag = "v488"
-symbols = ["bittensor.cli.commands.wallet.KeyfileError", "bittensor.cli.commands.wallet.WalletSigner", "bittensor.cli.commands.wallet.WrongPasswordError", "bittensor.cli.commands.wallet._ACCOUNT_TYPE_HELP", "bittensor.cli.commands.wallet._CRYPTO_TYPE_HELP", "bittensor.cli.commands.wallet._N_WORDS_HELP", "bittensor.cli.commands.wallet._PRIVATE_KEY_HELP", "bittensor.cli.commands.wallet._PreparedRegistration", "bittensor.cli.commands.wallet._PreparedRegistration.deposit", "bittensor.cli.commands.wallet._PreparedRegistration.payer", "bittensor.cli.commands.wallet._PreparedRegistration.payer_name", "bittensor.cli.commands.wallet._PreparedRegistration.roles", "bittensor.cli.commands.wallet._address_fields", "bittensor.cli.commands.wallet._creation_address_fields", "bittensor.cli.commands.wallet._finish_hashed_creation", "bittensor.cli.commands.wallet._hashed_recovery_hint", "bittensor.cli.commands.wallet._prepare_hashed_creation", "bittensor.cli.commands.wallet._public_recovery_type", "bittensor.cli.commands.wallet._resolve_coldkey_source", "bittensor.cli.commands.wallet._resolve_crypto_type", "bittensor.cli.commands.wallet._resolve_key_secret", "bittensor.cli.commands.wallet.announce_coldkey_swap", "bittensor.cli.commands.wallet.create", "bittensor.cli.commands.wallet.dataclass", "bittensor.cli.commands.wallet.keyfile_data_is_encrypted", "bittensor.cli.commands.wallet.list_wallets", "bittensor.cli.commands.wallet.new_coldkey", "bittensor.cli.commands.wallet.new_hotkey", "bittensor.cli.commands.wallet.parse_recipient", "bittensor.cli.commands.wallet.regen_coldkey", "bittensor.cli.commands.wallet.regen_coldkey_pub", "bittensor.cli.commands.wallet.regen_hotkey", "bittensor.cli.commands.wallet.regen_hotkey_pub", "bittensor.cli.commands.wallet.register_wallet", "bittensor.cli.commands.wallet.registration_deposit_for_types", "bittensor.cli.commands.wallet.shlex", "bittensor.cli.commands.wallet.show_wallet", "bittensor.cli.commands.wallet.sign", "bittensor.cli.commands.wallet.unlock_wallet", "bittensor.cli.commands.wallet.verify", "bittensor.cli.commands.wallet.wallet_addresses", "bittensor.cli.commands.wallet.wallet_history", "bittensor.cli.commands.wallet.wallet_transfer"]
 
 [[file]]
 py = "sdk/python/bittensor/cli/context.py"
@@ -203,14 +155,6 @@ from = "0036e8de67dd82e7f4eead7c9ad5dbb383f35670"
 to = "633ce1c94de7b26f1466426801811bc8b4bcc8bf"
 tag = "v488"
 symbols = ["bittensor.cli.tx.BittensorError", "bittensor.cli.tx._list_note", "bittensor.cli.tx._make_command", "bittensor.cli.tx._placeholder", "bittensor.cli.tx.apply_intent_prompt_policy", "bittensor.cli.tx.falls_back_to_wallet", "bittensor.cli.tx.validate_intent_prompt_policy"]
-
-[[file]]
-py = "sdk/python/bittensor/wallets.py"
-kind = "ported"
-from = "cf6d9e094eb73e45923f73a7603e15cf75504626"
-to = "f0abfe2498f2938c5bdeb25a22c4e415847f97bc"
-tag = "v488"
-symbols = ["bittensor.wallets.CLASSICAL_HASHED_CRYPTO_TYPES", "bittensor.wallets.CRYPTO_ED25519", "bittensor.wallets.CRYPTO_FALCON1024", "bittensor.wallets.CRYPTO_FALCON1024_HASHED", "bittensor.wallets.CRYPTO_FALCON512", "bittensor.wallets.CRYPTO_FALCON512_HASHED", "bittensor.wallets.CRYPTO_HASHED", "bittensor.wallets.CRYPTO_HASHED_ED25519", "bittensor.wallets.CRYPTO_MLDSA65", "bittensor.wallets.CRYPTO_MLDSA65_FIXED", "bittensor.wallets.CRYPTO_SR25519", "bittensor.wallets.CRYPTO_TYPE_NAMES", "bittensor.wallets.DEFAULT_WALLET_PATH", "bittensor.wallets.FALCON1024_CRYPTO_TYPES", "bittensor.wallets.FALCON512_CRYPTO_TYPES", "bittensor.wallets.FIXED_PQ_CRYPTO_TYPES", "bittensor.wallets.HASHED_CRYPTO_TYPES", "bittensor.wallets.MLDSA_CRYPTO_TYPES", "bittensor.wallets.PQ_CRYPTO_TYPES", "bittensor.wallets.REGISTERED_CRYPTO_TYPES", "bittensor.wallets.Wallet", "bittensor.wallets._cleanup_backups", "bittensor.wallets._keyfile_inode", "bittensor.wallets._read_keyfile", "bittensor.wallets._wallet_directory_lock", "bittensor.wallets.account_crypto_type", "bittensor.wallets.account_type_name", "bittensor.wallets.create", "bittensor.wallets.list_wallets_detailed", "bittensor.wallets.new_coldkey", "bittensor.wallets.new_hotkey", "bittensor.wallets.parse_crypto_type", "bittensor.wallets.regen_coldkey", "bittensor.wallets.regen_coldkey_pub", "bittensor.wallets.regen_hotkey", "bittensor.wallets.regen_hotkey_pub", "bittensor.wallets.requires_registration", "bittensor.wallets.sign_message", "bittensor.wallets.sign_message_key", "bittensor.wallets.signing_scheme_name", "bittensor.wallets.tempfile", "bittensor.wallets.verify_message"]
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli.py"

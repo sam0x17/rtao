@@ -14,7 +14,20 @@ Not a versioned release. Each item links to its section below.
 
 - `rtao wallet` creates, restores, shows and registers hashed and post-quantum keys; contacts accept receiving addresses; `rtao wallet verify` needs `--crypto-type` for a bare ss58 address (D-152).
 - btauth verification takes each sender's signature scheme from trusted configuration, refusing unconfigured senders; hashed SR/ED hotkeys sign and verify (D-153). **Migration:** see below.
+- `rtao wallet transfer` and other intent commands accept complete receiving addresses (the recipient is registered or checked in the same batch); `wallet show`/`list` report finalized registration (`--offline` skips it); `wallet sign` signs with hashed SR/ED keys; `evm mirror` and `evm deposit-address` follow registered aliases (D-156).
 - `FundEvmKey` uses native EVM deposits on v488 runtimes; registered hashed EVM aliases resolve to their native account; multisig groups can register and check a permanent quantum-resistant authority; shielded multisig approvals check the complete fee (D-154).
+
+### CLI receiving addresses, wallet registration status and message signing (D-156)
+
+#### rtao-cli
+
+- Intent account fields accept receiving addresses and keep them, so execution guards the recipient; raw call account arguments refuse them; other account-identity flags refuse them with a pointer to the SS58 account. `AppContext::resolve_address_text` is the text-preserving resolver.
+- `wallet show` and `wallet list` take `--offline` and show each key's account type, signing scheme and, for keys that need registration, the receiving address and its finalized registration (`registered`, `unregistered`, `mismatch`, `unavailable`, `not_checked`).
+- `wallet sign` signs with a hashed SR/ED key at its finalized generation (generation zero must be retired) and refuses post-quantum keys.
+- `wallet transfer` and `wallet announce-coldkey-swap` take `--hashed-descriptor`.
+- `wallet verify` takes `--type` with `--crypto-type` (standard or hashed).
+- `evm mirror` reports a registered alias's native receiving address and refuses an unprotected one while hashed aliases are enabled; `evm deposit-address` reports direct credit or the claim route; `evm key list/show` label the legacy mirror; EVM routes refuse receiving addresses.
+- `proxy book add --account-mode`; created pure proxies save their account mode and the restore hint names every field.
 
 ### EVM funding, multisig protection and approval obligations (D-154)
 

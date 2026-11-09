@@ -159,6 +159,30 @@ impl AppContext {
         param: &str,
         value: Option<&str>,
     ) -> Result<Option<AccountId>, CliError> {
+        let Some(address) = self.resolve_address_text(param, value)? else {
+            return Ok(None);
+        };
+        if rtao::primitives::receiving::is_receiving_address(&address) {
+            // D-156: account-identity consumers take SS58; only intent fields
+            // carry a receiving address, so its registration guard applies.
+            return Err(CliError::input(format!(
+                "{param} takes an account here, not a receiving address; pass its SS58 account"
+            )));
+        }
+        address
+            .parse()
+            .map(Some)
+            .map_err(|error| CliError::input(format!("cannot resolve {param}: {error}")))
+    }
+
+    /// Python v488 `resolve_address`: resolve a CLI account reference while
+    /// preserving a complete receiving address (canonical SS58 otherwise),
+    /// for intent fields whose execution guards the recipient.
+    pub fn resolve_address_text(
+        &self,
+        param: &str,
+        value: Option<&str>,
+    ) -> Result<Option<String>, CliError> {
         let lookup = FsAccountLookup::new(self.globals.wallet_path.clone())
             .map_err(|e| CliError::failure(e.to_string()))?;
         let resolver = NameResolver::new(
@@ -181,10 +205,13 @@ impl AppContext {
         self.output
             .classify_address(&resolved.address, resolved.kind)
             .map_err(|e| CliError::failure(e.to_string()))?;
+        if rtao::primitives::receiving::is_receiving_address(&resolved.address) {
+            return Ok(Some(resolved.address));
+        }
         resolved
             .address
-            .parse()
-            .map(Some)
+            .parse::<AccountId>()
+            .map(|account| Some(account.to_string()))
             .map_err(|error| CliError::input(format!("cannot resolve {param}: {error}")))
     }
     /// Resolve proxy flag > config; `self` explicitly bypasses the default.
