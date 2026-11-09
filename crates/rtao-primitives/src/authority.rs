@@ -84,6 +84,26 @@ impl From<AuthorityType> for u8 {
 }
 
 impl AuthorityType {
+    /// The scheme a public descriptor names: version 1 hashed Sr25519 or
+    /// Ed25519 (34 bytes), version 2 by its algorithm (66 bytes); `None`
+    /// for any other shape. The core's decoder still validates the content.
+    pub const fn from_descriptor(descriptor: &[u8]) -> Option<Self> {
+        match descriptor {
+            [1, 1, ..] if descriptor.len() == 34 => Some(Self::HashedSr25519),
+            [1, 3, ..] if descriptor.len() == 34 => Some(Self::HashedEd25519),
+            [2, algorithm, ..] if descriptor.len() == 66 => match algorithm {
+                4 => Some(Self::MlDsa65),
+                5 => Some(Self::MlDsa65Fixed),
+                6 => Some(Self::Falcon512Hashed),
+                7 => Some(Self::Falcon512),
+                8 => Some(Self::Falcon1024Hashed),
+                9 => Some(Self::Falcon1024),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
     /// The core crypto code, which is also the runtime signature version.
     pub const fn code(self) -> u8 {
         self as u8
@@ -238,6 +258,34 @@ mod tests {
         assert_eq!(MlDsa65Fixed.profile(), Some(5));
         assert_eq!(HashedSr25519.commitment_length(), 32);
         assert_eq!(MlDsa65.commitment_length(), 64);
+    }
+
+    #[test]
+    fn descriptors_name_their_scheme() {
+        let mut v1 = vec![1, 1];
+        v1.resize(34, 7);
+        assert_eq!(
+            AuthorityType::from_descriptor(&v1),
+            Some(AuthorityType::HashedSr25519)
+        );
+        v1[1] = 3;
+        assert_eq!(
+            AuthorityType::from_descriptor(&v1),
+            Some(AuthorityType::HashedEd25519)
+        );
+        let mut v2 = vec![2, 5];
+        v2.resize(66, 7);
+        assert_eq!(
+            AuthorityType::from_descriptor(&v2),
+            Some(AuthorityType::MlDsa65Fixed)
+        );
+        for (algorithm, kind) in [(4, AuthorityType::MlDsa65), (9, AuthorityType::Falcon1024)] {
+            v2[1] = algorithm;
+            assert_eq!(AuthorityType::from_descriptor(&v2), Some(kind));
+            assert_eq!(kind.profile(), Some(algorithm));
+        }
+        assert_eq!(AuthorityType::from_descriptor(&v2[..65]), None);
+        assert_eq!(AuthorityType::from_descriptor(&[1, 2]), None);
     }
 
     #[test]

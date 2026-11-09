@@ -9162,7 +9162,7 @@
           "rtao_rpc::{RpcError,PolicyRefusal,policy::format_rpc_error}",
           "rtao_client::ClientError"
         ],
-        "synced_blob": "d48b44e8d8edb184c51005137a2de2f3a99198b2"
+        "synced_blob": "866578aface30a9e425c4084fcdc7426e65d1ba0"
       },
       {
         "kind": "ported",
@@ -9176,7 +9176,7 @@
           "crates/rtao-client/src/offline.rs",
           "crates/rtao-core-ext/src/ops/receipt.rs"
         ],
-        "synced_blob": "9a26b9d235e9bdd76a8d460493dc613a1d08f721"
+        "synced_blob": "692cd5fe41a6c3ab73b0bb6ad9ccf43e49c6ceee"
       },
       {
         "kind": "ported",

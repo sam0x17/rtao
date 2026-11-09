@@ -21,22 +21,6 @@ tag = "v488"
 symbols = ["bittensor._substrate.CallBytes", "bittensor._substrate.ExtrinsicNotFound", "bittensor._substrate.ExtrinsicSubmissionRejected", "bittensor._substrate.HashedSigningSnapshot", "bittensor._substrate.InclusionReport", "bittensor._substrate.MaxRetriesExceeded", "bittensor._substrate.MultisigAccount", "bittensor._substrate.RpcPolicyRejection", "bittensor._substrate.RpcSubstrate", "bittensor._substrate.RpcSubstrate._failed_submit", "bittensor._substrate.RpcSubstrate._result_from_report", "bittensor._substrate.RpcSubstrate._submit_and_report", "bittensor._substrate.RpcSubstrate.account_next_index", "bittensor._substrate.RpcSubstrate.compose", "bittensor._substrate.RpcSubstrate.constant", "bittensor._substrate.RpcSubstrate.estimate_fee", "bittensor._substrate.RpcSubstrate.estimate_shielded_carrier_fee", "bittensor._substrate.RpcSubstrate.multisig_account", "bittensor._substrate.RpcSubstrate.prepare_hashed_snapshot", "bittensor._substrate.RpcSubstrate.prepare_mldsa", "bittensor._substrate.RpcSubstrate.release_nonce_reservation", "bittensor._substrate.RpcSubstrate.sign_extrinsic", "bittensor._substrate.RpcSubstrate.submit", "bittensor._substrate.RpcSubstrate.submit_signature", "bittensor._substrate.RpcSubstrate.submit_signed", "bittensor._substrate.SignedExtrinsic", "bittensor._substrate.StateDiscardedError", "bittensor._substrate.Substrate", "bittensor._substrate.Substrate.constant", "bittensor._substrate.Substrate.estimate_fee", "bittensor._substrate.Substrate.estimate_shielded_carrier_fee", "bittensor._substrate.Substrate.multisig_account", "bittensor._substrate.Substrate.prepare_hashed_snapshot", "bittensor._substrate.Substrate.prepare_mldsa", "bittensor._substrate.Substrate.release_nonce_reservation", "bittensor._substrate.Substrate.sign_extrinsic", "bittensor._substrate.Substrate.submit", "bittensor._substrate.SubstrateRequestException", "bittensor._substrate.UnsignedExtrinsic", "bittensor._substrate.is_stateless_pq"]
 
 [[file]]
-py = "sdk/python/bittensor/_transport/errors.py"
-kind = "ported"
-from = "d48b44e8d8edb184c51005137a2de2f3a99198b2"
-to = "866578aface30a9e425c4084fcdc7426e65d1ba0"
-tag = "v488"
-symbols = ["bittensor._transport.errors.ExtrinsicSubmissionRejected"]
-
-[[file]]
-py = "sdk/python/bittensor/_transport/extrinsics.py"
-kind = "ported"
-from = "9a26b9d235e9bdd76a8d460493dc613a1d08f721"
-to = "692cd5fe41a6c3ab73b0bb6ad9ccf43e49c6ceee"
-tag = "v488"
-symbols = ["bittensor._transport.extrinsics.HASHED_PROOF_LENGTH", "bittensor._transport.extrinsics.MAX_SHIELDED_CIPHERTEXT_BYTES", "bittensor._transport.extrinsics.MLDSA_PROOF_LENGTH", "bittensor._transport.extrinsics.NonceCache", "bittensor._transport.extrinsics.NonceCache.__init__", "bittensor._transport.extrinsics.NonceCache.clear", "bittensor._transport.extrinsics.NonceCache.included", "bittensor._transport.extrinsics.NonceCache.next_for", "bittensor._transport.extrinsics.NonceCache.pin", "bittensor._transport.extrinsics.NonceCache.release", "bittensor._transport.extrinsics.NonceCache.reserve", "bittensor._transport.extrinsics.NonceCache.token", "bittensor._transport.extrinsics.PQ_CRYPTO_TYPES", "bittensor._transport.extrinsics.REGISTERED_CRYPTO_TYPES", "bittensor._transport.extrinsics.SHIELD_ENCRYPTION_OVERHEAD", "bittensor._transport.extrinsics.attach_signature", "bittensor._transport.extrinsics.create_hashed_extrinsic", "bittensor._transport.extrinsics.create_signed_extrinsic", "bittensor._transport.extrinsics.hashed_proof_length", "bittensor._transport.extrinsics.pq_lengths", "bittensor._transport.extrinsics.prepare_extrinsic", "bittensor._transport.extrinsics.shielded_ciphertext_size"]
-
-[[file]]
 py = "sdk/python/bittensor/_transport/interface.py"
 kind = "ported"
 from = "ea4b9a701522142c1c9b78f7e6274fe52d445d3b"

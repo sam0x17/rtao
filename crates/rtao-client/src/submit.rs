@@ -7,7 +7,7 @@
 //! Finality-anchored transaction preparation and typed submission.
 
 mod authority;
-pub use authority::{AuthorizedExtrinsic, HashedSigningSnapshot};
+pub use authority::{AuthorizedExtrinsic, HashedSigningSnapshot, ProbeSigner};
 
 use crate::{BlockRef, Client, ClientError, NonceLease, View, ViewExt};
 use bytes::Bytes;
@@ -517,19 +517,57 @@ impl Client {
         account: AccountId,
         crypto_type: CryptoType,
     ) -> Result<rtao_core::ops::fee::FeeEstimate, ClientError> {
+        self.estimate_weight_as(call, account, crate::ProbeSigner::Classical(crypto_type))
+            .await
+    }
+
+    /// [`Self::estimate_weight`] for any signing scheme: a hashed or
+    /// post-quantum account's probe carries a placeholder proof of its
+    /// scheme's length, so the length fee is the signed transaction's (D-149).
+    pub async fn estimate_weight_as(
+        &self,
+        call: CallBytes,
+        account: AccountId,
+        signer: crate::ProbeSigner<'_>,
+    ) -> Result<rtao_core::ops::fee::FeeEstimate, ClientError> {
         self.ensure_signing().await?;
         let runtime = self.refresh_runtime().await?;
         call.ensure_runtime(&runtime).map_err(ClientError::from)?;
         let nonce = self.nonces().reported(&account).await?;
-        let probe = rtao_core::ops::fee::probe(
-            runtime.core(),
-            call.as_bytes(),
-            account.0,
-            u8::from(crypto_type),
-            nonce,
-            self.genesis().0,
-        )
-        .map_err(CoreError::from)?;
+        let probe = match signer {
+            crate::ProbeSigner::Classical(crypto_type) => rtao_core::ops::fee::probe(
+                runtime.core(),
+                call.as_bytes(),
+                account.0,
+                u8::from(crypto_type),
+                nonce,
+                self.genesis().0,
+            )
+            .map_err(CoreError::from)?,
+            authority => {
+                let (proof, version) = authority.placeholder(account);
+                let genesis = self.genesis().0;
+                runtime
+                    .core()
+                    .encode_signed_extrinsic(
+                        call.as_bytes(),
+                        account.0,
+                        &proof,
+                        version,
+                        &TxParams {
+                            era: Value::str("00"),
+                            nonce,
+                            tip: 0,
+                            tip_asset_id: None,
+                            genesis_hash: genesis,
+                            era_block_hash: genesis,
+                            metadata_hash: None,
+                        },
+                    )
+                    .map_err(CoreError::from)?
+                    .0
+            }
+        };
         let request = rtao_core::ops::fee::request(&probe, None).map_err(CoreError::from)?;
         // The fee is queried at the head of the node that receives submissions.
         let response: serde_json::Value = self
@@ -556,19 +594,43 @@ impl Client {
             if opts.journal.is_some() {
                 self.nonces().clear_account(&signer.account());
             }
-            let lease = limits
+            let (lease, authority) = limits
                 .admission
                 .run(self, async {
-                    Ok::<_, ClientError>(match opts.nonce {
-                        NoncePolicy::Auto => self.nonces().lease(&signer.account()).await?,
-                        NoncePolicy::Explicit(nonce) => {
-                            self.nonces().lease_explicit(&signer.account(), nonce)
+                    // A hashed or post-quantum signer signs from chain-read
+                    // authority, at its confirmed nonce when rotating (D-149).
+                    if let Some(authority) = signer.authority() {
+                        if authority.account() != signer.account() {
+                            return Err(ClientError::Signing(
+                                rtao_signer::SignerError::InvalidSignature(
+                                    "authority signer account does not match the signer".into(),
+                                ),
+                            ));
                         }
-                    })
+                        let (lease, snapshot) = self.authority_lease(authority, opts.nonce).await?;
+                        return Ok((lease, Some(snapshot)));
+                    }
+                    Ok::<_, ClientError>((
+                        match opts.nonce {
+                            NoncePolicy::Auto => self.nonces().lease(&signer.account()).await?,
+                            NoncePolicy::Explicit(nonce) => {
+                                self.nonces().lease_explicit(&signer.account(), nonce)
+                            }
+                        },
+                        None,
+                    ))
                 })
                 .await?;
-            self.submit_with_lease(call, signer, lease, opts, limits, &attempted_hash)
-                .await
+            self.submit_with_lease(
+                call,
+                signer,
+                lease,
+                authority.as_ref(),
+                opts,
+                limits,
+                &attempted_hash,
+            )
+            .await
         };
         let outcome = limits.full.run(self, operation).await.map_err(|error| {
             submission_attempt_error(self, signer.account(), error, &attempted_hash)
@@ -591,10 +653,39 @@ impl Client {
         let attempted_hash = SubmissionAttempt::default();
         let outcome = limits
             .full
-            .run(
-                self,
-                self.submit_with_lease(call, signer, lease, opts, limits, &attempted_hash),
-            )
+            .run(self, async {
+                // A caller-owned lease suits only a standard post-quantum
+                // signer among the authority signers: a rotating account
+                // signs at its confirmed nonce (D-149).
+                let snapshot = match signer.authority() {
+                    None => None,
+                    Some(authority) if authority.authority_type().is_stateless() => {
+                        let mut snapshot = limits
+                            .admission
+                            .run(self, self.hashed_snapshot(authority, BlockRef::Finalized))
+                            .await?;
+                        snapshot.nonce = lease.value();
+                        Some(snapshot)
+                    }
+                    Some(_) => {
+                        return Err(ClientError::SigningDisabled {
+                            reason: "hashed accounts sign at their confirmed nonce; use submit"
+                                .into(),
+                        }
+                        .into());
+                    }
+                };
+                self.submit_with_lease(
+                    call,
+                    signer,
+                    lease,
+                    snapshot.as_ref(),
+                    opts,
+                    limits,
+                    &attempted_hash,
+                )
+                .await
+            })
             .await
             .map_err(|error| {
                 submission_attempt_error(self, signer.account(), error, &attempted_hash)
@@ -603,11 +694,13 @@ impl Client {
         outcome
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn submit_with_lease(
         &self,
         call: CallBytes,
         signer: &dyn Signer,
         lease: NonceLease,
+        authority: Option<&crate::HashedSigningSnapshot>,
         opts: &SubmitOptions,
         limits: SubmissionLimits,
         attempted_hash: &SubmissionAttempt,
@@ -631,16 +724,15 @@ impl Client {
                 .await
                 .map_err(ClientError::Journal)?;
         }
-        let request = unsigned.signing_request(SignPurpose::Extrinsic);
-        let signature = limits
-            .admission
-            .run(self, async {
-                signer.sign(&request).await.map_err(ClientError::Signing)
-            })
-            .await?;
-        let (bytes, hash) = limits
-            .admission
-            .run(self, self.attach_signature(&unsigned, signature))
+        let (bytes, hash) = self
+            .sign_prepared_as(
+                limits.admission,
+                &unsigned,
+                signer,
+                authority,
+                0,
+                SignPurpose::Extrinsic,
+            )
             .await?;
         if let Some(journal) = &opts.journal {
             journal

@@ -107,6 +107,12 @@ pub trait KeyView: Send + Sync {
     fn local_descriptor(&self, _account: &AccountId) -> Option<Vec<u8>> {
         None
     }
+    /// The public descriptor of this role's key when it is a hashed or
+    /// post-quantum account, read without unlocking; `None` for a classical
+    /// key. Fee quotes price its proof length (D-149).
+    fn authority_descriptor(&self, _role: SignerRole) -> Option<Vec<u8>> {
+        None
+    }
 }
 
 /// Compile-time key-source selection for one signing role.
@@ -158,6 +164,10 @@ impl<S: Signer + ?Sized> KeyView for S {
     }
     fn bare_signer_account(&self) -> Option<AccountId> {
         Some(self.account())
+    }
+    fn authority_descriptor(&self, _role: SignerRole) -> Option<Vec<u8>> {
+        self.authority()
+            .map(|authority| authority.descriptor().to_vec())
     }
 }
 

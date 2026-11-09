@@ -238,3 +238,34 @@ impl AuthoritySigner for KeypairAuthoritySigner {
         })
     }
 }
+
+/// A hashed or post-quantum keypair is also a [`crate::Signer`], so wallets,
+/// key sources and the executor pass it like any key (D-149).
+///
+/// It produces no 64-byte signature: [`crate::Signer::sign`] and
+/// [`crate::Signer::sign_raw`] refuse, and [`crate::Signer::authority`]
+/// routes the client to its authorization path. `crypto_type` is the
+/// nominal Sr25519 only for interfaces that require a classical type; no
+/// 64-byte path signs with it.
+impl crate::Signer for KeypairAuthoritySigner {
+    fn account(&self) -> AccountId {
+        self.account
+    }
+    fn crypto_type(&self) -> crate::CryptoType {
+        crate::CryptoType::Sr25519
+    }
+    fn sign<'a>(
+        &'a self,
+        _request: &'a crate::SigningRequest<'a>,
+    ) -> BoxFuture<'a, Result<crate::MultiSignature, SignerError>> {
+        Box::pin(async {
+            Err(SignerError::InvalidSignature(
+                "hashed and post-quantum accounts sign authorization proofs, not 64-byte signatures"
+                    .into(),
+            ))
+        })
+    }
+    fn authority(&self) -> Option<&dyn AuthoritySigner> {
+        Some(self)
+    }
+}

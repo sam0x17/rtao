@@ -271,6 +271,25 @@ impl Client {
         call: CallBytes,
         period: u64,
     ) -> Result<Balance<Tao>, ClientError> {
+        self.estimate_shielded_carrier_fee_as(
+            payer,
+            crate::ProbeSigner::Classical(CryptoType::Sr25519),
+            call,
+            period,
+        )
+        .await
+    }
+
+    /// [`Self::estimate_shielded_carrier_fee`] for a payer of any signing
+    /// scheme: both the inner transaction (inside the ciphertext) and the
+    /// carrier carry a placeholder signature or proof of its length (D-149).
+    pub async fn estimate_shielded_carrier_fee_as(
+        &self,
+        payer: AccountId,
+        signer: crate::ProbeSigner<'_>,
+        call: CallBytes,
+        period: u64,
+    ) -> Result<Balance<Tao>, ClientError> {
         self.ensure_signing().await?;
         let runtime = self.refresh_runtime().await?;
         call.ensure_runtime(&runtime).map_err(ClientError::from)?;
@@ -293,13 +312,13 @@ impl Client {
             era_block_hash: genesis,
             metadata_hash: None,
         };
-        let version = u8::from(CryptoType::Sr25519);
+        let (placeholder, version) = signer.placeholder(payer);
         let (inner, _) = runtime
             .core()
             .encode_signed_extrinsic(
                 call.as_bytes(),
                 payer.0,
-                &[0; 64],
+                &placeholder,
                 version,
                 &params(nonce + 1),
             )
@@ -313,7 +332,7 @@ impl Client {
             .encode_signed_extrinsic(
                 carrier.as_bytes(),
                 payer.0,
-                &[0; 64],
+                &placeholder,
                 version,
                 &params(nonce),
             )
@@ -811,7 +830,11 @@ impl Client {
                     .admission
                     .run(
                         self,
-                        self.estimate_weight(call.clone(), account, crypto_type),
+                        self.estimate_weight_as(
+                            call.clone(),
+                            account,
+                            crate::ProbeSigner::of(signer),
+                        ),
                     )
                     .await?;
                 if fee.partial_fee > max_fee.rao() {
@@ -862,7 +885,7 @@ impl Client {
             // account's pending carriers, which ages that anchor; after such a
             // wait the anchor is chosen again, holding the lease.
             let mut leased = None;
-            let (finalized, (carrier_lease, inner_lease)) = loop {
+            let (finalized, (carrier_lease, inner_lease), authority) = loop {
                 let waiting = tokio::time::Instant::now();
                 let finalized = loop {
                     // Both heights come from headers alone; neither block's
@@ -888,8 +911,8 @@ impl Client {
                         }
                     }
                 };
-                if let Some(pair) = leased.take() {
-                    break (finalized, pair);
+                if let Some((pair, authority)) = leased.take() {
+                    break (finalized, pair, authority);
                 }
                 if durable.is_some() {
                     // Other clients/restarts sharing the journal do not share
@@ -898,14 +921,28 @@ impl Client {
                     // allocating a pair.
                     self.nonces().clear_account(&account);
                 }
-                let (pair, waited) = limits
-                    .admission
-                    .run(self, self.nonces().lease_pair_waited(&account))
-                    .await?;
+                // A hashed or post-quantum signer signs both proofs from one
+                // finalized authority snapshot (D-149).
+                let (pair, waited, authority) = match signer.authority() {
+                    Some(authority) => {
+                        let (pair, waited, snapshot) = limits
+                            .admission
+                            .run(self, self.authority_pair(authority))
+                            .await?;
+                        (pair, waited, Some(snapshot))
+                    }
+                    None => {
+                        let (pair, waited) = limits
+                            .admission
+                            .run(self, self.nonces().lease_pair_waited(&account))
+                            .await?;
+                        (pair, waited, None)
+                    }
+                };
                 if !waited {
-                    break (finalized, pair);
+                    break (finalized, pair, authority);
                 }
-                leased = Some(pair);
+                leased = Some((pair, authority));
             };
             let inner = limits
                 .admission
@@ -951,18 +988,15 @@ impl Client {
                     })
                     .await?;
             }
-            let signature = limits
-                .admission
-                .run(self, async {
-                    signer
-                        .sign(&inner.signing_request(SignPurpose::ShieldInner))
-                        .await
-                        .map_err(ClientError::Signing)
-                })
-                .await?;
-            let (inner_bytes, inner_hash) = limits
-                .admission
-                .run(self, self.attach_signature(&inner, signature))
+            let (inner_bytes, inner_hash) = self
+                .sign_prepared_as(
+                    limits.admission,
+                    &inner,
+                    signer,
+                    authority.as_ref(),
+                    1,
+                    SignPurpose::ShieldInner,
+                )
                 .await?;
             let pair = if let Some((preparation, context)) = &durable {
                 Some(
@@ -1021,18 +1055,15 @@ impl Client {
                 .call()
                 .ensure_runtime(&runtime)
                 .map_err(ClientError::from)?;
-            let signature = limits
-                .admission
-                .run(self, async {
-                    signer
-                        .sign(&unsigned.signing_request(SignPurpose::ShieldCarrier))
-                        .await
-                        .map_err(ClientError::Signing)
-                })
-                .await?;
-            let (bytes, hash) = limits
-                .admission
-                .run(self, self.attach_signature(&unsigned, signature))
+            let (bytes, hash) = self
+                .sign_prepared_as(
+                    limits.admission,
+                    &unsigned,
+                    signer,
+                    authority.as_ref(),
+                    0,
+                    SignPurpose::ShieldCarrier,
+                )
                 .await?;
             let current_best = limits
                 .admission

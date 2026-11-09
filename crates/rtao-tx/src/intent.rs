@@ -91,6 +91,12 @@ impl KeyView for OriginView<'_> {
             Self::Account(_) => None,
         }
     }
+    fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+        match self {
+            Self::Keys(keys) => keys.authority_descriptor(role),
+            Self::Account(_) => None,
+        }
+    }
 }
 
 /// Immutable materials for building one semantic call at one block.
@@ -227,13 +233,10 @@ pub struct PreflightCx<'a, V: View + ?Sized> {
 impl<V: View + ?Sized> PreflightCx<'_, V> {
     /// Probe the fully wrapped call without unlocking a key.
     pub async fn estimate_fee(&self) -> Result<Balance<Tao>, IntentError> {
+        let probe = fee_probe();
         Ok(Balance::<Tao>::from_rao(
             self.client
-                .estimate_weight(
-                    self.call.clone(),
-                    self.fee_payer,
-                    rtao_primitives::CryptoType::Sr25519,
-                )
+                .estimate_weight_as(self.call.clone(), self.fee_payer, probe.signer())
                 .await?
                 .partial_fee,
         ))
@@ -564,4 +567,49 @@ impl<I: Intent> DynIntent for I {
     ) -> BoxFuture<'a, Result<Built, IntentError>> {
         Box::pin(self.wrap_call(cx, call))
     }
+}
+
+/// The fee payer's signing scheme for fee probes made while the executor
+/// reviews a call (D-149): a hashed or post-quantum payer's transaction
+/// carries a longer proof, so its length fee differs.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FeeProbe {
+    descriptor: Option<(rtao_primitives::AuthorityType, Vec<u8>)>,
+}
+
+impl FeeProbe {
+    /// The probe for a payer with this public descriptor; classical without one.
+    pub fn from_descriptor(descriptor: Option<Vec<u8>>) -> Self {
+        Self {
+            descriptor: descriptor.and_then(|descriptor| {
+                rtao_primitives::AuthorityType::from_descriptor(&descriptor)
+                    .map(|kind| (kind, descriptor))
+            }),
+        }
+    }
+    /// The client probe signer.
+    pub fn signer(&self) -> rtao_client::ProbeSigner<'_> {
+        match &self.descriptor {
+            Some((kind, descriptor)) => rtao_client::ProbeSigner::Authority {
+                kind: *kind,
+                descriptor,
+            },
+            None => rtao_client::ProbeSigner::Classical(rtao_primitives::CryptoType::Sr25519),
+        }
+    }
+}
+
+tokio::task_local! {
+    static FEE_PROBE: FeeProbe;
+}
+
+/// Run `future` with `probe` as the fee payer's scheme for
+/// [`PreflightCx::estimate_fee`].
+pub async fn with_fee_probe<F: std::future::Future>(probe: FeeProbe, future: F) -> F::Output {
+    FEE_PROBE.scope(probe, future).await
+}
+
+/// The current fee probe; classical outside an executor review.
+pub fn fee_probe() -> FeeProbe {
+    FEE_PROBE.try_with(Clone::clone).unwrap_or_default()
 }

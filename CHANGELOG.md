@@ -13,6 +13,27 @@
 Not a versioned release. Each item links to its section below.
 
 - Payments and ownership changes to hashed and post-quantum receiving addresses register or check the recipient in the same atomic batch, and the executor refuses to sign a first registration without explicit sponsorship consent (`max_registration_deposit`, `on_registration_sponsorship`, `rtao --max-registration-deposit`) (D-148).
+- Hashed and post-quantum signers pass through the ordinary `Signer` seam: `Client::submit` (journal included), Shield pairs and fee quotes sign and price them from chain-read authority, and the executor submits for them like any key (D-149).
+
+### Authority signers through the ordinary signing seam (D-149)
+
+#### rtao-signer
+
+- `Signer::authority()` (default `None`) exposes a hashed or post-quantum `AuthoritySigner`; `KeypairAuthoritySigner` now implements `Signer` (64-byte signing refuses) and so is a key source like any key. `KeyView::authority_descriptor` (default `None`) names a role's hashed or post-quantum public descriptor without unlocking.
+
+#### rtao-primitives
+
+- New: `AuthorityType::from_descriptor`.
+
+#### rtao-client
+
+- `Client::submit`, `submit_leased` (standard post-quantum only) and `submit_shielded` sign authority signers from chain-read authority: rotating accounts at their confirmed nonce with no pending transaction, Shield pairs from one finalized snapshot at `(n, g)` and `(n + 1, g + 1)`; every proof is verified before encoding. The submission journal records these submissions like any other.
+- New: `ProbeSigner`, `Client::estimate_weight_as` and `Client::estimate_shielded_carrier_fee_as`, which price a placeholder proof of the signer's scheme.
+
+#### rtao-tx
+
+- The executor prices fee probes and the Shield carrier with the signing role's own scheme (`KeyView::authority_descriptor`), and submits authority signers through the client.
+
 
 ### Registration guards and sponsorship consent (D-148)
 
@@ -33,7 +54,7 @@ Not a versioned release. Each item links to its section below.
 
 #### rtao-intents
 
-- `Transfer`, `TransferAll` and `AnnounceColdkeySwap` accept `hashed_descriptor` (decoded strictly at validation) instead of refusing it. `Batch` guards each child in place.
+- `Transfer`, `TransferAll` and `AnnounceColdkeySwap` accept `hashed_descriptor` (decoded strictly at validation) instead of refusing it. `Batch` guards each child in place and, as Python v488 (`atomic_calls`; the runtime rejects nested batches), flattens a child's own `Utility.batch_all` into the one batch, which changes the call bytes of batches with such children.
 
 #### rtao-cli
 

@@ -361,3 +361,140 @@ fn keypair_authority_signers_refuse_classical_keys() {
         .unwrap();
     assert!(!format!("{signer:?}").contains("seed"));
 }
+
+fn decoded_nonce(client_runtime: &rtao_runtime::RuntimeHandle, bytes: &[u8]) -> u128 {
+    use rtao_core::value_ext::ValueExt;
+    client_runtime
+        .core()
+        .decode_extrinsic(bytes, true)
+        .unwrap()
+        .field("nonce")
+        .and_then(ValueExt::as_u128)
+        .unwrap()
+}
+
+#[tokio::test]
+async fn authority_signers_submit_through_the_ordinary_signer_path() {
+    // D-149: a KeypairAuthoritySigner is a Signer whose authority() routes
+    // Client::submit to the authorization path.
+    for crypto in [CRYPTO_HASHED, CRYPTO_MLDSA65_FIXED] {
+        let signer = signer(crypto);
+        let (client, fake) = connect(state(&signer, 3, 5)).await;
+        fake.mutate_state(|state| {
+            state.queue_submit(SubmitScript::InBlockThenFinalized { events: json!([]) })
+        });
+        let as_signer: &dyn rtao_signer::Signer = &signer;
+        assert!(as_signer.authority().is_some());
+        let report = client
+            .submit(remark(&client).await, as_signer, &SubmitOptions::default())
+            .await
+            .unwrap();
+        assert_eq!(report.inclusion, Inclusion::Finalized);
+        let submitted = fake.mutate_state(|state| state.submissions.clone());
+        assert_eq!(submitted.len(), 1);
+        let runtime = client.refresh_runtime().await.unwrap();
+        assert_eq!(decoded_nonce(&runtime, &submitted[0]), 5);
+        assert!(submitted[0].len() > signer.authority_type().proof_length());
+    }
+}
+
+#[tokio::test]
+async fn rotating_accounts_refuse_caller_owned_leases() {
+    let signer = signer(CRYPTO_HASHED);
+    let (client, _fake) = connect(state(&signer, 0, 1)).await;
+    let lease = client.nonces().lease(&signer.account()).await.unwrap();
+    let error = client
+        .submit_leased(
+            remark(&client).await,
+            &signer,
+            lease,
+            &SubmitOptions::default(),
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("sign at their confirmed nonce"),
+        "{error}"
+    );
+}
+
+#[tokio::test]
+async fn shield_pairs_sign_both_proofs_from_one_snapshot() {
+    for crypto in [CRYPTO_HASHED, CRYPTO_MLDSA65_FIXED] {
+        let signer = signer(crypto);
+        let mut state = state(&signer, 3, 5);
+        state
+            .seed_constant("Aura", "SlotDuration", json!(1))
+            .unwrap();
+        state
+            .seed_typed("MevShield", "NextKey", (), vec![0u8; 1184])
+            .unwrap();
+        let (client, fake) = connect(state).await;
+        client
+            .submit_shielded(
+                remark(&client).await,
+                &signer,
+                &rtao_client::ShieldOptions {
+                    wait: rtao_client::Wait::Pool,
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let submitted = fake.mutate_state(|state| state.submissions.clone());
+        assert_eq!(submitted.len(), 1, "only the carrier is broadcast");
+        let runtime = client.refresh_runtime().await.unwrap();
+        // The carrier takes nonce n; its sealed inner, n + 1.
+        assert_eq!(decoded_nonce(&runtime, &submitted[0]), 5);
+        assert_eq!(
+            client.nonces().cached(&signer.account().to_string()).await,
+            Some(6)
+        );
+    }
+}
+
+#[tokio::test]
+async fn fee_probes_price_the_signing_scheme_proof_length() {
+    let signer = signer(CRYPTO_MLDSA65_FIXED);
+    let (client, fake) = connect(state(&signer, 0, 0)).await;
+    let call = remark(&client).await;
+    let probe_length = |fake: &FakeChain, since: usize| {
+        let requests = fake.requests();
+        let request = requests[since..]
+            .iter()
+            .rev()
+            .find(|request| {
+                request.method == "state_call"
+                    && request.params[0] == "TransactionPaymentApi_query_info"
+            })
+            .expect("fee probe")
+            .clone();
+        request.params[1].as_str().unwrap().len()
+    };
+    let start = fake.requests().len();
+    client
+        .estimate_weight(
+            call.clone(),
+            signer.account(),
+            rtao_primitives::CryptoType::Sr25519,
+        )
+        .await
+        .unwrap();
+    let classical = probe_length(&fake, start);
+    let start = fake.requests().len();
+    let as_signer: &dyn rtao_signer::Signer = &signer;
+    client
+        .estimate_weight_as(
+            call,
+            signer.account(),
+            rtao_client::ProbeSigner::of(as_signer),
+        )
+        .await
+        .unwrap();
+    let authority = probe_length(&fake, start);
+    // Hex characters: the proof replaces the 64-byte signature.
+    assert!(
+        authority - classical >= 2 * (MLDSA_PROOF_LENGTH - 64),
+        "{classical} {authority}"
+    );
+}

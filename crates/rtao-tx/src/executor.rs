@@ -511,6 +511,27 @@ impl Executor {
         signer_address: AccountId,
         opts: &PlanOptions,
     ) -> Result<ReviewedIntent, TxError> {
+        // Fee probes price the signing key's own proof length (D-149).
+        let probe = crate::intent::FeeProbe::from_descriptor(
+            intent
+                .signer_role_dyn()
+                .ok()
+                .and_then(|role| keys.authority_descriptor(role)),
+        );
+        Box::pin(crate::intent::with_fee_probe(
+            probe,
+            self.review_with_keys_probed(intent, keys, signer_address, opts),
+        ))
+        .await
+    }
+
+    async fn review_with_keys_probed(
+        &self,
+        intent: &dyn DynIntent,
+        keys: &dyn KeyView,
+        signer_address: AccountId,
+        opts: &PlanOptions,
+    ) -> Result<ReviewedIntent, TxError> {
         let shielded = opts.shielded;
         intent.validate_dyn()?;
         let semantic = intent.semantic_intent_dyn();
@@ -743,9 +764,15 @@ impl Executor {
             },
         };
         if quote_shielded {
+            let probe = crate::intent::fee_probe();
             let carrier = self
                 .client
-                .estimate_shielded_carrier_fee(signer_address, built.call.clone(), carrier_period)
+                .estimate_shielded_carrier_fee_as(
+                    signer_address,
+                    probe.signer(),
+                    built.call.clone(),
+                    carrier_period,
+                )
                 .await;
             let carrier = match carrier {
                 Err(error) => {

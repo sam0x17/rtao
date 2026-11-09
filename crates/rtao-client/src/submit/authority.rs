@@ -346,8 +346,9 @@ impl Client {
     /// hashed) or the finalized block (post-quantum), refuses while one of its
     /// transactions is pending and uses the confirmed nonce; an explicit
     /// nonce must equal it. A standard post-quantum account reads finalized
-    /// authority and takes an ordinary nonce lease. A journal is refused: it
-    /// does not yet record authorized submissions.
+    /// authority and takes an ordinary nonce lease. A journal is refused
+    /// here; [`Client::submit`] with the signer as a [`rtao_signer::Signer`]
+    /// (its `authority()` set) records journaled submissions.
     pub async fn submit_authorized(
         &self,
         call: CallBytes,
@@ -356,7 +357,7 @@ impl Client {
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         if opts.journal.is_some() {
             return Err(refused(
-                "the submission journal does not record hashed or post-quantum transactions yet",
+                "submit_authorized does not journal; use Client::submit with the signer as a Signer",
             )
             .into());
         }
@@ -483,4 +484,303 @@ fn verify_proof(
         ));
     }
     Ok(())
+}
+
+/// The signing scheme a fee probe prices: a classical 64-byte signature or a
+/// hashed or post-quantum authorization proof of its scheme's length.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProbeSigner<'a> {
+    /// An Ed25519 or Sr25519 signature.
+    Classical(rtao_primitives::CryptoType),
+    /// A hashed or post-quantum account's proof (Python's placeholder proof).
+    Authority {
+        /// The account's scheme.
+        kind: AuthorityType,
+        /// Its public descriptor.
+        descriptor: &'a [u8],
+    },
+}
+
+impl ProbeSigner<'_> {
+    /// The scheme a signer signs with, from its public identity only.
+    pub fn of(signer: &dyn rtao_signer::Signer) -> ProbeSigner<'_> {
+        match signer.authority() {
+            Some(authority) => ProbeSigner::Authority {
+                kind: authority.authority_type(),
+                descriptor: authority.descriptor(),
+            },
+            None => ProbeSigner::Classical(signer.crypto_type()),
+        }
+    }
+    /// The placeholder signature bytes and signature version for `account`.
+    pub(crate) fn placeholder(&self, account: AccountId) -> (Vec<u8>, u8) {
+        match *self {
+            Self::Classical(crypto) => (vec![0; 64], u8::from(crypto)),
+            Self::Authority { kind, descriptor } => {
+                (kind.placeholder_proof(account, descriptor, 0), kind.code())
+            }
+        }
+    }
+}
+
+impl Client {
+    /// The authority snapshot and nonce lease for a direct submission
+    /// (Python's `_sign_hashed` and stateless reservation).
+    ///
+    /// A rotating account reads its authority at the best block (classical
+    /// hashed) or finalized block (post-quantum), refuses while one of its
+    /// transactions is pending and signs at the confirmed nonce; an explicit
+    /// nonce must equal it. A standard post-quantum account reads finalized
+    /// authority and takes an ordinary nonce lease.
+    pub(crate) async fn authority_lease(
+        &self,
+        signer: &dyn AuthoritySigner,
+        nonce: NoncePolicy,
+    ) -> Result<(crate::NonceLease, HashedSigningSnapshot), ClientError> {
+        let kind = signer.authority_type();
+        let account = signer.account();
+        let block = if kind.is_post_quantum() {
+            BlockRef::Finalized
+        } else {
+            BlockRef::Best
+        };
+        let mut snapshot = self.hashed_snapshot(signer, block).await?;
+        let lease = if kind.is_stateless() {
+            let lease = match nonce {
+                NoncePolicy::Auto => self.nonces().lease(&account).await?,
+                NoncePolicy::Explicit(nonce) => self.nonces().lease_explicit(&account, nonce),
+            };
+            snapshot.nonce = lease.value();
+            lease
+        } else {
+            if self.nonces().fresh(&account).await? != snapshot.nonce {
+                return Err(refused(
+                    "hashed account has a pending transaction; wait for finalization before signing again",
+                ));
+            }
+            if matches!(nonce, NoncePolicy::Explicit(nonce) if nonce != snapshot.nonce) {
+                return Err(refused(
+                    "hashed accounts must use the current on-chain nonce; refresh and sign again",
+                ));
+            }
+            self.nonces().lease_explicit(&account, snapshot.nonce)
+        };
+        Ok((lease, snapshot))
+    }
+
+    /// The authority snapshot and the adjacent carrier and inner nonce leases
+    /// of a Shield pair (Python's `prepare_hashed_snapshot(reserve_nonces=…)`).
+    ///
+    /// Both proofs come from one finalized snapshot: the carrier at nonce `n`
+    /// and generation `g`, the inner at `n + 1` and `g + 1` (a standard
+    /// post-quantum account stays at generation zero). A rotating account
+    /// must have no pending transaction; a standard post-quantum account
+    /// leases the pair like a classical one.
+    pub(crate) async fn authority_pair(
+        &self,
+        signer: &dyn AuthoritySigner,
+    ) -> Result<
+        (
+            (crate::NonceLease, crate::NonceLease),
+            bool,
+            HashedSigningSnapshot,
+        ),
+        ClientError,
+    > {
+        let account = signer.account();
+        if signer.authority_type().is_stateless() {
+            let (pair, waited) = self.nonces().lease_pair_waited(&account).await?;
+            let mut snapshot = self.hashed_snapshot(signer, BlockRef::Finalized).await?;
+            snapshot.nonce = pair.0.value();
+            return Ok((pair, waited, snapshot));
+        }
+        let snapshot = self.prepare_hashed_snapshot(signer).await?;
+        let nonce = snapshot.nonce;
+        let inner = nonce
+            .checked_add(1)
+            .ok_or_else(|| ClientError::Protocol("account nonce overflow".into()))?;
+        let carrier = self.nonces().lease_explicit(&account, nonce);
+        let inner = self.nonces().lease_explicit(&account, inner);
+        Ok(((carrier, inner), false, snapshot))
+    }
+
+    /// Authorize a prepared transaction from `snapshot` at its nonce plus
+    /// `offset` (0, or 1 for a Shield inner transaction) and encode it.
+    ///
+    /// The prepared address and nonce must be the snapshot's, the signer's
+    /// key must match the chain's commitment, and the proof is verified
+    /// against the chain-read authority before encoding, after the same live
+    /// runtime, genesis and era checks as [`Client::attach_signature`].
+    pub(crate) async fn authorize_prepared(
+        &self,
+        unsigned: &crate::UnsignedExtrinsic,
+        signer: &dyn AuthoritySigner,
+        snapshot: &HashedSigningSnapshot,
+        offset: u64,
+        purpose: SignPurpose,
+    ) -> Result<(Bytes, H256), ClientError> {
+        let kind = signer.authority_type();
+        if offset > 1 {
+            return Err(refused(
+                "hashed generation offset must be zero or one for a Shield inner call",
+            ));
+        }
+        if snapshot.account != signer.account()
+            || unsigned.address() != snapshot.account
+            || snapshot.authority_type != kind
+            || snapshot.descriptor != signer.descriptor()
+        {
+            return Err(refused(
+                "hashed signing snapshot does not match the pinned account authority",
+            ));
+        }
+        let nonce = snapshot
+            .nonce
+            .checked_add(offset)
+            .filter(|nonce| !kind.is_stateless() || *nonce < u64::from(u32::MAX))
+            .ok_or_else(|| refused("standard post-quantum nonce is exhausted or invalid"))?;
+        if unsigned.nonce() != nonce {
+            return Err(refused(
+                "Shield nonce does not match its pinned signing snapshot",
+            ));
+        }
+        let (generation, commitment) = self.authority_generation(signer, snapshot, offset)?;
+        self.ensure_signing_network()?;
+        let (runtime, version) = self.refresh_runtime_version().await?;
+        runtime
+            .signing_status()
+            .map_err(|error| refused(error.to_string()))?;
+        check_live_stamp(&version, unsigned.call())?;
+        unsigned
+            .call()
+            .ensure_runtime(&runtime)
+            .map_err(ClientError::from)?;
+        check_scheme(&runtime, kind)?;
+        if unsigned.genesis_hash() != self.genesis() {
+            return Err(refused(
+                "prepared transaction belongs to a different genesis",
+            ));
+        }
+        if let Some(expiry) = unsigned.expiry()
+            && self.finalized_number().await? >= expiry
+        {
+            return Err(refused(
+                "prepared transaction's mortal era has expired; prepare and sign again",
+            ));
+        }
+        let call = unsigned.call().as_bytes();
+        let extra = unsigned.included_in_extrinsic();
+        let additional = unsigned.included_in_signed_data();
+        // The complete payload: authorization never uses the 256-byte hash.
+        let mut payload = Vec::with_capacity(call.len() + extra.len() + additional.len());
+        payload.extend_from_slice(call);
+        payload.extend_from_slice(extra);
+        payload.extend_from_slice(additional);
+        let request = AuthorizationRequest {
+            payload: &payload,
+            call,
+            generation,
+            purpose,
+        };
+        let proof = signer
+            .sign_authorization(&request)
+            .await
+            .map_err(ClientError::Signing)?;
+        proof.check(kind).map_err(ClientError::Signing)?;
+        verify_proof(
+            kind,
+            &proof.bytes,
+            &payload,
+            &snapshot.descriptor,
+            generation,
+            &commitment,
+        )?;
+        let (bytes, hash) = runtime
+            .core()
+            .encode_signed_extrinsic(
+                call,
+                snapshot.account.0,
+                &proof.bytes,
+                kind.code(),
+                &unsigned.params(),
+            )
+            .map_err(CoreError::from)?;
+        Ok((bytes.into(), H256(hash)))
+    }
+
+    /// The generation and commitment a proof at `offset` signs with, after
+    /// checking the signer's key against the snapshot's commitment.
+    fn authority_generation(
+        &self,
+        signer: &dyn AuthoritySigner,
+        snapshot: &HashedSigningSnapshot,
+        offset: u64,
+    ) -> Result<(u64, Vec<u8>), ClientError> {
+        if signer.authority_type().is_stateless() {
+            if snapshot.generation != 0 || snapshot.commitment != snapshot.descriptor[2..] {
+                return Err(refused(
+                    "standard post-quantum signing snapshot does not match this wallet",
+                ));
+            }
+            return Ok((0, snapshot.commitment.clone()));
+        }
+        if snapshot.generation >= u64::MAX - 1 - offset {
+            return Err(refused("hashed signing generation is exhausted"));
+        }
+        let current = signer
+            .commitment(snapshot.generation)
+            .map_err(ClientError::Signing)?;
+        if current != snapshot.commitment {
+            return Err(refused(
+                "derived hashed signing key does not match the current on-chain commitment",
+            ));
+        }
+        let generation = snapshot.generation + offset;
+        let commitment = if offset == 0 {
+            current
+        } else {
+            signer
+                .commitment(generation)
+                .map_err(ClientError::Signing)?
+        };
+        Ok((generation, commitment))
+    }
+}
+
+impl Client {
+    /// Sign a prepared transaction under `admission`: classically (the
+    /// signature and its attachment as separate bounded steps), or for a
+    /// hashed or post-quantum signer from `snapshot` at `offset` (D-149).
+    pub(crate) async fn sign_prepared_as(
+        &self,
+        admission: super::OperationLimit,
+        unsigned: &crate::UnsignedExtrinsic,
+        signer: &dyn rtao_signer::Signer,
+        snapshot: Option<&HashedSigningSnapshot>,
+        offset: u64,
+        purpose: SignPurpose,
+    ) -> Result<(Bytes, H256), ClientError> {
+        match (signer.authority(), snapshot) {
+            (Some(authority), Some(snapshot)) => {
+                admission
+                    .run(
+                        self,
+                        self.authorize_prepared(unsigned, authority, snapshot, offset, purpose),
+                    )
+                    .await
+            }
+            (None, None) => {
+                let request = unsigned.signing_request(purpose);
+                let signature = admission
+                    .run(self, async {
+                        signer.sign(&request).await.map_err(ClientError::Signing)
+                    })
+                    .await?;
+                admission
+                    .run(self, self.attach_signature(unsigned, signature))
+                    .await
+            }
+            _ => Err(refused("hashed signing snapshot does not match the signer")),
+        }
+    }
 }

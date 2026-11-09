@@ -277,6 +277,15 @@ pub trait Signer: Send + Sync + 'static {
     fn sign_raw<'a>(&'a self, _message: &'a [u8]) -> BoxFuture<'a, Result<[u8; 64], SignerError>> {
         Box::pin(async { Err(SignerError::RawSigningUnsupported) })
     }
+    /// The hashed or post-quantum authorization signer behind this signer,
+    /// if any (D-149).
+    ///
+    /// Such a signer produces no 64-byte signature: the client signs and
+    /// submits through its authorization path instead, from authority read
+    /// on chain. `None` for classical keys.
+    fn authority(&self) -> Option<&dyn AuthoritySigner> {
+        None
+    }
 }
 
 /// An unlocked pinned-core keypair shared until the final `Arc` owner drops.
@@ -403,5 +412,8 @@ impl<S: Signer + ?Sized> Signer for Arc<S> {
     }
     fn sign_raw<'a>(&'a self, message: &'a [u8]) -> BoxFuture<'a, Result<[u8; 64], SignerError>> {
         (**self).sign_raw(message)
+    }
+    fn authority(&self) -> Option<&dyn AuthoritySigner> {
+        (**self).authority()
     }
 }

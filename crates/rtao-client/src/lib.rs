@@ -74,7 +74,7 @@ pub use shield::{
 };
 pub use submit::{
     AuthorizedExtrinsic, ExtrinsicReport, HashedSigningSnapshot, Inclusion, Mortality, NoncePolicy,
-    Period, PoolRejection, SubmitFailure, SubmitOptions, UnsignedExtrinsic, Wait,
+    Period, PoolRejection, ProbeSigner, SubmitFailure, SubmitOptions, UnsignedExtrinsic, Wait,
 };
 pub use view::{
     BlockRef, DynView, Fetch, FromStorage, HeadPolicy, IntoCoreValues, KeyArgs, PinnedBlock,
