@@ -14,6 +14,26 @@ Not a versioned release. Each item links to its section below.
 
 - `rtao multisig add` saves new groups as safe by default (`--account-mode`), and `--multisig-account-mode` selects or checks a group's derivation (D-145).
 - The subnet template, `fuzz/` and the CI probe workspaces build the reviewed core patch, kept equal to the root's by the pin and template checks (D-146).
+- Hashed and post-quantum accounts can sign and submit through the new `AuthoritySigner` and `Client::submit_authorized`, from authority read on chain and verified before sending (D-147); the existing 64-byte signing paths are unchanged.
+
+### Hashed and post-quantum signing (D-147)
+
+#### rtao-primitives
+
+- New: `AuthorityType` (non-exhaustive): the core's hashed and post-quantum crypto codes (hashed Sr25519/Ed25519, rotating and standard ML-DSA-65, Falcon-512 and Falcon-1024), with Python's `pq_lengths`, `hashed_proof_length` (`proof_length`), `is_stateless_pq` (`is_stateless`), `requires_registration`, the descriptor profile and a fee-quote `placeholder_proof`; `HASHED_PROOF_LENGTH` (136) and `MLDSA_PROOF_LENGTH` (5367). `CryptoType` stays Ed25519/Sr25519.
+- New: `receiving::raw_bytes` (Python `hashed.raw_bytes`).
+
+#### rtao-signer
+
+- New: `AuthoritySigner`, an object-safe signer for hashed and post-quantum accounts that returns a variable-length `AuthorizationProof` over the complete unshortened payload (`AuthorizationRequest`) at a generation read from chain state; `KeypairAuthoritySigner` wraps an unlocked core keypair, refuses a classical key and checks that its account derives from its public descriptor (`expect_identity` checks it against a public wallet). `Signer` and `MultiSignature` are unchanged.
+
+#### rtao-core
+
+- New re-exports in `keys`: `verify_hashed_authorization`, `verify_mldsa_authorization`, `account_crypto_type` and the Falcon crypto codes.
+
+#### rtao-client
+
+- New: `HashedSigningSnapshot`, `AuthorizedExtrinsic` and `Client::{hashed_snapshot, prepare_hashed_snapshot, sign_authorized, submit_authorized}`. A rotating account signs at the generation and confirmed nonce of its `HashedAccounts` record (the best block for classical hashed accounts, the finalized block for post-quantum ones); the runtime must support the scheme, `AdminUtils.HashedAccountsEnabled` must be true, the record must name the signer's descriptor and the signer's key must match its commitment; a pending transaction, another nonce and a third Shield offset are refused. A standard post-quantum account needs no registration and takes ordinary nonce leases. Every proof is verified against the chain-read authority before the core encodes the extrinsic. The journal is refused for these submissions for now.
 
 ### CLI account modes; the template's core patch (D-145, D-146)
 

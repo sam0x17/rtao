@@ -21,14 +21,6 @@ tag = "v488"
 symbols = ["bittensor._substrate.CallBytes", "bittensor._substrate.ExtrinsicNotFound", "bittensor._substrate.ExtrinsicSubmissionRejected", "bittensor._substrate.HashedSigningSnapshot", "bittensor._substrate.InclusionReport", "bittensor._substrate.MaxRetriesExceeded", "bittensor._substrate.MultisigAccount", "bittensor._substrate.RpcPolicyRejection", "bittensor._substrate.RpcSubstrate", "bittensor._substrate.RpcSubstrate._failed_submit", "bittensor._substrate.RpcSubstrate._result_from_report", "bittensor._substrate.RpcSubstrate._submit_and_report", "bittensor._substrate.RpcSubstrate.account_next_index", "bittensor._substrate.RpcSubstrate.compose", "bittensor._substrate.RpcSubstrate.constant", "bittensor._substrate.RpcSubstrate.estimate_fee", "bittensor._substrate.RpcSubstrate.estimate_shielded_carrier_fee", "bittensor._substrate.RpcSubstrate.multisig_account", "bittensor._substrate.RpcSubstrate.prepare_hashed_snapshot", "bittensor._substrate.RpcSubstrate.prepare_mldsa", "bittensor._substrate.RpcSubstrate.release_nonce_reservation", "bittensor._substrate.RpcSubstrate.sign_extrinsic", "bittensor._substrate.RpcSubstrate.submit", "bittensor._substrate.RpcSubstrate.submit_signature", "bittensor._substrate.RpcSubstrate.submit_signed", "bittensor._substrate.SignedExtrinsic", "bittensor._substrate.StateDiscardedError", "bittensor._substrate.Substrate", "bittensor._substrate.Substrate.constant", "bittensor._substrate.Substrate.estimate_fee", "bittensor._substrate.Substrate.estimate_shielded_carrier_fee", "bittensor._substrate.Substrate.multisig_account", "bittensor._substrate.Substrate.prepare_hashed_snapshot", "bittensor._substrate.Substrate.prepare_mldsa", "bittensor._substrate.Substrate.release_nonce_reservation", "bittensor._substrate.Substrate.sign_extrinsic", "bittensor._substrate.Substrate.submit", "bittensor._substrate.SubstrateRequestException", "bittensor._substrate.UnsignedExtrinsic", "bittensor._substrate.is_stateless_pq"]
 
 [[file]]
-py = "sdk/python/bittensor/_transport/contract.py"
-kind = "ported"
-from = "fb01ce3096af01e97eaff28a27def819c30b9ad0"
-to = "0ae380b7814181927173b11142ba9e8b834306de"
-tag = "v488"
-symbols = ["bittensor._transport.contract.HashedSigningSnapshot", "bittensor._transport.contract.HashedSigningSnapshot.address", "bittensor._transport.contract.HashedSigningSnapshot.block_hash", "bittensor._transport.contract.HashedSigningSnapshot.commitment", "bittensor._transport.contract.HashedSigningSnapshot.crypto_type", "bittensor._transport.contract.HashedSigningSnapshot.descriptor", "bittensor._transport.contract.HashedSigningSnapshot.generation", "bittensor._transport.contract.HashedSigningSnapshot.nonce", "bittensor._transport.contract.MultisigAccount", "bittensor._transport.contract.MultisigAccount.account_mode", "bittensor._transport.contract.SignedExtrinsic", "bittensor._transport.contract.SignedExtrinsic.nonce", "bittensor._transport.contract.SignedExtrinsic.signer_address"]
-
-[[file]]
 py = "sdk/python/bittensor/_transport/errors.py"
 kind = "ported"
 from = "d48b44e8d8edb184c51005137a2de2f3a99198b2"
@@ -411,14 +403,6 @@ from = "25e9a4a9dcbe5ac7fadcc8dedb41c011e904adcd"
 to = "98e1ec5934be865830ee493ec6e54f7820803d88"
 tag = "v488"
 symbols = ["bittensor.signing.REGISTERED_CRYPTO_TYPES", "bittensor.signing.WalletSigner", "bittensor.signing.WalletSigner.__init__", "bittensor.signing.WalletSigner._public", "bittensor.signing.WalletSigner._unlock", "bittensor.signing.WalletSigner.at_generation", "bittensor.signing.WalletSigner.hashed_descriptor", "bittensor.signing._check_signer_identity", "bittensor.signing._signer_identity", "bittensor.signing.is_stateless_pq", "bittensor.signing.resolve_signer", "bittensor.signing.ss58_decode"]
-
-[[file]]
-py = "sdk/python/bittensor/sp_core.py"
-kind = "n/a"
-from = "85209ae8e5988622f31265786c78bf9be5b887da"
-to = "431422f365d1b044dbcc954e3b548db84baad733"
-tag = "v488"
-symbols = ["bittensor.sp_core.CLASSICAL_HASHED_CRYPTO_TYPES", "bittensor.sp_core.CRYPTO_HASHED", "bittensor.sp_core.FALCON1024_CRYPTO_TYPES", "bittensor.sp_core.FALCON512_CRYPTO_TYPES", "bittensor.sp_core.FALCON_CRYPTO_TYPES", "bittensor.sp_core.FIXED_PQ_CRYPTO_TYPES", "bittensor.sp_core.HASHED_CRYPTO_TYPES", "bittensor.sp_core.MLDSA_CRYPTO_TYPES", "bittensor.sp_core.PQ_CRYPTO_TYPES", "bittensor.sp_core.PQ_PROFILES", "bittensor.sp_core.REGISTERED_CRYPTO_TYPES", "bittensor.sp_core.account_crypto_type", "bittensor.sp_core.decode_hashed_receiving_address", "bittensor.sp_core.decode_mldsa_receiving_address", "bittensor.sp_core.encode_hashed_receiving_address", "bittensor.sp_core.encode_mldsa_receiving_address", "bittensor.sp_core.is_stateless_mldsa", "bittensor.sp_core.is_stateless_mldsa_descriptor", "bittensor.sp_core.is_stateless_pq", "bittensor.sp_core.is_stateless_pq_descriptor", "bittensor.sp_core.pq_lengths", "bittensor.sp_core.requires_registration", "bittensor.sp_core.verify_hashed_authorization", "bittensor.sp_core.verify_mldsa_authorization"]
 
 [[file]]
 py = "sdk/python/bittensor/sync.py"

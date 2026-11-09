@@ -9150,7 +9150,7 @@
           "crates/rtao-client/src/block_info.rs",
           "crates/rtao-core-ext/src/ir.rs"
         ],
-        "synced_blob": "fb01ce3096af01e97eaff28a27def819c30b9ad0"
+        "synced_blob": "0ae380b7814181927173b11142ba9e8b834306de"
       },
       {
         "kind": "ported",
@@ -11490,7 +11490,7 @@
         "rust": [
           "rtao_core::{keys,keyfiles,keyfile_env}; rtao_primitives::AccountId; signer/keypair API"
         ],
-        "synced_blob": "85209ae8e5988622f31265786c78bf9be5b887da"
+        "synced_blob": "431422f365d1b044dbcc954e3b548db84baad733"
       },
       {
         "kind": "ported",

@@ -131,7 +131,8 @@ pub fn registration_descriptor_value(
     Ok(serde_json::json!({ variant: value }))
 }
 
-fn record_bytes(value: &serde_json::Value) -> Option<Vec<u8>> {
+/// Python `hashed.raw_bytes`: bytes stored as 0x hex or a byte list.
+pub fn raw_bytes(value: &serde_json::Value) -> Option<Vec<u8>> {
     match value {
         serde_json::Value::String(text) => {
             crate::pyfmt::bytes_fromhex(text.strip_prefix("0x").unwrap_or(text)).ok()
@@ -149,7 +150,7 @@ fn record_bytes(value: &serde_json::Value) -> Option<Vec<u8>> {
 pub fn descriptor_bytes(value: &serde_json::Value) -> Result<Vec<u8>, rtao_core::CoreError> {
     let commitment = value
         .get("initial_commitment")
-        .and_then(record_bytes)
+        .and_then(raw_bytes)
         .ok_or_else(|| invalid("unsupported hashed descriptor"))?;
     if value.get("version").and_then(serde_json::Value::as_u64) == Some(2) {
         let algorithm = value

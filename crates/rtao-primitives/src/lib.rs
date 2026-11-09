@@ -6,6 +6,7 @@
 
 mod account;
 mod account_mode;
+mod authority;
 /// Chain IP addresses rendered as HTTP axon targets.
 pub mod axon;
 mod error;
@@ -43,6 +44,7 @@ pub mod ratio;
 
 pub use account::{AccountId, CryptoType, DefaultAccount, Ss58Address};
 pub use account_mode::{AccountMode, AccountModeError, multisig_account_id};
+pub use authority::{AuthorityType, AuthorityTypeError, HASHED_PROOF_LENGTH, MLDSA_PROOF_LENGTH};
 pub use error::UnitError;
 pub use fixed::{
     I32F32, I64F64, I96F32, PerMillion, PerU16, Perbill, Percent, Permill, Ratio, U64F64,

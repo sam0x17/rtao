@@ -6,6 +6,9 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Finality-anchored transaction preparation and typed submission.
 
+mod authority;
+pub use authority::{AuthorizedExtrinsic, HashedSigningSnapshot};
+
 use crate::{BlockRef, Client, ClientError, NonceLease, View, ViewExt};
 use bytes::Bytes;
 use futures::StreamExt;
@@ -1187,24 +1190,7 @@ impl Client {
                 );
             }
         }
-        let (era, anchor, expiry) = match opts.mortality {
-            Mortality::Immortal => (Value::Str("00".into()), self.genesis(), None),
-            Mortality::Mortal(period) => {
-                let birth = rtao_core::extrinsic::era_birth(period.get(), height);
-                let anchor = self.block_hash(birth).await?;
-                let expiry = birth.checked_add(period.get()).ok_or_else(|| {
-                    ClientError::Protocol("mortal era expiry overflows block number".into())
-                })?;
-                (
-                    Value::record(vec![
-                        ("period".into(), Value::Uint(period.get().into())),
-                        ("current".into(), Value::Uint(height.into())),
-                    ]),
-                    anchor,
-                    Some(expiry),
-                )
-            }
-        };
+        let (era, anchor, expiry) = self.era_for(opts.mortality, height).await?;
         let spec_name = version
             .get("specName")
             .and_then(serde_json::Value::as_str)
@@ -1274,6 +1260,32 @@ impl Client {
             submission_head: height,
             expiry,
             runtime,
+        })
+    }
+    /// The era, its anchor block and expiry for a transaction prepared at
+    /// finalized `height`.
+    pub(crate) async fn era_for(
+        &self,
+        mortality: Mortality,
+        height: u64,
+    ) -> Result<(Value, H256, Option<u64>), ClientError> {
+        Ok(match mortality {
+            Mortality::Immortal => (Value::Str("00".into()), self.genesis(), None),
+            Mortality::Mortal(period) => {
+                let birth = rtao_core::extrinsic::era_birth(period.get(), height);
+                let anchor = self.block_hash(birth).await?;
+                let expiry = birth.checked_add(period.get()).ok_or_else(|| {
+                    ClientError::Protocol("mortal era expiry overflows block number".into())
+                })?;
+                (
+                    Value::record(vec![
+                        ("period".into(), Value::Uint(period.get().into())),
+                        ("current".into(), Value::Uint(height.into())),
+                    ]),
+                    anchor,
+                    Some(expiry),
+                )
+            }
         })
     }
     /// Validate both runtime stamps and attach a negotiated signature.
