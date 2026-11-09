@@ -14,6 +14,21 @@ Not a versioned release. Each item links to its section below.
 
 - `rtao wallet` creates, restores, shows and registers hashed and post-quantum keys; contacts accept receiving addresses; `rtao wallet verify` needs `--crypto-type` for a bare ss58 address (D-152).
 - btauth verification takes each sender's signature scheme from trusted configuration, refusing unconfigured senders; hashed SR/ED hotkeys sign and verify (D-153). **Migration:** see below.
+- `FundEvmKey` uses native EVM deposits on v488 runtimes; registered hashed EVM aliases resolve to their native account; multisig groups can register and check a permanent quantum-resistant authority; shielded multisig approvals check the complete fee (D-154).
+
+### EVM funding, multisig protection and approval obligations (D-154)
+
+#### rtao-intents
+
+- `FundEvmKey` builds `EVM.deposit` (the chain resolves the active alias) when the runtime supports it; its summary no longer names the legacy mirror, and on older runtimes with hashed accounts enabled it refuses instead of funding a mirror that a concurrent registration could redirect. New `evm::{resolve_evm_recipient, resolve_evm_deposit, resolve_evm_funding_recipient}`.
+- `EvmWithdraw` checks that the coldkey's alias is its own and reports `nothing to claim: the legacy EVM mirror is empty`.
+- Raw multisig execute/approve intents check only the opening deposit at build and carry `multisig_approvals`, so the executor checks fees against the actual outer signer.
+
+#### rtao-tx
+
+- `Multisig::{protection_status, protection_call, funding_call}`; `hashed::{compose_derivative, multisig_protection_status, multisig_protection_call, MultisigProtection}`.
+- `FundsRequest` gains `shielded` (source-breaking for struct literals): shielded approvals quote the carrier fee, keep the existential deposit or freeze free and refuse when they cannot quote.
+- `Multisig::approve` takes the registration Shield default behind the executor's auto-shield setting.
 
 ### HTTP authentication: trusted sender schemes and hashed hotkeys (D-141, D-153)
 

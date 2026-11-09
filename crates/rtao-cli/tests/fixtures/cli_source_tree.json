@@ -4,7 +4,7 @@
   "sources": [
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/main.py",
-      "sha256": "b710988cf97c467c48a26f7a2465d21a19864f62707c2dfc9d710a221c4c7d15"
+      "sha256": "4715748407bfa6920d6955ab35402ae1b92603fbde94015c5d7430dbe08d6c30"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/globals.py",
@@ -24,7 +24,11 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py",
-      "sha256": "86927735b25f56289cf567e738d85c53716f6a14da1fafc378b4d166744eaf26"
+      "sha256": "abdcd4136715177ace0f2afcae176a11f2d0a5dd64e63b5d07d680f3765fbc0f"
+    },
+    {
+      "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "sha256": "fa09ac098b296531493ef277b3964b62dcfa1747064607b3444cad032e70e932"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
@@ -40,7 +44,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py",
-      "sha256": "cc86d09fc9c4a4186798ef6737aa6626cf2652162ce92d162d0bfc925fef4835"
+      "sha256": "9bb8edc31f46efc082193482a314ad26952a9ee12d8ce669432e0095b58d5361"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
@@ -56,7 +60,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py",
-      "sha256": "2d6a0503619847f649b4a39e7a10f1fdbbfa620401ce626cf11443fc50466144"
+      "sha256": "ffaa1033fb7ba235d280eda32f43b22ea65df770cea0982dd0d1e77177bbc929"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py",
@@ -679,6 +683,92 @@
       "positionals": [
         "code"
       ],
+      "unresolved": []
+    },
+    {
+      "path": "gamma close",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": null,
+      "generated_intent": "close_gamma_deposit",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma list",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": "list_deposits",
+      "options": [
+        "--coldkey"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma mint",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": null,
+      "generated_intent": "mint_gamma",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma mint-with-stake",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": null,
+      "generated_intent": "mint_gamma_with_stake",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma move",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": null,
+      "generated_intent": "move_gamma",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma set-cap",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": null,
+      "generated_intent": "set_gamma_deposit_daily_spend_cap",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma set-spender",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": null,
+      "generated_intent": "set_gamma_deposit_spender",
+      "options": [],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma show",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": "show_deposit",
+      "options": [
+        "--hotkey",
+        "--netuid"
+      ],
+      "positionals": [],
+      "unresolved": []
+    },
+    {
+      "path": "gamma spend",
+      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
+      "function": "spend",
+      "options": [
+        "--netuid",
+        "--spend"
+      ],
+      "positionals": [],
       "unresolved": []
     },
     {

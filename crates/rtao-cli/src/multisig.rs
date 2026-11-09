@@ -542,6 +542,7 @@ impl DynIntent for SemanticMultisig<'_> {
                         outer_call: Some(&outer),
                         crypto_type: self.crypto,
                         signer_label: None,
+                        shielded: false,
                     },
                 )
                 .await

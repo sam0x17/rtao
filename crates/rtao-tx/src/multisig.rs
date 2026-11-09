@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/multisig.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/multisig.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/contract.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Multisig account approvals and best-effort funding checks.
 
@@ -104,6 +104,108 @@ impl Multisig {
         })
     }
 
+    /// Python `Multisig.protection_status`: finalized eligibility for, and
+    /// quorum-approved registration of, this group's permanent derived
+    /// authority. A safe group needs none.
+    #[doc(alias = "bittensor.multisig.Multisig.protection_status")]
+    pub async fn protection_status(
+        &self,
+        client: &Client,
+    ) -> Result<crate::hashed::MultisigProtection, TxError> {
+        if self.account_mode == AccountMode::Safe {
+            return Ok(crate::hashed::MultisigProtection {
+                safe_derivation: true,
+                ..Default::default()
+            });
+        }
+        let finalized = client.at(rtao_client::BlockRef::Finalized).await?;
+        let runtime = finalized.block().runtime.clone();
+        Ok(crate::hashed::multisig_protection_status(
+            &finalized,
+            &runtime,
+            &self.signatories,
+            self.threshold,
+        )
+        .await?)
+    }
+
+    /// Python `Multisig.protection_call`: the permanent authority
+    /// registration (or, once registered, its check) for this group's own
+    /// quorum to approve before funding. `deposit_payer` must be the final
+    /// executing member, consenting through its outer signature. Approve it
+    /// separately so pending economic calls keep their bytes.
+    #[doc(alias = "bittensor.multisig.Multisig.protection_call")]
+    pub async fn protection_call(
+        &self,
+        client: &Client,
+        deposit_payer: AccountId,
+    ) -> Result<CallBytes, TxError> {
+        if self.account_mode == AccountMode::Safe {
+            return Err(IntentError::validation(
+                "safe multisigs do not use permanent authority registration",
+            )
+            .into());
+        }
+        let finalized = client.at(rtao_client::BlockRef::Finalized).await?;
+        let runtime = finalized.block().runtime.clone();
+        Ok(crate::hashed::multisig_protection_call(
+            &finalized,
+            &runtime,
+            &self.signatories,
+            self.threshold,
+            deposit_payer,
+        )
+        .await?)
+    }
+
+    /// Python `Multisig.funding_call`: `Balances.transfer_keep_alive` to the
+    /// group, guarded by `check_derived` in one atomic batch when the group
+    /// is eligible for protection. An eligible group that has not registered
+    /// its authority (through [`Self::protection_call`], finalized) is
+    /// refused.
+    #[doc(alias = "bittensor.multisig.Multisig.funding_call")]
+    pub async fn funding_call(
+        &self,
+        client: &Client,
+        amount_rao: u64,
+    ) -> Result<CallBytes, TxError> {
+        if amount_rao == 0 {
+            return Err(IntentError::validation(
+                "funding amount must be a positive integer number of rao",
+            )
+            .into());
+        }
+        let status = self.protection_status(client).await?;
+        let runtime = client
+            .at(rtao_client::BlockRef::Finalized)
+            .await?
+            .block()
+            .runtime
+            .clone();
+        let payment = rtao_runtime::calls::balances::transfer_keep_alive(
+            DynValue::new(rtao_core::codec::Value::Bytes(self.address.0.to_vec())),
+            rtao_primitives::TaoBalance(amount_rao),
+        )
+        .compose(&runtime)
+        .map_err(IntentError::from)?;
+        if !status.eligible {
+            return Ok(payment);
+        }
+        if !status.registered {
+            return Err(IntentError::validation(
+                "this multisig must approve protection_call(deposit_payer=...) through its quorum and finalize it before funding",
+            )
+            .into());
+        }
+        // Registration is already final, so this is `check_derived` only.
+        let guard = self.protection_call(client, self.address).await?;
+        Ok(
+            rtao_runtime::calls::utility::batch_all(vec![guard, payment])
+                .compose(&runtime)
+                .map_err(IntentError::from)?,
+        )
+    }
+
     /// Approve the exact call, preserving an existing opening timepoint.
     ///
     /// Chain-read and fee-probe failures skip the funding check. An observed
@@ -148,12 +250,19 @@ impl Multisig {
             }
             call.ensure_runtime(&snapshot.block().runtime)
                 .map_err(ClientError::from)?;
+            // Python v488: account registration defaults to Shield when it is
+            // active (here behind the executor's auto-shield setting).
+            let shielded = options.shielded
+                || executor
+                    .auto_shield_route(&snapshot, &snapshot.block().runtime, &call, &mut Vec::new())
+                    .await?;
             self.preflight_funds(
                 client,
                 &snapshot,
                 signer,
                 &call,
                 options.signer_label.as_deref(),
+                shielded,
             )
             .await?;
             let runtime = &snapshot.block().runtime;
@@ -186,9 +295,9 @@ impl Multisig {
                 )
                 .await?
             };
-            Ok::<_, TxError>(outer)
+            Ok::<_, TxError>((outer, shielded))
         };
-        let outer = match expires {
+        let (outer, shielded) = match expires {
             Some(expires) => tokio::time::timeout_at(expires, preparation)
                 .await
                 .map_err(|_| approval_timeout())??,
@@ -208,14 +317,14 @@ impl Multisig {
                 keys,
                 options.signer,
                 &ExecuteOptions {
-                    period: if options.shielded {
+                    period: if shielded {
                         Some(rtao_catalog::py::MEV_SHIELD_ERA_PERIOD as u32)
                     } else {
                         Some(rtao_catalog::py::DEFAULT_ERA_PERIOD as u32)
                     },
                     wait_for_inclusion: options.wait_for_inclusion,
                     wait_for_finalization: options.wait_for_finalization,
-                    shielded: options.shielded,
+                    shielded,
                     deadline: remaining,
                     submit_deadline: options.submit_deadline,
                     ..Default::default()
@@ -231,6 +340,7 @@ impl Multisig {
         signer: AccountId,
         call: &CallBytes,
         label: Option<&str>,
+        shielded: bool,
     ) -> Result<(), TxError> {
         let preparation = async {
             let pending = view
@@ -239,7 +349,25 @@ impl Multisig {
                     (self.address, call.hash()),
                 )
                 .await?;
-            let outer = if self.threshold >= 2 {
+            let outer = if self.threshold == 1 {
+                // Python v488 fee-probes the threshold-1 wrapper as well.
+                let runtime = view.runtime().await?;
+                let others = self
+                    .signatories
+                    .iter()
+                    .copied()
+                    .filter(|account| *account != signer)
+                    .collect::<Vec<_>>();
+                Some(
+                    rtao_client::compose::as_multi_threshold_1_with_mode(
+                        &runtime,
+                        &others,
+                        call.clone(),
+                        self.account_mode,
+                    )
+                    .map_err(ClientError::from)?,
+                )
+            } else if self.threshold >= 2 {
                 let runtime = view.runtime().await?;
                 let estimate = client
                     .estimate_weight(call.clone(), signer, CryptoType::Sr25519)
@@ -277,8 +405,15 @@ impl Multisig {
             Ok::<_, ClientError>((pending.is_none(), outer))
         }
         .await;
-        let Ok((opening, outer)) = preparation else {
-            return Ok(());
+        let (opening, outer) = match preparation {
+            Ok(prepared) => prepared,
+            Err(error) if shielded => {
+                return Err(TxError::Chain(ChainError::new(
+                    format!("could not prepare shielded multisig approval: {error}"),
+                    None,
+                )));
+            }
+            Err(_) => return Ok(()),
         };
         check_multisig_funds(
             client,
@@ -290,6 +425,7 @@ impl Multisig {
                 outer_call: outer.as_ref(),
                 crypto_type: CryptoType::Sr25519,
                 signer_label: label,
+                shielded,
             },
         )
         .await
@@ -357,6 +493,11 @@ pub struct FundsRequest<'a> {
     pub crypto_type: CryptoType,
     /// Local display label for the funding help.
     pub signer_label: Option<&'a str>,
+    /// The approval goes through MEV Shield: the check then quotes the
+    /// carrier fee too, keeps the existential deposit (or a larger freeze)
+    /// free, and refuses rather than skips when it cannot quote (Python
+    /// v488 `check_multisig_funds(shielded=True)`).
+    pub shielded: bool,
 }
 
 /// Read the opening reserve through the view's generated constant descriptors.
@@ -396,7 +537,8 @@ pub async fn free_balance<V: View + ?Sized>(
     Ok(Balance::from_rao(free))
 }
 
-/// Refuse an observed deposit-plus-fee shortfall; skip failed state or fee probes.
+/// Refuse an observed deposit-plus-fee shortfall. A plain approval skips
+/// failed state or fee probes; a shielded one must quote everything.
 pub async fn check_multisig_funds<V: View + ?Sized>(
     client: &Client,
     view: &V,
@@ -408,7 +550,7 @@ pub async fn check_multisig_funds<V: View + ?Sized>(
         } else {
             0
         };
-        let fee = match request.outer_call {
+        let mut fee = match request.outer_call {
             Some(call) => {
                 client
                     .estimate_weight(call.clone(), request.signer, request.crypto_type)
@@ -417,17 +559,61 @@ pub async fn check_multisig_funds<V: View + ?Sized>(
             }
             None => 0,
         };
+        let (free, retained) = if request.shielded {
+            let call = request
+                .outer_call
+                .ok_or_else(|| ClientError::Protocol("no multisig approval to quote".into()))?;
+            fee = fee.saturating_add(
+                client
+                    .estimate_shielded_carrier_fee(
+                        request.signer,
+                        call.clone(),
+                        rtao_catalog::py::MEV_SHIELD_ERA_PERIOD,
+                    )
+                    .await?
+                    .rao(),
+            );
+            let account = view
+                .storage(&rtao_runtime::storage::system::ACCOUNT, (request.signer,))
+                .await?;
+            let data = account.as_core().field("data");
+            let field = |name: &str| {
+                data.and_then(|data| data.field(name))
+                    .and_then(ValueExt::as_u128)
+                    .and_then(|value| u64::try_from(value).ok())
+            };
+            let minimum = view
+                .constant(&rtao_runtime::constants::balances::EXISTENTIAL_DEPOSIT)
+                .await?
+                .0;
+            (
+                field("free").unwrap_or(0),
+                minimum.max(field("frozen").unwrap_or(0)),
+            )
+        } else {
+            if deposit == 0 && fee == 0 {
+                return Ok(None);
+            }
+            (free_balance(view, request.signer).await?.rao(), 0)
+        };
         if deposit == 0 && fee == 0 {
             return Ok(None);
         }
-        let free = free_balance(view, request.signer).await?.rao();
-        Ok::<_, ClientError>(Some((free, fee, deposit)))
+        Ok::<_, ClientError>(Some((free, fee, deposit, retained)))
     }
     .await;
-    let Ok(Some((free, fee, deposit))) = observed else {
-        return Ok(());
+    let (free, fee, deposit, retained) = match observed {
+        Ok(Some(observed)) => observed,
+        Ok(None) => return Ok(()),
+        Err(error) if request.shielded => {
+            return Err(TxError::Chain(ChainError::new(
+                format!("could not quote complete shielded multisig approval: {error}"),
+                None,
+            )));
+        }
+        Err(_) => return Ok(()),
     };
-    if u128::from(free) >= u128::from(deposit) + u128::from(fee) {
+    if u128::from(free) >= u128::from(deposit) + u128::from(fee) + u128::from(retained) {
         return Ok(());
     }
     Err(TxError::Chain(funding_error(
@@ -436,6 +622,7 @@ pub async fn check_multisig_funds<V: View + ?Sized>(
         free,
         fee,
         deposit,
+        retained,
     )))
 }
 
@@ -469,14 +656,17 @@ fn funding_error(
     free: u64,
     fee: u64,
     deposit: u64,
+    retained: u64,
 ) -> ChainError {
     let display = match label.filter(|label| !label.is_empty() && *label != signer.to_string()) {
         Some(label) => format!("{signer} ({label})"),
         None => signer.to_string(),
     };
-    let amount =
-        tao_ceil((u128::from(deposit) + 2 * u128::from(fee)).saturating_sub(u128::from(free)));
-    let (message, help) = if deposit > 0 {
+    let amount = tao_ceil(
+        (u128::from(deposit) + u128::from(retained) + 2 * u128::from(fee))
+            .saturating_sub(u128::from(free)),
+    );
+    let (mut message, help) = if deposit > 0 {
         (
             format!(
                 "the signing account cannot cover the multisig deposit plus the transaction fee: {signer} holds {} free, but opening this operation reserves a {} deposit on top of a ~{} fee",
@@ -498,6 +688,12 @@ fn funding_error(
             format!("fund {display} with ≥ {amount}"),
         )
     };
+    if retained > 0 {
+        message.push_str(&format!(
+            "; {} must remain free for the existential deposit or freeze",
+            tao(u128::from(retained))
+        ));
+    }
     ChainError::with_code(message, None, rtao_catalog::ErrorCode::InsufficientBalance)
         .with_remediation(help)
 }

@@ -461,6 +461,189 @@ pub(crate) fn descriptor_call_value(descriptor: &[u8]) -> Result<rtao_core::DynV
     )))
 }
 
+/// Python's `compose_derivative`: wrap exact call bytes in the parent's
+/// derivative call for its derivation mode.
+///
+/// `Safe` uses `Utility.as_safe_derivative`; legacy (`None` or `Legacy`)
+/// keeps a registered quantum-resistant parent's protection
+/// (`as_protected_derivative`) and is otherwise `as_derivative`. A bare
+/// account's key type cannot be inferred, so callers pass `Safe` explicitly
+/// for a fixed post-quantum key or a safe composite (rtao's CLI does so from
+/// the saved account mode).
+#[doc(alias = "bittensor.hashed.compose_derivative")]
+pub async fn compose_derivative<V: View + ?Sized>(
+    view: &V,
+    runtime: &RuntimeHandle,
+    parent: AccountId,
+    index: u16,
+    call: CallBytes,
+    account_mode: Option<rtao_primitives::AccountMode>,
+) -> Result<CallBytes, IntentError> {
+    if account_mode == Some(rtao_primitives::AccountMode::Safe) {
+        return Ok(utility::as_safe_derivative(index, call).compose(runtime)?);
+    }
+    let wrapped = if is_pq_required(view, runtime, parent).await? {
+        utility::as_protected_derivative(index, call)
+    } else {
+        utility::as_derivative(index, call)
+    };
+    Ok(wrapped.compose(runtime)?)
+}
+
+/// Python's `multisig_protection_status`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MultisigProtection {
+    /// Fewer than `threshold` members lack a finalized quantum-resistant
+    /// authority, so the group's own authority can be registered.
+    pub eligible: bool,
+    /// The group's derived authority is registered in finalized state.
+    pub registered: bool,
+    /// A safe-derivation group, which needs no registration.
+    pub safe_derivation: bool,
+}
+
+fn multisig_members(signatories: &[AccountId]) -> Vec<AccountId> {
+    let mut members = signatories.to_vec();
+    members.sort_unstable();
+    members.dedup();
+    members
+}
+
+async fn weak_members<V: View + ?Sized>(
+    finalized: &V,
+    runtime: &RuntimeHandle,
+    members: &[AccountId],
+) -> Result<usize, IntentError> {
+    let mut weak = 0;
+    for member in members {
+        if !is_pq_required(finalized, runtime, *member).await? {
+            weak += 1;
+        }
+    }
+    Ok(weak)
+}
+
+/// Python's `multisig_protection_status` over finalized state: whether a
+/// legacy multisig may register its derived authority, and whether it has.
+///
+/// `finalized` must be a view of the finalized block; this reads eligibility
+/// and registration from it without submitting anything.
+#[doc(alias = "bittensor.hashed.multisig_protection_status")]
+pub async fn multisig_protection_status<V: View + ?Sized>(
+    finalized: &V,
+    runtime: &RuntimeHandle,
+    signatories: &[AccountId],
+    threshold: u16,
+) -> Result<MultisigProtection, IntentError> {
+    if !has_constant(runtime, "HashedAccounts", "MlDsaRegistrationDeposit") {
+        return Ok(MultisigProtection::default());
+    }
+    let (account, members) = rtao_primitives::multisig_account_id(
+        signatories,
+        threshold,
+        rtao_primitives::AccountMode::Legacy,
+    )?;
+    let weak = weak_members(finalized, runtime, &members).await?;
+    let kind = protected_account_kind(finalized, runtime, account).await?;
+    Ok(MultisigProtection {
+        eligible: members.len() >= 2 && weak < usize::from(threshold),
+        registered: kind == Some(ProtectedKind::Derived),
+        safe_derivation: false,
+    })
+}
+
+fn derived_signatory(value: &Value) -> Option<AccountId> {
+    let text = value.as_str()?;
+    if let Some(hex) = text.strip_prefix("0x") {
+        let bytes: [u8; 32] = hex::decode(hex).ok()?.try_into().ok()?;
+        return Some(AccountId(bytes));
+    }
+    text.parse().ok()
+}
+
+fn derived_multisig_matches(record: &Value, threshold: u16, members: &[AccountId]) -> bool {
+    let Some(multisig) = record
+        .get("descriptor")
+        .and_then(|value| value.get("Multisig"))
+    else {
+        return false;
+    };
+    let stored_threshold = multisig.get("threshold").and_then(Value::as_u64);
+    let stored: Option<Vec<AccountId>> = multisig
+        .get("signatories")
+        .and_then(Value::as_array)
+        .and_then(|items| items.iter().map(derived_signatory).collect());
+    stored_threshold == Some(u64::from(threshold)) && stored.as_deref() == Some(members)
+}
+
+/// Python's `multisig_protection_call`: the permanent derived-authority
+/// registration (`register_derived_sponsored`, the final executing member
+/// `deposit_payer` paying the deposit) or, once registered,
+/// `check_derived`, for the multisig's own quorum to approve.
+///
+/// `finalized` must be a view of the finalized block. A quorum made only of
+/// members without a finalized quantum-resistant authority is refused, as is
+/// a registered authority that does not describe this group.
+#[doc(alias = "bittensor.hashed.multisig_protection_call")]
+pub async fn multisig_protection_call<V: View + ?Sized>(
+    finalized: &V,
+    runtime: &RuntimeHandle,
+    signatories: &[AccountId],
+    threshold: u16,
+    deposit_payer: AccountId,
+) -> Result<CallBytes, IntentError> {
+    if !has_constant(runtime, "HashedAccounts", "MlDsaRegistrationDeposit") {
+        return Err(validation(
+            "quantum-resistant derived accounts are not supported on this chain",
+        ));
+    }
+    if hashed_accounts_enabled(finalized, runtime).await? != Some(true) {
+        return Err(validation("hashed accounts are not enabled on this chain"));
+    }
+    let members = multisig_members(signatories);
+    if !(2..=100).contains(&members.len())
+        || threshold < 1
+        || usize::from(threshold) > members.len()
+    {
+        return Err(validation(
+            "invalid protected multisig threshold or signatory count",
+        ));
+    }
+    if weak_members(finalized, runtime, &members).await? >= usize::from(threshold) {
+        return Err(validation(
+            "a complete multisig quorum must require a finalized quantum-resistant member",
+        ));
+    }
+    let (account, _) = rtao_primitives::multisig_account_id(
+        &members,
+        threshold,
+        rtao_primitives::AccountMode::Legacy,
+    )?;
+    let descriptor = serde_json::json!({
+        "Multisig": {
+            "threshold": threshold,
+            "signatories": members.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        }
+    });
+    let descriptor = rtao_core::DynValue::new(json_to_core(&descriptor));
+    let record = finalized
+        .storage(&st::DERIVED_AUTHORITIES, (account,))
+        .await?
+        .map(|record| record.to_json());
+    let call = match record {
+        Some(record) => {
+            if !derived_multisig_matches(&record, threshold, &members) {
+                return Err(validation(
+                    "registered derived authority does not match the multisig",
+                ));
+            }
+            calls::check_derived(descriptor)
+        }
+        None => calls::register_derived_sponsored(descriptor, deposit_payer),
+    };
+    Ok(call.compose(runtime)?)
+}
+
 /// Python's `atomic_calls`: flatten only same-origin atomic batches
 /// (`Utility.batch_all`), preserving every other wrapper.
 #[doc(alias = "bittensor.hashed.atomic_calls")]

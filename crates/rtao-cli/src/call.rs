@@ -1271,6 +1271,7 @@ async fn prepare_continuation(
             outer_call: Some(&outer),
             crypto_type: CryptoType::Sr25519,
             signer_label: Some(selection.display_wallet()),
+            shielded: false,
         },
     )
     .await

@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/proxy.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/proxy.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Proxy delegation, keyless accounts and announced-call dispatch.
 
 use rtao_client::{DynView, View, ViewExt};

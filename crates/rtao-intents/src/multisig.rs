@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/multisig.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/multisig.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Explicit multisig dispatch, approval and cancellation calls.
 
 use rtao_client::{View, ViewExt};
@@ -350,6 +350,9 @@ async fn build_approval<V: View + ?Sized>(
         }
     }
     .compose(cx.runtime)?;
+    // The approval origin reserves the opening deposit; the executor combines
+    // this obligation with fees paid by the actual outer signer, which can
+    // differ when a proxy dispatches this call (Python v488).
     check_multisig_funds(
         snapshot.client(),
         cx.view,
@@ -357,20 +360,32 @@ async fn build_approval<V: View + ?Sized>(
             signer,
             threshold,
             opening: when.is_none(),
-            outer_call: Some(&outer),
+            outer_call: None,
             crypto_type: CryptoType::Sr25519,
             signer_label: None,
+            shielded: false,
         },
     )
     .await
     .map_err(intent_error)?;
+    let mut approval = inner_extras(&inner);
+    approval.insert(
+        "multisig_defers_inner".into(),
+        Value::Bool(matches!(dispatch, Dispatch::Approve) || when.is_none()),
+    );
+    approval.insert(
+        "multisig_approvals".into(),
+        json!([{
+            "payer": signer.to_string(),
+            "threshold": threshold,
+            "opening": when.is_none(),
+        }]),
+    );
     // An approval records the call without dispatching it, so only an
     // executing dispatch carries the inner call's extras.
     let extras = match dispatch {
-        Dispatch::Execute => {
-            rtao_tx::multisig::merge_approval_metadata(&[&nested, &inner_extras(&inner)])
-        }
-        Dispatch::Approve => inner_extras(&inner),
+        Dispatch::Execute => rtao_tx::multisig::merge_approval_metadata(&[&nested, &approval]),
+        Dispatch::Approve => approval,
     };
     Ok(Built {
         call: outer,
@@ -948,7 +963,18 @@ mod tests {
             let decoded = decode(&built.call, runtime)?;
             assert_eq!(decoded["call_module"], "Multisig");
             if matches!(call_index, 1 | 2) {
-                assert_eq!(built.extras, inner_extras(&inner));
+                // v488: the approval obligation travels to the executor,
+                // which checks it with the actual outer signer's fees.
+                let mut expected_extras = inner_extras(&inner);
+                expected_extras.insert(
+                    "multisig_defers_inner".into(),
+                    json!(intent.spec().name == "multisig_approve" || opening),
+                );
+                expected_extras.insert(
+                    "multisig_approvals".into(),
+                    json!([{"payer": MEMBER.to_string(), "threshold": 2, "opening": opening}]),
+                );
+                assert_eq!(built.extras, expected_extras);
                 let typed = rtao_tx::MultisigCall::from_data(&built.extras)?;
                 assert_eq!(typed.call_hash, Some(H256(inner.hash())));
                 assert_eq!(typed.call_data, Some(inner_bytes.clone()));
@@ -1131,13 +1157,14 @@ mod tests {
 
     #[cfg(feature = "transfer")]
     #[tokio::test]
-    async fn raw_multisig_build_checks_approval_member_deposit_plus_outer_fee_and_later_fee_only()
+    async fn raw_multisig_build_checks_the_approval_members_opening_deposit_only()
     -> anyhow::Result<()> {
+        // v488: the build checks the opening deposit; the executor adds the
+        // fees of the actual outer signer (`multisig_approvals`).
         for (free, when, accepted) in [
-            (126, None, false),
-            (127, None, true),
-            (6, Some(json!({"height":12,"index":3})), false),
-            (7, Some(json!({"height":12,"index":3})), true),
+            (119, None, false),
+            (120, None, true),
+            (0, Some(json!({"height":12,"index":3})), true),
         ] {
             let (chain, client, snapshot) = fixture(free).await?;
             let intent = MultisigApprove {
@@ -1164,11 +1191,7 @@ mod tests {
                 };
                 assert_eq!(error.code, rtao_catalog::ErrorCode::InsufficientBalance);
                 assert!(error.message.contains(&MEMBER.to_string()));
-                assert!(error.message.contains(if when.is_none() {
-                    "deposit plus the transaction fee"
-                } else {
-                    "cannot cover the transaction fee"
-                }));
+                assert!(error.message.contains("deposit plus the transaction fee"));
                 assert!(
                     error
                         .remediation()
@@ -1185,7 +1208,6 @@ mod tests {
                     )
                 })
                 .collect();
-            assert!(nonce_requests.len() >= 2);
             assert!(
                 nonce_requests
                     .iter()
@@ -1800,7 +1822,7 @@ mod tests {
 
     #[cfg(feature = "transfer")]
     #[tokio::test]
-    async fn raw_multisig_funding_probe_failure_is_best_effort_after_required_weight_probe()
+    async fn raw_multisig_build_probes_only_the_inner_weight_and_leaves_fees_to_the_executor()
     -> anyhow::Result<()> {
         let (chain, client, snapshot) = fixture(0).await?;
         let runtime = &snapshot.block().runtime;
@@ -1842,7 +1864,7 @@ mod tests {
             threshold: 2,
             other_signatories: vec![json!(OTHER)],
             call: transfer(),
-            timepoint: None,
+            timepoint: Some(json!({"height":12,"index":3})),
         };
         // Connection setup also calls Metadata_metadata_at_version. Count
         // only this build's business probes, keeping their order observable.
@@ -1869,15 +1891,11 @@ mod tests {
                     && request.params[0] == "TransactionPaymentApi_query_info"
             })
             .collect();
-        assert_eq!(probes.len(), 2);
-        // Python first requires the inner call's dispatch weight, then makes
-        // a best-effort fee probe for the composed outer approval. Check both
-        // probe payloads, retaining independent SCALE length/call assertions.
+        assert_eq!(probes.len(), 1);
+        // Python requires the inner call's dispatch weight; v488 leaves the
+        // outer approval's fee to the executor's reserve check.
         let inner_bytes = transfer_bytes();
-        for (probe, call) in probes
-            .into_iter()
-            .zip([inner_bytes.as_slice(), built.call.as_bytes()])
-        {
+        for (probe, call) in probes.into_iter().zip([inner_bytes.as_slice()]) {
             let bytes = hex::decode(
                 probe.params[1]
                     .as_str()

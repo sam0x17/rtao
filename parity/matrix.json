@@ -8993,7 +8993,7 @@
         "rust": [
           "crates/rtao/src/lib.rs"
         ],
-        "synced_blob": "2794f4358a84f0a9471c025d726a05dfdaf2baaf"
+        "synced_blob": "75159386404e4355b05f1499a1db0c52a65b3d58"
       },
       {
         "kind": "n/a",
@@ -9088,7 +9088,7 @@
           "crates/rtao-tx/src/executor.rs",
           "crates/rtao-rpc/src/session.rs"
         ],
-        "synced_blob": "03316a548082418fa7e33523a34445370b0894d2"
+        "synced_blob": "d75700ec581a5d87fc258bb0966790a44ce3b703"
       },
       {
         "kind": "ported",
@@ -9193,7 +9193,7 @@
           "crates/rtao-core-ext/src/ops/fee.rs",
           "crates/rtao-core-ext/src/ops/extrinsic_lookup.rs"
         ],
-        "synced_blob": "ea4b9a701522142c1c9b78f7e6274fe52d445d3b"
+        "synced_blob": "22cdb716b676c91dd50f2e0780964ff893ce81c8"
       },
       {
         "kind": "n/a",
@@ -10271,7 +10271,7 @@
         "rust": [
           "`rtao_evm` crate root"
         ],
-        "synced_blob": "e73671b64f25c4a5ab33bdc9c144bf6626ce3caf"
+        "synced_blob": "e50684b5866a2ea51ba19205766e926fffc58cf6"
       },
       {
         "kind": "vendored",
@@ -10535,7 +10535,7 @@
           "rtao_primitives::evm",
           "rtao_evm::addresses"
         ],
-        "synced_blob": "19c36c3d7411944184148a1e5cbd96f03819f178"
+        "synced_blob": "3479d6abee4a10016fa33000cbde8ca31c2daee3"
       },
       {
         "kind": "ported",
@@ -10557,7 +10557,7 @@
         "rust": [
           "rtao_evm::keys"
         ],
-        "synced_blob": "2c23c156c4f9b8350248428367ee1e99129dfb1b"
+        "synced_blob": "bfc0bf3a1d96e3678e61f52c6ebc8099faa80578"
       },
       {
         "kind": "extracted",
@@ -10622,7 +10622,7 @@
           "crates/rtao-client/src/shield.rs",
           "crates/rtao-client/src/compose.rs"
         ],
-        "synced_blob": "b113eb41267aa2b5f349ec210384c66e1b53056f"
+        "synced_blob": "ea6547dfb106fa26bf3a3dc5d2613e5170068b91"
       },
       {
         "kind": "n/a",
@@ -10817,7 +10817,7 @@
           "rtao_intents::association::{AssociateHotkey, AssociateEvmKey} (feature association)",
           "rtao_intents::generated::{interfaces, passthrough}"
         ],
-        "synced_blob": "289fc369c7f702231460852af4b3a7f7ae348041"
+        "synced_blob": "ab08e652c1c01e15f157bfcf1b7ca00bf820788c"
       },
       {
         "kind": "ported",
@@ -10883,7 +10883,7 @@
         "rust": [
           "rtao_intents::crowdloan (feature crowdloan)"
         ],
-        "synced_blob": "a0e8fc6981a0aa63ad5d46aa60a37d6b657567a7"
+        "synced_blob": "2ad3b7c537e42f77d421c2275ddf4893f1981506"
       },
       {
         "kind": "ported",
@@ -10906,7 +10906,7 @@
           "rtao_intents::evm::{FundEvmKey, EvmWithdraw}",
           "rtao_intents::generated::interfaces"
         ],
-        "synced_blob": "62274b85ee0d003ae650099b83bb1e73dba37533"
+        "synced_blob": "c6b3ea2027049a41c8ff00eba419637e0e3929bc"
       },
       {
         "kind": "ported",
@@ -10981,7 +10981,7 @@
           "rtao_intents::multisig",
           "rtao_intents::multisig_adapter::{MultisigAdapter, MultisigThreshold1Adapter, MultisigContinuation}"
         ],
-        "synced_blob": "01acc9c3ea4664c82cdad7aabe2e0c52a439e736"
+        "synced_blob": "70dd6b22c6ee4788fa96e628eb33eff586dcc22a"
       },
       {
         "kind": "ported",
@@ -11005,7 +11005,7 @@
           "rtao_intents::proxy::{PROXY_TYPES,check_proxy_type,AddProxy,RemoveProxy,RemoveProxies,CreatePureProxy,KillPureProxy,ExecuteProxyAnnounced}",
           "rtao_intents::generated::{interfaces,defaults,passthrough,any_intent}"
         ],
-        "synced_blob": "30b4e4d42f161e970e1bacdad9ad2175ce6318da"
+        "synced_blob": "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
       },
       {
         "kind": "ported",
@@ -11163,7 +11163,7 @@
         "rust": [
           "rtao_tx::multisig::{Multisig,ApproveOptions,FundsRequest,check_multisig_funds,multisig_opening_shortfall}; rtao_client::compose::{as_multi,as_multi_existing,approve_as_multi}"
         ],
-        "synced_blob": "25b5105b4300daa25b2fae8626064ee0f2697f15"
+        "synced_blob": "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3"
       },
       {
         "kind": "ported",
@@ -11201,7 +11201,7 @@
           "crates/rtao-intents/src/pow/workers.rs",
           "crates/rtao-intents/src/pow/gpu.rs"
         ],
-        "synced_blob": "e406e347c5a39e668c9583ca8bef8cf37c7e8c42"
+        "synced_blob": "ad6b3b82cbe3e8d312a20cbf872dde3097a5bb36"
       },
       {
         "kind": "n/a",
@@ -11975,7 +11975,7 @@
         "rust": [
           "Complete reviewed upstream pytest input; native analogues in crates/rtao-testkit/tests/{goldens,typed_calls,corpus}.rs and related runtime/core-ext fixtures"
         ],
-        "synced_blob": "5ad19b8b78ac71abc6f31b4b3b1e4fd1a8259563"
+        "synced_blob": "4f9e26186ea51f3b9edcb9b574ebbf378081a415"
       },
       {
         "kind": "oracle-only",
@@ -12016,7 +12016,7 @@
           "crates/rtao-evm/src/keys/tests.rs",
           "xtask/src/extract_precompiles.rs"
         ],
-        "synced_blob": "8dd19654744f5338cc4b9ab620f834bbf6b526bd"
+        "synced_blob": "f69e75ab6d302a2f39e11366e7f0dd36c0c00974"
       },
       {
         "kind": "oracle-only",
@@ -12167,7 +12167,7 @@
           "crates/rtao-tx/tests/multisig.rs",
           "crates/rtao-tx/tests/shield_raw.rs"
         ],
-        "synced_blob": "b331fa60834e3f39495306acf359a1a4de2f03f1"
+        "synced_blob": "4d4d674de1a209d7f4f8ee2e500de83e7682627e"
       },
       {
         "kind": "ported",
@@ -12203,7 +12203,7 @@
           "crates/rtao-intents/src/registration_pow.rs",
           "crates/rtao/tests/pow_public_contract.rs"
         ],
-        "synced_blob": "cd615d4e237d09fdded03c630c4ddcc2c2ce7b2e"
+        "synced_blob": "37c6ab528f20e73c2a1f983178e42393103bf3ed"
       },
       {
         "kind": "ported",
@@ -12384,57 +12384,58 @@
         "synced_blob": "eb1d10cdf0a6a7f5ab9e37a0bb77a48a4f2e9e8a"
       },
       {
-        "kind": "ported",
+        "kind": "extracted",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/gamma_info.rs",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "codegen/frozen_models.toml",
+          "rtao_runtime::models (GammaDepositInfo freeze_struct layout tripwire)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "n/a",
         "milestone": "port due",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keys/falcon.rs",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "n/a",
         "milestone": "port due",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keys/hashed.rs",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "n/a",
         "milestone": "port due",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keys/mldsa.rs",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "n/a",
         "milestone": "port due",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keys/receiving.rs",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
         "synced_blob": "pending"
       },
@@ -12457,7 +12458,9 @@
         "python": "sdk/python/bittensor/account_mode.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/account_modes.rs",
+          "rtao_primitives::AccountMode",
+          "rtao_client::compose::{as_multi_with_mode, as_multi_threshold_1_with_mode, as_multi_existing_with_mode}"
         ],
         "synced_blob": "pending"
       },
@@ -12496,13 +12499,13 @@
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "generated",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
         "synced_blob": "pending"
       },
@@ -12560,7 +12563,7 @@
         "python": "sdk/python/bittensor/mldsa.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_core::runtime::RuntimeCore::supports_mldsa_profile (through rtao_tx::hashed::descriptor_registration_enabled and rtao_client::submit::authority)"
         ],
         "synced_blob": "pending"
       },
@@ -12596,7 +12599,9 @@
         "python": "sdk/python/bittensor/receiving.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-primitives/src/receiving.rs",
+          "rtao_primitives::Ss58Address (receiving addresses)",
+          "rtao_tx::hashed::receiving_recipients"
         ],
         "synced_blob": "pending"
       },
@@ -12619,7 +12624,7 @@
         "python": "sdk/python/bittensor/shielding.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_tx::executor::{contains_account_registration, Executor::auto_shield_route}"
         ],
         "synced_blob": "pending"
       },
@@ -12638,266 +12643,266 @@
         "synced_blob": "18701823aed3d7df5902d2f6bf7fdf195c97f3f8"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_falcon_fund_safety.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_falcon_release.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_hashed_activation.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mixed_multisig.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_cli_regressions.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_extended.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_localnet.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_multisig_costs.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_nested_authority.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_operation_families.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_proxy_boundaries.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_release.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_release_costs.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_root_cli.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_sponsorship_live.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_validator_paths.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_mldsa_validator_proxy.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_wallet_approval_lifecycle.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_wallet_parity.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_wallet_shield.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_wallet_swap_release.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "oracle-only",
         "milestone": "port due",
         "oracle": "unverified",
         "python": "sdk/python/tests/e2e/test_wallet_types.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "n/a",
         "milestone": "port due",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "sdk/python/tests/fixtures/mldsa-zero-next-proof.hex",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "none needed"
         ],
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
+        "kind": "n/a",
         "milestone": "port due",
-        "oracle": "unverified",
+        "oracle": "not_required",
         "python": "sdk/python/tests/harness/receiving.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "none needed"
         ],
         "synced_blob": "pending"
       },
@@ -12963,7 +12968,7 @@
         "python": "sdk/python/tests/unit/test_hashed_evm.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_intents::evm::tests (registered_hashed_aliases_resolve_to_their_native_account_and_fail_closed)"
         ],
         "synced_blob": "pending"
       },
@@ -13018,7 +13023,11 @@
         "python": "sdk/python/tests/unit/test_mldsa_accounts.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao-client tests/authority.rs",
+          "rtao-intents tests/recipient_registration.rs",
+          "rtao-intents tests/authority_execution.rs",
+          "rtao-tx tests/multisig_protection.rs",
+          "rtao_intents::evm::tests"
         ],
         "synced_blob": "pending"
       },
@@ -13029,7 +13038,9 @@
         "python": "sdk/python/tests/unit/test_mldsa_messages.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao-btauth tests/conformance.rs",
+          "rtao tests/http_auth.rs",
+          "rtao_signer::KeypairAuthoritySigner::sign_message_at"
         ],
         "synced_blob": "pending"
       },
@@ -13040,7 +13051,7 @@
         "python": "sdk/python/tests/unit/test_mldsa_orders.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/limit_orders.rs"
         ],
         "synced_blob": "pending"
       },
@@ -13051,7 +13062,7 @@
         "python": "sdk/python/tests/unit/test_mldsa_signing.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao-client tests/authority.rs (offline_post_quantum_requests_round_trip_sign_and_submit, offline_requests_refuse_classical_descriptors_and_changed_authority)"
         ],
         "synced_blob": "pending"
       },
@@ -13062,7 +13073,8 @@
         "python": "sdk/python/tests/unit/test_multisig_pinned_staking.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-tx/src/pinned.rs",
+          "crates/rtao-intents/tests/pinned_inputs.rs"
         ],
         "synced_blob": "pending"
       },
@@ -13073,7 +13085,8 @@
         "python": "sdk/python/tests/unit/test_multisig_signatories.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-intents/src/multisig.rs (member parsing)",
+          "rtao_tx::multisig::Multisig::with_mode"
         ],
         "synced_blob": "pending"
       },
@@ -13095,7 +13108,7 @@
         "python": "sdk/python/tests/unit/test_pq_release_adversarial.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao-client tests/authority.rs (proofs_that_do_not_verify_against_chain_authority_are_never_sent)"
         ],
         "synced_blob": "pending"
       },
@@ -13106,7 +13119,7 @@
         "python": "sdk/python/tests/unit/test_registration_deposit.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao_tx::hashed::quote_registration_deposit"
         ],
         "synced_blob": "pending"
       },
@@ -13117,7 +13130,7 @@
         "python": "sdk/python/tests/unit/test_registration_shield.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao-tx tests/auto_shield.rs"
         ],
         "synced_blob": "pending"
       },
@@ -13128,7 +13141,8 @@
         "python": "sdk/python/tests/unit/test_registration_sponsorship.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "crates/rtao-tx/src/sponsorship.rs",
+          "rtao-intents tests/recipient_registration.rs (execution_needs_consent_before_any_key_is_unlocked)"
         ],
         "synced_blob": "pending"
       },
@@ -13183,7 +13197,9 @@
         "python": "sdk/python/tests/unit/test_stateless_mldsa.py",
         "rtao": "pending",
         "rust": [
-          "pending: new upstream file at v488, not yet classified or ported"
+          "rtao-client tests/authority.rs (standard_post_quantum_accounts_need_no_registration_and_pipeline, shield_pairs_sign_both_proofs_from_one_snapshot, fee_probes_price_the_signing_scheme_proof_length)",
+          "rtao-wallet tests/authority_wallets.rs",
+          "rtao-intents tests/recipient_registration.rs (a_standard_post_quantum_recipient_needs_no_guard)"
         ],
         "synced_blob": "pending"
       },

@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/crowdloan.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/crowdloan.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Crowdloan funding, settlement and creator updates.
 
 use crate::arguments::check_nested_json as check_call_budget;
@@ -281,6 +281,17 @@ fn leaf_safety(
             Some("amount_staked")
         }
         ("SubtensorModule", "add_stake_burn") | ("Crowdloan", "contribute") => Some("amount"),
+        // v488 native EVM deposit: `None` deposits the whole transferable
+        // balance (FundEvmKey's `all`).
+        ("EVM", "deposit") => {
+            let value = call_arg(call, "value")?;
+            if matches!(value, CoreValue::Null) {
+                safety.spend = Spend::Unbounded;
+                None
+            } else {
+                Some("value")
+            }
+        }
         ("Balances", "transfer_all")
         | (
             "SubtensorModule",

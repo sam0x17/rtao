@@ -2463,7 +2463,7 @@ fn is_sudo(runtime: &rtao_runtime::RuntimeHandle, call: &CallBytes) -> Result<bo
 impl Executor {
     // py: sdk/python/bittensor/shielding.py:77-89
     /// Python's `registration_shield_default`, behind the opt-in setting.
-    async fn auto_shield_route<V: View + ?Sized>(
+    pub(crate) async fn auto_shield_route<V: View + ?Sized>(
         &self,
         view: &V,
         runtime: &rtao_runtime::RuntimeHandle,

@@ -948,10 +948,6 @@ const TAKE_TARGETS: [u16; 5] = [0, 1, DELEGATES_DEFAULT_TAKE, 32768, u16::MAX];
 // Independent pinned Python test_evm.py::H160_TO_SS58_VECTORS.
 const EVM_H160: &str = "0x1111111111111111111111111111111111111111";
 const EVM_MIRROR: &str = "5DDYKUgyHe2Sx8a9oTZPAXrgFaTiGnYZXrecNdeC9bG7TbtX";
-const EVM_MIRROR_KEY: [u8; 32] = [
-    0x32, 0xf9, 0x55, 0xc9, 0x58, 0xe5, 0x11, 0x89, 0xa4, 0x92, 0x1a, 0xed, 0x41, 0xef, 0x00, 0x81,
-    0x8f, 0x73, 0x68, 0xdf, 0xae, 0xc8, 0xd9, 0x96, 0x9f, 0x09, 0x10, 0x06, 0xf8, 0x06, 0x62, 0x28,
-];
 
 struct M5Pair {
     pair: Pair,
@@ -1015,6 +1011,23 @@ fn position_intents_refuse_subnet_ids_outside_the_checked_currency_range() {
         }
         assert_eq!(seen.len(), 7);
     }
+}
+
+/// v488 `FundEvmKey` on a runtime with native EVM deposits: `EVM.deposit`
+/// (pallet 22, call 6) with the H160 and an optional u64 value. The pinned
+/// core's trusted `fund_evm_key` still models the legacy mirror transfer, so
+/// these pairs compare policy with the core and bytes independently.
+fn evm_deposit_bytes(amount: Option<u64>) -> Vec<u8> {
+    let mut bytes = vec![22, 6];
+    bytes.extend_from_slice(&[0x11; 20]);
+    match amount {
+        Some(amount) => {
+            bytes.push(1);
+            bytes.extend_from_slice(&amount.to_le_bytes());
+        }
+        None => bytes.push(0),
+    }
+    bytes
 }
 
 fn m5_pair(
@@ -1093,9 +1106,7 @@ fn m5_static_pairs() -> Vec<M5Pair> {
     let zero_tolerance = Ratio::new(0.0).unwrap();
     let mut pairs = vec![];
     for amount in AMOUNTS {
-        let mut bytes = vec![5, 3, 0];
-        bytes.extend_from_slice(&EVM_MIRROR_KEY);
-        bytes.extend_from_slice(&compact_balance(amount));
+        let bytes = evm_deposit_bytes(Some(amount));
         pairs.push(m5_pair(
             "fund_evm_key",
             IntentCall::fund_evm_key(EVM_MIRROR, u128::from(amount)),
@@ -1338,18 +1349,9 @@ fn m5_static_pairs() -> Vec<M5Pair> {
             global: true,
         });
     }
-    // Compact amount mode boundaries have explicit byte vectors as well as
-    // core-constructor comparisons; they do not depend on compact_balance().
-    for (amount, compact) in [
-        (63, vec![252]),
-        (64, vec![1, 1]),
-        (16_383, vec![253, 255]),
-        (16_384, vec![2, 0, 1, 0]),
-        (1 << 30, vec![3, 0, 0, 0, 64]),
-    ] {
-        let mut bytes = vec![5, 3, 0];
-        bytes.extend_from_slice(&EVM_MIRROR_KEY);
-        bytes.extend(compact);
+    // The former compact-mode boundaries, now fixed-width u64 deposits.
+    for amount in [63, 64, 16_383, 16_384, 1 << 30] {
+        let bytes = evm_deposit_bytes(Some(amount));
         pairs.push(m5_pair(
             "fund_evm_key",
             IntentCall::fund_evm_key(EVM_MIRROR, u128::from(amount)),
@@ -1364,24 +1366,6 @@ fn m5_static_pairs() -> Vec<M5Pair> {
         ));
     }
     pairs
-}
-
-fn compact_balance(value: u64) -> Vec<u8> {
-    if value < 64 {
-        vec![(value as u8) << 2]
-    } else if value < 16384 {
-        ((value as u16) << 2 | 1).to_le_bytes().to_vec()
-    } else if value < 1 << 30 {
-        ((value as u32) << 2 | 2).to_le_bytes().to_vec()
-    } else {
-        let bytes = value.to_le_bytes();
-        let count = (8usize)
-            .saturating_sub((value.leading_zeros() / 8) as usize)
-            .max(4);
-        let mut encoded = vec![((count - 4) as u8) << 2 | 3];
-        encoded.extend_from_slice(&bytes[..count]);
-        encoded
-    }
 }
 
 async fn m5_fixture() -> (Client, rtao_testkit::FakeChain) {
@@ -1886,21 +1870,24 @@ async fn assert_m5_build(pair: &M5Pair, snapshot: &rtao_client::Snapshot, keys: 
         })
         .await
         .unwrap();
-    let expected = runtime
-        .core()
-        .compose_call(
-            pair.pair.core.pallet(),
-            pair.pair.core.function(),
-            pair.pair.core.params(),
-        )
-        .unwrap();
-    assert_eq!(
-        built.call.as_bytes(),
-        expected,
-        "{} {:?}",
-        pair.pair.constructor,
-        pair.pair.intent.to_json_dyn()
-    );
+    let native_deposit = pair.pair.intent.spec().name == "fund_evm_key";
+    if !native_deposit {
+        let expected = runtime
+            .core()
+            .compose_call(
+                pair.pair.core.pallet(),
+                pair.pair.core.function(),
+                pair.pair.core.params(),
+            )
+            .unwrap();
+        assert_eq!(
+            built.call.as_bytes(),
+            expected,
+            "{} {:?}",
+            pair.pair.constructor,
+            pair.pair.intent.to_json_dyn()
+        );
+    }
     assert_eq!(
         built.call.as_bytes(),
         pair.bytes,
@@ -1920,13 +1907,18 @@ async fn assert_m5_build(pair: &M5Pair, snapshot: &rtao_client::Snapshot, keys: 
             true,
         )
         .unwrap();
+    let (pallet, function) = if native_deposit {
+        ("EVM", "deposit")
+    } else {
+        (pair.pair.core.pallet(), pair.pair.core.function())
+    };
     assert_eq!(
         decoded.field("call_module").and_then(ValueExt::as_str),
-        Some(pair.pair.core.pallet())
+        Some(pallet)
     );
     assert_eq!(
         decoded.field("call_function").and_then(ValueExt::as_str),
-        Some(pair.pair.core.function())
+        Some(function)
     );
     assert!(built.extras.is_empty());
 }
@@ -2281,9 +2273,7 @@ async fn all_free_tao_keeps_python_unbounded_spend_while_core_exact_constructor_
             }
         }
     }
-    let mut bytes = vec![5, 4, 0];
-    bytes.extend_from_slice(&EVM_MIRROR_KEY);
-    bytes.push(1);
+    let bytes = evm_deposit_bytes(None);
     let sweep = m5_pair(
         "transfer_all",
         IntentCall::transfer_all(EVM_MIRROR, true),

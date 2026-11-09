@@ -5,30 +5,6 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "sdk/python/bittensor/__init__.py"
-kind = "ported"
-from = "2794f4358a84f0a9471c025d726a05dfdaf2baaf"
-to = "75159386404e4355b05f1499a1db0c52a65b3d58"
-tag = "v488"
-symbols = ["bittensor.RegistrationSponsorship", "bittensor.RegistrationSponsorshipRequired", "bittensor.__all__"]
-
-[[file]]
-py = "sdk/python/bittensor/_substrate.py"
-kind = "ported"
-from = "03316a548082418fa7e33523a34445370b0894d2"
-to = "d75700ec581a5d87fc258bb0966790a44ce3b703"
-tag = "v488"
-symbols = ["bittensor._substrate.CallBytes", "bittensor._substrate.ExtrinsicNotFound", "bittensor._substrate.ExtrinsicSubmissionRejected", "bittensor._substrate.HashedSigningSnapshot", "bittensor._substrate.InclusionReport", "bittensor._substrate.MaxRetriesExceeded", "bittensor._substrate.MultisigAccount", "bittensor._substrate.RpcPolicyRejection", "bittensor._substrate.RpcSubstrate", "bittensor._substrate.RpcSubstrate._failed_submit", "bittensor._substrate.RpcSubstrate._result_from_report", "bittensor._substrate.RpcSubstrate._submit_and_report", "bittensor._substrate.RpcSubstrate.account_next_index", "bittensor._substrate.RpcSubstrate.compose", "bittensor._substrate.RpcSubstrate.constant", "bittensor._substrate.RpcSubstrate.estimate_fee", "bittensor._substrate.RpcSubstrate.estimate_shielded_carrier_fee", "bittensor._substrate.RpcSubstrate.multisig_account", "bittensor._substrate.RpcSubstrate.prepare_hashed_snapshot", "bittensor._substrate.RpcSubstrate.prepare_mldsa", "bittensor._substrate.RpcSubstrate.release_nonce_reservation", "bittensor._substrate.RpcSubstrate.sign_extrinsic", "bittensor._substrate.RpcSubstrate.submit", "bittensor._substrate.RpcSubstrate.submit_signature", "bittensor._substrate.RpcSubstrate.submit_signed", "bittensor._substrate.SignedExtrinsic", "bittensor._substrate.StateDiscardedError", "bittensor._substrate.Substrate", "bittensor._substrate.Substrate.constant", "bittensor._substrate.Substrate.estimate_fee", "bittensor._substrate.Substrate.estimate_shielded_carrier_fee", "bittensor._substrate.Substrate.multisig_account", "bittensor._substrate.Substrate.prepare_hashed_snapshot", "bittensor._substrate.Substrate.prepare_mldsa", "bittensor._substrate.Substrate.release_nonce_reservation", "bittensor._substrate.Substrate.sign_extrinsic", "bittensor._substrate.Substrate.submit", "bittensor._substrate.SubstrateRequestException", "bittensor._substrate.UnsignedExtrinsic", "bittensor._substrate.is_stateless_pq"]
-
-[[file]]
-py = "sdk/python/bittensor/_transport/interface.py"
-kind = "ported"
-from = "ea4b9a701522142c1c9b78f7e6274fe52d445d3b"
-to = "22cdb716b676c91dd50f2e0780964ff893ce81c8"
-tag = "v488"
-symbols = ["bittensor._transport.interface.Any", "bittensor._transport.interface.AsyncIterator", "bittensor._transport.interface.Awaitable", "bittensor._transport.interface.BlockData", "bittensor._transport.interface.BlockNotFound", "bittensor._transport.interface.Callable", "bittensor._transport.interface.ExtrinsicNotFound", "bittensor._transport.interface.ExtrinsicSubmissionRejected", "bittensor._transport.interface.FALCON_CRYPTO_TYPES", "bittensor._transport.interface.HashedSigningSnapshot", "bittensor._transport.interface.IMMORTAL", "bittensor._transport.interface.InclusionReport", "bittensor._transport.interface.MaxRetriesExceeded", "bittensor._transport.interface.MetadataIR", "bittensor._transport.interface.MultisigAccount", "bittensor._transport.interface.NonceCache", "bittensor._transport.interface.Optional", "bittensor._transport.interface.PQ_CRYPTO_TYPES", "bittensor._transport.interface.PQ_PROFILES", "bittensor._transport.interface.REGISTERED_CRYPTO_TYPES", "bittensor._transport.interface.RpcPolicyRejection", "bittensor._transport.interface.SignedExtrinsic", "bittensor._transport.interface.SubstrateConnection", "bittensor._transport.interface.SubstrateConnection._hashed_snapshot_at", "bittensor._transport.interface.SubstrateConnection._normalize_era_at", "bittensor._transport.interface.SubstrateConnection._sign_hashed", "bittensor._transport.interface.SubstrateConnection._sign_stateless_mldsa", "bittensor._transport.interface.SubstrateConnection._stateless_mldsa_codec", "bittensor._transport.interface.SubstrateConnection.attach_mldsa_proof", "bittensor._transport.interface.SubstrateConnection.attach_signature", "bittensor._transport.interface.SubstrateConnection.create_multisig_extrinsic", "bittensor._transport.interface.SubstrateConnection.create_signed_extrinsic", "bittensor._transport.interface.SubstrateConnection.generate_multisig_account", "bittensor._transport.interface.SubstrateConnection.get_finalized_block_number", "bittensor._transport.interface.SubstrateConnection.get_payment_info", "bittensor._transport.interface.SubstrateConnection.get_shielded_payment_info", "bittensor._transport.interface.SubstrateConnection.prepare_hashed_snapshot", "bittensor._transport.interface.SubstrateConnection.prepare_mldsa_unsigned", "bittensor._transport.interface.SubstrateConnection.release_nonce_reservation", "bittensor._transport.interface.SubstrateConnection.sign_without_nonce_tracking", "bittensor._transport.interface.SubstrateConnection.submit_extrinsic", "bittensor._transport.interface.SubstrateRequestException", "bittensor._transport.interface.TypeVar", "bittensor._transport.interface.UnsignedExtrinsic", "bittensor._transport.interface._SubmissionResult", "bittensor._transport.interface._submit_once", "bittensor._transport.interface.hashed_proof_length", "bittensor._transport.interface.is_stateless_pq", "bittensor._transport.interface.pq_lengths", "bittensor._transport.interface.replace", "bittensor._transport.interface.resolve_outcome", "bittensor._transport.interface.shielded_ciphertext_size", "bittensor._transport.interface.supports_fixed_profile", "bittensor._transport.interface.watch_status_block"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/call.py"
 kind = "ported"
 from = "4b05fe2a6d40baeaeea4ed11f49998f80d2615bb"
@@ -229,94 +205,6 @@ tag = "v488"
 symbols = ["bittensor.cli.tx.BittensorError", "bittensor.cli.tx._list_note", "bittensor.cli.tx._make_command", "bittensor.cli.tx._placeholder", "bittensor.cli.tx.apply_intent_prompt_policy", "bittensor.cli.tx.falls_back_to_wallet", "bittensor.cli.tx.validate_intent_prompt_policy"]
 
 [[file]]
-py = "sdk/python/bittensor/evm/__init__.py"
-kind = "n/a"
-from = "e73671b64f25c4a5ab33bdc9c144bf6626ce3caf"
-to = "e50684b5866a2ea51ba19205766e926fffc58cf6"
-tag = "v488"
-symbols = ["bittensor.evm.__all__", "bittensor.evm.h160_to_ss58", "bittensor.evm.is_h160", "bittensor.evm.normalize_h160", "bittensor.evm.pubkey_to_ss58", "bittensor.evm.resolve_evm_recipient", "bittensor.evm.ss58_to_h160_truncated", "bittensor.evm.ss58_to_pubkey"]
-
-[[file]]
-py = "sdk/python/bittensor/evm/addresses.py"
-kind = "ported"
-from = "19c36c3d7411944184148a1e5cbd96f03819f178"
-to = "3479d6abee4a10016fa33000cbde8ca31c2daee3"
-tag = "v488"
-symbols = ["bittensor.evm.addresses.Any", "bittensor.evm.addresses.Keypair", "bittensor.evm.addresses.Recipient", "bittensor.evm.addresses.h160_to_ss58", "bittensor.evm.addresses.is_receiving_address", "bittensor.evm.addresses.normalize_h160", "bittensor.evm.addresses.parse_recipient", "bittensor.evm.addresses.receiving_address", "bittensor.evm.addresses.resolve_evm_deposit", "bittensor.evm.addresses.resolve_evm_funding_recipient", "bittensor.evm.addresses.resolve_evm_recipient", "bittensor.evm.addresses.ss58_to_pubkey"]
-
-[[file]]
-py = "sdk/python/bittensor/evm/keys.py"
-kind = "ported"
-from = "2c23c156c4f9b8350248428367ee1e99129dfb1b"
-to = "bfc0bf3a1d96e3678e61f52c6ebc8099faa80578"
-tag = "v488"
-symbols = []
-
-[[file]]
-py = "sdk/python/bittensor/executor.py"
-kind = "ported"
-from = "b113eb41267aa2b5f349ec210384c66e1b53056f"
-to = "ea6547dfb106fa26bf3a3dc5d2613e5170068b91"
-tag = "v488"
-symbols = ["bittensor.executor.Any", "bittensor.executor.Executor", "bittensor.executor.Executor._enforce", "bittensor.executor.Executor._preflight", "bittensor.executor.Executor._quote_submission", "bittensor.executor.Executor._resolve_shielded_inner", "bittensor.executor.Executor._setup_reserve", "bittensor.executor.Executor._submit_encrypted_call", "bittensor.executor.Executor._submit_shielded_prepared", "bittensor.executor.Executor._use_shield", "bittensor.executor.Executor._violations", "bittensor.executor.Executor.execute", "bittensor.executor.Executor.plan", "bittensor.executor.Executor.preflight", "bittensor.executor.Executor.submit_call", "bittensor.executor.Executor.submit_shielded", "bittensor.executor.Keypair", "bittensor.executor.MAX_SHIELDED_CIPHERTEXT_BYTES", "bittensor.executor.Optional", "bittensor.executor.REGISTERED_CRYPTO_TYPES", "bittensor.executor.RegistrationSponsorshipCallback", "bittensor.executor.UNBOUNDED", "bittensor.executor.WalletLike", "bittensor.executor._FeePeriodView", "bittensor.executor._FeePeriodView.__getattr__", "bittensor.executor._FeePeriodView.__init__", "bittensor.executor._FeePeriodView.estimate_fee", "bittensor.executor._MAX_SHIELDED_CIPHERTEXT_BYTES", "bittensor.executor._OriginView", "bittensor.executor._OriginView.__init__", "bittensor.executor._coerce_addresses", "bittensor.executor._compose_intent_call", "bittensor.executor._compose_nested_intent_call", "bittensor.executor._gamma_minted_data", "bittensor.executor._gamma_spent_data", "bittensor.executor._intent_origin_view", "bittensor.executor._is_transient", "bittensor.executor._require_planned_signer", "bittensor.executor.account_for_read", "bittensor.executor.as_wallet", "bittensor.executor.authorize_registration_sponsorship", "bittensor.executor.cast", "bittensor.executor.coerce_address", "bittensor.executor.coerce_payment_address", "bittensor.executor.contains_account_registration", "bittensor.executor.descriptor_bytes", "bittensor.executor.estimate_shielded_carrier_fee", "bittensor.executor.gamma_from_units", "bittensor.executor.has_receiving_setup_inputs", "bittensor.executor.hashed_accounts_enabled", "bittensor.executor.is_address_param", "bittensor.executor.is_stateless_pq", "bittensor.executor.merge_approval_metadata", "bittensor.executor.multisig_deposit_rao", "bittensor.executor.pinned_inputs", "bittensor.executor.prepare_recipient_intent", "bittensor.executor.protected_account_record", "bittensor.executor.public_view", "bittensor.executor.registration_shield_default", "bittensor.executor.registration_sponsorship_quote", "bittensor.executor.resolve_signer", "bittensor.executor.ss58_decode", "bittensor.executor.validate_registration_deposit_limit", "bittensor.executor.with_recipient_registration"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/association.py"
-kind = "ported"
-from = "289fc369c7f702231460852af4b3a7f7ae348041"
-to = "ab08e652c1c01e15f157bfcf1b7ca00bf820788c"
-tag = "v488"
-symbols = ["bittensor.intents.association.AssociateHotkey", "bittensor.intents.association.AssociateHotkey.build", "bittensor.intents.association.public_view"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/crowdloan.py"
-kind = "ported"
-from = "a0e8fc6981a0aa63ad5d46aa60a37d6b657567a7"
-to = "2ad3b7c537e42f77d421c2275ddf4893f1981506"
-tag = "v488"
-symbols = ["bittensor.intents.crowdloan.BuiltCall", "bittensor.intents.crowdloan.ContributeCrowdloan", "bittensor.intents.crowdloan.ContributeCrowdloan.build", "bittensor.intents.crowdloan.CreateCrowdloan", "bittensor.intents.crowdloan.CreateCrowdloan.build", "bittensor.intents.crowdloan.Intent", "bittensor.intents.crowdloan.compose_pinned_call", "bittensor.intents.crowdloan.partial"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/evm.py"
-kind = "ported"
-from = "62274b85ee0d003ae650099b83bb1e73dba37533"
-to = "c6b3ea2027049a41c8ff00eba419637e0e3929bc"
-tag = "v488"
-symbols = ["bittensor.intents.evm.BuiltCall", "bittensor.intents.evm.Call", "bittensor.intents.evm.EvmWithdraw", "bittensor.intents.evm.EvmWithdraw.build", "bittensor.intents.evm.FundEvmKey", "bittensor.intents.evm.FundEvmKey.build", "bittensor.intents.evm.FundEvmKey.effects", "bittensor.intents.evm.FundEvmKey.mirror_ss58", "bittensor.intents.evm.FundEvmKey.summary", "bittensor.intents.evm.FundEvmKey.warnings", "bittensor.intents.evm.FundEvmKey.wraps", "bittensor.intents.evm.Intent", "bittensor.intents.evm.approved_amount", "bittensor.intents.evm.calls", "bittensor.intents.evm.compose_pinned_call", "bittensor.intents.evm.h160_to_ss58", "bittensor.intents.evm.normalize_h160", "bittensor.intents.evm.resolve_evm_deposit", "bittensor.intents.evm.resolve_evm_funding_recipient", "bittensor.intents.evm.resolve_evm_recipient", "bittensor.intents.evm.ss58_to_h160_truncated"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/multisig.py"
-kind = "ported"
-from = "01acc9c3ea4664c82cdad7aabe2e0c52a439e736"
-to = "70dd6b22c6ee4788fa96e628eb33eff586dcc22a"
-tag = "v488"
-symbols = ["bittensor.intents.multisig.MultisigApprove", "bittensor.intents.multisig.MultisigApprove.account_mode", "bittensor.intents.multisig.MultisigApprove.build", "bittensor.intents.multisig.MultisigApprove.wraps", "bittensor.intents.multisig.MultisigCancel", "bittensor.intents.multisig.MultisigCancel.account_mode", "bittensor.intents.multisig.MultisigCancel.build", "bittensor.intents.multisig.MultisigCancel.wraps", "bittensor.intents.multisig.MultisigExecute", "bittensor.intents.multisig.MultisigExecute._build_with_inner", "bittensor.intents.multisig.MultisigExecute.account_mode", "bittensor.intents.multisig.MultisigExecute.build", "bittensor.intents.multisig.MultisigExecute.requires_build_for_policy", "bittensor.intents.multisig.MultisigExecute.wraps", "bittensor.intents.multisig.MultisigIntentAdapter", "bittensor.intents.multisig.MultisigIntentAdapter.account_mode", "bittensor.intents.multisig.MultisigIntentAdapter.origin_view", "bittensor.intents.multisig.MultisigIntentAdapter.preflight", "bittensor.intents.multisig.MultisigThreshold1", "bittensor.intents.multisig.MultisigThreshold1._build_with_inner", "bittensor.intents.multisig.MultisigThreshold1.account_mode", "bittensor.intents.multisig.MultisigThreshold1.build", "bittensor.intents.multisig.MultisigThreshold1.requires_build_for_policy", "bittensor.intents.multisig.MultisigThreshold1.wraps", "bittensor.intents.multisig._account_view", "bittensor.intents.multisig._compose_inner", "bittensor.intents.multisig._pending_timepoint", "bittensor.intents.multisig._sorted_signatories", "bittensor.intents.multisig._validate_multisig", "bittensor.intents.multisig.calls", "bittensor.intents.multisig.check_multisig_funds", "bittensor.intents.multisig.merge_approval_metadata", "bittensor.intents.multisig.multisig_call", "bittensor.intents.multisig.multisig_opening_shortfall", "bittensor.intents.multisig.parse_recipient", "bittensor.intents.multisig.ss58_decode", "bittensor.intents.multisig.ss58_encode", "bittensor.intents.multisig.warn_legacy_mldsa"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/proxy.py"
-kind = "ported"
-from = "30b4e4d42f161e970e1bacdad9ad2175ce6318da"
-to = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
-tag = "v488"
-symbols = ["bittensor.intents.proxy.BuiltCall", "bittensor.intents.proxy.CreatePureProxy", "bittensor.intents.proxy.CreatePureProxy.account_mode", "bittensor.intents.proxy.CreatePureProxy.build", "bittensor.intents.proxy.CreatePureProxy.requires_build_for_policy", "bittensor.intents.proxy.CreatePureProxy.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.Intent", "bittensor.intents.proxy.KillPureProxy", "bittensor.intents.proxy.KillPureProxy.account_mode", "bittensor.intents.proxy.KillPureProxy.build", "bittensor.intents.proxy.KillPureProxy.wraps", "bittensor.intents.proxy.PROXY_TYPES"]
-
-[[file]]
-py = "sdk/python/bittensor/multisig.py"
-kind = "ported"
-from = "25b5105b4300daa25b2fae8626064ee0f2697f15"
-to = "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3"
-tag = "v488"
-symbols = ["bittensor.multisig.Multisig", "bittensor.multisig.Multisig._compose_as_multi", "bittensor.multisig.Multisig._preflight_funds", "bittensor.multisig.Multisig.account_mode", "bittensor.multisig.Multisig.approve", "bittensor.multisig.Multisig.funding_call", "bittensor.multisig.Multisig.protection_call", "bittensor.multisig.Multisig.protection_status", "bittensor.multisig._funding_error", "bittensor.multisig.check_multisig_funds", "bittensor.multisig.merge_approval_metadata", "bittensor.multisig.multisig_call", "bittensor.multisig.warn_legacy_mldsa"]
-
-[[file]]
-py = "sdk/python/bittensor/pow_registration.py"
-kind = "ported"
-from = "e406e347c5a39e668c9583ca8bef8cf37c7e8c42"
-to = "ad6b3b82cbe3e8d312a20cbf872dde3097a5bb36"
-tag = "v488"
-symbols = ["bittensor.pow_registration.mine_registration", "bittensor.pow_registration.parse_recipient"]
-
-[[file]]
 py = "sdk/python/bittensor/wallets.py"
 kind = "ported"
 from = "cf6d9e094eb73e45923f73a7603e15cf75504626"
@@ -341,44 +229,12 @@ tag = "v488"
 symbols = ["tests.unit.test_cli_commands.EMISSION_WEIGHTS_INFO", "tests.unit.test_cli_commands.INTENT_SAMPLES", "tests.unit.test_cli_commands.READ_SAMPLES", "tests.unit.test_cli_commands.deepcopy", "tests.unit.test_cli_commands.fake", "tests.unit.test_cli_commands.seed_gamma", "tests.unit.test_cli_commands.test_tx_dry_run_from_sample"]
 
 [[file]]
-py = "sdk/python/tests/unit/test_codec_golden.py"
-kind = "oracle-only"
-from = "5ad19b8b78ac71abc6f31b4b3b1e4fd1a8259563"
-to = "4f9e26186ea51f3b9edcb9b574ebbf378081a415"
-tag = "v488"
-symbols = ["tests.unit.test_codec_golden.test_singleton_bounded_tuple_sequence"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_evm.py"
-kind = "ported"
-from = "8dd19654744f5338cc4b9ab620f834bbf6b526bd"
-to = "f69e75ab6d302a2f39e11366e7f0dd36c0c00974"
-tag = "v488"
-symbols = ["tests.unit.test_evm.Keypair", "tests.unit.test_evm.TestAssociationProof", "tests.unit.test_evm.TestAssociationProof.test_fixed_ms_proof_binds_the_full_native_identity_to_a_separate_evm_key"]
-
-[[file]]
 py = "sdk/python/tests/unit/test_intents_table.py"
 kind = "ported"
 from = "4968a1ce1c156c3fe47195781635672e441d2009"
 to = "bb18ed8f10f037a48ed6c6b1feb658445191819b"
 tag = "v488"
 symbols = ["tests.unit.test_intents_table.ALICE", "tests.unit.test_intents_table.ALICE_HOT", "tests.unit.test_intents_table.BOB", "tests.unit.test_intents_table.BOB_HOT", "tests.unit.test_intents_table.EMISSION_WEIGHTS_INFO", "tests.unit.test_intents_table.INTENT_SAMPLES", "tests.unit.test_intents_table.dev_wallet", "tests.unit.test_intents_table.seed_gamma", "tests.unit.test_intents_table.test_build_returns_composed_call", "tests.unit.test_intents_table.test_composes_and_plans_offline"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_multisig_safety.py"
-kind = "ported"
-from = "b331fa60834e3f39495306acf359a1a4de2f03f1"
-to = "4d4d674de1a209d7f4f8ee2e500de83e7682627e"
-tag = "v488"
-symbols = ["tests.unit.test_multisig_safety.Balance", "tests.unit.test_multisig_safety.Policy", "tests.unit.test_multisig_safety.test_required_mev_shield_passes_proxy_for", "tests.unit.test_multisig_safety.test_required_mev_shield_survives_multisig_dispatch", "tests.unit.test_multisig_safety.test_sdk_multisig_normalizes_receiving_members", "tests.unit.test_multisig_safety.test_sdk_multisig_rejects_nonmember_before_signing"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_pow_registration.py"
-kind = "ported"
-from = "cd615d4e237d09fdded03c630c4ddcc2c2ce7b2e"
-to = "37c6ab528f20e73c2a1f983178e42393103bf3ed"
-tag = "v488"
-symbols = ["tests.unit.test_pow_registration.descriptor_receiving_address", "tests.unit.test_pow_registration.test_miner_resolves_receiving_addresses_but_preserves_hotkey_descriptor"]
 
 [[file]]
 py = "sdk/python/tests/unit/test_root_claim_fee.py"

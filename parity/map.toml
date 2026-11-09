@@ -719,10 +719,10 @@ notes = "v482 source mapping 2026-10-22: Announcement sample wraps announce_cold
 py = "sdk/python/bittensor/__init__.py"
 rs = ["crates/rtao/src/lib.rs"]
 kind = "ported"
-synced_blob = "2794f4358a84f0a9471c025d726a05dfdaf2baaf"
-synced_tag = "v486"
+synced_blob = "75159386404e4355b05f1499a1db0c52a65b3d58"
+synced_tag = "v488"
 milestone = "M0–M8"
-notes = "v484 source reconciliation: Export SubnetLifecycleState through rtao_reads and the feature-gated rtao facade/prelude. Explicit export decision names the enum and real SCALE/legacy fixtures; Python object mutability is not claimed. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "v484 source reconciliation: Export SubnetLifecycleState through rtao_reads and the feature-gated rtao facade/prelude. Explicit export decision names the enum and real SCALE/legacy fixtures; Python object mutability is not claimed. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: RegistrationSponsorship and RegistrationSponsorshipRequired are rtao_tx::sponsorship's types and TxError::RegistrationSponsorship (D-148)."
 
 [[file]]
 py = "sdk/python/bittensor/_generated/__init__.py"
@@ -791,10 +791,10 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 py = "sdk/python/bittensor/_substrate.py"
 rs = ["crates/rtao-client/src/client.rs", "crates/rtao-client/src/error.rs", "crates/rtao-client/src/view.rs", "crates/rtao-client/src/submit.rs", "crates/rtao-client/src/block_info.rs", "crates/rtao-tx/src/output.rs", "crates/rtao-tx/src/executor.rs", "crates/rtao-rpc/src/session.rs"]
 kind = "ported"
-synced_blob = "03316a548082418fa7e33523a34445370b0894d2"
-synced_tag = "v486"
+synced_blob = "d75700ec581a5d87fc258bb0966790a44ce3b703"
+synced_tag = "v488"
 milestone = "M1–M2"
-notes = "v482 source mapping 2026-10-22: Included failed receipts now retain actual fee and triggered events. Candidate native submission already projects those into its typed result; pool rejection remains separate with no included receipt. Production-port review remains open. Consumers: crates/rtao-client/src/submit.rs; crates/rtao-tx/src/executor.rs. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "v482 source mapping 2026-10-22: Included failed receipts now retain actual fee and triggered events. Candidate native submission already projects those into its typed result; pool rejection remains separate with no included receipt. Production-port review remains open. Consumers: crates/rtao-client/src/submit.rs; crates/rtao-tx/src/executor.rs. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-147, D-149, D-151): the substrate surface's new entry points are Client methods: constant(block_hash) is a View at that block; estimate_fee(period) and estimate_shielded_carrier_fee are Client::estimate_weight_as (era_for) and estimate_shielded_carrier_fee_as; prepare_hashed_snapshot and sign_extrinsic(hashed_signing_snapshot) are rtao_client::submit::authority (prepare_hashed_snapshot, sign_authorized, authority_pair); prepare_mldsa/attach are prepare_pq_call/submit_pq_proof; multisig_account(account_mode) is Multisig::with_mode; compose of prepared CallBytes keeps its bytes after CallBytes::ensure_runtime. release_nonce_reservation has no counterpart: rtao keeps its lease model (D-149)."
 
 [[file]]
 py = "sdk/python/bittensor/_subtensor.py"
@@ -863,10 +863,10 @@ notes = "Source reconciliation 2026-10-15: complete authenticated module (426 ph
 py = "sdk/python/bittensor/_transport/interface.py"
 rs = ["crates/rtao-client/src/client.rs","crates/rtao-client/src/view.rs","crates/rtao-client/src/block_info.rs","crates/rtao-client/src/submit.rs","crates/rtao-client/src/compose.rs","crates/rtao-core-ext/src/ops/fee.rs","crates/rtao-core-ext/src/ops/extrinsic_lookup.rs"]
 kind = "ported"
-synced_blob = "ea4b9a701522142c1c9b78f7e6274fe52d445d3b"
-synced_tag = "v486"
+synced_blob = "22cdb716b676c91dd50f2e0780964ff893ce81c8"
+synced_tag = "v488"
 milestone = "M1–M5"
-notes = "Source reconciliation 2026-10-15: complete authenticated 810-line module and all 48 definitions reviewed against exported native client, view, block, submission, fee, lookup and full-call multisig consumers. Architecture sections 3.5, 3.6 and 3.9 record native API factoring and defaults. Finalized-number caching uses 12-second probes and a 512-entry FIFO without a reverse cache; exact TTL/eviction coverage remains unverified. Native strict lazy 256-key streams pin the whole scan and continue past deleted pages; Python's 100-key records, repeated iteration, private tolerant mode and page options are different APIs. Supported map_has_entries is expressible with public pinned metadata/storage_key/keys_paged primitives, requiring a free-key arity check and Some(prefix) cursor; no dedicated wrapper or complete probe fixture is claimed. The trim consumer has bounded queue probes and a recheck fixture but different two-map/request behavior; null_pruning source/test rows remain pending. BlockInfo retains tolerant null positions and execution-runtime decoding. Preparation/fee probes avoid nonce-cache mutation; submission uses checked leases and authenticated external signing. Native mortality/finalization, both runtime stamps, strict input and D-008/D-023/D-024 remain explicit. Shared core/runtime/signer/nonce helpers are dependencies with separate attribution. No exact private-method, exception API, Python oracle, complete pytest coverage or current hosted acceptance is claimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: complete authenticated 810-line module and all 48 definitions reviewed against exported native client, view, block, submission, fee, lookup and full-call multisig consumers. Architecture sections 3.5, 3.6 and 3.9 record native API factoring and defaults. Finalized-number caching uses 12-second probes and a 512-entry FIFO without a reverse cache; exact TTL/eviction coverage remains unverified. Native strict lazy 256-key streams pin the whole scan and continue past deleted pages; Python's 100-key records, repeated iteration, private tolerant mode and page options are different APIs. Supported map_has_entries is expressible with public pinned metadata/storage_key/keys_paged primitives, requiring a free-key arity check and Some(prefix) cursor; no dedicated wrapper or complete probe fixture is claimed. The trim consumer has bounded queue probes and a recheck fixture but different two-map/request behavior; null_pruning source/test rows remain pending. BlockInfo retains tolerant null positions and execution-runtime decoding. Preparation/fee probes avoid nonce-cache mutation; submission uses checked leases and authenticated external signing. Native mortality/finalization, both runtime stamps, strict input and D-008/D-023/D-024 remain explicit. Shared core/runtime/signer/nonce helpers are dependencies with separate attribution. No exact private-method, exception API, Python oracle, complete pytest coverage or current hosted acceptance is claimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-147, D-149, D-151): stateless ML-DSA codec and signing, hashed snapshots, prepare_mldsa_unsigned/attach_mldsa_proof and the shielded payment quote are rtao_client::submit::authority and shield.rs; _submit_once's definite-rejection classification is the journal's author-error classification; account next index is read uncached (Client::nonces().reported). NonceCache reservation release is not ported (lease model, D-149)."
 
 [[file]]
 py = "sdk/python/bittensor/_transport/lru.py"
@@ -1717,10 +1717,10 @@ notes = "v482 source mapping 2026-10-22: Reservation occupied maps to AlreadyExi
 py = "sdk/python/bittensor/evm/__init__.py"
 rs = ["`rtao_evm` crate root"]
 kind = "n/a"
-synced_blob = "e73671b64f25c4a5ab33bdc9c144bf6626ce3caf"
-synced_tag = "v486"
+synced_blob = "e50684b5866a2ea51ba19205766e926fffc58cf6"
+synced_tag = "v488"
 milestone = "M7"
-notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Python package/re-export/import-registration glue. Rust Cargo modules, feature-gated facade exports and generated intent/read registries replace import mechanics; the separate public export gate owns named API completeness. No Python import side effects are needed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Python package/re-export/import-registration glue. Rust Cargo modules, feature-gated facade exports and generated intent/read registries replace import mechanics; the separate public export gate owns named API completeness. No Python import side effects are needed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-154): resolve_evm_recipient is rtao_intents::evm::resolve_evm_recipient."
 
 [[file]]
 py = "sdk/python/bittensor/evm/abi/addressMapping.json"
@@ -1915,10 +1915,10 @@ notes = "copied verbatim at `parity_tag`, sha256 in `upstream.toml [artifacts]` 
 py = "sdk/python/bittensor/evm/addresses.py"
 rs = ["rtao_primitives::evm", "rtao_evm::addresses"]
 kind = "ported"
-synced_blob = "19c36c3d7411944184148a1e5cbd96f03819f178"
-synced_tag = "v486"
+synced_blob = "3479d6abee4a10016fa33000cbde8ca31c2daee3"
+synced_tag = "v488"
 milestone = "M5-M7"
-notes = "Source reconciliation 2026-10-15: Complete authenticated Python/native helper bodies and meaningful fixture bodies reviewed, including the three pinned mirror vectors, Blake2 evm-prefix bytes, full-key/truncated conversion, registered prefixes 0/42/128 and unregistered-prefix 1000 refusal, Python fromhex whitespace grammar and malformed inputs. Actual homes are rtao_primitives::evm and forwarding rtao_evm::addresses. Raw-byte public keys and separate optional-prefix helpers are declared native API adaptations; typed wire addresses still require twenty decoded bytes. Existing intents, key, precompile and CLI consumers use these helpers. Source review establishes neither current hosted execution nor live EVM behavior. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: Complete authenticated Python/native helper bodies and meaningful fixture bodies reviewed, including the three pinned mirror vectors, Blake2 evm-prefix bytes, full-key/truncated conversion, registered prefixes 0/42/128 and unregistered-prefix 1000 refusal, Python fromhex whitespace grammar and malformed inputs. Actual homes are rtao_primitives::evm and forwarding rtao_evm::addresses. Raw-byte public keys and separate optional-prefix helpers are declared native API adaptations; typed wire addresses still require twenty decoded bytes. Existing intents, key, precompile and CLI consumers use these helpers. Source review establishes neither current hosted execution nor live EVM behavior. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-154): resolve_evm_recipient (HashedAccounts.EvmAliases; malformed, unregistered or mismatched bindings fail closed; derived aliases are refused because a pinned view cannot read finalized state), resolve_evm_deposit and resolve_evm_funding_recipient are rtao_intents::evm. The receiving-address refusals of is_h160/raw EVM calls are the CLI's EVM commands (pending with them)."
 
 [[file]]
 py = "sdk/python/bittensor/evm/contracts.py"
@@ -1933,10 +1933,10 @@ notes = "Source reconciliation 2026-10-15: complete authenticated 102-line modul
 py = "sdk/python/bittensor/evm/keys.py"
 rs = ["rtao_evm::keys"]
 kind = "ported"
-synced_blob = "2c23c156c4f9b8350248428367ee1e99129dfb1b"
-synced_tag = "v486"
+synced_blob = "bfc0bf3a1d96e3678e61f52c6ebc8099faa80578"
+synced_tag = "v488"
 milestone = "M7"
-notes = "Source reconciliation 2026-10-15: complete authenticated 244-line module, native key helpers/tests and actual CLI consumers reviewed. All create/import/list/info/unlock/export/write, password and V3 crypto/publication paths have explicit homes. Python edge whitespace for private keys/mnemonics is repaired. Typed ImportSource/account/path/error APIs, caller-owned prompting, ~/ only expansion, strict V3 metadata/address validation, bounded KDF/files and atomic owner-only no-clobber publication are documented native policies; arbitrary address-only JSON, ~user and exact Python diagnostic text are not claimed. Four independent published V3 vectors and substantive known-key/BIP44/password/resource/erasure/publication fixtures were read. Dependency entropy/seed/drop boundaries remain qualified. No current hosted test, independent Python differential, live-chain or native-platform result is established. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: complete authenticated 244-line module, native key helpers/tests and actual CLI consumers reviewed. All create/import/list/info/unlock/export/write, password and V3 crypto/publication paths have explicit homes. Python edge whitespace for private keys/mnemonics is repaired. Typed ImportSource/account/path/error APIs, caller-owned prompting, ~/ only expansion, strict V3 metadata/address validation, bounded KDF/files and atomic owner-only no-clobber publication are documented native policies; arbitrary address-only JSON, ~user and exact Python diagnostic text are not claimed. Four independent published V3 vectors and substantive known-key/BIP44/password/resource/erasure/publication fixtures were read. Dependency entropy/seed/drop boundaries remain qualified. No current hosted test, independent Python differential, live-chain or native-platform result is established. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: comment-only change (the ss58 mirror is the legacy mirror)."
 
 [[file]]
 py = "sdk/python/bittensor/evm/networks.py"
@@ -1978,10 +1978,10 @@ notes = "Source reconciliation 2026-10-15: complete authenticated file, preparat
 py = "sdk/python/bittensor/executor.py"
 rs = ["crates/rtao-tx/src/executor.rs", "crates/rtao-tx/src/registration.rs", "crates/rtao-tx/src/offline.rs", "crates/rtao-client/src/shield.rs", "crates/rtao-client/src/compose.rs"]
 kind = "ported"
-synced_blob = "b113eb41267aa2b5f349ec210384c66e1b53056f"
-synced_tag = "v486"
+synced_blob = "ea6547dfb106fa26bf3a3dc5d2613e5170068b91"
+synced_tag = "v488"
 milestone = "M2–M5"
-notes = "Source reconciliation 2026-10-16: complete authenticated 1319-line module and all 40 definitions reviewed against actual planning, typed/dynamic execution, nested origin and fee policy, shield, offline and registration consumers plus substantive fixture bodies. Native AccountId/ProxyType/CryptoType, checked u64 balances/nonces, immutable stamped calls/signatures and bounded progress channels adapt Python dynamic inputs and callbacks. SDK preparation preserves identity and completes before fresh shield anchor/nonce selection, including Arc sources; camera/phone readiness remains unverified. Clear pure-proxy execution adds creation data; explicit shield retains the Python shield-only map. Registered D-069/070/071 cover stricter registration, eligible owner replanning and observed-head retry pacing; registration completion errors retain the original submitted receipt without retrying. D-049 covers finalized canonical shield absence and hash-bearing unresolved failures. D-008/012/013/018/021/023/024/025/026/028/029/041/059/060 remain applicable. No fresh Python oracle, live-chain decryption, hardware/platform execution or milestone acceptance is claimed; M2-S02 is separately fixed by the pinned core wiping owner. Spec 481 reconciliation 2026-10-18: plan() now copies IntentPreflight.preview into Plan.preview; rtao_tx::Executor::plan_with_keys copies the native IntentPreflight.preview map likewise. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 1 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-16: complete authenticated 1319-line module and all 40 definitions reviewed against actual planning, typed/dynamic execution, nested origin and fee policy, shield, offline and registration consumers plus substantive fixture bodies. Native AccountId/ProxyType/CryptoType, checked u64 balances/nonces, immutable stamped calls/signatures and bounded progress channels adapt Python dynamic inputs and callbacks. SDK preparation preserves identity and completes before fresh shield anchor/nonce selection, including Arc sources; camera/phone readiness remains unverified. Clear pure-proxy execution adds creation data; explicit shield retains the Python shield-only map. Registered D-069/070/071 cover stricter registration, eligible owner replanning and observed-head retry pacing; registration completion errors retain the original submitted receipt without retrying. D-049 covers finalized canonical shield absence and hash-bearing unresolved failures. D-008/012/013/018/021/023/024/025/026/028/029/041/059/060 remain applicable. No fresh Python oracle, live-chain decryption, hardware/platform execution or milestone acceptance is claimed; M2-S02 is separately fixed by the pinned core wiping owner. Spec 481 reconciliation 2026-10-18: plan() now copies IntentPreflight.preview into Plan.preview; rtao_tx::Executor::plan_with_keys copies the native IntentPreflight.preview map likewise. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 1 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-148, D-149, D-154): recipient preparation and guards, nested intent composition (compose_nested_intent_call), sponsorship authorization before unlocking, setup and pure-proxy reserves, multisig approval obligations combined with the outer signer's fee (multisig_approvals), the complete Shield quote (inner plus carrier), the registration Shield default behind the opt-in setting, the planned-signer check before submission, and gamma spent/minted result data. Remaining residue: Python's warnings channel for the Shield fallback is not surfaced by multisig approvals."
 
 [[file]]
 py = "sdk/python/bittensor/extension/__init__.py"
@@ -2131,10 +2131,10 @@ notes = "v484 source reconciliation: Raise single-hotkey admission envelope from
 py = "sdk/python/bittensor/intents/association.py"
 rs = ["rtao_intents::association::{AssociateHotkey, AssociateEvmKey} (feature association)","rtao_intents::generated::{interfaces, passthrough}"]
 kind = "ported"
-synced_blob = "289fc369c7f702231460852af4b3a7f7ae348041"
-synced_tag = "v486"
+synced_blob = "ab08e652c1c01e15f157bfcf1b7ca00bf820788c"
+synced_tag = "v488"
 milestone = "M5"
-notes = "Source reconciliation 2026-10-15: both intents compared with the exact authenticated source blob and generated interfaces. Hotkey association preserves explicit-address priority, wallet hotkey fallback, coldkey signing and summary spelling; EVM association preserves raw address/proof text, Python fromhex decoding and evaluation order, exact native H160/u64/[u8;65] encoding, and hotkey signing. Both inherit read-free default preflight and zero spend; proof verification remains chain-owned as upstream. Regression sources: association::tests::{association_hotkey_keeps_defaults_explicit_priority_and_ss58_spelling, association_evm_encodes_fixed_fields_without_changing_or_verifying_the_proof, association_signature_preserves_python_fromhex_whitespace_and_errors, association_evm_validates_hex_then_address_then_fixed_signature_length, association_preflight_and_policy_keep_inherited_defaults, association_tool_inputs_enforce_native_ranges_and_account_validation}. These are authored source proofs, not a new executed suite or oracle claim. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 14 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: both intents compared with the exact authenticated source blob and generated interfaces. Hotkey association preserves explicit-address priority, wallet hotkey fallback, coldkey signing and summary spelling; EVM association preserves raw address/proof text, Python fromhex decoding and evaluation order, exact native H160/u64/[u8;65] encoding, and hotkey signing. Both inherit read-free default preflight and zero spend; proof verification remains chain-owned as upstream. Regression sources: association::tests::{association_hotkey_keeps_defaults_explicit_priority_and_ss58_spelling, association_evm_encodes_fixed_fields_without_changing_or_verifying_the_proof, association_signature_preserves_python_fromhex_whitespace_and_errors, association_evm_validates_hex_then_address_then_fixed_signature_length, association_preflight_and_policy_keep_inherited_defaults, association_tool_inputs_enforce_native_ranges_and_account_validation}. These are authored source proofs, not a new executed suite or oracle claim. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 14 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: associate_hotkey already takes the effective origin's hotkey (BuildCx::hotkey_address), which is the public view's hotkey for watch-only and public wallets."
 
 [[file]]
 py = "sdk/python/bittensor/intents/base.py"
@@ -2185,10 +2185,10 @@ notes = "Source reconciliation 2026-10-15: exact source blob, pinned SHA256 and 
 py = "sdk/python/bittensor/intents/crowdloan.py"
 rs = ["rtao_intents::crowdloan (feature crowdloan)"]
 kind = "ported"
-synced_blob = "a0e8fc6981a0aa63ad5d46aa60a37d6b657567a7"
-synced_tag = "v486"
+synced_blob = "2ad3b7c537e42f77d421c2275ddf4893f1981506"
+synced_tag = "v488"
 milestone = "M5"
-notes = "Source reconciliation 2026-10-15: complete authenticated ten-intent module, every constructor/default/money/ALL/nested-call branch, exact summaries/warnings and actual generated/native consumers and substantive fixture bodies reviewed. Nine generated builds and handwritten CreateCrowdloan preserve semantic arguments and public origin; generated interfaces/defaults and shared argument conversion are dependencies. Typed u32 IDs/blocks and checked native u64 unit-aware money replace permissive Python inputs. D-046 bounds nested JSON; D-059 aggregates child policy, authenticates stored callbacks/preimages and refuses unsupported deferred shielding or future changing sources. Static Finalize policy deliberately remains Unbounded/global rather than Python's inherited None/local defaults; live pinned callback inspection can refine it without changing the outer call. Finite typed-builder fixtures establish arguments, not independent Python wire goldens for every operation. Source closure does not establish current hosted execution, complete oracle coverage, runtime state transitions or final S9/milestone acceptance. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 62 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: complete authenticated ten-intent module, every constructor/default/money/ALL/nested-call branch, exact summaries/warnings and actual generated/native consumers and substantive fixture bodies reviewed. Nine generated builds and handwritten CreateCrowdloan preserve semantic arguments and public origin; generated interfaces/defaults and shared argument conversion are dependencies. Typed u32 IDs/blocks and checked native u64 unit-aware money replace permissive Python inputs. D-046 bounds nested JSON; D-059 aggregates child policy, authenticates stored callbacks/preimages and refuses unsupported deferred shielding or future changing sources. Static Finalize policy deliberately remains Unbounded/global rather than Python's inherited None/local defaults; live pinned callback inspection can refine it without changing the outer call. Finite typed-builder fixtures establish arguments, not independent Python wire goldens for every operation. Source closure does not establish current hosted execution, complete oracle coverage, runtime state transitions or final S9/milestone acceptance. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 62 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-148, D-133): the stored call composes as the creator's nested intent (compose_nested_intent_call, its guards executing on finalization) and an all contribution is pinned for later multisig rounds (compose_pinned)."
 
 [[file]]
 py = "sdk/python/bittensor/intents/emission_weights.py"
@@ -2203,10 +2203,10 @@ notes = "Source reconciliation 2026-10-18: complete authenticated 281-line modul
 py = "sdk/python/bittensor/intents/evm.py"
 rs = ["rtao_intents::evm::{FundEvmKey, EvmWithdraw}","rtao_intents::generated::interfaces"]
 kind = "ported"
-synced_blob = "62274b85ee0d003ae650099b83bb1e73dba37533"
-synced_tag = "v486"
+synced_blob = "c6b3ea2027049a41c8ff00eba419637e0e3929bc"
+synced_tag = "v488"
 milestone = "M5"
-notes = "Source reconciliation 2026-10-15: complete authenticated source, native/generated implementation and meaningful fixture bodies independently reviewed. Address normalization precedes money validation; accepted pinned mirror vectors and Python interior-hex-whitespace behavior are preserved. Exact/all funding keeps alive; exact withdrawal avoids storage and all withdrawal uses the effective coldkey mirror free balance, refusing zero. Checked native amounts, normalized JSON, summaries/warnings and inherited policy/preflight remain. Authored evm::tests::{evm_funding_uses_pinned_python_mirror_vectors_and_normalizes_at_construction, evm_funding_preserves_address_validation_and_constructor_error_order, evm_funding_keeps_alive_and_encodes_native_compact_amounts_or_all, evm_withdraw_exact_never_reads_and_all_uses_effective_coldkey_mirror_free_balance, evm_withdraw_all_refuses_empty_mirrors_without_spending_origin_balance, evm_preflights_keep_exact_warnings_and_inherited_policy, evm_amounts_reject_wrong_currency_negative_and_out_of_native_range} pin literal wire bytes, native boundaries and exact reads. No current hosted regression/oracle success is inferred. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 14 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: complete authenticated source, native/generated implementation and meaningful fixture bodies independently reviewed. Address normalization precedes money validation; accepted pinned mirror vectors and Python interior-hex-whitespace behavior are preserved. Exact/all funding keeps alive; exact withdrawal avoids storage and all withdrawal uses the effective coldkey mirror free balance, refusing zero. Checked native amounts, normalized JSON, summaries/warnings and inherited policy/preflight remain. Authored evm::tests::{evm_funding_uses_pinned_python_mirror_vectors_and_normalizes_at_construction, evm_funding_preserves_address_validation_and_constructor_error_order, evm_funding_keeps_alive_and_encodes_native_compact_amounts_or_all, evm_withdraw_exact_never_reads_and_all_uses_effective_coldkey_mirror_free_balance, evm_withdraw_all_refuses_empty_mirrors_without_spending_origin_balance, evm_preflights_keep_exact_warnings_and_inherited_policy, evm_amounts_reject_wrong_currency_negative_and_out_of_native_range} pin literal wire bytes, native boundaries and exact reads. No current hosted regression/oracle success is inferred. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 14 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-154): fund_evm_key builds EVM.deposit when the runtime advertises NativeDepositSupported (v488 does), so the chain resolves the active alias at execution; on older runtimes it funds the legacy mirror only without hashed accounts and otherwise refuses (unprotected aliases, as Python; protected aliases point to wallet transfer with the receiving address instead of an inline guard). Summary drops the mirror; effects and warnings follow Python. evm_withdraw resolves the coldkey's deposit alias, debits the legacy mirror and pins an all amount for later multisig rounds; its empty-mirror message is Python's."
 
 [[file]]
 py = "sdk/python/bittensor/intents/governance.py"
@@ -2257,10 +2257,10 @@ notes = "Source reconciliation 2026-10-15: complete authenticated lock module, s
 py = "sdk/python/bittensor/intents/multisig.py"
 rs = ["rtao_intents::multisig", "rtao_intents::multisig_adapter::{MultisigAdapter, MultisigThreshold1Adapter, MultisigContinuation}"]
 kind = "ported"
-synced_blob = "01acc9c3ea4664c82cdad7aabe2e0c52a439e736"
-synced_tag = "v486"
+synced_blob = "70dd6b22c6ee4788fa96e628eb33eff586dcc22a"
+synced_tag = "v488"
 milestone = "M5"
-notes = "Source reconciliation 2026-10-15: four registered multisig intents and both owned typed adapters are implemented under feature multisig. Exact source blob matches tree.txt. Canonical attribution covers registered behavior and adapter source; executor/FakeChain fixtures pin semantic previews, member/group/deposit/runtime checks, origin and sudo/proxy layer order, fixed call bytes, opening continuity, typed output and policy/shield forwarding. D060 replaces independent pinned bytes with executor-issued bound continuation proofs; real hotkey Batch continuation uses dynamic role under both thresholds. Independent reviews informed the proof provenance and dynamic-role corrections; final corrected-source rereads found no remaining defect. Hosted regression execution remains pending, and no device or oracle execution is claimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 31 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: four registered multisig intents and both owned typed adapters are implemented under feature multisig. Exact source blob matches tree.txt. Canonical attribution covers registered behavior and adapter source; executor/FakeChain fixtures pin semantic previews, member/group/deposit/runtime checks, origin and sudo/proxy layer order, fixed call bytes, opening continuity, typed output and policy/shield forwarding. D060 replaces independent pinned bytes with executor-issued bound continuation proofs; real hotkey Batch continuation uses dynamic role under both thresholds. Independent reviews informed the proof provenance and dynamic-role corrections; final corrected-source rereads found no remaining defect. Hosted regression execution remains pending, and no device or oracle execution is claimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 31 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-145, D-148, D-154): members parse receiving addresses to accounts, the account mode selects the *_safe calls, the inner call composes as a nested intent with guards, and execute/approve carry multisig_defers_inner and multisig_approvals; the build checks only the approval member's opening deposit, the executor adding the actual outer signer's fees. Remaining: the adapter preflight does not rewrite semantic effects to receiving addresses."
 
 [[file]]
 py = "sdk/python/bittensor/intents/plan.py"
@@ -2275,10 +2275,10 @@ notes = "Source reconciliation 2026-10-15: complete authenticated Python Policy/
 py = "sdk/python/bittensor/intents/proxy.py"
 rs = ["rtao_intents::proxy::{PROXY_TYPES,check_proxy_type,AddProxy,RemoveProxy,RemoveProxies,CreatePureProxy,KillPureProxy,ExecuteProxyAnnounced}","rtao_intents::generated::{interfaces,defaults,passthrough,any_intent}"]
 kind = "ported"
-synced_blob = "30b4e4d42f161e970e1bacdad9ad2175ce6318da"
-synced_tag = "v486"
+synced_blob = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
+synced_tag = "v488"
 milestone = "M5"
-notes = "v482 source mapping 2026-10-22: Adds Validate/Weights, HOTKEY_PROXY_TYPES and proxy_grant_signer; add/remove select hotkey dynamically, remove_proxies has from_hotkey=false default. Existing native doc aliases expose both helpers and typed SignerRole replaces Python strings. Candidate implementations/fixtures are mapped; independent port review remains open. Consumers: crates/rtao-intents/src/proxy.rs; crates/rtao-intents/src/generated/interfaces.rs. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "v482 source mapping 2026-10-22: Adds Validate/Weights, HOTKEY_PROXY_TYPES and proxy_grant_signer; add/remove select hotkey dynamically, remove_proxies has from_hotkey=false default. Existing native doc aliases expose both helpers and typed SignerRole replaces Python strings. Candidate implementations/fixtures are mapped; independent port review remains open. Consumers: crates/rtao-intents/src/proxy.rs; crates/rtao-intents/src/generated/interfaces.rs. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-145, D-148): Lock and GammaSpend proxy types, create_pure_proxy account_mode (create_safe_pure; create_protected_pure with the derived deposit guard and reserves for a quantum-resistant payer), kill_pure_proxy account_mode and announced execution as a nested intent with its extras."
 
 [[file]]
 py = "sdk/python/bittensor/intents/registration.py"
@@ -2392,10 +2392,10 @@ notes = "Source reconciliation 2026-10-16: complete 573-line file, all 32 functi
 py = "sdk/python/bittensor/multisig.py"
 rs = ["rtao_tx::multisig::{Multisig,ApproveOptions,FundsRequest,check_multisig_funds,multisig_opening_shortfall}; rtao_client::compose::{as_multi,as_multi_existing,approve_as_multi}"]
 kind = "ported"
-synced_blob = "25b5105b4300daa25b2fae8626064ee0f2697f15"
-synced_tag = "v486"
+synced_blob = "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3"
+synced_tag = "v488"
 milestone = "M4"
-notes = "Source reconciliation 2026-10-15: complete authenticated 319-line module and every source helper/consumer reviewed. Native checked money/account/runtime bounds, canonical members, exact opening/continuation funding formulas, extracted fee allowance, best-effort read/probe failures and full-call approvals are retained. Typed CLI transaction errors now preserve computed funding remediation; continuation errors append original-opening recovery, and empty labels match Python truthiness without trimming whitespace labels. Four substantive actual-funds/raw/semantic fixtures remain unexecuted. Native threshold-one shield composition deliberately uses as_multi_threshold_1; the pinned Python helper unconditionally constructs as_multi. Raw public fee probes default to sr25519, semantic adapters use known crypto; no all-scheme estimate execution is claimed. Fixed three-decimal private funding hints replace arbitrary formatter arguments. D-023 failed events, D-041 exact timepoints and S9 opaque continuation proofs remain intact. No full CLI module, fresh Python/oracle, live threshold-one runtime result or current hosted acceptance follows. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 1 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: complete authenticated 319-line module and every source helper/consumer reviewed. Native checked money/account/runtime bounds, canonical members, exact opening/continuation funding formulas, extracted fee allowance, best-effort read/probe failures and full-call approvals are retained. Typed CLI transaction errors now preserve computed funding remediation; continuation errors append original-opening recovery, and empty labels match Python truthiness without trimming whitespace labels. Four substantive actual-funds/raw/semantic fixtures remain unexecuted. Native threshold-one shield composition deliberately uses as_multi_threshold_1; the pinned Python helper unconditionally constructs as_multi. Raw public fee probes default to sr25519, semantic adapters use known crypto; no all-scheme estimate execution is claimed. Fixed three-decimal private funding hints replace arbitrary formatter arguments. D-023 failed events, D-041 exact timepoints and S9 opaque continuation proofs remain intact. No full CLI module, fresh Python/oracle, live threshold-one runtime result or current hosted acceptance follows. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 1 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-145, D-154): Multisig::{protection_status, protection_call, funding_call} (rtao_tx::hashed::multisig_protection_status/call over finalized state); check_multisig_funds(shielded) quotes the carrier fee, keeps the existential deposit or freeze free and refuses when it cannot quote; approvals check membership, fee-probe the threshold-1 wrapper too and default to Shield for account registration behind the executor's auto-shield setting; merge_approval_metadata."
 
 [[file]]
 py = "sdk/python/bittensor/namespaces.py"
@@ -2419,10 +2419,10 @@ notes = "v484 source reconciliation: Add generated subnet_state/subnet_states re
 py = "sdk/python/bittensor/pow_registration.py"
 rs = ["crates/rtao-intents/src/pow/mod.rs","crates/rtao-intents/src/pow/workers.rs","crates/rtao-intents/src/pow/gpu.rs"]
 kind = "ported"
-synced_blob = "e406e347c5a39e668c9583ca8bef8cf37c7e8c42"
-synced_tag = "v486"
+synced_blob = "ad6b3b82cbe3e8d312a20cbf872dde3097a5bb36"
+synced_tag = "v488"
 milestone = "M4–M7"
-notes = "Source reconciliation 2026-10-16: complete authenticated 255-line module and all seven functions reviewed against native solver, CPU workers, GPU adapter, pinned core seal/miner and actual callers. Exact valid-chain prefix bytes, little-endian nonce/target, u64 difficulty clamps, pinned public admission, capacity/reuse waits, 12-second refresh, canonical work age and current-target/CPU-seal validation have native homes. Typed PowProof replaces the Python intent return; the real CLI builds PowRegister arguments and retains original mining settings, while SyncClient deliberately returns a public proof. Ordinary solve is CPU-only; solve_with_backend exposes Auto/Cpu/Gpu with explicit IDs and visible discovery/startup failures. Deterministic disjoint 1024-attempt CPU ranges, earlier subscription-driven refresh, renewed admission and joined worker cleanup are explicit native policies. Core seal accepts valid runtime challenge prefixes, without claiming Python helper behavior for arbitrary malformed prefixes. GPU cleanup can wait for an unresponsive driver; no identical nonce schedule, performance, Python/oracle, physical GPU/live-chain or full pytest/e2e equivalence is claimed. All 26 existing native solver/fake-GPU regressions pass at exact ab5d792 in hosted run38865058430. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-16: complete authenticated 255-line module and all seven functions reviewed against native solver, CPU workers, GPU adapter, pinned core seal/miner and actual callers. Exact valid-chain prefix bytes, little-endian nonce/target, u64 difficulty clamps, pinned public admission, capacity/reuse waits, 12-second refresh, canonical work age and current-target/CPU-seal validation have native homes. Typed PowProof replaces the Python intent return; the real CLI builds PowRegister arguments and retains original mining settings, while SyncClient deliberately returns a public proof. Ordinary solve is CPU-only; solve_with_backend exposes Auto/Cpu/Gpu with explicit IDs and visible discovery/startup failures. Deterministic disjoint 1024-attempt CPU ranges, earlier subscription-driven refresh, renewed admission and joined worker cleanup are explicit native policies. Core seal accepts valid runtime challenge prefixes, without claiming Python helper behavior for arbitrary malformed prefixes. GPU cleanup can wait for an unresponsive driver; no identical nonce schedule, performance, Python/oracle, physical GPU/live-chain or full pytest/e2e equivalence is claimed. All 26 existing native solver/fake-GPU regressions pass at exact ab5d792 in hosted run38865058430. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: the miner takes AccountIds; rtao_primitives::Ss58Address::account resolves a receiving hotkey to its account while the intent keeps the receiving address for submission."
 
 [[file]]
 py = "sdk/python/bittensor/py.typed"
@@ -3018,10 +3018,10 @@ notes = "Source reconciliation 2026-10-17: the bounded extractor authenticates t
 py = "sdk/python/tests/unit/test_codec_golden.py"
 rs = ["Complete reviewed upstream pytest input; native analogues in crates/rtao-testkit/tests/{goldens,typed_calls,corpus}.rs and related runtime/core-ext fixtures"]
 kind = "oracle-only"
-synced_blob = "5ad19b8b78ac71abc6f31b4b3b1e4fd1a8259563"
-synced_tag = "v486"
+synced_blob = "4f9e26186ea51f3b9edcb9b574ebbf378081a415"
+synced_tag = "v488"
 milestone = "the milestone of the code each tests"
-notes = "Source-input reconciliation 2026-10-15: all 14 authenticated test functions, helper and module skip mapped to actual native fixture/implementation bodies under Q30. Exact immortal payload-parts and complete block-extrinsic dictionaries close CG3/CG5 source gaps. CG12 retains partial pinned IR checklist coverage; CG13 lacks an exact reflected ConsensusMode inventory/order assertion; CG14 emitter syntax/default-constructor checks remain Python tooling-only. Committed fixtures are historical spec461 inputs, not fresh recordings. Optional oracle scripts do not run this pytest module; native tests do not execute upstream dependency unit tests or PyO3/import/skip behavior. This unchanged oracle-only classification records complete source review, not a complete native assertion port, first corpus, current passing execution or differential parity. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source-input reconciliation 2026-10-15: all 14 authenticated test functions, helper and module skip mapped to actual native fixture/implementation bodies under Q30. Exact immortal payload-parts and complete block-extrinsic dictionaries close CG3/CG5 source gaps. CG12 retains partial pinned IR checklist coverage; CG13 lacks an exact reflected ConsensusMode inventory/order assertion; CG14 emitter syntax/default-constructor checks remain Python tooling-only. Committed fixtures are historical spec461 inputs, not fresh recordings. Optional oracle scripts do not run this pytest module; native tests do not execute upstream dependency unit tests or PyO3/import/skip behavior. This unchanged oracle-only classification records complete source review, not a complete native assertion port, first corpus, current passing execution or differential parity. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: the singleton bounded tuple sequence is the core codec's encoding, exercised through rtao_testkit golden replay."
 
 [[file]]
 py = "sdk/python/tests/unit/test_codec_properties.py"
@@ -3045,10 +3045,10 @@ notes = "Source reconciliation 2026-10-18: complete authenticated 926-line modul
 py = "sdk/python/tests/unit/test_evm.py"
 rs = ["crates/rtao-evm/src/addresses.rs", "crates/rtao-evm/src/money.rs", "crates/rtao-evm/src/transactions.rs", "crates/rtao-evm/src/precompiles.rs", "crates/rtao-evm/src/keys/tests.rs", "xtask/src/extract_precompiles.rs"]
 kind = "ported"
-synced_blob = "8dd19654744f5338cc4b9ab620f834bbf6b526bd"
-synced_tag = "v486"
+synced_blob = "f69e75ab6d302a2f39e11366e7f0dd36c0c00974"
+synced_tag = "v488"
 milestone = "the milestone of the code each tests"
-notes = "v484 source reconciliation: New subnet ABI entries covered by native function resolution, encoding and uint8 boundary test; existing full ABI catalog tests retained. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "v484 source reconciliation: New subnet ABI entries covered by native function resolution, encoding and uint8 boundary test; existing full ABI catalog tests retained. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: the fixed-ML-DSA association proof binding the full 32-byte identity is the core's association_proof over the native account (rtao_evm); no separate Rust case."
 
 [[file]]
 py = "sdk/python/tests/unit/test_extension_bridge.py"
@@ -3165,10 +3165,10 @@ notes = "v484 source reconciliation: New test module mapped to native subnets_co
 py = "sdk/python/tests/unit/test_multisig_safety.py"
 rs = ["crates/rtao-intents/tests/multisig_adapter.rs","crates/rtao-tx/tests/multisig.rs","crates/rtao-tx/tests/shield_raw.rs"]
 kind = "ported"
-synced_blob = "b331fa60834e3f39495306acf359a1a4de2f03f1"
-synced_tag = "v486"
+synced_blob = "4d4d674de1a209d7f4f8ee2e500de83e7682627e"
+synced_tag = "v488"
 milestone = "the milestone of the code each tests"
-notes = "Source reconciliation 2026-10-16: complete authenticated 284-line module, seven functions/eight parameter cases, all 28 assert statements and two mock-await obligations mapped to native or explicit typed/source/compositional counterparts. Seven genuine pyt origins and canonical same-source headers bind only the three adapted test homes. Five added origins/header comments preserve every executable line and all 17 prior plus three later witness bodies. Adopted public BurnedRegister threshold-one Policy check/plan share exact unbounded/netuid diagnostics before unlock. The authored wrapped RegisterSubnet fixture covers ordinary and shielded completion with distinct member/group/hotkey, retained receipt and later-block shield completion; ordinary deferred=false is source-bound, while the later-block vector discriminates deferred=true. Owned results/semantic references and member-specific contexts adapt Python identity/mutation. Required-shield/proxy-Staking forwarding uses unchanged typed options and component witnesses; ClaimRoot combines adapter role assertions with separate actual reserve/read coverage. Root nesting intentionally uses System.remark, with AdminUtils[7]/enabled=true and pending12/3 pinned separately. These are scoped correspondences, not identical combined transcripts. Provenance comments add no execution evidence. Ordinary hosted run 38897437100 at a6aa2bc passes all 3,080 tests, including wrapped_registration_completion_uses_group_origin_in_both_transports; current provenance edits preserve all executable fixture bodies. Source reconciliation retains the typed/input/compositional limits above. No full Python/oracle differential, live runtime/decryption or milestone acceptance is claimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-16: complete authenticated 284-line module, seven functions/eight parameter cases, all 28 assert statements and two mock-await obligations mapped to native or explicit typed/source/compositional counterparts. Seven genuine pyt origins and canonical same-source headers bind only the three adapted test homes. Five added origins/header comments preserve every executable line and all 17 prior plus three later witness bodies. Adopted public BurnedRegister threshold-one Policy check/plan share exact unbounded/netuid diagnostics before unlock. The authored wrapped RegisterSubnet fixture covers ordinary and shielded completion with distinct member/group/hotkey, retained receipt and later-block shield completion; ordinary deferred=false is source-bound, while the later-block vector discriminates deferred=true. Owned results/semantic references and member-specific contexts adapt Python identity/mutation. Required-shield/proxy-Staking forwarding uses unchanged typed options and component witnesses; ClaimRoot combines adapter role assertions with separate actual reserve/read coverage. Root nesting intentionally uses System.remark, with AdminUtils[7]/enabled=true and pending12/3 pinned separately. These are scoped correspondences, not identical combined transcripts. Provenance comments add no execution evidence. Ordinary hosted run 38897437100 at a6aa2bc passes all 3,080 tests, including wrapped_registration_completion_uses_group_origin_in_both_transports; current provenance edits preserve all executable fixture bodies. Source reconciliation retains the typed/input/compositional limits above. No full Python/oracle differential, live runtime/decryption or milestone acceptance is claimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: receiving members and nonmember refusal are Multisig::with_mode/approve; required Shield through multisig and proxy carries the sponsorship options (rtao-intents tests/recipient_registration.rs)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_natural_name_key.py"
@@ -3192,10 +3192,10 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 115-line modul
 py = "sdk/python/tests/unit/test_pow_registration.py"
 rs = ["crates/rtao-intents/src/pow/tests.rs","crates/rtao-intents/src/registration_pow.rs","crates/rtao/tests/pow_public_contract.rs"]
 kind = "ported"
-synced_blob = "cd615d4e237d09fdded03c630c4ddcc2c2ce7b2e"
-synced_tag = "v486"
+synced_blob = "37c6ab528f20e73c2a1f983178e42393103bf3ed"
+synced_tag = "v488"
 milestone = "the milestone of the code each tests"
-notes = "Source reconciliation 2026-10-16: complete authenticated 374-line module, all 16 tests/21 parameter-expanded cases and 45 assert/raises sites reviewed against 26 native solver/fake-GPU fixtures, actual registration build, pinned core seal/target and blocking/CLI callers. Exact valid typed challenge, reference seal, disabled/UID0/root refusals, capacity waits, team difficulty, selected GPU options, corruption/remine checks, 12-second refresh, pool age 4/5 and late-proof refusal have native counterparts. One added actual SyncClient->PowProof->PowRegister plan fixture binds exact call bytes and refuses private signer acquisition/submission. Native u64 difficulty, usize devices, typed keys/errors/defaults and explicit CPU/PowProof return replace permissive Python values and constructed intent; CLI retains backend/device constructor fields. Python 2^256 difficulty and negative GPU IDs are outside the native chain domain. Deterministic bounded CPU ranges, earlier head-driven refresh, extra final head validation and joined worker cleanup intentionally change nonce/sleep/RPC schedules. Default all-device forwarding is source-reviewed; physical GPU discovery/driver behavior, identical Python transcript, pytest/oracle, live registration and milestone acceptance remain unclaimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-16: complete authenticated 374-line module, all 16 tests/21 parameter-expanded cases and 45 assert/raises sites reviewed against 26 native solver/fake-GPU fixtures, actual registration build, pinned core seal/target and blocking/CLI callers. Exact valid typed challenge, reference seal, disabled/UID0/root refusals, capacity waits, team difficulty, selected GPU options, corruption/remine checks, 12-second refresh, pool age 4/5 and late-proof refusal have native counterparts. One added actual SyncClient->PowProof->PowRegister plan fixture binds exact call bytes and refuses private signer acquisition/submission. Native u64 difficulty, usize devices, typed keys/errors/defaults and explicit CPU/PowProof return replace permissive Python values and constructed intent; CLI retains backend/device constructor fields. Python 2^256 difficulty and negative GPU IDs are outside the native chain domain. Deterministic bounded CPU ranges, earlier head-driven refresh, extra final head validation and joined worker cleanup intentionally change nonce/sleep/RPC schedules. Default all-device forwarding is source-reviewed; physical GPU discovery/driver behavior, identical Python transcript, pytest/oracle, live registration and milestone acceptance remain unclaimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: receiving hotkeys mine against their account (Ss58Address::account); no separate Rust case."
 
 [[file]]
 py = "sdk/python/tests/unit/test_prepare_attach.py"
@@ -3333,48 +3333,48 @@ notes = "v484 source reconciliation: Import exact release catalog and regenerate
 
 [[file]]
 py = "pallets/subtensor/src/rpc_info/gamma_info.rs"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["codegen/frozen_models.toml", "rtao_runtime::models (GammaDepositInfo freeze_struct layout tripwire)"]
+kind = "extracted"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): GammaDepositInfo is a frozen model (codegen/frozen_models.toml) read by the gamma_deposit(s) reads."
 
 [[file]]
 py = "sdk/bittensor-core/src/keys/falcon.rs"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): core key module (falcon); rtao calls the pinned core through rtao_core::keys and does not reimplement it."
 
 [[file]]
 py = "sdk/bittensor-core/src/keys/hashed.rs"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): core key module (hashed); rtao calls the pinned core through rtao_core::keys and does not reimplement it."
 
 [[file]]
 py = "sdk/bittensor-core/src/keys/mldsa.rs"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): core key module (mldsa); rtao calls the pinned core through rtao_core::keys and does not reimplement it."
 
 [[file]]
 py = "sdk/bittensor-core/src/keys/receiving.rs"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+kind = "n/a"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): core key module (receiving); rtao calls the pinned core through rtao_core::keys and does not reimplement it."
 
 [[file]]
 py = "sdk/python/bittensor/_pinned.py"
@@ -3387,12 +3387,12 @@ notes = "Added by the v488 runtime adoption (D-128). Ported 2026-11-07 (D-133): 
 
 [[file]]
 py = "sdk/python/bittensor/account_mode.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["crates/rtao-intents/src/account_modes.rs", "rtao_primitives::AccountMode", "rtao_client::compose::{as_multi_with_mode, as_multi_threshold_1_with_mode, as_multi_existing_with_mode}"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): validate_account_mode (exact legacy/safe), multisig_call (the *_safe Multisig variants by mode) and the safe multisig account derivation (D-145). warn_legacy_mldsa is a Python UserWarning; rtao's CLI says the same when a standard ML-DSA wallet takes legacy derivation."
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/gamma.py"
@@ -3423,12 +3423,12 @@ notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/bittensor/error_descriptions/hashed_accounts.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
+kind = "generated"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): HashedAccounts error descriptions, extracted with the other error_descriptions modules."
 
 [[file]]
 py = "sdk/python/bittensor/hashed.py"
@@ -3468,12 +3468,12 @@ notes = "Added by the v488 runtime adoption (D-128). Partly ported 2026-11-07 (D
 
 [[file]]
 py = "sdk/python/bittensor/mldsa.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao_core::runtime::RuntimeCore::supports_mldsa_profile (through rtao_tx::hashed::descriptor_registration_enabled and rtao_client::submit::authority)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): supports_fixed_profile: the core decodes the advertised profiles from metadata and fails closed on absent or malformed advertisements, before receiving setup or private-key use."
 
 [[file]]
 py = "sdk/python/bittensor/mldsa_signing.py"
@@ -3495,12 +3495,12 @@ notes = "Added by the v488 runtime adoption (D-128). Ported 2026-11-07: gamma_de
 
 [[file]]
 py = "sdk/python/bittensor/receiving.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["crates/rtao-primitives/src/receiving.rs", "rtao_primitives::Ss58Address (receiving addresses)", "rtao_tx::hashed::receiving_recipients"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Recipient, is_receiving_address, parse_recipient, account_for_read and receiving_address (core encode_hashed_receiving_address) (D-148, D-150). account_for_registered_write and coerce_payment_address are the executor's recipient preparation (rtao_tx::hashed)."
 
 [[file]]
 py = "sdk/python/bittensor/registration_sponsorship.py"
@@ -3513,12 +3513,12 @@ notes = "Added by the v488 runtime adoption (D-128). Ported 2026-11-08 (D-148): 
 
 [[file]]
 py = "sdk/python/bittensor/shielding.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao_tx::executor::{contains_account_registration, Executor::auto_shield_route}"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): contains_account_registration and registration_shield_default behind the executor's opt-in auto-shield setting (D-140); multisig approvals use the same route (D-154)."
 
 [[file]]
 py = "sdk/python/bittensor/wallet_registration.py"
@@ -3531,219 +3531,219 @@ notes = "Added by the v488 runtime adoption (D-128). Ported 2026-11-08 (D-151): 
 
 [[file]]
 py = "sdk/python/tests/e2e/test_falcon_fund_safety.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_falcon_release.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_hashed_activation.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mixed_multisig.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_cli_regressions.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_extended.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_localnet.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_multisig_costs.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_nested_authority.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_operation_families.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_proxy_boundaries.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_release.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_release_costs.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_root_cli.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_sponsorship_live.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_validator_paths.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_mldsa_validator_proxy.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_wallet_approval_lifecycle.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_wallet_parity.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_wallet_shield.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_wallet_swap_release.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/e2e/test_wallet_types.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["parity/e2e_map.toml (optional live-runtime input; runtime execution remains pending under Q30)"]
+kind = "oracle-only"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): a v488 localnet scenario (writable chain, funded hashed/ML-DSA/Falcon accounts). Its test functions are keys of parity/e2e_map.toml; no runtime execution is claimed. The client behavior it exercises is covered by the ordinary fixtures named in the D-147 to D-154 rows."
 
 [[file]]
 py = "sdk/python/tests/fixtures/mldsa-zero-next-proof.hex"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["none needed"]
+kind = "n/a"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): fixture of test_mldsa_signing's zero next-commitment case; rtao's proofs come from the core and the equivalent refusal is the core's."
 
 [[file]]
 py = "sdk/python/tests/harness/receiving.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
-kind = "ported"
+rs = ["none needed"]
+kind = "n/a"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Python test harness helpers for receiving addresses; rtao fixtures build them with rtao_core::keys."
 
 [[file]]
 py = "sdk/python/tests/unit/test_evm_wallet_types.py"
@@ -3792,12 +3792,12 @@ notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/tests/unit/test_hashed_evm.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao_intents::evm::tests (registered_hashed_aliases_resolve_to_their_native_account_and_fail_closed)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Registered aliases resolve to the bound account with its receiving address; unregistered or mismatched bindings fail closed; native EVM deposits on v488 (D-154)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_hashed_messages.py"
@@ -3837,57 +3837,57 @@ notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/tests/unit/test_mldsa_accounts.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao-client tests/authority.rs", "rtao-intents tests/recipient_registration.rs", "rtao-intents tests/authority_execution.rs", "rtao-tx tests/multisig_protection.rs", "rtao_intents::evm::tests"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Rust counterparts: finalized authority and stable identity, refusal of wrong or stale authority before signing, complete-proof fee quotes, Shield pairs from one snapshot (rtao-client tests/authority.rs); ML-DSA recipient guards and deposits (recipient_registration.rs); protected derivatives and multisig protection requiring a quantum-resistant member in every quorum and registration before funding (multisig_protection.rs); registered EVM aliases (evm::tests). Not ported as individual cases: the derived-alias finalized policy (rtao refuses derived aliases, D-154), the transport's finalized-number fallback and Python's metadata byte-representation variants (the core decodes metadata)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_mldsa_messages.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao-btauth tests/conformance.rs", "rtao tests/http_auth.rs", "rtao_signer::KeypairAuthoritySigner::sign_message_at"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Post-quantum message signing, HTTP signing, signer preparation and HTTP verification are refused (D-153: sign_message_at, HashedHttpSigner, prepare_signer, validate_trusted_crypto_type)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_mldsa_orders.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["crates/rtao-intents/src/limit_orders.rs"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Partial: order identity and terms are rtao_intents::limit_orders tests. Not ported: ML-DSA-authorized order approvals, mixed-scheme execution and fee descriptors with finalized registration, which need signed-order support for authority signers (remaining, issue #12)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_mldsa_signing.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao-client tests/authority.rs (offline_post_quantum_requests_round_trip_sign_and_submit, offline_requests_refuse_classical_descriptors_and_changed_authority)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Offline JSON round trip and full-payload proof attachment, refusal of changed transactions, runtimes or authority, and revalidation against finalized state (D-151). The zero-next-commitment and runtime-profile refusals are the core's."
 
 [[file]]
 py = "sdk/python/tests/unit/test_multisig_pinned_staking.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["crates/rtao-tx/src/pinned.rs", "crates/rtao-intents/tests/pinned_inputs.rs"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Later multisig rounds rebuild with the approved state-derived inputs (D-133); EVM withdrawals join them (D-154)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_multisig_signatories.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["crates/rtao-intents/src/multisig.rs (member parsing)", "rtao_tx::multisig::Multisig::with_mode"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Members are identities: receiving addresses resolve to their account, duplicates refuse, and canonical ordering is by account bytes."
 
 [[file]]
 py = "sdk/python/tests/unit/test_order_subnet_policy.py"
@@ -3900,39 +3900,39 @@ notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/tests/unit/test_pq_release_adversarial.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao-client tests/authority.rs (proofs_that_do_not_verify_against_chain_authority_are_never_sent)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Partial: every proof is verified against chain authority before sending; incomplete or extended proofs are the core's refusals. Not ported: the signed-order adversarial cases and Falcon CLI recovery (remaining, issue #12)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_registration_deposit.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao_tx::hashed::quote_registration_deposit"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): The live shared reserve and whether a call may bound it (check_registration_deposit), D-148."
 
 [[file]]
 py = "sdk/python/tests/unit/test_registration_shield.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao-tx tests/auto_shield.rs"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Registration takes Shield only when opted in and active (D-140)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_registration_sponsorship.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["crates/rtao-tx/src/sponsorship.rs", "rtao-intents tests/recipient_registration.rs (execution_needs_consent_before_any_key_is_unlocked)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Sponsorship consent before any key is unlocked: max_registration_deposit or a callback, never --yes (D-148)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_registration_sponsorship_cli.py"
@@ -3972,12 +3972,12 @@ notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/tests/unit/test_stateless_mldsa.py"
-rs = ["pending: new upstream file at v488, not yet classified or ported"]
+rs = ["rtao-client tests/authority.rs (standard_post_quantum_accounts_need_no_registration_and_pipeline, shield_pairs_sign_both_proofs_from_one_snapshot, fee_probes_price_the_signing_scheme_proof_length)", "rtao-wallet tests/authority_wallets.rs", "rtao-intents tests/recipient_registration.rs (a_standard_post_quantum_recipient_needs_no_guard)"]
 kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Added by the v488 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+notes = "Classified 2026-11-08 (D-155): Standard ML-DSA accounts take ordinary nonce leases (single or Shield pair), never read a registry, price their full proof and need no registration; seed restore and watch-only keep the identity. rtao keeps its lease model instead of Python's reservation release paths (D-149), so the NonceCache release and expiry cases have no counterpart."
 
 [[file]]
 py = "sdk/python/tests/unit/test_submission_admission.py"
