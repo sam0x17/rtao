@@ -1366,6 +1366,33 @@ fn live(args: &[String]) -> Result<()> {
                 .as_str()
                 .context("pinned parity commit missing")?,
         );
+    } else if network != "localnet-main" {
+        // Any other runtime (a testnet ahead of Finney) carries a source only
+        // when upstream's release proves it builds this :code; otherwise the
+        // row has none and nothing that needs one reads it (D-162).
+        let source = crate::pin::release_source(spec, &code)?;
+        let evidence = match &source {
+            Ok(source) => {
+                if let Some(tag) = &source.tag {
+                    row["tag"] = value(tag);
+                }
+                row["commit"] = value(&source.commit);
+                println!(
+                    "{network} spec {spec} source: commit {} (v{spec}{}), whose release wasm is this :code",
+                    source.commit,
+                    if source.prerelease { " prerelease" } else { "" }
+                );
+                json!({"proven":true,"commit":source.commit,"tag":source.tag,"release":format!("v{spec}"),"prerelease":source.prerelease})
+            }
+            Err(reason) => {
+                println!("{network} spec {spec} recorded without a source commit: {reason}");
+                json!({"proven":false,"reason":reason})
+            }
+        };
+        fs::write(
+            out.join("source.json"),
+            format!("{}\n", serde_json::to_string_pretty(&evidence)?),
+        )?;
     }
     for (field, text) in [
         ("code_hash", code.as_str()),

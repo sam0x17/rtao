@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Runtime adoption fix (D-162, repository maintenance)
+
+- Testnet recording failed at stage probe for a testnet runtime ahead of Finney (spec 489): the probe pins required a source commit that `drift --apply` records only for the parity runtime. Such a runtime now carries upstream's commit (and the tag of a final release) only when release `vN`'s wasm is exactly its finalized `:code` and the tag, srtool digest, release record and runtime source agree; otherwise it is recorded without one, and the probe pins require a commit only on the parity pin's network.
+
 ### Core bumped from v478 to v488 (D-127, D-136)
 
 - `bittensor-core` and its companions move from v478 to v488, the parity pin's core (`b3:3936452e140b597df13a0ab4cc6a7d08b5ac605fe8ccfaf858ee017db97dd730`); `[parity] core_fingerprint` is gone. The reviewed core patch is carried onto v488 (fork revision `cd1a2e6ae41bf558eef8e21d00348c5a65e77d33`), and every downstream `[patch]` line names v488: applications that copy rtao's patch set must update theirs.

@@ -129,6 +129,8 @@ fn pins(root: &Path, check: bool) -> Result<()> {
         "subtensor runtime/build.rs enable_metadata_hash(TAO, 9); metadata System.Version and SS58Prefix",
     );
     let mut rows = ArrayOfTables::new();
+    let upstream = fs::read_to_string(root.join("upstream.toml"))?.parse::<DocumentMut>()?;
+    let pinned_network = crate::metadata_pin::pinned_network(&upstream)?;
     for network in ["finney", "testnet", "devnet"] {
         let index = fs::read_to_string(root.join(format!("vendor/metadata/{network}/index.toml")))?
             .parse::<DocumentMut>()?;
@@ -161,12 +163,8 @@ fn pins(root: &Path, check: bool) -> Result<()> {
             let mut output = Table::new();
             output["network"] = value(network);
             output["spec"] = value(i64::from(spec));
-            for field in ["genesis", "code_hash", "commit"] {
-                output[field] = value(
-                    row.get(field)
-                        .and_then(toml_edit::Item::as_str)
-                        .with_context(|| format!("{network} spec {spec} pin lacks {field}"))?,
-                );
+            for (field, text) in pin_identity(row, network, spec, pinned_network)? {
+                output[field] = value(text);
             }
             output["v15_sha256"] = value(sha);
             output["spec_name"] = value(info.spec_name);
@@ -191,6 +189,28 @@ fn pins(root: &Path, check: bool) -> Result<()> {
         fs::write(&path, generated)?;
     }
     Ok(())
+}
+
+/// The identity fields a metadata row gives its RFC-0078 pin. Genesis and
+/// `:code` always; the source commit is required on the network that proves
+/// the parity pin, and elsewhere carried when the row has one: a runtime ahead
+/// of the parity pin is recorded with a commit only when upstream's release
+/// proves it builds that `:code` (D-162). No probe check reads the commit.
+fn pin_identity<'a>(
+    row: &'a Table,
+    network: &str,
+    spec: u32,
+    pinned_network: &str,
+) -> Result<Vec<(&'static str, &'a str)>> {
+    let mut fields = Vec::new();
+    for field in ["genesis", "code_hash", "commit"] {
+        match row.get(field).and_then(toml_edit::Item::as_str) {
+            Some(text) => fields.push((field, text)),
+            None if field == "commit" && network != pinned_network => {}
+            None => bail!("{network} spec {spec} pin lacks {field}"),
+        }
+    }
+    Ok(fields)
 }
 
 fn unavailable(network: &str, detail: &str) -> Json {
@@ -985,6 +1005,35 @@ mod tests {
 
     fn runtime() -> Result<RuntimeHandle> {
         Ok(RuntimeHandle::parse(METADATA, 478, 1, 42)?)
+    }
+
+    #[test]
+    fn pin_identity_requires_a_commit_only_on_the_parity_network() -> Result<()> {
+        let doc: DocumentMut =
+            "[row]\ngenesis = \"0xg\"\ncode_hash = \"0xc\"\ncommit = \"abc\"\n".parse()?;
+        let row = doc["row"].as_table().context("row")?;
+        assert_eq!(
+            pin_identity(row, "testnet", 489, "finney")?,
+            [("genesis", "0xg"), ("code_hash", "0xc"), ("commit", "abc")]
+        );
+        let mut without = row.clone();
+        without.remove("commit");
+        // A runtime ahead of the parity pin without a proven source (D-162).
+        assert_eq!(
+            pin_identity(&without, "testnet", 489, "finney")?,
+            [("genesis", "0xg"), ("code_hash", "0xc")]
+        );
+        let refused = pin_identity(&without, "finney", 489, "finney")
+            .err()
+            .context("parity network row without commit accepted")?;
+        assert_eq!(refused.to_string(), "finney spec 489 pin lacks commit");
+        assert!(pin_identity(&without, "testnet", 489, "testnet").is_err());
+        for field in ["genesis", "code_hash"] {
+            let mut bad = row.clone();
+            bad.remove(field);
+            assert!(pin_identity(&bad, "testnet", 489, "finney").is_err());
+        }
+        Ok(())
     }
 
     #[test]
