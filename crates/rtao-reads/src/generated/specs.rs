@@ -2838,6 +2838,11 @@ pub static READ_SPECS: [ReadSpec; 111] = [
             Hit {
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
+                name: "SubnetGammaEmission",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
                 name: "SubnetTAO",
             },
             Hit {

@@ -1,59 +1,59 @@
 {
   "format": 1,
   "metadata_provenance": {
-    "finalized_head": "0x0cb6e583fc4bf8c0c7ed52543a35bcd65f66db0477f0b51a52cfd7aa6cb05fbc",
-    "path": "vendor/metadata/finney/488.v15.scale",
-    "sha256": "494d08e9bc62aa574f9d016a4210ae5b57f817ac716d7c2f4e562b44c2d45e5d",
-    "spec": 488
+    "finalized_head": "0x1ef113be08c24b7c3910d59406a64367166fc32082b26011a796322bf161d3aa",
+    "path": "vendor/metadata/finney/490.v15.scale",
+    "sha256": "cfe0d09fbe6fbf8817e59e1da39e05b00c4424712c3d8c652db803d4d3e344b7",
+    "spec": 490
   },
   "provenance": {
     "blob": "898812ed48595a20cb343a80297728d759b5cf2e",
-    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
     "path": "sdk/python/bittensor/intents/hyperparameters.py",
-    "tag": "v488"
+    "tag": "v490"
   },
   "sources": [
     {
       "blob": "898812ed48595a20cb343a80297728d759b5cf2e",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "sdk/python/bittensor/intents/hyperparameters.py",
-      "tag": "v488"
+      "tag": "v490"
     },
     {
       "blob": "772977590e33f80c932eefa3611dbac6e425b3da",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "sdk/python/bittensor/hyperparams.py",
-      "tag": "v488"
+      "tag": "v490"
     },
     {
-      "blob": "cb5f50be2425fadf629dc357448ef0121e1e1ae4",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "blob": "8aa8a8219d8b1d642b18a31d66998943efbb0bf7",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "pallets/admin-utils/src/lib.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     {
       "blob": "98c0081114fb19d18d4f7a76b2fecd67a8b53243",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "pallets/subtensor/src/coinbase/tempo_control.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     {
       "blob": "7c50fd80383b16eb7c647afb075185e2982cb4db",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "pallets/subtensor/src/utils/rate_limiting.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     {
       "blob": "17cbe4581ef163e886a06ba0771341e8956c87dd",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "pallets/subtensor/src/utils/misc.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     {
-      "blob": "c88ec641c25fa92c7be955f1ccec48631f678851",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "blob": "eb78dd66775314fe06fbcb47a7f511e94f0057aa",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "pallets/subtensor/src/coinbase/run_coinbase.rs",
-      "tag": "v488"
+      "tag": "v490"
     }
   ],
   "values": {

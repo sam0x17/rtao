@@ -1,5 +1,5 @@
 {
-  "upstream_commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+  "upstream_commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
   "packages": [
     {
       "name": "ark-bls12-377",

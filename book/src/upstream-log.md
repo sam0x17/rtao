@@ -330,6 +330,16 @@ of the parity pin `v488` (D-127, D-136), carrying the reviewed core patch to
 fork revision `cd1a2e6ae41bf558eef8e21d00348c5a65e77d33`. The parity pin and the runtime are unchanged.
 Workflow run: <https://github.com/sam0x17/rtao/actions/runs/42502998044>.
 
+## 2026-11-10: Finney runtime 490 adopted automatically
+
+The hosted runtime-adopt workflow observed Finney finalize spec 490 at block
+9478866 (`0xcade6ddc1b679a80a3721fd94cb9b7659b3b2892ff46f227a446d3550a5ccb60`), `:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`, confirmed it from 4 public
+endpoints (release wasm: matches), and advanced parity from spec 488 to
+`v490` (`d967d13588834f4f5aaa8ef4c8fc1a865d581462`, pin source `v490`). Metadata drift is `additive`. The
+porting report lists 41 changed watched sources: 0 auto-blessed,
+13 re-derived and checked. 20 hand port(s) remain due and are listed in `parity/port_due.toml` (`eco-tests/src/mock.rs`, `pallets/admin-utils/src/lib.rs`, `sdk/bittensor-core-py/pyproject.toml`, `sdk/bittensor-core-py/src/keys.rs`, `sdk/bittensor-core/Cargo.toml`, `sdk/bittensor-core/src/keyfiles/mod.rs`, `sdk/bittensor-core/src/keys/mod.rs`, `sdk/bittensor-core/src/lib.rs`, `sdk/python/bittensor/_substrate.py`, `sdk/python/bittensor/_transport/extrinsics.py`, `sdk/python/bittensor/_transport/interface.py`, `sdk/python/bittensor/cli/commands/subnet_emission.py`, `sdk/python/bittensor/emission_weights.py`, `sdk/python/bittensor/intents/emission_weights.py`, `sdk/python/bittensor/intents/gamma.py`, `sdk/python/bittensor/reads/subnets.py`, `sdk/python/bittensor/sp_core.py`, `sdk/python/tests/unit/test_emission_weights.py`, `sdk/python/tests/unit/test_sp_core_keypair.py`, `sdk/python/tests/unit/test_sp_core_parity.py`); strict parity names them until they are ported and blessed. The core's inputs differ at v490; the core stays at v488 and its bump is due (`[parity] core_fingerprint`, D-127). The validated range
+is unchanged. Workflow run: <https://github.com/sam0x17/rtao/actions/runs/42916062960>.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

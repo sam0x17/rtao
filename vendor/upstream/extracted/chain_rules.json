@@ -3,9 +3,9 @@
     "format": 1,
     "provenance": {
       "blob": "ac183bf1bcc59f4bacb2f0230bd07c9a0d68fac7",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "runtime/src/transaction_payment_wrapper.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     "scope": "Reviewed validate-time payer/priority/tip policy and fee-dispatch projection only. Concrete priority values, discount implementations, preparation, account debits/refunds and runtime admission are runtime-owned and unexecuted; the client's any-leaf coldkey warning is not a payer resolver.",
     "values": {
@@ -50,9 +50,9 @@
     "format": 1,
     "provenance": {
       "blob": "535ff1c7eb0d68d15e37ad5bd17687f97401eb2e",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "runtime/src/check_mortality.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     "values": {
       "MAX_SHIELD_ERA_PERIOD": {
@@ -63,27 +63,27 @@
     }
   },
   "provenance": {
-    "blob": "a6cb7389e7cf800ec252216ad712a40b10968d3b",
-    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+    "blob": "d1e6edfb2fe5c6bbb8d5a436a6b1954510bac989",
+    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
     "path": "pallets/subtensor/src/lib.rs",
-    "sha256": "ce579a7d83a73cdc23317edb59875131cd01e4990a20f77d5096b342493cee9f",
-    "tag": "v488"
+    "sha256": "1b8df917dc2e82e578325259c10258c3934664af6b69992a9512057f4ca5f944",
+    "tag": "v490"
   },
   "proxy_contract": {
     "format": 1,
     "provenance": {
       "blob": "410e03f5b6c32d6ece685ac4b666bdd732191cc1",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "common/src/proxy.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     "python_mirror": {
       "path": "sdk/python/bittensor/intents/proxy.py",
       "provenance": {
         "blob": "bdbf035ee7db391e1b6b0ce9e70b27966c97de18",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/proxy.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "table": "PROXY_TYPES"
     },
@@ -187,23 +187,23 @@
   },
   "rate_limiting_provenance": {
     "blob": "7c50fd80383b16eb7c647afb075185e2982cb4db",
-    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
     "path": "pallets/subtensor/src/utils/rate_limiting.rs",
-    "tag": "v488"
+    "tag": "v490"
   },
   "reveal_contract": {
     "core_provenance": {
       "blob": "aec057443ad430fdc96db518cfea5aacdacf9a51",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "sdk/bittensor-core/src/timelock/mod.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     "format": 1,
     "provenance": {
       "blob": "32b0f98a75e383a2e34d3328561761ee506084d9",
-      "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+      "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
       "path": "pallets/subtensor/src/coinbase/reveal_commits.rs",
-      "tag": "v488"
+      "tag": "v490"
     },
     "scope": "SCALE payload fields and first three reveal-epoch bindings only; runtime reveal/decryption/dispatch acceptance is not certified",
     "values": {

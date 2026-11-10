@@ -601,6 +601,11 @@
         "rtao": "generated"
       },
       {
+        "name": "EmissionSlotsNotAscending",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
         "name": "EmissionWeightIndexDuplicated",
         "oracle": "unverified",
         "rtao": "generated"
@@ -737,6 +742,21 @@
       },
       {
         "name": "GammaDisabled",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "GammaEmissionAboveMaximum",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "GammaEmissionNotSettableOnLeasedSubnet",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "GammaEmissionTargetNotWhitelisted",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -1962,6 +1982,11 @@
       },
       {
         "name": "TooManyGammaDeposits",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "TooManyGammaShares",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -8116,7 +8141,7 @@
           "vendor/upstream/signed-requests.mdx",
           "rtao_btauth::legacy::verify_v10 implements the documented optional legacy signature recipe"
         ],
-        "synced_blob": "10cf452633ba5c81a15881fb612cf633fc1c9219"
+        "synced_blob": "ad6436c73531575747498acaff1916ee5d793a86"
       },
       {
         "kind": "n/a",
@@ -8227,7 +8252,7 @@
         "rust": [
           "vendor/upstream/extracted/owner_map.json (framework_rules.blocks_until_next_auto_epoch client projection)"
         ],
-        "synced_blob": "c88ec641c25fa92c7be955f1ccec48631f678851"
+        "synced_blob": "eb78dd66775314fe06fbcb47a7f511e94f0057aa"
       },
       {
         "kind": "extracted",
@@ -9015,7 +9040,7 @@
         "rust": [
           "`rtao_runtime::generated::calls`"
         ],
-        "synced_blob": "ac6219e63bd1fe1f92fc8f50075dc951e6515184"
+        "synced_blob": "b872af71f2eaaa41ed44b25c4a3d360145228ca1"
       },
       {
         "kind": "generated",
@@ -9037,7 +9062,7 @@
         "rust": [
           "`rtao_runtime::generated::errors::MODULE_ERRORS`"
         ],
-        "synced_blob": "da4a32f40ebd7122ebfdc36a7f99f4f8c05eed33"
+        "synced_blob": "1ea92db94aeee66cd7c78e6b8d5c88725453272b"
       },
       {
         "kind": "generated",
@@ -9059,7 +9084,7 @@
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "6c1ead591ee09ae39980f824ac7ba0ccc30bffa6"
+        "synced_blob": "39bfa12b63e06a5478e8a21ffc10e205d7f49aa3"
       },
       {
         "kind": "n/a",
@@ -10205,7 +10230,7 @@
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "99090b2092903e73a005cf313c50827d6707dfa5"
+        "synced_blob": "bed9e0fab0cfbbdb2ad5e7444c15f864c7604c70"
       },
       {
         "kind": "generated",
@@ -10260,7 +10285,7 @@
         "rust": [
           "rtao_catalog::errors::{ErrorCode, CHAIN_ERRORS}; rtao_catalog::py"
         ],
-        "synced_blob": "f115ac1f884639e12ae53cf40f320919ca1459e8"
+        "synced_blob": "01f24577d207390720efe950b1f77735560474ca"
       },
       {
         "kind": "n/a",
@@ -11663,7 +11688,7 @@
           "rtao_catalog::py::PYTHON_TABLES",
           "xtask/src/parity_catalog.rs"
         ],
-        "synced_blob": "01f6f1fed5094e61242c3fe33113688dc4ffab07"
+        "synced_blob": "fac2fe36e23a0b85e3cac1d33fd76af910dbd4d0"
       },
       {
         "kind": "n/a",
@@ -11740,7 +11765,7 @@
         "rust": [
           "xtask/src/compat.rs"
         ],
-        "synced_blob": "fbcb777baf6f06fc0b55be0284329cd59a2b9aa9"
+        "synced_blob": "044adbfa236ebd5d6ee34cf5af2e27a10978bf42"
       },
       {
         "kind": "oracle-only",
@@ -11875,7 +11900,7 @@
         "rust": [
           "rtao_testkit::fakes::FakeState"
         ],
-        "synced_blob": "8182c3edfe6a70328b890bf8b87ba4667e6a9374"
+        "synced_blob": "4329667aadf3ebeb3b88809b7adcfc47e3915aef"
       },
       {
         "kind": "extracted",
@@ -12357,7 +12382,7 @@
           "vendor/upstream/catalog/errors.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "0f297b6177760d6d79ca3a1e19ff97bf5938f51a"
+        "synced_blob": "3fe63308dc1ae0a9d391b717a86b3fa634bef89e"
       },
       {
         "kind": "vendored",
@@ -12369,7 +12394,7 @@
           "vendor/upstream/catalog/intents.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "f655ac6ce409bc71b867f1c7139db844481313fd"
+        "synced_blob": "cfd9a9daaddc21a019f2f1ded3c8792089e4bcb8"
       },
       {
         "kind": "vendored",
@@ -12381,7 +12406,7 @@
           "vendor/upstream/catalog/reads.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "eb1d10cdf0a6a7f5ab9e37a0bb77a48a4f2e9e8a"
+        "synced_blob": "33e785e549879f37abc42a0b97ec1bc0b4396081"
       },
       {
         "kind": "extracted",
@@ -13450,6 +13475,72 @@
           "crates/rtao-client/tests/authority.rs::authority_signers_submit_through_the_ordinary_signer_path",
           "crates/rtao-client/tests/authority.rs::fee_probes_price_the_signing_scheme_proof_length",
           "crates/rtao-cli/tests/m8_wallet.rs::hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/bittensor-core/src/keyfile_env.rs",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v490, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/bittensor-core/tests/password_environment.rs",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v490, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/bittensor-core/tests/verify_strict.rs",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v490, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_normalize_signature.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v490, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_sp_core_backend_compat.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v490, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_storage_exists.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v490, not yet classified or ported"
         ],
         "synced_blob": "pending"
       }
@@ -14695,8 +14786,8 @@
     ]
   },
   "pin": {
-    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
-    "tag": "v488"
+    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+    "tag": "v490"
   },
   "schema": 1,
   "status_semantics": {

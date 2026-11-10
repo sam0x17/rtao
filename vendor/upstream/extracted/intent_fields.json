@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
     "path": "website/apps/bittensor-website/public/catalog/intents.json",
-    "sha256": "044d2627e97483b6e6c6aea097ea3c249a4203d6b41f824e56a844220610a728",
-    "tag": "v488"
+    "sha256": "3bf69ac317893bbd5cee648378b153e2e47b9551f961a56930dc5293a9328624",
+    "tag": "v490"
   },
   "format": 1,
   "intents": [
@@ -845,12 +845,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 21536,
-            "end_line": 502,
-            "line": 502,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 21585,
+            "end_line": 504,
+            "line": 504,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 21472
+            "start_byte": 21521
           },
           "required": true
         },
@@ -863,24 +863,24 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 21616,
-            "end_line": 503,
-            "line": 503,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 21665,
+            "end_line": 505,
+            "line": 505,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 21541
+            "start_byte": 21590
           },
           "required": true
         }
       ],
       "name": "close_gamma_deposit",
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "end_byte": 22448,
-        "end_line": 521,
-        "line": 492,
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "end_byte": 22497,
+        "end_line": 523,
+        "line": 494,
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "start_byte": 21180
+        "start_byte": 21229
       },
       "python_class": "CloseGammaDeposit"
     },
@@ -1964,12 +1964,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 9759,
-            "end_line": 238,
-            "line": 238,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 9926,
+            "end_line": 241,
+            "line": 241,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9677
+            "start_byte": 9844
           },
           "required": true
         },
@@ -1982,12 +1982,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 9890,
-            "end_line": 241,
-            "line": 239,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 10057,
+            "end_line": 244,
+            "line": 242,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9764
+            "start_byte": 9931
           },
           "required": true
         },
@@ -2000,12 +2000,12 @@
           },
           "name": "amount_tao",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 9985,
-            "end_line": 242,
-            "line": 242,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 10152,
+            "end_line": 245,
+            "line": 245,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9895
+            "start_byte": 10062
           },
           "required": true
         },
@@ -2018,12 +2018,12 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 10105,
-            "end_line": 245,
-            "line": 243,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 10272,
+            "end_line": 248,
+            "line": 246,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9990
+            "start_byte": 10157
           },
           "required": false
         },
@@ -2036,12 +2036,12 @@
           },
           "name": "spender_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 10192,
-            "end_line": 246,
-            "line": 246,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 10359,
+            "end_line": 249,
+            "line": 249,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 10110
+            "start_byte": 10277
           },
           "required": false
         },
@@ -2054,12 +2054,12 @@
           },
           "name": "service_hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 10286,
-            "end_line": 247,
-            "line": 247,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 10453,
+            "end_line": 250,
+            "line": 250,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 10197
+            "start_byte": 10364
           },
           "required": false
         },
@@ -2072,24 +2072,24 @@
           },
           "name": "daily_spend_cap_gamma",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 10406,
-            "end_line": 250,
-            "line": 248,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 10573,
+            "end_line": 253,
+            "line": 251,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 10291
+            "start_byte": 10458
           },
           "required": false
         }
       ],
       "name": "mint_gamma",
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "end_byte": 11984,
-        "end_line": 289,
-        "line": 210,
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "end_byte": 12151,
+        "end_line": 292,
+        "line": 213,
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "start_byte": 8183
+        "start_byte": 8350
       },
       "python_class": "MintGamma"
     },
@@ -2104,12 +2104,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 12960,
-            "end_line": 312,
-            "line": 312,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13127,
+            "end_line": 315,
+            "line": 315,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 12891
+            "start_byte": 13058
           },
           "required": true
         },
@@ -2122,12 +2122,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 13091,
-            "end_line": 315,
-            "line": 313,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13258,
+            "end_line": 318,
+            "line": 316,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 12965
+            "start_byte": 13132
           },
           "required": true
         },
@@ -2140,12 +2140,12 @@
           },
           "name": "amount_alpha",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 13168,
-            "end_line": 316,
-            "line": 316,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13335,
+            "end_line": 319,
+            "line": 319,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 13096
+            "start_byte": 13263
           },
           "required": true
         },
@@ -2158,12 +2158,12 @@
           },
           "name": "origin_hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 13242,
-            "end_line": 317,
-            "line": 317,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13409,
+            "end_line": 320,
+            "line": 320,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 13173
+            "start_byte": 13340
           },
           "required": true
         },
@@ -2176,12 +2176,12 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 13362,
-            "end_line": 320,
-            "line": 318,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13529,
+            "end_line": 323,
+            "line": 321,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 13247
+            "start_byte": 13414
           },
           "required": false
         },
@@ -2194,12 +2194,12 @@
           },
           "name": "spender_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 13449,
-            "end_line": 321,
-            "line": 321,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13616,
+            "end_line": 324,
+            "line": 324,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 13367
+            "start_byte": 13534
           },
           "required": false
         },
@@ -2212,12 +2212,12 @@
           },
           "name": "service_hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 13543,
-            "end_line": 322,
-            "line": 322,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13710,
+            "end_line": 325,
+            "line": 325,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 13454
+            "start_byte": 13621
           },
           "required": false
         },
@@ -2230,24 +2230,24 @@
           },
           "name": "daily_spend_cap_gamma",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 13663,
-            "end_line": 325,
-            "line": 323,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 13830,
+            "end_line": 328,
+            "line": 326,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 13548
+            "start_byte": 13715
           },
           "required": false
         }
       ],
       "name": "mint_gamma_with_stake",
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "end_byte": 16691,
-        "end_line": 390,
-        "line": 294,
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "end_byte": 16858,
+        "end_line": 393,
+        "line": 297,
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "start_byte": 12008
+        "start_byte": 12175
       },
       "python_class": "MintGammaWithStake"
     },
@@ -2262,12 +2262,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 17344,
-            "end_line": 410,
-            "line": 410,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 17511,
+            "end_line": 413,
+            "line": 413,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17278
+            "start_byte": 17445
           },
           "required": true
         },
@@ -2280,12 +2280,12 @@
           },
           "name": "origin_hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 17436,
-            "end_line": 411,
-            "line": 411,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 17603,
+            "end_line": 414,
+            "line": 414,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17349
+            "start_byte": 17516
           },
           "required": true
         },
@@ -2298,12 +2298,12 @@
           },
           "name": "destination_hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 17531,
-            "end_line": 412,
-            "line": 412,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 17698,
+            "end_line": 415,
+            "line": 415,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17441
+            "start_byte": 17608
           },
           "required": true
         },
@@ -2316,24 +2316,24 @@
           },
           "name": "amount_gamma",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 17598,
-            "end_line": 413,
-            "line": 413,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 17765,
+            "end_line": 416,
+            "line": 416,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17536
+            "start_byte": 17703
           },
           "required": true
         }
       ],
       "name": "move_gamma",
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "end_byte": 21156,
-        "end_line": 487,
-        "line": 395,
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "end_byte": 21205,
+        "end_line": 489,
+        "line": 398,
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "start_byte": 16715
+        "start_byte": 16882
       },
       "python_class": "MoveGamma"
     },
@@ -4439,12 +4439,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 25556,
-            "end_line": 602,
-            "line": 602,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 25605,
+            "end_line": 604,
+            "line": 604,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 25492
+            "start_byte": 25541
           },
           "required": true
         },
@@ -4457,12 +4457,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 25630,
-            "end_line": 603,
-            "line": 603,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 25679,
+            "end_line": 605,
+            "line": 605,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 25561
+            "start_byte": 25610
           },
           "required": true
         },
@@ -4475,12 +4475,12 @@
           },
           "name": "daily_spend_cap_gamma",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 25772,
-            "end_line": 606,
-            "line": 604,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 25821,
+            "end_line": 608,
+            "line": 606,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 25635
+            "start_byte": 25684
           },
           "required": false
         },
@@ -4493,24 +4493,24 @@
           },
           "name": "remove_cap",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 25854,
-            "end_line": 607,
-            "line": 607,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 25903,
+            "end_line": 609,
+            "line": 609,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 25777
+            "start_byte": 25826
           },
           "required": false
         }
       ],
       "name": "set_gamma_deposit_daily_spend_cap",
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "end_byte": 27021,
-        "end_line": 635,
-        "line": 589,
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "end_byte": 27070,
+        "end_line": 637,
+        "line": 591,
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "start_byte": 24953
+        "start_byte": 25002
       },
       "python_class": "SetGammaDepositDailySpendCap"
     },
@@ -4525,12 +4525,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 22913,
-            "end_line": 537,
-            "line": 537,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 22962,
+            "end_line": 539,
+            "line": 539,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 22849
+            "start_byte": 22898
           },
           "required": true
         },
@@ -4543,12 +4543,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 22987,
-            "end_line": 538,
-            "line": 538,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 23036,
+            "end_line": 540,
+            "line": 540,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 22918
+            "start_byte": 22967
           },
           "required": true
         },
@@ -4561,12 +4561,12 @@
           },
           "name": "spender_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 23114,
-            "end_line": 541,
-            "line": 539,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 23163,
+            "end_line": 543,
+            "line": 541,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 22992
+            "start_byte": 23041
           },
           "required": false
         },
@@ -4579,12 +4579,12 @@
           },
           "name": "service_hotkey_ss58",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 23208,
-            "end_line": 542,
-            "line": 542,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 23257,
+            "end_line": 544,
+            "line": 544,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 23119
+            "start_byte": 23168
           },
           "required": false
         },
@@ -4597,24 +4597,24 @@
           },
           "name": "default_spender",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 23494,
-            "end_line": 549,
-            "line": 543,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 23543,
+            "end_line": 551,
+            "line": 545,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 23213
+            "start_byte": 23262
           },
           "required": false
         }
       ],
       "name": "set_gamma_deposit_spender",
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "end_byte": 24929,
-        "end_line": 584,
-        "line": 526,
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "end_byte": 24978,
+        "end_line": 586,
+        "line": 528,
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "start_byte": 22472
+        "start_byte": 22521
       },
       "python_class": "SetGammaDepositSpender"
     },
@@ -5237,12 +5237,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5",
-            "end_byte": 4637,
-            "end_line": 107,
-            "line": 107,
+            "blob": "575e6ec5728a0ffdea80743a4c01480673a716d9",
+            "end_byte": 4785,
+            "end_line": 113,
+            "line": 113,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 4545
+            "start_byte": 4693
           },
           "required": true
         },
@@ -5255,12 +5255,12 @@
           },
           "name": "slots",
           "provenance": {
-            "blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5",
-            "end_byte": 4703,
-            "end_line": 108,
-            "line": 108,
+            "blob": "575e6ec5728a0ffdea80743a4c01480673a716d9",
+            "end_byte": 4851,
+            "end_line": 114,
+            "line": 114,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 4642
+            "start_byte": 4790
           },
           "required": true
         },
@@ -5273,12 +5273,12 @@
           },
           "name": "values",
           "provenance": {
-            "blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5",
-            "end_byte": 4779,
-            "end_line": 109,
-            "line": 109,
+            "blob": "575e6ec5728a0ffdea80743a4c01480673a716d9",
+            "end_byte": 4927,
+            "end_line": 115,
+            "line": 115,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 4708
+            "start_byte": 4856
           },
           "required": true
         },
@@ -5291,24 +5291,24 @@
           },
           "name": "renormalize",
           "provenance": {
-            "blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5",
-            "end_byte": 4861,
-            "end_line": 110,
-            "line": 110,
+            "blob": "575e6ec5728a0ffdea80743a4c01480673a716d9",
+            "end_byte": 5009,
+            "end_line": 116,
+            "line": 116,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 4784
+            "start_byte": 4932
           },
           "required": false
         }
       ],
       "name": "set_subnet_emission_weights",
       "provenance": {
-        "blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5",
-        "end_byte": 11707,
-        "end_line": 267,
-        "line": 85,
+        "blob": "575e6ec5728a0ffdea80743a4c01480673a716d9",
+        "end_byte": 12401,
+        "end_line": 285,
+        "line": 90,
         "path": "sdk/python/bittensor/intents/emission_weights.py",
-        "start_byte": 3398
+        "start_byte": 3513
       },
       "python_class": "SetSubnetEmissionWeights"
     },
@@ -5671,12 +5671,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 28163,
-            "end_line": 661,
-            "line": 661,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 28212,
+            "end_line": 663,
+            "line": 663,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 28098
+            "start_byte": 28147
           },
           "required": true
         },
@@ -5689,24 +5689,24 @@
           },
           "name": "spends",
           "provenance": {
-            "blob": "906b8730f526cbe2691655f6086a991787974b88",
-            "end_byte": 28386,
-            "end_line": 667,
-            "line": 662,
+            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+            "end_byte": 28435,
+            "end_line": 669,
+            "line": 664,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 28168
+            "start_byte": 28217
           },
           "required": true
         }
       ],
       "name": "spend_gamma",
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "end_byte": 30825,
-        "end_line": 725,
-        "line": 640,
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "end_byte": 30874,
+        "end_line": 727,
+        "line": 642,
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "start_byte": 27045
+        "start_byte": 27094
       },
       "python_class": "SpendGamma"
     },
@@ -7014,7 +7014,7 @@
     }
   ],
   "parity": {
-    "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
-    "tag": "v488"
+    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+    "tag": "v490"
   }
 }

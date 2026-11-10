@@ -4,14 +4,14 @@
     "sdk/python/bittensor/_generated/errors.py": {
       "format": 1,
       "provenance": {
-        "blob": "da4a32f40ebd7122ebfdc36a7f99f4f8c05eed33",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "blob": "1ea92db94aeee66cd7c78e6b8d5c88725453272b",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/_generated/errors.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "ERRORS": {
-          "end_line": 474,
+          "end_line": 479,
           "line": 14,
           "value": {
             "dict": [
@@ -3698,6 +3698,86 @@
               [
                 {
                   "tuple": [
+                    7,
+                    202
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights_v2`: the split's slots are not in strictly ascending order.",
+                    "name": "EmissionSlotsNotAscending",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    203
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights_v2`: a gamma share may be at most 10% of emission.",
+                    "name": "GammaEmissionAboveMaximum",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    204
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights_v2`: a gamma share names a subnet that is not whitelisted for gamma emission.",
+                    "name": "GammaEmissionTargetNotWhitelisted",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    205
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights_v2`: a split may have at most 16 gamma shares.",
+                    "name": "TooManyGammaShares",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    206
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "`set_subnet_emission_weights_v2`: a subnet under a lease may not have gamma shares.",
+                    "name": "GammaEmissionNotSettableOnLeasedSubnet",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
                     11,
                     0
                   ]
@@ -7367,15 +7447,15 @@
     "sdk/python/bittensor/_transport/extrinsics.py": {
       "format": 1,
       "provenance": {
-        "blob": "692cd5fe41a6c3ab73b0bb6ad9ccf43e49c6ceee",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "blob": "1b9adfbb52f1dcd6e8a1b5ec16d63f52be89dc23",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/_transport/extrinsics.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "MAX_SHIELDED_CIPHERTEXT_BYTES": {
-          "end_line": 59,
-          "line": 59,
+          "end_line": 69,
+          "line": 69,
           "value": 32768
         }
       }
@@ -7384,9 +7464,9 @@
       "format": 1,
       "provenance": {
         "blob": "76101e5247da8356118e4bb179aadf77b2f14c34",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/_transport/runtime.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "_DISK_CACHE_MAX_FILES": {
@@ -7422,9 +7502,9 @@
       "format": 1,
       "provenance": {
         "blob": "4c33d256550a45a951e9c75c6e3b74b7dd0fa0d3",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/_transport/utils/receipt.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "_NESTED_RESULT_EVENTS": {
@@ -7495,9 +7575,9 @@
       "format": 1,
       "provenance": {
         "blob": "cf591495eef97141ca0ffc53155898b8e8f2cb4b",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/basket_index_data.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "BASELINES": {
@@ -9795,9 +9875,9 @@
       "format": 1,
       "provenance": {
         "blob": "4c4a26ae8ca1be99c9ee834c7fb6184c89d888b8",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/config.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "DEFAULT_ADDRESSES_PATH": {
@@ -9971,15 +10051,15 @@
     "sdk/python/bittensor/error_map.py": {
       "format": 1,
       "provenance": {
-        "blob": "f115ac1f884639e12ae53cf40f320919ca1459e8",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "blob": "01f24577d207390720efe950b1f77735560474ca",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/error_map.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "CUSTOM_TRANSACTION_ERRORS": {
-          "end_line": 572,
-          "line": 542,
+          "end_line": 577,
+          "line": 547,
           "value": {
             "dict": [
               [
@@ -10102,8 +10182,8 @@
           }
         },
         "DISPATCH_ERRORS": {
-          "end_line": 849,
-          "line": 609,
+          "end_line": 854,
+          "line": 614,
           "value": {
             "dict": [
               [
@@ -10578,8 +10658,8 @@
           }
         },
         "INVALID_TRANSACTION_ERRORS": {
-          "end_line": 595,
-          "line": 578,
+          "end_line": 600,
+          "line": 583,
           "value": {
             "tuple": [
               {
@@ -10682,7 +10762,7 @@
           }
         },
         "NAME_TO_CODE": {
-          "end_line": 530,
+          "end_line": 535,
           "line": 46,
           "value": {
             "dict": [
@@ -11565,6 +11645,26 @@
               [
                 "EmissionWeightsNotSettableOnRoot",
                 "invalid_argument"
+              ],
+              [
+                "EmissionSlotsNotAscending",
+                "invalid_argument"
+              ],
+              [
+                "GammaEmissionAboveMaximum",
+                "policy_violation"
+              ],
+              [
+                "GammaEmissionTargetNotWhitelisted",
+                "policy_violation"
+              ],
+              [
+                "TooManyGammaShares",
+                "limit_exceeded"
+              ],
+              [
+                "GammaEmissionNotSettableOnLeasedSubnet",
+                "policy_violation"
               ],
               [
                 "UnlockAmountTooHigh",
@@ -12459,9 +12559,9 @@
       "format": 1,
       "provenance": {
         "blob": "e9ee94d16ddb1b89bf94dd94ec63f1484b5d06d7",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/evm/networks.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "EVM_NETWORKS": {
@@ -12545,9 +12645,9 @@
       "format": 1,
       "provenance": {
         "blob": "ce5b43be2cb6c1477b970858bb9992bff348855e",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/evm/precompiles.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "CALLER_ROLES": {
@@ -13080,9 +13180,9 @@
       "format": 1,
       "provenance": {
         "blob": "ea6547dfb106fa26bf3a3dc5d2613e5170068b91",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/executor.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "_SHIELDED_FINALITY_RPC_RETRIES": {
@@ -13112,9 +13212,9 @@
       "format": 1,
       "provenance": {
         "blob": "63ba35b88b039dfe547b29f30561c90dec09967d",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/fee_filters.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "COLDKEY_FEE_WARNING": {
@@ -13238,9 +13338,9 @@
       "format": 1,
       "provenance": {
         "blob": "772977590e33f80c932eefa3611dbac6e425b3da",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/hyperparams.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "FIXED128_ONE": {
@@ -14792,9 +14892,9 @@
       "format": 1,
       "provenance": {
         "blob": "f45a39a4852703d52d91776ffbc216ed5b9a5dbd",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/_money.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "_FALLBACK_AMOUNT_UNITS": {
@@ -14997,9 +15097,9 @@
       "format": 1,
       "provenance": {
         "blob": "ab08e652c1c01e15f157bfcf1b7ca00bf820788c",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/association.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "AssociateEvmKey.block_number": {
@@ -15089,9 +15189,9 @@
       "format": 1,
       "provenance": {
         "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/base.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "Intent.all_amount_fields": {
@@ -15139,9 +15239,9 @@
       "format": 1,
       "provenance": {
         "blob": "2200235b75b4d2457b9b554b269afa080aeceaa2",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/batch.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "Batch.intents": {
@@ -15176,9 +15276,9 @@
       "format": 1,
       "provenance": {
         "blob": "42392f29c930b80fc79c6c7d8a216a0ad01d5b93",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/children.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "DecreaseTake.hotkey_ss58": {
@@ -15387,9 +15487,9 @@
       "format": 1,
       "provenance": {
         "blob": "d2882ffce64baa07576b6a0d0dafbeeb815b98aa",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/coldkey.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "AnnounceColdkeySwap.hashed_descriptor": {
@@ -15537,9 +15637,9 @@
       "format": 1,
       "provenance": {
         "blob": "08fb440799bf16dbfb3552133512a7dfaa54db4c",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/collateral.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "AddCollateral.all_amount_fields": {
@@ -15658,9 +15758,9 @@
       "format": 1,
       "provenance": {
         "blob": "2ad3b7c537e42f77d421c2275ddf4893f1981506",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/crowdloan.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "ContributeCrowdloan.all_amount_fields": {
@@ -16030,61 +16130,61 @@
     "sdk/python/bittensor/intents/emission_weights.py": {
       "format": 1,
       "provenance": {
-        "blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "blob": "575e6ec5728a0ffdea80743a4c01480673a716d9",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/emission_weights.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "SetSubnetEmissionWeights.netuid": {
-          "end_line": 107,
-          "line": 107,
+          "end_line": 113,
+          "line": 113,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.op": {
-          "end_line": 101,
-          "line": 101,
+          "end_line": 107,
+          "line": 107,
           "value": "set_subnet_emission_weights"
         },
         "SetSubnetEmissionWeights.origin": {
-          "end_line": 103,
-          "line": 103,
+          "end_line": 109,
+          "line": 109,
           "value": "subnet_owner"
         },
         "SetSubnetEmissionWeights.renormalize": {
-          "end_line": 110,
-          "line": 110,
+          "end_line": 116,
+          "line": 116,
           "value": false
         },
         "SetSubnetEmissionWeights.signer": {
-          "end_line": 102,
-          "line": 102,
+          "end_line": 108,
+          "line": 108,
           "value": "coldkey"
         },
         "SetSubnetEmissionWeights.slots": {
-          "end_line": 108,
-          "line": 108,
+          "end_line": 114,
+          "line": 114,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.values": {
-          "end_line": 109,
-          "line": 109,
+          "end_line": 115,
+          "line": 115,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.verify": {
-          "end_line": 104,
-          "line": 104,
+          "end_line": 110,
+          "line": 110,
           "value": "subnet_emission_weights"
         },
         "SetSubnetEmissionWeights.wraps": {
-          "end_line": 105,
-          "line": 105,
+          "end_line": 111,
+          "line": 111,
           "value": {
             "tuple": [
               {
@@ -16102,9 +16202,9 @@
       "format": 1,
       "provenance": {
         "blob": "c6b3ea2027049a41c8ff00eba419637e0e3929bc",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/evm.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "EvmWithdraw.all_amount_fields": {
@@ -16205,39 +16305,39 @@
     "sdk/python/bittensor/intents/gamma.py": {
       "format": 1,
       "provenance": {
-        "blob": "906b8730f526cbe2691655f6086a991787974b88",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "blob": "0b48b3352b0580881c2a01549425f5651273e346",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "CloseGammaDeposit.hotkey_ss58": {
-          "end_line": 503,
-          "line": 503,
+          "end_line": 505,
+          "line": 505,
           "value": {
             "required": true
           }
         },
         "CloseGammaDeposit.netuid": {
-          "end_line": 502,
-          "line": 502,
+          "end_line": 504,
+          "line": 504,
           "value": {
             "required": true
           }
         },
         "CloseGammaDeposit.op": {
-          "end_line": 498,
-          "line": 498,
+          "end_line": 500,
+          "line": 500,
           "value": "close_gamma_deposit"
         },
         "CloseGammaDeposit.signer": {
-          "end_line": 499,
-          "line": 499,
+          "end_line": 501,
+          "line": 501,
           "value": "coldkey"
         },
         "CloseGammaDeposit.wraps": {
-          "end_line": 500,
-          "line": 500,
+          "end_line": 502,
+          "line": 502,
           "value": {
             "tuple": [
               {
@@ -16250,64 +16350,64 @@
           }
         },
         "MintGamma.amount_tao": {
-          "end_line": 242,
-          "line": 242,
+          "end_line": 245,
+          "line": 245,
           "value": {
             "required": true
           }
         },
         "MintGamma.daily_spend_cap_gamma": {
-          "end_line": 250,
-          "line": 248,
+          "end_line": 253,
+          "line": 251,
           "value": null
         },
         "MintGamma.hotkey_ss58": {
-          "end_line": 241,
-          "line": 239,
+          "end_line": 244,
+          "line": 242,
           "value": {
             "required": true
           }
         },
         "MintGamma.mev_shield_default": {
-          "end_line": 236,
-          "line": 236,
+          "end_line": 239,
+          "line": 239,
           "value": true
         },
         "MintGamma.netuid": {
-          "end_line": 238,
-          "line": 238,
+          "end_line": 241,
+          "line": 241,
           "value": {
             "required": true
           }
         },
         "MintGamma.op": {
-          "end_line": 233,
-          "line": 233,
+          "end_line": 236,
+          "line": 236,
           "value": "mint_gamma"
         },
         "MintGamma.rate_tolerance": {
-          "end_line": 245,
-          "line": 243,
+          "end_line": 248,
+          "line": 246,
           "value": 0.05
         },
         "MintGamma.service_hotkey_ss58": {
-          "end_line": 247,
-          "line": 247,
+          "end_line": 250,
+          "line": 250,
           "value": null
         },
         "MintGamma.signer": {
-          "end_line": 234,
-          "line": 234,
+          "end_line": 237,
+          "line": 237,
           "value": "coldkey"
         },
         "MintGamma.spender_ss58": {
-          "end_line": 246,
-          "line": 246,
+          "end_line": 249,
+          "line": 249,
           "value": null
         },
         "MintGamma.wraps": {
-          "end_line": 235,
-          "line": 235,
+          "end_line": 238,
+          "line": 238,
           "value": {
             "tuple": [
               {
@@ -16320,8 +16420,8 @@
           }
         },
         "MintGammaWithStake.all_amount_fields": {
-          "end_line": 310,
-          "line": 310,
+          "end_line": 313,
+          "line": 313,
           "value": {
             "tuple": [
               "amount_alpha"
@@ -16329,66 +16429,66 @@
           }
         },
         "MintGammaWithStake.amount_alpha": {
-          "end_line": 316,
-          "line": 316,
+          "end_line": 319,
+          "line": 319,
           "value": {
             "required": true
           }
         },
         "MintGammaWithStake.daily_spend_cap_gamma": {
-          "end_line": 325,
-          "line": 323,
+          "end_line": 328,
+          "line": 326,
           "value": null
         },
         "MintGammaWithStake.hotkey_ss58": {
-          "end_line": 315,
-          "line": 313,
+          "end_line": 318,
+          "line": 316,
           "value": {
             "required": true
           }
         },
         "MintGammaWithStake.netuid": {
-          "end_line": 312,
-          "line": 312,
+          "end_line": 315,
+          "line": 315,
           "value": {
             "required": true
           }
         },
         "MintGammaWithStake.op": {
-          "end_line": 307,
-          "line": 307,
+          "end_line": 310,
+          "line": 310,
           "value": "mint_gamma_with_stake"
         },
         "MintGammaWithStake.origin_hotkey_ss58": {
-          "end_line": 317,
-          "line": 317,
+          "end_line": 320,
+          "line": 320,
           "value": {
             "required": true
           }
         },
         "MintGammaWithStake.rate_tolerance": {
-          "end_line": 320,
-          "line": 318,
+          "end_line": 323,
+          "line": 321,
           "value": 0.05
         },
         "MintGammaWithStake.service_hotkey_ss58": {
-          "end_line": 322,
-          "line": 322,
+          "end_line": 325,
+          "line": 325,
           "value": null
         },
         "MintGammaWithStake.signer": {
-          "end_line": 308,
-          "line": 308,
+          "end_line": 311,
+          "line": 311,
           "value": "coldkey"
         },
         "MintGammaWithStake.spender_ss58": {
-          "end_line": 321,
-          "line": 321,
+          "end_line": 324,
+          "line": 324,
           "value": null
         },
         "MintGammaWithStake.wraps": {
-          "end_line": 309,
-          "line": 309,
+          "end_line": 312,
+          "line": 312,
           "value": {
             "tuple": [
               {
@@ -16401,8 +16501,8 @@
           }
         },
         "MoveGamma.all_amount_fields": {
-          "end_line": 408,
-          "line": 408,
+          "end_line": 411,
+          "line": 411,
           "value": {
             "tuple": [
               "amount_gamma"
@@ -16410,46 +16510,46 @@
           }
         },
         "MoveGamma.amount_gamma": {
+          "end_line": 416,
+          "line": 416,
+          "value": {
+            "required": true
+          }
+        },
+        "MoveGamma.destination_hotkey_ss58": {
+          "end_line": 415,
+          "line": 415,
+          "value": {
+            "required": true
+          }
+        },
+        "MoveGamma.netuid": {
           "end_line": 413,
           "line": 413,
           "value": {
             "required": true
           }
         },
-        "MoveGamma.destination_hotkey_ss58": {
-          "end_line": 412,
-          "line": 412,
-          "value": {
-            "required": true
-          }
-        },
-        "MoveGamma.netuid": {
-          "end_line": 410,
-          "line": 410,
-          "value": {
-            "required": true
-          }
-        },
         "MoveGamma.op": {
-          "end_line": 405,
-          "line": 405,
+          "end_line": 408,
+          "line": 408,
           "value": "move_gamma"
         },
         "MoveGamma.origin_hotkey_ss58": {
-          "end_line": 411,
-          "line": 411,
+          "end_line": 414,
+          "line": 414,
           "value": {
             "required": true
           }
         },
         "MoveGamma.signer": {
-          "end_line": 406,
-          "line": 406,
+          "end_line": 409,
+          "line": 409,
           "value": "coldkey"
         },
         "MoveGamma.wraps": {
-          "end_line": 407,
-          "line": 407,
+          "end_line": 410,
+          "line": 410,
           "value": {
             "tuple": [
               {
@@ -16462,42 +16562,42 @@
           }
         },
         "SetGammaDepositDailySpendCap.daily_spend_cap_gamma": {
-          "end_line": 606,
-          "line": 604,
+          "end_line": 608,
+          "line": 606,
           "value": null
         },
         "SetGammaDepositDailySpendCap.hotkey_ss58": {
-          "end_line": 603,
-          "line": 603,
+          "end_line": 605,
+          "line": 605,
           "value": {
             "required": true
           }
         },
         "SetGammaDepositDailySpendCap.netuid": {
-          "end_line": 602,
-          "line": 602,
+          "end_line": 604,
+          "line": 604,
           "value": {
             "required": true
           }
         },
         "SetGammaDepositDailySpendCap.op": {
-          "end_line": 598,
-          "line": 598,
+          "end_line": 600,
+          "line": 600,
           "value": "set_gamma_deposit_daily_spend_cap"
         },
         "SetGammaDepositDailySpendCap.remove_cap": {
-          "end_line": 607,
-          "line": 607,
+          "end_line": 609,
+          "line": 609,
           "value": false
         },
         "SetGammaDepositDailySpendCap.signer": {
-          "end_line": 599,
-          "line": 599,
+          "end_line": 601,
+          "line": 601,
           "value": "coldkey"
         },
         "SetGammaDepositDailySpendCap.wraps": {
-          "end_line": 600,
-          "line": 600,
+          "end_line": 602,
+          "line": 602,
           "value": {
             "tuple": [
               {
@@ -16510,47 +16610,47 @@
           }
         },
         "SetGammaDepositSpender.default_spender": {
-          "end_line": 549,
-          "line": 543,
+          "end_line": 551,
+          "line": 545,
           "value": false
         },
         "SetGammaDepositSpender.hotkey_ss58": {
-          "end_line": 538,
-          "line": 538,
+          "end_line": 540,
+          "line": 540,
           "value": {
             "required": true
           }
         },
         "SetGammaDepositSpender.netuid": {
-          "end_line": 537,
-          "line": 537,
+          "end_line": 539,
+          "line": 539,
           "value": {
             "required": true
           }
         },
         "SetGammaDepositSpender.op": {
-          "end_line": 533,
-          "line": 533,
+          "end_line": 535,
+          "line": 535,
           "value": "set_gamma_deposit_spender"
         },
         "SetGammaDepositSpender.service_hotkey_ss58": {
-          "end_line": 542,
-          "line": 542,
+          "end_line": 544,
+          "line": 544,
           "value": null
         },
         "SetGammaDepositSpender.signer": {
-          "end_line": 534,
-          "line": 534,
+          "end_line": 536,
+          "line": 536,
           "value": "coldkey"
         },
         "SetGammaDepositSpender.spender_ss58": {
-          "end_line": 541,
-          "line": 539,
+          "end_line": 543,
+          "line": 541,
           "value": null
         },
         "SetGammaDepositSpender.wraps": {
-          "end_line": 535,
-          "line": 535,
+          "end_line": 537,
+          "line": 537,
           "value": {
             "tuple": [
               {
@@ -16563,32 +16663,32 @@
           }
         },
         "SpendGamma.netuid": {
-          "end_line": 661,
-          "line": 661,
+          "end_line": 663,
+          "line": 663,
           "value": {
             "required": true
           }
         },
         "SpendGamma.op": {
-          "end_line": 657,
-          "line": 657,
+          "end_line": 659,
+          "line": 659,
           "value": "spend_gamma"
         },
         "SpendGamma.signer": {
-          "end_line": 658,
-          "line": 658,
+          "end_line": 660,
+          "line": 660,
           "value": "coldkey"
         },
         "SpendGamma.spends": {
-          "end_line": 667,
-          "line": 662,
+          "end_line": 669,
+          "line": 664,
           "value": {
             "required": true
           }
         },
         "SpendGamma.wraps": {
-          "end_line": 659,
-          "line": 659,
+          "end_line": 661,
+          "line": 661,
           "value": {
             "tuple": [
               {
@@ -16606,9 +16706,9 @@
       "format": 1,
       "provenance": {
         "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/governance.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "SetMechanismCount.mechanism_count": {
@@ -16847,9 +16947,9 @@
       "format": 1,
       "provenance": {
         "blob": "898812ed48595a20cb343a80297728d759b5cf2e",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/hyperparameters.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "OWNER_HYPERPARAMETERS": {
@@ -17440,9 +17540,9 @@
       "format": 1,
       "provenance": {
         "blob": "a4a2167fcbb2db93d649935c32705e5d6612b1e9",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/identity.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "SetIdentity.additional": {
@@ -17590,9 +17690,9 @@
       "format": 1,
       "provenance": {
         "blob": "c1bf79b7bb6a5ebcec925010679de8b87f700115",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/leasing.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "RegisterLeasedNetwork.emissions_share": {
@@ -17673,9 +17773,9 @@
       "format": 1,
       "provenance": {
         "blob": "9a3d299c1f5938a89bf37e27162279c8e9222329",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/limit_orders.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "AuthorizeOrder.op": {
@@ -17806,9 +17906,9 @@
       "format": 1,
       "provenance": {
         "blob": "05c03b46d80f556a6bbc08b963f15248e69c19d2",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/lock.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "LockStake.all_amount_fields": {
@@ -17976,9 +18076,9 @@
       "format": 1,
       "provenance": {
         "blob": "70dd6b22c6ee4788fa96e628eb33eff586dcc22a",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/multisig.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "MultisigApprove.account_mode": {
@@ -18267,9 +18367,9 @@
       "format": 1,
       "provenance": {
         "blob": "bdbf035ee7db391e1b6b0ce9e70b27966c97de18",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/proxy.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "AddProxy.delay": {
@@ -18595,9 +18695,9 @@
       "format": 1,
       "provenance": {
         "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/registration.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "BurnedRegister.hotkey_ss58": {
@@ -18936,9 +19036,9 @@
       "format": 1,
       "provenance": {
         "blob": "1e7d78e639d650b602620fe387a1912a731d3ceb",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/root.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "SetRootClaimThreshold.op": {
@@ -19048,9 +19148,9 @@
       "format": 1,
       "provenance": {
         "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/serving.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "ResetAxon.netuid": {
@@ -19305,9 +19405,9 @@
       "format": 1,
       "provenance": {
         "blob": "ebbef6a1d24c000b5d4a0b003addfba8a8d1e0b8",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/staking.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "AddStake.all_amount_fields": {
@@ -20343,9 +20443,9 @@
       "format": 1,
       "provenance": {
         "blob": "89321c66fae0860b180ba4aef88d888aa158e48f",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/transfer.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "Transfer.all_amount_fields": {
@@ -20464,9 +20564,9 @@
       "format": 1,
       "provenance": {
         "blob": "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/intents/weights.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "CommitWeights.commit_reveal_version": {
@@ -20655,9 +20755,9 @@
       "format": 1,
       "provenance": {
         "blob": "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/multisig.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "_FEE_ALLOWANCE_RAO": {
@@ -20671,9 +20771,9 @@
       "format": 1,
       "provenance": {
         "blob": "8f2d33830bea92232ef7173adad3105a553f9d9d",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/bittensor/result.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "EXPLANATIONS": {
@@ -21171,10 +21271,10 @@
     "sdk/python/codegen/check.py": {
       "format": 1,
       "provenance": {
-        "blob": "01f6f1fed5094e61242c3fe33113688dc4ffab07",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "blob": "fac2fe36e23a0b85e3cac1d33fd76af910dbd4d0",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/codegen/check.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "COVERED_PALLETS": {
@@ -21200,7 +21300,7 @@
           }
         },
         "RAW_ONLY": {
-          "end_line": 326,
+          "end_line": 330,
           "line": 75,
           "value": {
             "dict": [
@@ -21421,6 +21521,8 @@
                     "sudo_set_sn_owner_hotkey",
                     "sudo_set_stake_threshold",
                     "sudo_set_start_call_delay",
+                    "sudo_set_subnet_emission_weights_v2",
+                    "sudo_set_subnet_gamma_emission_whitelisted",
                     "sudo_set_subnet_limit",
                     "sudo_set_subnet_moving_alpha",
                     "sudo_set_subnet_owner_cut",
@@ -21464,10 +21566,10 @@
     "sdk/python/tests/harness/fake_substrate.py": {
       "format": 1,
       "provenance": {
-        "blob": "8182c3edfe6a70328b890bf8b87ba4667e6a9374",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "blob": "4329667aadf3ebeb3b88809b7adcfc47e3915aef",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/tests/harness/fake_substrate.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "DEFAULT_CONSTANTS": {
@@ -21857,9 +21959,9 @@
       "format": 1,
       "provenance": {
         "blob": "8a6ded3185596b57cef116eeb602b57cbb3d6ce4",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/tests/harness/samples.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "ALICE": {
@@ -25161,9 +25263,9 @@
       "format": 1,
       "provenance": {
         "blob": "0705e3c90e593202712a08d9ec9ed21a82d622a3",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/tests/unit/test_cli_null_pruning.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "test_invalid_requests_never_submit.parametrize": {
@@ -25438,9 +25540,9 @@
       "format": 1,
       "provenance": {
         "blob": "47ecc619720512a599ed8107f947f2dbee7d71f8",
-        "commit": "b6a81d144078eac18bd25c3af7cb31579bb670f3",
+        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
         "path": "sdk/python/tests/unit/test_rpc.py",
-        "tag": "v488"
+        "tag": "v490"
       },
       "values": {
         "test_provider_defined_code_without_policy_contract_is_not_terminal.parametrize": {

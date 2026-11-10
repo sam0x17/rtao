@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Finney runtime 490 adopted automatically
+
+- The parity pin moves from spec 488 to v490 (`d967d13588834f4f5aaa8ef4c8fc1a865d581462`, pinned as `v490`), the runtime Finney finalized at block 9478866 with `:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`.
+- Live evidence: 4 public endpoints agree at the pinned block on genesis, spec, the `:code` hash (and the BLAKE2b-256 of its bytes) and the V15/V16 metadata digests; release wasm: matches.
+- Metadata drift 488 -> 490: `additive`. Code generation, extracted tables and catalogs are regenerated from the pinned sources; watched sources changed: 41, of which 0 were reconciled automatically and 13 re-derived and checked. 20 hand port(s) remain due and are listed in `parity/port_due.toml` (`eco-tests/src/mock.rs`, `pallets/admin-utils/src/lib.rs`, `sdk/bittensor-core-py/pyproject.toml`, `sdk/bittensor-core-py/src/keys.rs`, `sdk/bittensor-core/Cargo.toml`, `sdk/bittensor-core/src/keyfiles/mod.rs`, `sdk/bittensor-core/src/keys/mod.rs`, `sdk/bittensor-core/src/lib.rs`, `sdk/python/bittensor/_substrate.py`, `sdk/python/bittensor/_transport/extrinsics.py`, `sdk/python/bittensor/_transport/interface.py`, `sdk/python/bittensor/cli/commands/subnet_emission.py`, `sdk/python/bittensor/emission_weights.py`, `sdk/python/bittensor/intents/emission_weights.py`, `sdk/python/bittensor/intents/gamma.py`, `sdk/python/bittensor/reads/subnets.py`, `sdk/python/bittensor/sp_core.py`, `sdk/python/tests/unit/test_emission_weights.py`, `sdk/python/tests/unit/test_sp_core_keypair.py`, `sdk/python/tests/unit/test_sp_core_parity.py`); strict parity names them until they are ported and blessed.
+- The core's inputs differ at v490; the core stays at v488 and its bump is due (`[parity] core_fingerprint`, D-127).
+- Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42916062960)): pin source identity, live evidence, imports, extraction, regeneration, compatibility, probe pins, drift, parity, formatting, a workspace build, the runtime, reads, intents and client tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution; the validated range is unchanged.
+
 ### Testnet runtime 490 recorded automatically
 
 - Testnet finalized spec 490 (`:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`) at block 8416678; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/42895343113)). Source: upstream commit `d967d13588834f4f5aaa8ef4c8fc1a865d581462`, whose v490 prerelease wasm is this `:code`. The parity pin is unchanged.
