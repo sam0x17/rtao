@@ -99,7 +99,7 @@ fn baseline(root: &Path, explicit: Option<&str>) -> Result<Option<String>> {
         let event_path = std::env::var_os("GITHUB_EVENT_PATH")
             .context("CI parity needs its event file for shrink-only validation")?;
         let event: Value = serde_json::from_slice(&fs::read(event_path)?)?;
-        if std::env::var("GITHUB_EVENT_NAME").as_deref() == Ok("workflow_dispatch") {
+        if selected_commit_event(std::env::var("GITHUB_EVENT_NAME").ok().as_deref()) {
             let sha = std::env::var("GITHUB_SHA")
                 .context("manual CI parity needs its selected commit SHA")?;
             return dispatch_baseline(root, &sha).map(Some);
@@ -114,6 +114,14 @@ fn baseline(root: &Path, explicit: Option<&str>) -> Result<Option<String>> {
     } else {
         Ok(git(root, "HEAD^", "parity/pending.toml")?.map(|_| "HEAD^".into()))
     }
+}
+
+/// Events with no change range of their own: a dispatch and a scheduled run
+/// (the hourly runtime-adopt, whose event carries no `before`) check the one
+/// commit they run on against its first parent, bound to `GITHUB_SHA` and the
+/// checked-out HEAD. Every other event keeps its push/PR/merge-group range.
+pub(super) fn selected_commit_event(name: Option<&str>) -> bool {
+    matches!(name, Some("workflow_dispatch" | "schedule"))
 }
 
 pub(super) fn dispatch_baseline(root: &Path, sha: &str) -> Result<String> {
@@ -1516,6 +1524,21 @@ fn document_pins(root: &Path) -> Result<DocumentMut> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn scheduled_and_dispatched_runs_check_their_selected_commit() {
+        assert!(super::selected_commit_event(Some("workflow_dispatch")));
+        assert!(super::selected_commit_event(Some("schedule")));
+        for other in [
+            None,
+            Some(""),
+            Some("push"),
+            Some("pull_request"),
+            Some("merge_group"),
+        ] {
+            assert!(!super::selected_commit_event(other));
+        }
+    }
+
     #[test]
     fn strict_client_scope_defers_only_the_named_optional_m10_addition() {
         assert!(super::optional_m10_divergence("D-031", "M10", "addition"));

@@ -14,6 +14,10 @@
 
 - Testnet finalized spec 490 (`:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`) at block 8416678; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/42895343113)). Source: upstream commit `d967d13588834f4f5aaa8ef4c8fc1a865d581462`, whose v490 prerelease wasm is this `:code`. The parity pin is unchanged.
 
+### Runtime adoption fix (D-167, repository maintenance)
+
+- A scheduled runtime-adopt run could never pass stage parity: `parity check` took the shrink-only baseline from the event's `before` SHA, which a `schedule` event does not carry, so the hourly run failed with "CI event lacks a string parity baseline" (run 42917551022) where a dispatched run passed. A scheduled run now checks its selected commit against that commit's first parent, as a dispatch does, with the same checks.
+
 ### Runtime adoption fix (D-166, repository maintenance)
 
 - The second Finney 490 adoption passed every check and then refused its own commit: the commit guard treated the vendored copy of upstream's `sdk/bittensor-core/Cargo.toml` as a workspace manifest. Vendored upstream sources (pinned artifacts verified byte for byte) are now outside the guard; every other manifest and tooling path stays refused.
