@@ -10,7 +10,7 @@
         "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
         "compiler": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0\nLLVM version: 23.1.1",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1794158033,
+        "measured_unix_seconds": 1794342731,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1495,17 +1495,17 @@
             "crates/rtao-transport-quic/Cargo.toml": "c72c99623b01e055ed8307a3b1359ef60852892e2d2df4a845c7416ab17339bd",
             "crates/rtao-tx/Cargo.toml": "9ed0bd496ab8f48c6d3e9966bd130321e81d490a9bbc4f83d87f51e0d209f72f",
             "crates/rtao-wallet/Cargo.toml": "a956707a77f207cbb4d3bba6fbc935e4337c6886ec612c61a8ddbfe3ecaeee97",
-            "crates/rtao/Cargo.toml": "9f4146fc5137bc15b95c3819de9c27d5a11b59bf353a6511e728470ea3c77329",
+            "crates/rtao/Cargo.toml": "48a7a45eb33dfa330b5558ebac5de50dccbb494c521547217eb0dc31b7ccbb3b",
             "upstream.toml": "36c5ae3bc609377d29b7b27b4fd1b44db4e21f4c8395ec324a37bfbd388d235d",
             "xtask/Cargo.toml": "9cf9e09f3d3cf64a1b6cc30b207c07755f2f91c48e3afec31672c5117a5875f3"
           },
-          "dependency_inputs_sha256": "5f1abc451dae09a648ada6dafa39a0f706e0ed944b5358a891e4199e897cbb65",
+          "dependency_inputs_sha256": "e8df56bcc4c4b76b988e67d8e8a6d24fe3c708f1f5e59f3c46d2a02a4291f39a",
           "dirty": true,
-          "head_commit": "018981f854ce7a1be33b380e6faafd8d964bc27a"
+          "head_commit": "50490b9c359a4c6208a2e69d3026031a63dae09a"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "1af92a07d9e5b6794305ac3425ee69b92f29c1b7e5b70fe22c0f649ff9fa3a77"
+      "sha256": "891b6c4a9328dc749b833d7f05a7502364f823c765e152326ef87ee67944cf24"
     }
   ],
   "core": {
