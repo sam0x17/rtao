@@ -4024,7 +4024,11 @@ mod tests {
         const HELPER: &str = "def _core_helper(name: str):\n    native = getattr(_backend, name, None)\n    if native is not None:\n        return native\n    version = _CORE_HELPERS_SINCE[name]\n\n    def unavailable(*args, **kwargs):\n        raise RuntimeError(\n            f\"bittensor.sp_core.{name} requires bittensor-core>={version}; \"\n            \"rebuild or upgrade bittensor-core together with bittensor.\"\n        )\n\n    unavailable.__name__ = unavailable.__qualname__ = name\n    return unavailable\n";
         const CALLS: &str = "\n\nverify_strict = _core_helper(\"verify_strict\")\nencode_password_for_environment = _core_helper(\"encode_password_for_environment\")\n";
         let root = root()?;
-        let source = Resolver::new(&root)?.source(SP_CORE)?;
+        // From v489 the pinned module carries the reviewed helper itself;
+        // each case below composes it onto the module without it.
+        let source = Resolver::new(&root)?
+            .source(SP_CORE)?
+            .replace(&format!("{TABLE}{HELPER}{CALLS}"), "");
         let resolve = |sp_core: String| -> Result<()> {
             let mut actual = Resolver::new(&root)?;
             actual.sources.insert(SP_CORE.into(), sp_core);

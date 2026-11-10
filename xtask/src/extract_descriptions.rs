@@ -249,12 +249,19 @@ mod tests {
         let catalog: Value =
             serde_json::from_slice(&fs::read(root.join("vendor/upstream/catalog/errors.json"))?)?;
         let descriptions = checked(&mut resolver, &pins, &catalog)?;
+        // One description per catalog chain error, at whatever parity pin
+        // (D-165: v490 added five).
+        let expected = catalog["chain_errors"]
+            .as_object()
+            .context("catalog chain errors missing")?
+            .len();
+        assert!(expected >= 441, "{expected} catalog chain errors");
         assert_eq!(
             descriptions["descriptions"]
                 .as_object()
                 .context("description map missing")?
                 .len(),
-            441
+            expected
         );
         let source = resolver.source(AGGREGATOR)?;
         for changed in [
