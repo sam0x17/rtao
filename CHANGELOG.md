@@ -6,6 +6,10 @@
 
 - Testnet finalized spec 490 (`:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`) at block 8416678; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/42895343113)). Source: upstream commit `d967d13588834f4f5aaa8ef4c8fc1a865d581462`, whose v490 prerelease wasm is this `:code`. The parity pin is unchanged.
 
+### Runtime adoption fix (D-164, repository maintenance)
+
+- The Finney 490 adoption failed at stage provenance because upstream had not yet published the `subtensor-localnet:v490` image (it is built only after upstream's mainnet mirror moves). `pin --parity vN` now pins the image of the release's own commit (`:sha-<commit>`, by digest) until `:vN` exists, and `pin --check` accepts either tag for a released pin. Release provenance and the finalized `:code` check are unchanged.
+
 ### Runtime adoption fix (D-162, repository maintenance)
 
 - Testnet recording failed at stage probe for a testnet runtime ahead of Finney (spec 489): the probe pins required a source commit that `drift --apply` records only for the parity runtime. Such a runtime now carries upstream's commit (and the tag of a final release) only when release `vN`'s wasm is exactly its finalized `:code` and the tag, srtool digest, release record and runtime source agree; otherwise it is recorded without one, and the probe pins require a commit only on the parity pin's network.

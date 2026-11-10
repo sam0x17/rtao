@@ -915,9 +915,9 @@ fn release_proof(repo: &Path, requested: &str) -> Result<ReleaseProof> {
         genesis == "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03",
         "endpoint is not finney"
     );
-    let digest = image_digest(&tag)?;
+    let (image_tag, digest) = release_image(&tag, &commit)?;
     Ok(ReleaseProof {
-        image_tag: tag.clone(),
+        image_tag,
         tag,
         commit,
         spec,
@@ -1330,6 +1330,64 @@ fn unreleased(pins: &DocumentMut) -> bool {
         == Some("unreleased")
 }
 
+/// The localnet image upstream built from a release's immutable commit
+/// (D-164). Upstream's mainnet build publishes `:vN` only after its watcher
+/// moves the mainnet mirror branch, which can be well after Finney finalizes
+/// the runtime (v490: the release at 20:14, the adoption's provenance at
+/// 20:48, the mainnet image build still running). Every branch build of the
+/// commit (devnet, testnet, mainnet) also publishes `:sha-<commit>`, the tag
+/// an unreleased pin already uses, so the release's own commit is pinned
+/// through that tag, by digest, until `:vN` exists. Neither published is an
+/// error: the next run retries.
+fn release_image(tag: &str, commit: &str) -> Result<(String, String)> {
+    ensure!(
+        hex_string(commit, 40),
+        "release commit is not a full Git SHA"
+    );
+    if let Some(digest) = published_image_digest(tag)? {
+        return Ok((tag.to_owned(), digest));
+    }
+    let by_commit = format!("sha-{commit}");
+    match published_image_digest(&by_commit)? {
+        Some(digest) => {
+            eprintln!(
+                "{IMAGE}:{tag} is not published yet; pinning the image of the release commit, :{by_commit}"
+            );
+            Ok((by_commit, digest))
+        }
+        None => bail!(
+            "upstream has published no localnet image of {tag} ({commit}) yet: neither {IMAGE}:{tag} nor :{by_commit} exists; the next run retries"
+        ),
+    }
+}
+
+/// `image_digest`, or `None` when the registry has no such tag (HTTP 404).
+fn published_image_digest(tag: &str) -> Result<Option<String>> {
+    match image_digest(tag) {
+        Ok(digest) => Ok(Some(digest)),
+        Err(error) if registry_not_found(&error) => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
+/// curl `--fail` reports a missing manifest as `returned error: 404`.
+fn registry_not_found(error: &anyhow::Error) -> bool {
+    let text = error.to_string();
+    text.contains("/manifests/") && text.contains("returned error: 404")
+}
+
+/// The localnet tags a committed parity pin may carry in its `pinned` lane: an
+/// unreleased pin's commit image, a release's `vN` image or, before `vN` is
+/// published, the release commit's image (D-164).
+fn pinned_image_tags(pins: &DocumentMut) -> Result<Vec<String>> {
+    let commit = format!("sha-{}", pin_string(pins, "parity", "commit")?);
+    Ok(if unreleased(pins) {
+        vec![commit]
+    } else {
+        vec![pin_string(pins, "parity", "tag")?.to_owned(), commit]
+    })
+}
+
 fn image_digest(tag: &str) -> Result<String> {
     ensure!(
         !tag.is_empty()
@@ -1672,15 +1730,14 @@ fn verify_pin_identity(repo: &Path, pins: &DocumentMut) -> Result<()> {
         "unexpected localnet source"
     );
     for lane in ["pinned", "mainnet", "testnet", "devnet", "main"] {
-        let expected_tag = match lane {
-            "pinned" if unreleased(pins) => {
-                format!("sha-{}", pin_string(pins, "parity", "commit")?)
-            }
-            "pinned" => pin_string(pins, "parity", "tag")?.to_owned(),
-            _ => lane.to_owned(),
+        let expected = match lane {
+            "pinned" => pinned_image_tags(pins)?,
+            _ => vec![lane.to_owned()],
         };
         ensure!(
-            pins["localnet"][lane]["tag"].as_str() == Some(expected_tag.as_str()),
+            pins["localnet"][lane]["tag"]
+                .as_str()
+                .is_some_and(|tag| expected.iter().any(|e| e == tag)),
             "localnet {lane} tag differs from pin"
         );
         ensure!(
@@ -2401,6 +2458,31 @@ mod tests {
             }
             ensure!(ok(&deployment, &bad, &wasm).is_err());
         }
+        Ok(())
+    }
+
+    #[test]
+    fn release_pins_accept_the_release_commit_image() -> Result<()> {
+        let commit = "d967d13588834f4f5aaa8ef4c8fc1a865d581462";
+        let released: DocumentMut =
+            format!("[parity]\ntag = 'v490'\ncommit = '{commit}'\n").parse()?;
+        ensure!(pinned_image_tags(&released)? == ["v490".to_owned(), format!("sha-{commit}")]);
+        let mut unreleased = released.clone();
+        unreleased["parity"]["release"] = value("unreleased");
+        ensure!(pinned_image_tags(&unreleased)? == [format!("sha-{commit}")]);
+        let missing = anyhow::anyhow!(
+            "HTTPS request to https://ghcr.io/v2/raofoundation/subtensor-localnet/manifests/v490 failed: curl: (22) The requested URL returned error: 404"
+        );
+        ensure!(registry_not_found(&missing));
+        let denied = anyhow::anyhow!(
+            "HTTPS request to https://ghcr.io/v2/raofoundation/subtensor-localnet/manifests/v490 failed: curl: (22) The requested URL returned error: 401"
+        );
+        ensure!(!registry_not_found(&denied));
+        let token = anyhow::anyhow!(
+            "HTTPS request to https://ghcr.io/token?scope=x failed: curl: (22) The requested URL returned error: 404"
+        );
+        ensure!(!registry_not_found(&token));
+        ensure!(release_image("v490", "not-a-commit").is_err());
         Ok(())
     }
 
