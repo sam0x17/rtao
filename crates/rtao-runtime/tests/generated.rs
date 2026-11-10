@@ -5,15 +5,13 @@ use rtao_primitives::{AccountId, CompactBytesText, DefaultAccount, StakeWeight, 
 use rtao_runtime::{ModelFieldDescriptor, StorageDescriptor, shapes, storage};
 use scale_decode::DecodeAsType;
 
+#[path = "support/pinned_metadata.rs"]
+mod pinned_metadata;
+use pinned_metadata::pinned_metadata;
+
 #[test]
 fn zero_account_default_decodes_to_zero_bytes() {
-    let runtime = Runtime::parse(
-        include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
-        488,
-        1,
-        42,
-    )
-    .unwrap();
+    let runtime = Runtime::parse(&pinned_metadata().0, pinned_metadata().1, 1, 42).unwrap();
     let entries = runtime
         .pallets
         .iter()
@@ -86,15 +84,7 @@ fn semantic_model_fields_and_native_fixed_fraction_are_typed() {
 fn path_only_leaf_aliases_preserve_structural_surface_and_composed_bytes() {
     use rtao_primitives::NetUid;
     use rtao_runtime::{RuntimeHandle, calls};
-    let parse = || {
-        Runtime::parse(
-            include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
-            488,
-            1,
-            42,
-        )
-        .unwrap()
-    };
+    let parse = || Runtime::parse(&pinned_metadata().0, pinned_metadata().1, 1, 42).unwrap();
     let before = RuntimeHandle::new(parse()).unwrap();
     let mut aliased = parse();
     let account = aliased
@@ -139,15 +129,7 @@ fn api_by_name_output_projection_tolerates_only_undeclared_fields() {
     use rtao_runtime::{
         RuntimeHandle, SurfaceDescriptor, runtime_apis, shape_parts, verify_surface_with,
     };
-    let parse = || {
-        Runtime::parse(
-            include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
-            488,
-            1,
-            42,
-        )
-        .unwrap()
-    };
+    let parse = || Runtime::parse(&pinned_metadata().0, pinned_metadata().1, 1, 42).unwrap();
     let baseline = RuntimeHandle::new(parse()).unwrap();
     let mut expected = runtime_apis::subnet_info_runtime_api::GET_METAGRAPH.surface();
     let method = baseline.runtime_api(expected.api, expected.name).unwrap();

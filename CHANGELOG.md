@@ -6,6 +6,10 @@
 
 - Testnet finalized spec 490 (`:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`) at block 8416678; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/42895343113)). Source: upstream commit `d967d13588834f4f5aaa8ef4c8fc1a865d581462`, whose v490 prerelease wasm is this `:code`. The parity pin is unchanged.
 
+### Runtime adoption fix (D-165, repository maintenance)
+
+- The dispatched Finney 490 adoption failed at stage tests: `rtao-runtime`'s surface tests compared the regenerated surface with the 488 metadata by literal path. Tests that compare the generated surface with metadata now read the pinned Finney codegen input from `upstream.toml`, so an adoption moves them with the pin.
+
 ### Runtime adoption fix (D-164, repository maintenance)
 
 - The Finney 490 adoption failed at stage provenance because upstream had not yet published the `subtensor-localnet:v490` image (it is built only after upstream's mainnet mirror moves). `pin --parity vN` now pins the image of the release's own commit (`:sha-<commit>`, by digest) until `:vN` exists, and `pin --check` accepts either tag for a released pin. Release provenance and the finalized `:code` check are unchanged.

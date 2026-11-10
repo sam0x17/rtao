@@ -913,10 +913,11 @@ mod tests {
     use blake2::Digest;
     use rtao_core::codec::Value;
 
-    const METADATA: &[u8] = include_bytes!("../../../vendor/metadata/finney/488.v15.scale");
+    include!("../tests/support/pinned_metadata.rs");
 
     fn parse_core() -> Runtime {
-        Runtime::parse(METADATA, 488, 1, 42).unwrap()
+        let (metadata, spec) = pinned_metadata();
+        Runtime::parse(metadata, *spec, 1, 42).unwrap()
     }
 
     fn runtime() -> RuntimeHandle {

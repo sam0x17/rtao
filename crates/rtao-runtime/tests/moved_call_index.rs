@@ -14,16 +14,14 @@ use rtao_runtime::{
 };
 use scale_info::TypeDef;
 
+#[path = "support/pinned_metadata.rs"]
+mod pinned_metadata;
+use pinned_metadata::pinned_metadata;
+
 const DESCRIPTOR: &str = "call:SubtensorModule.set_mechanism_weights";
 
 fn pinned() -> Runtime {
-    Runtime::parse(
-        include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
-        488,
-        1,
-        42,
-    )
-    .unwrap()
+    Runtime::parse(&pinned_metadata().0, pinned_metadata().1, 1, 42).unwrap()
 }
 
 fn set_weights() -> rtao_runtime::Call {
