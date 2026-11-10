@@ -215,7 +215,7 @@ expect_pins core-bump-unreleased-source "$unreleased_root" "$(bump "$current")" 
 # The commit guard: a core bump may change manifests and locks, and in a
 # manifest only the core's references; everything else stays refused.
 sed -n -e '/^die() {/,/^}/p' -e '/^tooling_paths=/p' -e '/^core_bump_paths=/p' -e '/^core_reference=/p' \
-  -e '/^check_paths() {/,/^}/p' "$script" >"$work/paths.sh"
+  -e '/^vendored_sources=/p' -e '/^check_paths() {/,/^}/p' "$script" >"$work/paths.sh"
 # shellcheck disable=SC1091
 source "$work/paths.sh"
 guard=$work/guard
@@ -234,6 +234,9 @@ TOML
 printf 'w3f-bls = { git = "%s", tag = "v478" }\n' "$upstream_url" >"$guard/ci/probe/Cargo.toml"
 printf 'lock v478\n' >"$guard/Cargo.lock"
 printf 'fn main() {}\n' >"$guard/xtask/main.rs"
+mkdir -p "$guard/vendor/upstream/src/sdk/bittensor-core"
+printf '[package]\nname = "bittensor-core"\n' >"$guard/vendor/upstream/src/sdk/bittensor-core/Cargo.toml"
+printf '[workspace]\n' >"$guard/vendor/upstream/Cargo.toml"
 guarded() { git -C "$guard" -c user.name=t -c user.email=t@invalid "$@"; }
 guarded add -A
 guarded commit -q -m base
@@ -256,6 +259,8 @@ guard_case core-references-move pass core-bump "$moved"
 guard_case adoption-refuses-manifests refuse adopt-finney "$moved"
 guard_case core-bump-refuses-other-manifest-lines refuse core-bump "$moved && sed -i 's/serde = \"1\"/serde = \"2\"/' Cargo.toml"
 guard_case core-bump-refuses-tooling refuse core-bump "$moved && echo '// x' >>xtask/main.rs"
+guard_case adoption-accepts-vendored-upstream-manifest pass adopt-finney "echo 'version = \"1\"' >>vendor/upstream/src/sdk/bittensor-core/Cargo.toml"
+guard_case adoption-refuses-manifest-outside-vendored-sources refuse adopt-finney "echo '# x' >>vendor/upstream/Cargo.toml"
 guard_case core-bump-refuses-another-repository refuse core-bump "sed -i 's|$fork_url|https://github.com/attacker/subtensor.git|' Cargo.toml"
 
 # ── live-evidence verdict ─────────────────────────────────────────────

@@ -1058,13 +1058,18 @@ bot() {
 # was not produced by the pipeline as checked: refuse it, here and again in
 # the push job, which trusts nothing the adopt job built.
 tooling_paths='^(\.github/|ci/|xtask/|\.cargo/|\.config/|patches/|rust-toolchain\.toml$|deny\.toml$|clippy\.toml$|AGENTS\.md$)|(^|/)(Cargo\.toml|Cargo\.lock|build\.rs)$'
+# Vendored upstream sources (`import-upstream`, each a pinned artifact whose
+# bytes the checks stage verifies with `import-upstream --verify-only`) are
+# not workspace members or tooling, whatever their file name: v490 changed
+# the vendored `sdk/bittensor-core/Cargo.toml` (D-166).
+vendored_sources='^vendor/upstream/src/'
 # A core bump (D-136) must move the core's references in manifests and
 # locks; every changed manifest line must be one of those references.
 core_bump_paths='(^|/)Cargo\.(toml|lock)$'
 core_reference='^[-+]([A-Za-z0-9_-]+ = \{ git = "https://github\.com/(RaoFoundation|sam0x17)/subtensor\.git", (tag = "v[0-9]+"|rev = "[0-9a-f]{40}")(, [^{}]*)? \}|\[patch\."https://github\.com/(RaoFoundation|sam0x17)/subtensor\.git"\]|)$'
 check_paths() {
   local touched manifest stray
-  touched=$(git diff --name-only "$1" "$2" | grep -E "$tooling_paths" || true)
+  touched=$(git diff --name-only "$1" "$2" | grep -Ev "$vendored_sources" | grep -E "$tooling_paths" || true)
   if [[ "${3:-}" == core-bump ]]; then
     for manifest in $(grep -E '(^|/)Cargo\.toml$' <<<"$touched" || true); do
       stray=$(git diff --no-color --no-ext-diff -U0 "$1" "$2" -- "$manifest" |
