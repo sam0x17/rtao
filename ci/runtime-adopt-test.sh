@@ -58,7 +58,10 @@ release="{\"$next\": {\"release\": {\"tag\": \"v$next\", \"prerelease\": false, 
 prerelease="{\"$next\": {\"release\": {\"tag\": \"v$next\", \"prerelease\": true, \"draft\": false}, \"main_merge\": \"$merge\"}}"
 merge_only="{\"$next\": {\"release\": null, \"main_merge\": \"$merge\"}}"
 nothing="{\"$next\": {\"release\": null, \"main_merge\": null}}"
-ahead="{\"main\": {\"head\": \"$merge\", \"spec\": $next}, \"testnet\": {\"head\": \"$merge\", \"spec\": $testnet_spec}}"
+# Upcoming means above every running runtime, and the last testnet row may be
+# ahead of the parity pin (D-162), so the simulated branch declares one more.
+upcoming=$(( (testnet_spec > spec ? testnet_spec : spec) + 1 ))
+ahead="{\"main\": {\"head\": \"$merge\", \"spec\": $upcoming}, \"testnet\": {\"head\": \"$merge\", \"spec\": $testnet_spec}}"
 
 expect current "$(observation "$spec" "$code" "$testnet_spec" "$testnet_code")" \
   '.action == "none" and .deferred == [] and .upcoming == [] and .unobserved == []'
@@ -85,7 +88,7 @@ expect finney-blocked-testnet-new "$(observation "$spec" "$other" "$next" "$othe
 expect finney-unreachable "$(observation null "" "$testnet_spec" "$testnet_code")" \
   '.action == "none" and (.unobserved | length) == 1'
 expect upstream-ahead "$(observation "$spec" "$code" "$testnet_spec" "$testnet_code" '{}' "$ahead")" \
-  ".action == \"none\" and (.upcoming | map(.branch)) == [\"main\"] and .upcoming[0].spec == $next"
+  ".action == \"none\" and (.upcoming | map(.branch)) == [\"main\"] and .upcoming[0].spec == $upcoming"
 expect wrong-spec-name "$(observation "$spec" "$code" "$testnet_spec" "$testnet_code" | jq -c '.finney.spec_name = "other"')" \
   '.action == "blocked" and (.reason | test("spec_name"))'
 
