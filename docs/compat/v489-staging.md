@@ -117,8 +117,7 @@ Upstream `main` then declared spec 490 (`d967d13588834f4f5aaa8ef4c8fc1a865d58146
 version (11.3.3.dev0) change, and testnet finalized 490. Testnet's 490
 metadata against Finney's 488 is purely additive: the two calls, five storage
 entries, three events and five errors above, with `System.Version`
-surface-unchanged. Whichever of 489 or 490 Finney enacts, this branch applies
-unchanged.
+surface-unchanged. Finney enacted 490; this branch applies to it unchanged.
 
 ## Automated adoption (rehearsal)
 
@@ -128,7 +127,7 @@ parity pin moved to v489, the published localnet image
 (`sha256:7c09de9b…`, revision `0b9d7403`) served spec 489,
 `transaction_version` 1, and its V15/V16 metadata was indexed in place of
 Finney's. Provenance, live evidence, the probe's hosted inputs and the commit
-were not exercised (no network runs 489 on Finney).
+were not exercised (the rehearsal did not run against Finney).
 
 - `import`, the core hold (`[parity] core_fingerprint`), `compat` after the
   build-weight remeasure, `probe pins`, every `--check`, the workspace build
@@ -142,7 +141,7 @@ were not exercised (no network runs 489 on Finney).
   `main` for the Finney 490 adoption.
 - `drift`: additive, signing envelope unchanged; the run's stop condition
   (a breaking extrinsic or `System.Version` change) does not fire. The
-  localnet's extra `faucet` call and two storage defaults are fast-runtime
+  localnet's extra `faucet` call and two storage defaults are localnet build
   artefacts, absent from testnet's metadata.
 - `parity` in adoption mode: 20 changed sources go to `parity/port_due.toml`
   (the emission weights, gamma, transport, `sp_core` and core sources above),
