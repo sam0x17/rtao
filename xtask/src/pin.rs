@@ -930,6 +930,205 @@ fn release_proof(repo: &Path, requested: &str) -> Result<ReleaseProof> {
     })
 }
 
+/// The proven upstream source of a runtime that a network other than the
+/// parity pin's finalized (D-162): `commit` declares the spec and upstream's
+/// srtool build of it is exactly the finalized `:code`.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct RuntimeSource {
+    /// The release tag, only for a final release (a prerelease tag may move).
+    pub(crate) tag: Option<String>,
+    pub(crate) commit: String,
+    pub(crate) prerelease: bool,
+}
+
+/// What upstream's `vN` release says about one runtime.
+struct ReleaseEvidence<'a> {
+    release: &'a Json,
+    /// `git/ref/tags/vN`.
+    tag_ref: &'a Json,
+    digest: &'a Json,
+    wasm: &'a [u8],
+    /// `runtime/src/lib.rs` at the tag's commit.
+    runtime_source: &'a str,
+    /// `upgrade-manifest.json` or `deployment.json`, when published.
+    record: Option<&'a Json>,
+}
+
+/// Prove that release `v<spec>` builds `code`, or say why it does not. Every
+/// identity must agree: the tag names a commit, that commit declares the spec,
+/// the srtool digest names the commit, the wasm's SHA256, BLAKE2b-256 and
+/// spec, and any release record names the same commit, spec and wasm. A
+/// prerelease is accepted here (its wasm is still compared with the finalized
+/// `:code`), but its tag is not recorded.
+fn prove_source(spec: u32, code: &str, evidence: &ReleaseEvidence<'_>) -> Result<RuntimeSource> {
+    let tag = format!("v{spec}");
+    let release = evidence.release;
+    ensure!(
+        release["draft"].as_bool() == Some(false),
+        "{tag} is a draft"
+    );
+    ensure!(
+        release["tag_name"].as_str() == Some(tag.as_str()),
+        "GitHub returned another release than {tag}"
+    );
+    let prerelease = release["prerelease"]
+        .as_bool()
+        .context("release prerelease flag absent")?;
+    ensure!(
+        evidence.tag_ref["object"]["type"].as_str() == Some("commit"),
+        "{tag} is not a lightweight tag naming a commit"
+    );
+    let commit = json_string(&evidence.tag_ref["object"], "sha")?;
+    ensure!(hex_string(commit, 40), "{tag} names no Git commit");
+    ensure!(
+        declared_spec(evidence.runtime_source)? == spec,
+        "{tag}'s commit {commit} does not declare spec {spec}"
+    );
+    let sha256 = format!("0x{:x}", Sha256::digest(evidence.wasm));
+    let hash = format!("0x{:x}", Blake2b::<U32>::digest(evidence.wasm));
+    ensure!(
+        hash == code,
+        "{tag}'s release wasm is :code {hash}, not the finalized {code}"
+    );
+    let digest = evidence.digest;
+    ensure!(
+        digest["commit"].as_str() == Some(commit)
+            && digest["sha256"].as_str() == Some(sha256.as_str())
+            && digest["runtimes"]["compressed"]["blake2_256"].as_str() == Some(hash.as_str())
+            && digest["runtimes"]["compressed"]["subwasm"]["core_version"]["specVersion"].as_u64()
+                == Some(u64::from(spec)),
+        "{tag}'s srtool digest does not name commit {commit}, spec {spec} and its wasm"
+    );
+    if let Some(record) = evidence.record {
+        ensure!(
+            record["commit"].as_str() == Some(commit)
+                && record["spec_version"].as_u64() == Some(u64::from(spec))
+                && record
+                    .get("tag")
+                    .is_none_or(|value| value.as_str() == Some(tag.as_str()))
+                && record
+                    .get("repo")
+                    .is_none_or(|value| value.as_str() == Some(REPOSITORY))
+                && record
+                    .get("wasm_sha256")
+                    .is_none_or(|value| value.as_str() == Some(sha256.as_str()))
+                && record
+                    .get("code_hash")
+                    .is_none_or(|value| value.as_str() == Some(hash.as_str())),
+            "{tag}'s release record disagrees with its tag, commit or wasm"
+        );
+    }
+    Ok(RuntimeSource {
+        tag: (!prerelease).then_some(tag),
+        commit: commit.to_owned(),
+        prerelease,
+    })
+}
+
+/// A GitHub read that may answer 404 (`None`).
+fn github_optional(path: &str, raw: bool) -> Result<Option<Vec<u8>>> {
+    let mut command = Command::new("gh");
+    command.args(["api", "--method", "GET"]);
+    if raw {
+        command.args(["--header", "Accept: application/vnd.github.raw+json"]);
+    }
+    let output = command
+        .arg(path)
+        .output()
+        .context("GitHub reads require gh (or install the GitHub CLI)")?;
+    if output.status.success() {
+        return Ok(Some(output.stdout));
+    }
+    let error = String::from_utf8_lossy(&output.stderr);
+    ensure!(
+        error.contains("HTTP 404"),
+        "GitHub read {path} failed: {error}"
+    );
+    Ok(None)
+}
+
+/// Look up the upstream source of runtime `spec` with `:code` `code` (D-162).
+/// `Ok(Err(reason))`: upstream offers no provable source (no release, missing
+/// assets, a wasm that is not this `:code`, disagreeing identities), so the
+/// runtime is recorded without one. `Err`: GitHub could not be read.
+pub(crate) fn release_source(spec: u32, code: &str) -> Result<Result<RuntimeSource, String>> {
+    let tag = format!("v{spec}");
+    let Some(release) = github_optional(&format!("repos/{REPOSITORY}/releases/tags/{tag}"), false)?
+    else {
+        return Ok(Err(format!("upstream has published no {tag} release")));
+    };
+    let release: Json = serde_json::from_slice(&release).context("invalid GitHub JSON")?;
+    let Some(tag_ref) = github_optional(&format!("repos/{REPOSITORY}/git/ref/tags/{tag}"), false)?
+    else {
+        return Ok(Err(format!("{tag} has a release but no tag")));
+    };
+    let tag_ref: Json = serde_json::from_slice(&tag_ref).context("invalid GitHub JSON")?;
+    let assets = release["assets"].as_array().cloned().unwrap_or_default();
+    let asset = |name: &str| -> Result<Option<Vec<u8>>> {
+        let candidates: Vec<_> = assets
+            .iter()
+            .filter(|asset| asset["name"].as_str() == Some(name))
+            .collect();
+        let [candidate] = candidates.as_slice() else {
+            return Ok(None);
+        };
+        let url = json_string(candidate, "browser_download_url")?;
+        ensure!(
+            url == format!("https://github.com/{REPOSITORY}/releases/download/{tag}/{name}"),
+            "unexpected release asset URL {url}"
+        );
+        http(url, &[], None, false).map(Some)
+    };
+    let (Some(wasm), Some(digest)) = (asset("subtensor.wasm")?, asset("subtensor-digest.json")?)
+    else {
+        return Ok(Err(format!(
+            "{tag} lacks exactly one subtensor.wasm and subtensor-digest.json"
+        )));
+    };
+    let digest: Json = serde_json::from_slice(&digest).context("invalid srtool digest")?;
+    let record = match (asset("upgrade-manifest.json")?, asset("deployment.json")?) {
+        (Some(_), Some(_)) => {
+            return Ok(Err(format!(
+                "{tag} carries both an upgrade manifest and a deployment record"
+            )));
+        }
+        (Some(record), None) | (None, Some(record)) => {
+            Some(serde_json::from_slice::<Json>(&record).context("invalid release record")?)
+        }
+        (None, None) => None,
+    };
+    let Some(commit) = tag_ref["object"]["sha"]
+        .as_str()
+        .filter(|commit| hex_string(commit, 40))
+    else {
+        return Ok(Err(format!("{tag} names no Git commit")));
+    };
+    let Some(runtime_source) = github_optional(
+        &format!("repos/{REPOSITORY}/contents/runtime/src/lib.rs?ref={commit}"),
+        true,
+    )?
+    else {
+        return Ok(Err(format!(
+            "{tag}'s commit {commit} has no runtime source"
+        )));
+    };
+    let runtime_source =
+        String::from_utf8(runtime_source).context("runtime source is not UTF-8")?;
+    Ok(prove_source(
+        spec,
+        code,
+        &ReleaseEvidence {
+            release: &release,
+            tag_ref: &tag_ref,
+            digest: &digest,
+            wasm: &wasm,
+            runtime_source: &runtime_source,
+            record: record.as_ref(),
+        },
+    )
+    .map_err(|error| format!("{error:#}")))
+}
+
 /// The endpoint for a proving network, overridable as `RTAO_<NETWORK>_HTTP`.
 fn network_endpoint(network: &str) -> Result<String> {
     let (_, endpoint, _) = PROOF_NETWORKS
@@ -2024,6 +2223,152 @@ mod tests {
             )
             .is_err()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn runtime_source_is_proven_only_when_every_identity_agrees() -> Result<()> {
+        // D-162: a runtime ahead of the parity pin (testnet 489) is recorded
+        // with the commit whose release wasm is exactly its finalized :code.
+        let wasm = b"testnet runtime fixture".to_vec();
+        let sha = format!("0x{:x}", Sha256::digest(&wasm));
+        let code = format!("0x{:x}", Blake2b::<U32>::digest(&wasm));
+        let commit = "0b9d7403b12847a1807be0d328617517114aae6d";
+        let release = json!({"draft": false, "prerelease": true, "tag_name": "v489"});
+        let tag_ref = json!({"object": {"type": "commit", "sha": commit}});
+        let digest = json!({"commit": commit, "sha256": sha, "runtimes": {"compressed": {"blake2_256": code, "subwasm": {"core_version": {"specVersion": 489}}}}});
+        let manifest = json!({"tag": "v489", "commit": commit, "repo": REPOSITORY, "network": "finney", "spec_version": 489, "wasm_sha256": sha});
+        let source = "    spec_version: 489,\n";
+        let prove = |release: &Json,
+                     tag_ref: &Json,
+                     digest: &Json,
+                     wasm: &[u8],
+                     runtime_source: &str,
+                     record: Option<&Json>,
+                     code: &str| {
+            prove_source(
+                489,
+                code,
+                &ReleaseEvidence {
+                    release,
+                    tag_ref,
+                    digest,
+                    wasm,
+                    runtime_source,
+                    record,
+                },
+            )
+        };
+        let proven = prove(
+            &release,
+            &tag_ref,
+            &digest,
+            &wasm,
+            source,
+            Some(&manifest),
+            &code,
+        )?;
+        assert_eq!(
+            proven,
+            RuntimeSource {
+                tag: None,
+                commit: commit.to_owned(),
+                prerelease: true
+            }
+        );
+        let mut final_release = release.clone();
+        final_release["prerelease"] = json!(false);
+        assert_eq!(
+            prove(
+                &final_release,
+                &tag_ref,
+                &digest,
+                &wasm,
+                source,
+                None,
+                &code
+            )?
+            .tag,
+            Some("v489".to_owned())
+        );
+        // Another :code (testnet running a build that is not the release).
+        let other = format!("0x{}", "07".repeat(32));
+        assert!(prove(&release, &tag_ref, &digest, &wasm, source, None, &other).is_err());
+        assert!(
+            prove(
+                &release,
+                &tag_ref,
+                &digest,
+                b"other wasm",
+                source,
+                None,
+                &code
+            )
+            .is_err()
+        );
+        for (key, bad_value) in [
+            ("draft", json!(true)),
+            ("tag_name", json!("v488")),
+            ("prerelease", json!(null)),
+        ] {
+            let mut bad = release.clone();
+            bad[key] = bad_value;
+            assert!(prove(&bad, &tag_ref, &digest, &wasm, source, None, &code).is_err());
+        }
+        for bad in [
+            json!({"object": {"type": "tag", "sha": commit}}),
+            json!({"object": {"type": "commit", "sha": "main"}}),
+        ] {
+            assert!(prove(&release, &bad, &digest, &wasm, source, None, &code).is_err());
+        }
+        assert!(
+            prove(
+                &release,
+                &tag_ref,
+                &digest,
+                &wasm,
+                "spec_version: 488,",
+                None,
+                &code
+            )
+            .is_err()
+        );
+        for (pointer, bad_value) in [
+            ("/commit", json!("other")),
+            ("/sha256", json!("0xdead")),
+            ("/runtimes/compressed/blake2_256", json!("0xdead")),
+            (
+                "/runtimes/compressed/subwasm/core_version/specVersion",
+                json!(488),
+            ),
+        ] {
+            let mut bad = digest.clone();
+            *bad.pointer_mut(pointer).context("digest pointer")? = bad_value;
+            assert!(prove(&release, &tag_ref, &bad, &wasm, source, None, &code).is_err());
+        }
+        for (key, bad_value) in [
+            ("commit", json!("other")),
+            ("tag", json!("v488")),
+            ("repo", json!("attacker/subtensor")),
+            ("spec_version", json!(488)),
+            ("wasm_sha256", json!("0xdead")),
+            ("code_hash", json!("0xdead")),
+        ] {
+            let mut bad = manifest.clone();
+            bad[key] = bad_value;
+            assert!(
+                prove(
+                    &release,
+                    &tag_ref,
+                    &digest,
+                    &wasm,
+                    source,
+                    Some(&bad),
+                    &code
+                )
+                .is_err()
+            );
+        }
         Ok(())
     }
 

@@ -1025,15 +1025,23 @@ Workflow run: <$run>."
 }
 
 record_testnet() {
-  local decision=$1 evidence=$2 spec code number run class
+  local decision=$1 evidence=$2 spec code number run class source_text
   spec=$(jq -r .spec "$decision")
   code=$(jq -r .code "$decision")
   number=$(jq -r .observed.testnet.number "$decision")
   class=$(jq -r '.classification // "recorded"' "$evidence/drift/report.json" 2>/dev/null || echo recorded)
   run=${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-local}/actions/runs/${GITHUB_RUN_ID:-local}
+  # drift --apply proves a source for a runtime other than the parity one
+  # only from upstream's release wasm (D-162); the parity runtime carries the
+  # parity tag and commit (D-126).
+  source_text=$(jq -r '
+    if .proven == true then
+      " Source: upstream commit `\(.commit)`, whose \(.release)\(if .prerelease then " prerelease" else "" end) wasm is this `:code`."
+    elif .proven == false then " No upstream source is recorded: \(.reason)."
+    else "" end' "$evidence/drift/source.json" 2>/dev/null || true)
   changelog_entry "### Testnet runtime $spec recorded automatically
 
-- Testnet finalized spec $spec (\`:code\` \`$code\`) at block $number; its V15/V16 metadata is indexed under \`vendor/metadata/testnet/\` (drift against the previous testnet row: \`$class\`) and the probe pins are regenerated ([run]($run)). The parity pin is unchanged."
+- Testnet finalized spec $spec (\`:code\` \`$code\`) at block $number; its V15/V16 metadata is indexed under \`vendor/metadata/testnet/\` (drift against the previous testnet row: \`$class\`) and the probe pins are regenerated ([run]($run)).$source_text The parity pin is unchanged."
 }
 
 # ── commit and push ───────────────────────────────────────────────────

@@ -470,7 +470,6 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
         );
         Ok(())
     }
-    #[allow(clippy::too_many_arguments)]
     // The walk threads its reviewed-state counters explicitly (D-163 added
     // the core helper flag) rather than hiding them in a context type.
     #[allow(clippy::too_many_arguments)]
