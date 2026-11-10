@@ -130,6 +130,78 @@ fn metadata_contains(hit: &Hit) -> bool {
 
 /// Preserve authenticated hit evidence and return the exact effective coverage.
 ///
+/// Carry every replacement citation to the pinned sources after a parity pin
+/// moved (`parity pending --base`, run by runtime adoption before `regen`).
+///
+/// A citation binds the Python read source and the runtime source by their
+/// pinned SHA-256 (and the Python blob), so any change elsewhere in a cited
+/// file used to stop the regeneration of an otherwise unchanged replacement.
+/// Only identities move here: a cited path must be a pinned artifact whose
+/// vendored bytes hash to its pin, and a changed runtime source must still
+/// contain the row's predicate text. Every behavioural rule (the replaced hit
+/// is an authenticated extracted hit of the new source, both descriptors are
+/// in the pinned metadata, the predicate names the target, the divergence is
+/// active) is then checked by `apply` in the same adoption's `regen` and
+/// `regen --check`, exactly as for a reviewed row. Returns whether any row
+/// changed.
+pub(crate) fn refresh_citations(root: &Path) -> Result<bool> {
+    let path = root.join("parity/read_hits_extra.toml");
+    let mut document: DocumentMut = fs::read_to_string(&path)?.parse()?;
+    let pins: DocumentMut = fs::read_to_string(root.join("upstream.toml"))?.parse()?;
+    let pinned = |source: &str| -> Result<(String, Vec<u8>)> {
+        let sha = pins
+            .get("artifacts")
+            .and_then(|artifacts| artifacts.get(source))
+            .and_then(|artifact| artifact.get("sha256"))
+            .and_then(Item::as_str)
+            .context("replacement citation is not an authenticated artifact")?
+            .to_owned();
+        let bytes = pinned_source(root, &pins, source, &sha)?;
+        Ok((sha, bytes))
+    };
+    let mut changed = false;
+    let Some(reads) = document.get_mut("read").and_then(Item::as_table_like_mut) else {
+        return Ok(false);
+    };
+    for (name, read) in reads.iter_mut() {
+        let Some(rows) = read.get_mut("replacements").and_then(Item::as_array_mut) else {
+            continue;
+        };
+        for row in rows.iter_mut() {
+            let row = row
+                .as_inline_table_mut()
+                .context("read replacement must be an inline table")?;
+            let source_path = field(row, "source_path")?.to_owned();
+            let (sha, bytes) = pinned(&source_path)
+                .with_context(|| format!("{name}: replacement source {source_path}"))?;
+            if field(row, "source_sha256")? != sha {
+                row.insert("source_blob", crate::extract::git_blob(&bytes).into());
+                row.insert("source_sha256", sha.into());
+                println!("{name}: replacement cites {source_path} at its pinned blob");
+                changed = true;
+            }
+            let runtime_path = field(row, "runtime_path")?.to_owned();
+            let (sha, bytes) = pinned(&runtime_path)
+                .with_context(|| format!("{name}: replacement runtime {runtime_path}"))?;
+            if field(row, "runtime_sha256")? != sha {
+                let runtime =
+                    std::str::from_utf8(&bytes).context("runtime citation must be UTF-8")?;
+                ensure!(
+                    runtime.contains(field(row, "runtime_predicate")?),
+                    "{name}: the pinned {runtime_path} no longer contains the replacement predicate; review the divergence"
+                );
+                row.insert("runtime_sha256", sha.into());
+                println!("{name}: replacement cites {runtime_path} at its pinned source");
+                changed = true;
+            }
+        }
+    }
+    if changed {
+        fs::write(&path, document.to_string())?;
+    }
+    Ok(changed)
+}
+
 /// Replacements require source identity, pinned runtime proof and an active
 /// divergence with this exact read/from/to mapping. Rejection leaves `hits`
 /// untouched. Raw extraction and catalog records are never modified.
@@ -592,6 +664,75 @@ mod tests {
         let mut f = Fixture::load()?;
         f.replacement()?.insert("skip_coverage", true.into());
         assert!(f.apply().is_err());
+        Ok(())
+    }
+
+    // D-163: a moved pin carries the citations; behaviour stays with apply.
+    #[test]
+    fn refresh_carries_citations_to_pinned_sources_only() -> Result<()> {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace")?
+            .to_owned();
+        let base = std::env::var_os("RTAO_TEST_TMPDIR")
+            .or_else(|| std::env::var_os("RTAO_TEMP_ROOT"))
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir);
+        let root = base.join(format!("read-hit-refresh-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let extras: DocumentMut =
+            fs::read_to_string(workspace.join("parity/read_hits_extra.toml"))?.parse()?;
+        let row = extras["read"]["subnet_start_schedule"]["replacements"]
+            .as_array()
+            .and_then(|rows| rows.get(0))
+            .and_then(toml_edit::Value::as_inline_table)
+            .context("D-040 row")?
+            .clone();
+        let cited = [field(&row, "source_path")?, field(&row, "runtime_path")?];
+        for path in ["upstream.toml", "parity/read_hits_extra.toml"]
+            .into_iter()
+            .map(str::to_owned)
+            .chain(
+                cited
+                    .iter()
+                    .map(|path| format!("vendor/upstream/src/{path}")),
+            )
+        {
+            fs::create_dir_all(root.join(&path).parent().context("parent")?)?;
+            fs::copy(workspace.join(&path), root.join(&path))?;
+        }
+        let extras_path = root.join("parity/read_hits_extra.toml");
+        let pinned = fs::read_to_string(&extras_path)?;
+        // Already at the pinned sources: nothing moves.
+        assert!(!refresh_citations(&root)?);
+        assert_eq!(fs::read_to_string(&extras_path)?, pinned);
+        // Citations of an earlier pin move to the pinned identities.
+        let stale = pinned
+            .replace(field(&row, "source_blob")?, &"1".repeat(40))
+            .replace(field(&row, "source_sha256")?, &"2".repeat(64))
+            .replace(field(&row, "runtime_sha256")?, &"3".repeat(64));
+        fs::write(&extras_path, &stale)?;
+        assert!(refresh_citations(&root)?);
+        assert_eq!(fs::read_to_string(&extras_path)?, pinned);
+        // A pinned runtime source without the predicate is not carried.
+        let runtime = root.join(format!("vendor/upstream/src/{}", cited[1]));
+        let changed = fs::read_to_string(&runtime)?.replace(
+            field(&row, "runtime_predicate")?,
+            "registration_block_number",
+        );
+        fs::write(&runtime, &changed)?;
+        let mut pins: DocumentMut = fs::read_to_string(root.join("upstream.toml"))?.parse()?;
+        pins["artifacts"][cited[1]]["sha256"] =
+            value(format!("{:x}", Sha256::digest(changed.as_bytes())));
+        fs::write(root.join("upstream.toml"), pins.to_string())?;
+        let failure = refresh_citations(&root)
+            .err()
+            .context("predicate loss accepted")?;
+        assert!(format!("{failure:#}").contains("no longer contains the replacement predicate"));
+        // Vendored bytes that differ from their pin are never cited.
+        fs::write(&runtime, b"tampered")?;
+        assert!(refresh_citations(&root).is_err());
+        fs::remove_dir_all(&root)?;
         Ok(())
     }
 }

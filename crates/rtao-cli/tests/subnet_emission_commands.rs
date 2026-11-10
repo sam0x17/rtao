@@ -246,11 +246,12 @@ fn netuid() -> String {
     SUBNET.0.to_string()
 }
 
-const SHOW_FIELDS: [&str; 15] = [
+const SHOW_FIELDS: [&str; 16] = [
     "netuid",
     "block",
     "weights",
     "shares",
+    "gamma_share",
     "global_tao_weight",
     "root_share",
     "baseline_root_share",

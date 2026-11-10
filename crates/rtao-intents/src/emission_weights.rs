@@ -15,7 +15,7 @@ use rtao_client::{View, ViewExt};
 use rtao_primitives::{AccountId, NetUid, emission_weights as ew, pyfmt::fmt_grouped};
 use rtao_reads::reads::subnets::{
     RootPreservationInputs, SubnetEmissionWeightsInfo, emission_weights_rate_limit_key,
-    root_preservation_inputs, subnet_emission_weights_info,
+    gamma_emission_share, root_preservation_inputs, subnet_emission_weights_info,
 };
 use rtao_runtime::{calls::admin_utils, storage::subtensor_module as st};
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentPreflight, PreflightCx};
@@ -133,17 +133,19 @@ pub(crate) fn canonicalize(intent: &mut SetSubnetEmissionWeights) -> Result<(), 
     Ok(())
 }
 
+// py: sdk/python/bittensor/intents/emission_weights.py:144-149 (v489)
 fn merged(
     intent: &SetSubnetEmissionWeights,
     updates: &[(usize, u64)],
     current: Option<&SubnetEmissionWeightsInfo>,
+    gamma_share: u64,
 ) -> Result<ew::Weights, ew::EmissionWeightsError> {
     let base = current.map_or_else(
         || ew::default_weights(ew::DEFAULT_OWNER),
         |info| info.weights,
     );
     if intent.renormalize {
-        ew::renormalize(&base, updates)
+        ew::renormalize_with_gamma(&base, updates, gamma_share)
     } else {
         Ok(ew::merge(&base, updates))
     }
@@ -156,6 +158,8 @@ struct Inputs {
     last_change_block: u64,
     block: u64,
     owner: Option<AccountId>,
+    /// Sum of the subnet's gamma shares (zero before runtime 489).
+    gamma_share: u64,
 }
 
 // py: sdk/python/bittensor/intents/emission_weights.py:150-182
@@ -170,6 +174,9 @@ async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inp
     let root = root_preservation_inputs(&snapshot, netuid)
         .await
         .map_err(read_error)?;
+    let gamma_share = gamma_emission_share(&snapshot, netuid)
+        .await
+        .map_err(read_error)?;
     let (last_change_block, owner) = snapshot
         .fetch((
             st::LAST_RATE_LIMITED_BLOCK.at((emission_weights_rate_limit_key(netuid),)),
@@ -182,6 +189,7 @@ async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inp
         last_change_block,
         block: snapshot.block().number,
         owner: owner.get().copied(),
+        gamma_share,
     }))
 }
 
@@ -203,7 +211,7 @@ impl SetSubnetEmissionWeights {
             });
         };
         let updates = updates(self)?;
-        let after = match merged(self, &updates, Some(&inputs.current)) {
+        let after = match merged(self, &updates, Some(&inputs.current), inputs.gamma_share) {
             Ok(after) => after,
             Err(error) => {
                 return Ok(IntentPreflight {
@@ -228,6 +236,7 @@ impl SetSubnetEmissionWeights {
             min_validator: Some(ew::min_validator_parts(baseline_parts)),
             min_owner: ew::DEFAULT_OWNER,
             created_via_lease: inputs.current.created_via_lease,
+            gamma_share: inputs.gamma_share,
         };
         let mut blocks: Vec<String> = ew::validate(&after, &rules)
             .iter()
@@ -314,10 +323,14 @@ impl Intent for SetSubnetEmissionWeights {
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let updates = updates(self)?;
         let (uids, values): (Vec<u16>, Vec<u64>) = if self.renormalize {
-            let current = subnet_emission_weights_info(cx.view, self.netuid)
+            let snapshot = cx.view.pin().await?;
+            let current = subnet_emission_weights_info(&snapshot, self.netuid)
                 .await
                 .map_err(read_error)?;
-            let merged = merged(self, &updates, current.as_ref()).map_err(invalid)?;
+            let gamma_share = gamma_emission_share(&snapshot, self.netuid)
+                .await
+                .map_err(read_error)?;
+            let merged = merged(self, &updates, current.as_ref(), gamma_share).map_err(invalid)?;
             ((0..5).collect(), merged.to_vec())
         } else {
             let mut sorted = updates;

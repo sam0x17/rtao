@@ -216,13 +216,32 @@ fn check_spender_or_service(
     Ok(())
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:116-122
-/// The coldkey owning `hotkey` as a staking hotkey; the zero account is none.
-async fn staking_owner<V: View + ?Sized>(
+// py: sdk/python/bittensor/intents/gamma.py:97-110 (v489)
+/// What stops `signer` opening a new deposit at `hotkey`, as the runtime's
+/// `Owner::try_get` decides it (runtime 489): an unassociated hotkey (no
+/// `Owner` entry) may be used, a hotkey with a stored owner only by that
+/// coldkey, and a stored zero account is still an owner. Owners compare as
+/// account IDs, so the same coldkey written with another SS58 prefix passes.
+async fn new_deposit_blocks<V: View + ?Sized>(
     view: &V,
-    hotkey: AccountId,
-) -> Result<Option<AccountId>, IntentError> {
-    Ok(view.storage(&st::OWNER, (hotkey,)).await?.get().copied())
+    hotkey: &Ss58Address,
+    signer: AccountId,
+) -> Result<Vec<String>, IntentError> {
+    let snapshot = view.pin().await?;
+    let key = [CoreValue::Bytes(hotkey.account().0.to_vec())];
+    if !snapshot
+        .storage_exists("SubtensorModule", "Owner", &key)
+        .await?
+    {
+        return Ok(Vec::new());
+    }
+    let owner = snapshot.storage(&st::OWNER, (hotkey.account(),)).await?;
+    if owner.get().copied().unwrap_or(AccountId::ZERO) != signer {
+        return Ok(vec![format!(
+            "the hotkey {hotkey} belongs to another coldkey; use your own or an unassociated hotkey"
+        )]);
+    }
+    Ok(Vec::new())
 }
 
 // py: sdk/python/bittensor/intents/gamma.py:125-131
@@ -318,13 +337,9 @@ async fn mint_preflight<V: View + ?Sized>(
                 ));
             }
         }
-        None => {
-            if staking_owner(view, hotkey.account()).await? != Some(signer) {
-                preview.blocks.push(format!(
-                    "associate {hotkey} with {signer} before opening a gamma deposit"
-                ));
-            }
-        }
+        None => preview
+            .blocks
+            .extend(new_deposit_blocks(view, hotkey, signer).await?),
     }
     let spender = match (&deposit, named) {
         (Some(deposit), None) => Some(deposit.spender),
@@ -693,16 +708,8 @@ impl Intent for MoveGamma {
                 signer,
                 &self.destination_hotkey_ss58,
             )),
-            None => {
-                if staking_owner(cx.view, self.destination_hotkey_ss58.account()).await?
-                    != Some(signer)
-                {
-                    blocks.push(format!(
-                        "associate {} with {signer} before opening a gamma deposit",
-                        self.destination_hotkey_ss58
-                    ));
-                }
-            }
+            None => blocks
+                .extend(new_deposit_blocks(cx.view, &self.destination_hotkey_ss58, signer).await?),
         }
         Ok(blocks)
     }

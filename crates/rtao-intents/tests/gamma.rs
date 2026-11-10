@@ -622,8 +622,15 @@ async fn a_mint_preview_shows_the_quote_and_the_deposit_it_credits() -> Result<(
             .iter()
             .any(|block| block.contains("belongs to another coldkey"))
     );
-    // A new deposit needs the signer to own the hotkey.
-    for (owner, blocked) in [(Some(COLD), false), (Some(OTHER_HOT), true), (None, true)] {
+    // A new deposit at a hotkey another coldkey owns is blocked; an
+    // unassociated hotkey (no Owner entry) is allowed (runtime 489).
+    // A stored zero account is still an owner (Owner::try_get).
+    for (owner, blocked) in [
+        (Some(COLD), false),
+        (Some(OTHER_HOT), true),
+        (Some(rtao_primitives::AccountId::ZERO), true),
+        (None, false),
+    ] {
         let plan = mint_plan(
             |state| {
                 if let Some(owner) = owner {
@@ -640,7 +647,9 @@ async fn a_mint_preview_shows_the_quote_and_the_deposit_it_credits() -> Result<(
         )
         .await?;
         assert_eq!(
-            plan.blocks.iter().any(|block| block.contains("associate")),
+            plan.blocks
+                .iter()
+                .any(|block| block.contains("use your own or an unassociated hotkey")),
             blocked,
             "{owner:?}: {:?}",
             plan.blocks

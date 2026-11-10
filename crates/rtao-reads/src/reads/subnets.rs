@@ -137,6 +137,52 @@ pub async fn root_preservation_inputs<V: View + ?Sized>(
     })
 }
 
+/// The sum of the subnet's gamma shares in u64 parts (runtime 489,
+/// `SubtensorModule.SubnetGammaEmission`): its five emission slots sum to one
+/// less it. Zero on a runtime without gamma shares, where the storage entry
+/// is absent from the live metadata, so the read works before and after 489.
+// py: sdk/python/bittensor/reads/subnets.py:313-317 (v489)
+pub async fn gamma_emission_share<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+) -> Result<u64, ReadError> {
+    const ITEM: &str = "SubtensorModule.SubnetGammaEmission";
+    let runtime = view.runtime().await?;
+    if runtime
+        .storage_entry("SubtensorModule", "SubnetGammaEmission")
+        .is_none()
+    {
+        return Ok(0);
+    }
+    let value = view
+        .storage_dyn(
+            "SubtensorModule",
+            "SubnetGammaEmission",
+            &[Value::Int(i128::from(netuid.0))],
+        )
+        .await?
+        .to_json();
+    let surface = |detail: &str| ReadError::SurfaceChanged {
+        descriptor: ITEM,
+        detail: detail.to_owned(),
+    };
+    let shares = match &value {
+        JsonValue::Null => return Ok(0),
+        JsonValue::Array(shares) => shares,
+        _ => return Err(surface("gamma shares are not a list")),
+    };
+    let mut total: u128 = 0;
+    for entry in shares {
+        let share = entry
+            .as_array()
+            .filter(|pair| pair.len() == 2)
+            .and_then(|pair| pair[1].as_u64())
+            .ok_or_else(|| surface("gamma share is not a (netuid, u64) pair"))?;
+        total += u128::from(share);
+    }
+    u64::try_from(total).map_err(|_| surface("gamma shares exceed u64"))
+}
+
 /// A subnet's emission weight vector and the rule inputs that bound it.
 ///
 /// Shares are u64 parts of `u64::MAX`; `shares` carries the same values as
@@ -167,6 +213,9 @@ pub struct SubnetEmissionWeights {
     pub validator: u64,
     /// Miner slot in parts.
     pub miner: u64,
+    /// Sum of the subnet's gamma shares in parts (zero before runtime 489);
+    /// the five slots sum to one less it.
+    pub gamma_share: u64,
     /// Global `TaoWeight` as a 0..1 float.
     pub global_tao_weight: f64,
     /// Whether the subnet was created through a lease.
@@ -200,6 +249,7 @@ impl SubnetEmissionWeights {
             min_validator: Some(self.min_validator),
             min_owner: ew::DEFAULT_OWNER,
             created_via_lease: self.created_via_lease,
+            gamma_share: self.gamma_share,
         }
     }
 
@@ -325,6 +375,7 @@ pub async fn subnet_emission_weights<V: View + ?Sized>(
         return Ok(None);
     };
     let inputs = root_preservation_inputs(&snapshot, netuid).await?;
+    let gamma_share = gamma_emission_share(&snapshot, netuid).await?;
     let last_change = snapshot
         .storage(
             &st::subtensor_module::LAST_RATE_LIMITED_BLOCK,
@@ -343,6 +394,7 @@ pub async fn subnet_emission_weights<V: View + ?Sized>(
         owner: info.owner,
         validator: info.validator,
         miner: info.miner,
+        gamma_share,
         global_tao_weight: inputs.global_tao_weight,
         created_via_lease: info.created_via_lease,
         root_tao: inputs.root_tao,

@@ -248,6 +248,55 @@ fn renormalize_rejects_overflow_and_incomplete_pin() {
     );
 }
 
+// Staged for runtime 489: Python v489 test_gamma_shares_count_toward_the_sum.
+#[test]
+fn gamma_shares_count_toward_the_sum() {
+    let gamma = share("10%");
+    let rules = Rules {
+        gamma_share: gamma,
+        ..Rules::default()
+    };
+    let out = ew::renormalize_with_gamma(&default(), &[(OWNER, share("18%"))], gamma).unwrap();
+    assert_eq!(
+        out.iter().map(|w| u128::from(*w)).sum::<u128>(),
+        u128::from(ONE - gamma)
+    );
+    assert!(ew::validate(&out, &rules).is_empty());
+    let violations = ew::validate(&default(), &rules);
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].error, "EmissionWeightsDoNotSumToOne");
+    assert!(
+        violations[0]
+            .message
+            .contains("the five slots and the gamma shares (10.00%) sum to 110.000000%"),
+        "{}",
+        violations[0].message
+    );
+    let table = rules.table();
+    let sum = table.iter().find(|(name, _, _)| *name == "sum").unwrap();
+    assert!(
+        sum.2
+            .contains("all five slots and the gamma shares (10.00%) add up")
+    );
+    // Without gamma shares nothing changes: the v488 messages and results.
+    assert_eq!(ew::and_gamma(0), "");
+    assert_eq!(
+        ew::renormalize_with_gamma(&default(), &[(OWNER, share("18%"))], 0).unwrap(),
+        ew::renormalize(&default(), &[(OWNER, share("18%"))]).unwrap()
+    );
+    let error = ew::renormalize_with_gamma(
+        &default(),
+        &[(OWNER, MAX_OWNER), (MINER, ONE - MAX_OWNER)],
+        gamma,
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(
+        error.starts_with("the pinned shares and the gamma shares (10.00%) alone exceed 100%"),
+        "{error}"
+    );
+}
+
 #[test]
 fn renormalize_accepts_nonzero_burn_and_rescales_the_rest() {
     let burn = share("10%");
@@ -489,6 +538,7 @@ fn rules_limits_and_table_cover_every_slot() {
         min_validator: Some(share("2.2%")),
         min_owner: DEFAULT_OWNER,
         created_via_lease: true,
+        ..Rules::default()
     };
     let limits = rules.limits();
     assert_keys_in_order(

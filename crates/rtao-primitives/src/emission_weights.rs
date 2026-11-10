@@ -569,13 +569,15 @@ impl Limits {
     }
 }
 
-// py: sdk/python/bittensor/emission_weights.py:165-245
+// py: sdk/python/bittensor/emission_weights.py:166-244
 /// The per-subnet inputs the chain rules depend on.
 ///
 /// `min_validator` is the lowest validator share in parts the chain accepts
 /// at this block, one part above root's baseline share, or `None` when it is
 /// unknown. `min_owner` is the lease floor, applied only to lease-created
-/// subnets.
+/// subnets. `gamma_share` is the sum of the subnet's gamma shares (runtime
+/// 489, `SubtensorModule.SubnetGammaEmission`); the five slots sum to one
+/// less it. It is zero on runtimes without gamma shares.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Rules {
     /// Lowest accepted validator share in parts, when chain state is known.
@@ -584,6 +586,8 @@ pub struct Rules {
     pub min_owner: u64,
     /// Whether the subnet was created through a lease.
     pub created_via_lease: bool,
+    /// Sum of the subnet's gamma shares in parts.
+    pub gamma_share: u64,
 }
 
 const BURN_RECYCLE_WHY: &str = "burn + recycle together may be at most 33%; burn destroys alpha (still counts toward issuance), recycle removes it from issuance";
@@ -652,9 +656,23 @@ impl Rules {
         rows.push((
             "sum",
             "= 100%".into(),
-            format!("all five slots add up to exactly {ONE} parts"),
+            format!(
+                "all five slots{} add up to exactly {ONE} parts",
+                and_gamma(self.gamma_share)
+            ),
         ));
         rows
+    }
+}
+
+// py: sdk/python/bittensor/emission_weights.py:247-249
+/// `" and the gamma shares (10.00%)"` when the subnet has any, for messages
+/// on the sum; empty otherwise.
+pub fn and_gamma(gamma_share: u64) -> String {
+    if gamma_share == 0 {
+        String::new()
+    } else {
+        format!(" and the gamma shares ({})", format_share(gamma_share, 2))
     }
 }
 
@@ -706,16 +724,31 @@ pub fn merge(current: &Weights, updates: &[(usize, u64)]) -> Weights {
     merged
 }
 
-// py: sdk/python/bittensor/emission_weights.py:284-323
+// py: sdk/python/bittensor/emission_weights.py:298-339
 /// Pin the `fixed` slots and rescale the other adjustable slots to sum to one.
 ///
 /// Untouched slots keep their relative proportions, split evenly when all
 /// are zero; the last of them in slot order (normally the miner) absorbs the
 /// rounding remainder. Fails if the pinned shares alone exceed one, or if
-/// every adjustable slot is pinned but the total is not one.
+/// every adjustable slot is pinned but the total is not one. This is
+/// [`renormalize_with_gamma`] for a subnet without gamma shares.
 pub fn renormalize(
     current: &Weights,
     fixed: &[(usize, u64)],
+) -> Result<Weights, EmissionWeightsError> {
+    renormalize_with_gamma(current, fixed, 0)
+}
+
+// py: sdk/python/bittensor/emission_weights.py:298-339
+/// [`renormalize`] for a subnet with gamma shares: the vector and
+/// `gamma_share`, the sum of the subnet's gamma shares in parts, sum to one,
+/// so the five slots fill one less `gamma_share` (Python's
+/// `renormalize(current, fixed, gamma_share)`). Fails if the pinned shares and
+/// the gamma shares exceed one.
+pub fn renormalize_with_gamma(
+    current: &Weights,
+    fixed: &[(usize, u64)],
+    gamma_share: u64,
 ) -> Result<Weights, EmissionWeightsError> {
     let mut pinned: Vec<(usize, u64)> = Vec::new();
     for &(slot, value) in fixed {
@@ -730,9 +763,11 @@ pub fn renormalize(
         .filter(|slot| !pinned.iter().any(|(known, _)| known == slot))
         .collect();
     let total: u128 = pinned.iter().map(|(_, value)| u128::from(*value)).sum();
-    let Some(remaining) = u128::from(ONE).checked_sub(total) else {
+    let gamma = u128::from(gamma_share);
+    let Some(remaining) = u128::from(ONE).checked_sub(total + gamma) else {
         return Err(EmissionWeightsError::new(format!(
-            "the pinned shares alone exceed 100%: {}",
+            "the pinned shares{} alone exceed 100%: {}",
+            and_gamma(gamma_share),
             pinned
                 .iter()
                 .filter(|(_, value)| *value != 0)
@@ -748,8 +783,9 @@ pub fn renormalize(
     if free.is_empty() {
         if remaining != 0 {
             return Err(EmissionWeightsError::new(format!(
-                "all adjustable slots are pinned but they sum to {}, not 100%",
-                format_share(total, 2)
+                "all adjustable slots are pinned but they{} sum to {}, not 100%",
+                and_gamma(gamma_share),
+                format_share(total + gamma, 2)
             )));
         }
         return Ok(out);
@@ -774,8 +810,9 @@ pub fn renormalize(
     Ok(out)
 }
 
-// py: sdk/python/bittensor/emission_weights.py:326-394
-/// Every rule the chain would reject, in the order it checks them.
+// py: sdk/python/bittensor/emission_weights.py:342-410
+/// Every rule the chain would reject, in the order it checks them; the sum
+/// counts the subnet's gamma shares (`rules.gamma_share`).
 pub fn validate(weights: &Weights, rules: &Rules) -> Vec<Violation> {
     let w = weights;
     let mut found = Vec::new();
@@ -845,12 +882,14 @@ pub fn validate(weights: &Weights, rules: &Rules) -> Vec<Violation> {
             ),
         );
     }
-    let total: u128 = w.iter().map(|value| u128::from(*value)).sum();
+    let total: u128 =
+        w.iter().map(|value| u128::from(*value)).sum::<u128>() + u128::from(rules.gamma_share);
     if total != u128::from(ONE) {
         push(
             "EmissionWeightsDoNotSumToOne",
             format!(
-                "the five slots sum to {} ({total} parts), not exactly 100% ({ONE} parts); renormalise another slot in the same call (`btcli subnets emission set-value` does this for you)",
+                "the five slots{} sum to {} ({total} parts), not exactly 100% ({ONE} parts); renormalise another slot in the same call (`btcli subnets emission set-value` does this for you)",
+                and_gamma(rules.gamma_share),
                 format_share(total, 6)
             ),
         );

@@ -1513,6 +1513,37 @@ pub trait ViewExt: View {
             Ok(Duration::from_millis(millis))
         }
     }
+    /// Whether an exact storage key is present at the pinned block, without
+    /// applying the entry's default: a stored default value (the zero account
+    /// in a `ValueQuery` map) is present, a missing key is not. Every key
+    /// argument is required; a partial key is refused before any RPC.
+    // py: sdk/python/bittensor/_transport/interface.py:338-358 (v489)
+    fn storage_exists(
+        &self,
+        pallet: &str,
+        item: &str,
+        keys: &[Value],
+    ) -> impl Future<Output = Result<bool, ClientError>> + Send {
+        async move {
+            let snapshot = View::pin(self).await?;
+            let runtime = snapshot.block.runtime.clone();
+            let info = runtime
+                .storage_entry(pallet, item)
+                .ok_or_else(|| CoreError::NotInRuntime(format!("storage {pallet}.{item}")))?;
+            if keys.len() != info.key_types.len() {
+                return Err(ClientError::Protocol(format!(
+                    "{pallet}.{item} expects {} key arguments, got {}",
+                    info.key_types.len(),
+                    keys.len()
+                )));
+            }
+            let key = runtime
+                .core()
+                .storage_key(info, keys)
+                .map_err(CoreError::from)?;
+            Ok(View::storage_raw(&snapshot, &key).await?.is_some())
+        }
+    }
     /// Read a named entry with exact Python shapes and live miss semantics.
     fn storage_dyn(
         &self,
