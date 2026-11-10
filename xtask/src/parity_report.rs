@@ -404,6 +404,13 @@ pub(super) fn pending_sync(root: &Path, args: &[String]) -> Result<()> {
     if changed {
         fs::write(root.join("parity/pending.toml"), pending.to_string())?;
     }
+    // A moved parity pin also moves the read-hit replacement citations to the
+    // pinned sources; regen re-checks every replacement rule (D-163).
+    let old = fs::read_to_string(base.join("upstream.toml"))?.parse::<DocumentMut>()?;
+    let new = fs::read_to_string(root.join("upstream.toml"))?.parse::<DocumentMut>()?;
+    if old["parity"]["commit"].as_str() != new["parity"]["commit"].as_str() {
+        crate::read_hit_replacements::refresh_citations(root)?;
+    }
     Ok(())
 }
 

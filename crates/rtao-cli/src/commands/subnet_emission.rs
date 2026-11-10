@@ -103,7 +103,7 @@ pub fn command() -> Command {
         .subcommand(with_globals(
             Command::new("show")
                 .about("Show the emission split, what root keeps, the allowed ranges and the next change window.")
-                .after_help("Example: rtao subnets emission show --netuid 4\n\nJSON fields: netuid, block, weights (u64 parts), shares (0..1), global_tao_weight, root_share, baseline_root_share, validator_share_after_root, root_capped, root_tao, alpha_issuance (rao), min_validator (parts), created_via_lease, limits{slot: min, max, min_parts, max_parts, why}, rate_limit{limit_blocks, last_change_block, next_allowed_block, blocks_until_allowed, owner_can_change_now}.")
+                .after_help("Example: rtao subnets emission show --netuid 4\n\nJSON fields: netuid, block, weights (u64 parts), shares (0..1), gamma_share (parts), global_tao_weight, root_share, baseline_root_share, validator_share_after_root, root_capped, root_tao, alpha_issuance (rao), min_validator (parts), created_via_lease, limits{slot: min, max, min_parts, max_parts, why}, rate_limit{limit_blocks, last_change_block, next_allowed_block, blocks_until_allowed, owner_can_change_now}.")
                 .arg(netuid_arg()),
             Tier::Read,
         ))
@@ -320,6 +320,7 @@ pub fn record(info: &SubnetEmissionWeights) -> Value {
         "block": info.block,
         "weights": info.weights,
         "shares": info.shares,
+        "gamma_share": info.gamma_share,
         "global_tao_weight": info.global_tao_weight,
         "root_share": info.root_share,
         "baseline_root_share": info.baseline_root_share,
@@ -891,7 +892,7 @@ fn renormalized(
     slot: usize,
     parts: u64,
 ) -> Result<ew::Weights, CliError> {
-    ew::renormalize(&info.weights, &[(slot, parts)]).map_err(|error| {
+    ew::renormalize_with_gamma(&info.weights, &[(slot, parts)], info.gamma_share).map_err(|error| {
         report(
             ctx,
             2,
@@ -1029,7 +1030,8 @@ pub async fn execute(
             let owner = parse_share(ctx, owner, "--owner")?;
             let validator = parse_share(ctx, validator, "--validator")?;
             let miner = parse_share(ctx, miner, "--miner")?;
-            let total = [burn, recycle, owner, validator, miner]
+            // The subnet's gamma shares count toward the sum (runtime 489).
+            let total = [burn, recycle, owner, validator, miner, info.gamma_share]
                 .into_iter()
                 .map(u128::from)
                 .sum::<u128>();
@@ -1051,7 +1053,8 @@ pub async fn execute(
                     ctx,
                     2,
                     &format!(
-                        "burn + recycle + owner + validator + miner must add up to 100%, not {}",
+                        "burn + recycle + owner + validator + miner{} must add up to 100%, not {}",
+                        ew::and_gamma(info.gamma_share),
                         ew::format_share(total, 4)
                     ),
                     None,

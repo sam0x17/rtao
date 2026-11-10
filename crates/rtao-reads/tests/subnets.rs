@@ -166,6 +166,8 @@ async fn subnet_emission_weights_decodes_the_runtime_payload_and_live_root_input
     assert_eq!(info.min_validator, baseline_parts + 1);
     assert_eq!(info.rules().min_validator, Some(baseline_parts + 1));
     assert!(!info.rules().created_via_lease);
+    // Runtime 488 metadata has no SubnetGammaEmission: no gamma shares.
+    assert_eq!((info.gamma_share, info.rules().gamma_share), (0, 0));
     assert_eq!((info.block, info.last_change_block), (100, 0));
     assert!(info.rate_limit().owner_can_change_now);
     // The pure baseline formula agrees with the derived runtime payload.

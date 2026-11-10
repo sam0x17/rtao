@@ -311,6 +311,35 @@ fn clone_binding(binding: &Binding, budget: &Cell<usize>) -> Result<Binding> {
     Ok(binding.clone())
 }
 
+/// sp_core.py's import-time helper (v489): resolves a backend function newer
+/// than some installable cores, or a stand-in that raises when called.
+const CORE_HELPER: &str = "_core_helper";
+/// SHA-256 of the reviewed `_core_helper` definition span (v489): it reads
+/// `getattr(_backend, name, None)` and otherwise builds a raising stand-in;
+/// it writes nothing to the backend or `Keypair`.
+const CORE_HELPER_SHA256: &str = "8203d0b15235ded9aa6d3a07b1e01791b163b1d245d19a82a9d56b961f83ad90";
+
+/// The name `NAME` of a module-level `_core_helper("NAME")` call in sp_core.py.
+fn core_helper_call<'a>(path: &str, class_body: bool, value: &'a ast::Expr) -> Option<&'a str> {
+    let ast::Expr::Call(call) = value else {
+        return None;
+    };
+    if class_body
+        || path != "sdk/python/bittensor/sp_core.py"
+        || !matches!(&*call.func, ast::Expr::Name(name) if name.id.as_str() == CORE_HELPER)
+        || !call.keywords.is_empty()
+    {
+        return None;
+    }
+    match call.args.as_slice() {
+        [ast::Expr::Constant(constant)] => match &constant.value {
+            ast::Constant::Str(name) => Some(name.as_str()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 // The samples producer is a deliberately small static adapter. In these three
 // modules only imports and inert declarations may run before addresses are
 // extracted. Reject new executable forms rather than guessing their effects on
@@ -441,12 +470,16 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
         );
         Ok(())
     }
+    // The walk threads its reviewed-state counters explicitly (D-163 added
+    // the core helper flag) rather than hiding them in a context type.
+    #[allow(clippy::too_many_arguments)]
     fn body(
         path: &str,
         source: &str,
         statements: &[ast::Stmt],
         keypair_exports: &mut usize,
         imports: &mut Vec<String>,
+        core_helper: &mut bool,
         class_body: bool,
         depth: usize,
     ) -> Result<()> {
@@ -510,6 +543,10 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                             name.id.as_str() != "_backend",
                             "sample producer backend binding changed"
                         );
+                        ensure!(
+                            name.id.as_str() != CORE_HELPER,
+                            "sample producer core helper binding changed"
+                        );
                         if name.id.as_str() == "Keypair" {
                             ensure!(
                                 path == "sdk/python/bittensor/sp_core.py"
@@ -522,7 +559,22 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                             *keypair_exports += 1;
                         }
                     }
-                    expression(&assign.value, 0)?;
+                    if let Some(helper) = core_helper_call(path, class_body, &assign.value) {
+                        // sp_core.py (v489): `NAME = _core_helper("NAME")`
+                        // calls the reviewed helper below, which only reads
+                        // the backend with getattr and may return a stub.
+                        ensure!(
+                            *core_helper,
+                            "sample producer calls the core helper before its reviewed definition"
+                        );
+                        ensure!(
+                            matches!(assign.targets.as_slice(), [ast::Expr::Name(target)]
+                                if target.id.as_str() == helper),
+                            "sample producer core helper binds another name"
+                        );
+                    } else {
+                        expression(&assign.value, 0)?;
+                    }
                 }
                 ast::Stmt::AnnAssign(assign) => {
                     declarations = true;
@@ -585,6 +637,22 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                                     == "0ec9544796c87b43d5002ace0376da5f46543be3a374ea9a5194fcbd922d4afc",
                             "sample producer module import callback changed"
                         );
+                    }
+                    if !class_body && function.name.as_str() == CORE_HELPER {
+                        let text = source
+                            .get(
+                                function.range().start().to_usize()
+                                    ..function.range().end().to_usize(),
+                            )
+                            .context("sample producer core helper span")?;
+                        ensure!(
+                            path == "sdk/python/bittensor/sp_core.py"
+                                && !*core_helper
+                                && format!("{:x}", Sha256::digest(text.as_bytes()))
+                                    == CORE_HELPER_SHA256,
+                            "sample producer core helper changed"
+                        );
+                        *core_helper = true;
                     }
                     defaults(&function.args)?;
                     // Function bodies are not executed by defining the module.
@@ -649,6 +717,7 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                         &class.body,
                         keypair_exports,
                         imports,
+                        core_helper,
                         true,
                         depth + 1,
                     )?;
@@ -722,6 +791,7 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
                         &block.body,
                         keypair_exports,
                         imports,
+                        core_helper,
                         class_body,
                         depth + 1,
                     )?;
@@ -776,6 +846,7 @@ fn sample_producer_static_surface(path: &str, source: &str, suite: &[ast::Stmt])
         suite,
         &mut keypair_exports,
         &mut imports,
+        &mut false,
         false,
         0,
     )
@@ -1385,8 +1456,11 @@ impl<'a> Resolver<'a> {
         if self.sample_producer_mode
             && path == "sdk/python/bittensor/sp_core.py"
             && evaluated.is_err()
-            && opaque(expr, bindings, 0)
+            && (opaque(expr, bindings, 0) || core_helper_call(path, false, expr).is_some())
         {
+            // A `_core_helper("NAME")` result (v489) stays unresolved like an
+            // opaque table; the static surface checked the helper's reviewed
+            // definition before any sample was resolved.
             return Ok(true);
         }
         self.sample_binding(evaluated, path).map(|()| false)
@@ -1431,6 +1505,15 @@ impl<'a> Resolver<'a> {
                         | "decode_hashed_receiving_address"
                         | "decode_mldsa_receiving_address"
                         | "encode_mldsa_receiving_address"
+                        // v489 ECDSA and signature-length constants and ECDSA
+                        // account codecs of the pinned backend.
+                        | "CRYPTO_ECDSA"
+                        | "ECDSA_PUBLIC_KEY_LEN"
+                        | "ED25519_SIGNATURE_LEN"
+                        | "SR25519_SIGNATURE_LEN"
+                        | "ECDSA_SIGNATURE_LEN"
+                        | "ecdsa_account_id"
+                        | "ecdsa_ss58_encode"
                         | "Keypair"
                         | "Keypair.create_from_uri"
                         | "KeyfileError"
@@ -3928,6 +4011,54 @@ mod tests {
                 .context("a shadowed module import callback was accepted")?;
             assert!(format!("{failure:#}").contains("module callback binding changed"));
         }
+        Ok(())
+    }
+
+    // v489's sp_core.py resolves newer backend helpers at import through
+    // `_core_helper`; only its reviewed definition may run (D-163).
+    #[test]
+    fn sample_producer_admits_only_the_reviewed_core_helper() -> Result<()> {
+        const SAMPLE: &str = "sdk/python/tests/harness/samples.py";
+        const SP_CORE: &str = "sdk/python/bittensor/sp_core.py";
+        const TABLE: &str = "_CORE_HELPERS_SINCE = {\n    \"verify_strict\": \"0.1.10\",\n    \"encode_password_for_environment\": \"0.1.10\",\n}\n\n\n";
+        const HELPER: &str = "def _core_helper(name: str):\n    native = getattr(_backend, name, None)\n    if native is not None:\n        return native\n    version = _CORE_HELPERS_SINCE[name]\n\n    def unavailable(*args, **kwargs):\n        raise RuntimeError(\n            f\"bittensor.sp_core.{name} requires bittensor-core>={version}; \"\n            \"rebuild or upgrade bittensor-core together with bittensor.\"\n        )\n\n    unavailable.__name__ = unavailable.__qualname__ = name\n    return unavailable\n";
+        const CALLS: &str = "\n\nverify_strict = _core_helper(\"verify_strict\")\nencode_password_for_environment = _core_helper(\"encode_password_for_environment\")\n";
+        let root = root()?;
+        let source = Resolver::new(&root)?.source(SP_CORE)?;
+        let resolve = |sp_core: String| -> Result<()> {
+            let mut actual = Resolver::new(&root)?;
+            actual.sources.insert(SP_CORE.into(), sp_core);
+            actual.values(SAMPLE, &["ALICE", "BOB_HOT"]).map(|_| ())
+        };
+        resolve(format!("{source}\n{TABLE}{HELPER}{CALLS}"))?;
+        let refused = |sp_core: String, reason: &str| -> Result<()> {
+            let failure = resolve(sp_core)
+                .err()
+                .with_context(|| format!("accepted although {reason}"))?;
+            assert!(format!("{failure:#}").contains(reason), "{failure:#}");
+            Ok(())
+        };
+        // A changed body may touch the backend at import.
+        let changed = HELPER.replace(
+            "    native = getattr",
+            "    _backend.Keypair = None\n    native = getattr",
+        );
+        refused(
+            format!("{source}\n{TABLE}{changed}{CALLS}"),
+            "core helper changed",
+        )?;
+        refused(
+            format!("{source}\n{CALLS}\n{TABLE}{HELPER}"),
+            "before its reviewed definition",
+        )?;
+        refused(
+            format!("{source}\n{TABLE}{HELPER}\n\nverify = _core_helper(\"verify_strict\")\n"),
+            "binds another name",
+        )?;
+        refused(
+            format!("{source}\n{TABLE}{HELPER}\n\n_core_helper = verify\n"),
+            "core helper binding changed",
+        )?;
         Ok(())
     }
 
