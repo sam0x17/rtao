@@ -14,6 +14,10 @@
 
 - Testnet finalized spec 490 (`:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`) at block 8416678; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/42895343113)). Source: upstream commit `d967d13588834f4f5aaa8ef4c8fc1a865d581462`, whose v490 prerelease wasm is this `:code`. The parity pin is unchanged.
 
+### Runtime adoption fix (D-168, repository maintenance)
+
+- A scheduled runtime-adopt run that queued behind the dispatched Finney 490 adoption started after that adoption landed, re-ran it on its older checkout, failed, opened a failure issue and alert for the adopted runtime and closed the hand-port issue from that checkout's empty list. A run whose ref has since moved now decides again against the ref's present pins: when they no longer call for its action it is skipped (or its failure goes unreported) as superseded, and it leaves the hand-port issue alone. An unrelated commit changes nothing.
+
 ### Runtime adoption fix (D-167, repository maintenance)
 
 - A scheduled runtime-adopt run could never pass stage parity: `parity check` took the shrink-only baseline from the event's `before` SHA, which a `schedule` event does not carry, so the hourly run failed with "CI event lacks a string parity baseline" (run 42917551022) where a dispatched run passed. A scheduled run now checks its selected commit against that commit's first parent, as a dispatch does, with the same checks.

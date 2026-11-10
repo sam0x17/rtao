@@ -84,6 +84,19 @@ jobs:
             timeout 300s ci/runtime-adopt.sh observe "$out/observed.json"
           fi
           ci/runtime-adopt.sh decide "$out/observed.json" "$out/decision.json"
+          # A run queued behind another decides on its own (older) checkout:
+          # when the ref's present pins no longer call for this action, skip
+          # it rather than adopt and report what main already carries (D-168).
+          if [ -z "$SIMULATE" ]; then
+            current=$(ci/runtime-adopt.sh current "$out/decision.json" "$out/observed.json")
+            case "$current" in
+              superseded:*)
+                jq --arg reason "$current" '.wanted = .action | .action = "superseded" | .reason = $reason' \
+                  "$out/decision.json" > "$out/decision.superseded.json"
+                mv "$out/decision.superseded.json" "$out/decision.json"
+                ;;
+            esac
+          fi
           echo "action=$(jq -r .action "$out/decision.json")" >> "$GITHUB_OUTPUT"
           jq . "$out/decision.json" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -238,9 +251,18 @@ jobs:
           case "$ACTION:$ADOPTED:$PUSHED" in
             none:*) outcome=none ;;
             backoff:*) outcome=backoff ;;
+            superseded:*) outcome=superseded ;;
             blocked:*) outcome=failure ;;
             *:success:success) outcome=success ;;
             *) outcome=failure ;;
           esac
           if [ "$SUPERSEDED" = true ]; then outcome=superseded; fi
+          # A failure decided on a checkout that main has since moved past
+          # (an adoption that landed meanwhile) is not reported (D-168).
+          if [ "$outcome" = failure ] && [ -f "$RUNNER_TEMP/decision/observed.json" ]; then
+            current=$(ci/runtime-adopt.sh current "$decision" "$RUNNER_TEMP/decision/observed.json")
+            case "$current" in
+              superseded:*) echo "$current"; outcome=superseded ;;
+            esac
+          fi
           ci/runtime-adopt.sh notify "$decision" "$outcome" "$RUNNER_TEMP/evidence"

@@ -503,6 +503,48 @@ check core-bump-failure-survives-a-quiet-run '[[ -f $core_fake/1.open ]] && grep
 core_pins=$free_root core_loop bash "$script" notify "$work/core-none.json" none >/dev/null
 check core-bump-issue-closes-once-the-core-moved '[[ -f $core_fake/1.closed ]] && grep -q "^close" $core_fake/log && grep -q "Core bumped" $core_fake/log'
 
+# ── a decision against the ref's present pins (D-168) ────────────────
+# A run decided on an older checkout is superseded only when the ref's
+# present pins no longer call for its decision; an unrelated commit is not.
+stale=$work/stale
+mkdir -p "$stale/origin/vendor/metadata/finney" "$stale/origin/vendor/metadata/testnet"
+cp "$root/upstream.toml" "$stale/origin/"
+cp "$root/vendor/metadata/finney/index.toml" "$stale/origin/vendor/metadata/finney/"
+cp "$root/vendor/metadata/testnet/index.toml" "$stale/origin/vendor/metadata/testnet/"
+staled() { git -C "$stale/origin" -c user.name=t -c user.email=t@invalid "$@"; }
+git -C "$stale/origin" init -q -b main
+staled add -A
+staled commit -q -m base
+git clone -q "$stale/origin" "$stale/checkout"
+printf '%s\n' "$(observation "$next" "$other" "$testnet_spec" "$testnet_code" "$release")" >"$stale/observed.json"
+bash "$script" decide "$stale/observed.json" "$stale/decision.json" >/dev/null
+stale_current() { RTAO_ADOPT_CHECKOUT=$stale/checkout bash "$script" current "$stale/decision.json" "$stale/observed.json" refs/heads/main; }
+stale_check() {
+  if [[ "$2" == "$3" ]]; then
+    echo "ok   current $1: $2"
+  else
+    echo "FAIL current $1: $2 (expected $3)"
+    failures=$((failures + 1))
+  fi
+}
+stale_check unmoved-ref "$(stale_current)" current
+echo '# unrelated' >>"$stale/origin/upstream.toml"
+staled commit -q -am unrelated
+stale_check unrelated-commit "$(stale_current)" current
+# The ref now carries the adoption this run decided on.
+awk -v next_spec="$next" -v code="$other" '
+  /^\[/ { section = $0 }
+  section == "[parity]" && $1 == "spec_version" { $0 = "spec_version = " next_spec }
+  section == "[networks.finney.metadata]" && $1 == "spec" { $0 = "spec = " next_spec }
+  section == "[networks.finney.metadata]" && $1 == "code_hash" { $0 = "code_hash = \"" code "\"" }
+  { print }
+' "$stale/origin/upstream.toml" >"$stale/upstream.toml"
+mv "$stale/upstream.toml" "$stale/origin/upstream.toml"
+staled commit -q -am adopted
+stale_check adopted-meanwhile "$(stale_current | cut -d: -f1)" superseded
+stale_check other-actions-stand "$(RTAO_ADOPT_CHECKOUT=$stale/checkout bash "$script" current "$work/core-none.json" "$stale/observed.json" refs/heads/main)" current
+stale_check unreadable-ref "$(RTAO_ADOPT_CHECKOUT=$stale/checkout bash "$script" current "$stale/decision.json" "$stale/observed.json" refs/heads/absent 2>/dev/null)" current
+
 if ((failures)); then
   echo "$failures decision checks failed" >&2
   exit 1

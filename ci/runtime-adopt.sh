@@ -4,6 +4,7 @@
 #
 #   ci/runtime-adopt.sh observe <observed.json>
 #   ci/runtime-adopt.sh decide <observed.json> <decision.json> [<pins-root>]
+#   ci/runtime-adopt.sh current <decision.json> <observed.json> [<ref>]
 #   ci/runtime-adopt.sh adopt <decision.json> <candidate> <evidence-dir>
 #   ci/runtime-adopt.sh commit <decision.json> <candidate> <bundle>
 #   ci/runtime-adopt.sh push <decision.json> <bundle>
@@ -486,6 +487,55 @@ decide() {
        core_bump: $core_note, observed_at: $o.observed_at}
 JQ
   jq -c '{action, network, spec, source, id, reason, retry_at, deferred: (.deferred | map(.id)), upcoming: (.upcoming | map("\(.branch)=\(.spec)")), unobserved, core_bump}' "$out"
+}
+
+# ── current ───────────────────────────────────────────────────────────
+
+# Whether a decision still stands against the pins on the run's ref now
+# (D-168). A run decides on its checkout's pins; a scheduled run that queued
+# behind another (the concurrency group) or one the ref moved under can
+# decide, fail and report an adoption that the ref already carries, and its
+# notify job would read the hand ports due from that stale checkout. Prints
+# "current" or "superseded: <reason>". Only when the same observation decided
+# against the ref's present pins no longer calls for this decision's id; an
+# unrelated commit leaves the id, and so the report, unchanged. A ref that
+# cannot be read counts as current: the run reports as it always has.
+current() {
+  local decision=${1:?current <decision.json> <observed.json> [<ref>]}
+  local observed=${2:?current <decision.json> <observed.json> [<ref>]}
+  local ref=${3:-${GITHUB_REF:-refs/heads/main}}
+  local checkout=${RTAO_ADOPT_CHECKOUT:-$root}
+  local id tip work now path
+  id=$(jq -r .id "$decision")
+  case "$(jq -r .action "$decision")" in
+    adopt-finney | record-testnet | core-bump | blocked) ;;
+    *) echo current && return 0 ;;
+  esac
+  if ! git -C "$checkout" fetch -q --depth=1 --no-tags origin "$ref" 2>/dev/null; then
+    echo "runtime-adopt: could not read $ref; reporting this run as decided" >&2
+    echo current
+    return 0
+  fi
+  tip=$(git -C "$checkout" rev-parse FETCH_HEAD)
+  if [[ "$tip" == "$(git -C "$checkout" rev-parse HEAD)" ]]; then
+    echo current
+    return 0
+  fi
+  work=$(mktemp -d)
+  mkdir -p "$work/vendor/metadata/finney" "$work/vendor/metadata/testnet"
+  for path in upstream.toml vendor/metadata/finney/index.toml vendor/metadata/testnet/index.toml; do
+    git -C "$checkout" show "$tip:$path" >"$work/$path" 2>/dev/null || rm -f "$work/$path"
+  done
+  now=""
+  if [[ -f "$work/upstream.toml" ]]; then
+    now=$( (decide "$observed" "$work/decision.json" "$work" >/dev/null && jq -r .id "$work/decision.json") 2>/dev/null) || now=""
+  fi
+  rm -rf "$work"
+  if [[ -n "$now" && "$now" != "$id" ]]; then
+    echo "superseded: $ref moved to ${tip:0:12} since this run's checkout, and its pins no longer call for $id (they decide $now)"
+  else
+    echo current
+  fi
 }
 
 # ── adopt (hosted runner) ─────────────────────────────────────────────
@@ -1334,8 +1384,11 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
   fi
 
   # Due hand ports: the adopted candidate's list after a successful adoption,
-  # otherwise the list on main.
-  if [[ "$outcome" == success && -n "$evidence" && -f "$evidence/port_due.checked" ]]; then
+  # otherwise the list on main; a superseded run's checkout is not main
+  # (D-168), so it leaves the issue to the next run.
+  if [[ "$outcome" == superseded ]]; then
+    :
+  elif [[ "$outcome" == success && -n "$evidence" && -f "$evidence/port_due.checked" ]]; then
     notify_port_due "$evidence/port_due.toml"
   else
     notify_port_due "${RTAO_ADOPT_PORT_DUE:-$root/parity/port_due.toml}"
@@ -1396,7 +1449,7 @@ preview. Refreshed by the runtime-adopt workflow; closed when no branch is ahead
       fi
       ;;
     superseded)
-      echo "main moved during the run; the next scheduled run retries from the new main"
+      echo "main moved since this run's checkout; the next scheduled run decides again from the new main"
       ;;
     backoff)
       echo "backing off: $reason"
@@ -1481,6 +1534,7 @@ shift || true
 case "$command" in
   observe) observe "$@" ;;
   decide) decide "$@" ;;
+  current) current "$@" ;;
   adopt) adopt "$@" ;;
   commit) commit "$@" ;;
   push) push "$@" ;;
