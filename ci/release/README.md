@@ -32,11 +32,11 @@ this runner does not build the supported macOS CLI targets.
    `$RTAO_TEMP_ROOT/ci/tools/bin` takes precedence); the Mac builder does not
    install it.
 
-   Set `RTAO_TEMP_ROOT` to a short directory under the clone's `.local/`
-   (for example `.local/mac` in a clone with a short path), with
-   `CARGO_TARGET_DIR` and `TMPDIR` beneath it. macOS limits Unix socket paths
-   to 104 bytes, and tests bind sockets under these directories, so a long
-   root makes them fail. Tests write their scratch only under the task root
+   Set `RTAO_TEMP_ROOT` to an absolute directory under the clone's `.local/`
+   of at most 40 bytes (for example `/Users/<name>/rtao/.local/mac`), with
+   `CARGO_TARGET_DIR` and `TMPDIR` beneath it. Tests bind Unix sockets about
+   60 bytes below the task root and macOS limits socket paths to 104 bytes, so
+   the script refuses a longer root. Tests write their scratch only under the task root
    or the target directory. The script exports `RTAO_TEST_TMPDIR` as
    `$RTAO_TEMP_ROOT/tmp` unless it is already set, and runs `cargo fetch
    --locked` before the checks: `rtao doctor` reads the workspace with

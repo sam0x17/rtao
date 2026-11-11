@@ -5,6 +5,11 @@ tag=${1:?usage: macos-build.sh tag}
 : "${RTAO_TEMP_ROOT:?record the task root}"
 : "${CARGO_TARGET_DIR:?build under the task root}"
 : "${TMPDIR:?scratch under the task root}"
+# Tests bind Unix sockets about 60 bytes below the task root, and macOS limits
+# socket paths to 104 bytes including the terminator.
+if test "${#RTAO_TEMP_ROOT}" -gt 40; then
+  echo 'RTAO_TEMP_ROOT must be at most 40 bytes (macOS Unix socket paths)' >&2; exit 1
+fi
 source ci/release/license.sh
 test "$(uname -s)" = Darwin
 test "$(uname -m)" = arm64
