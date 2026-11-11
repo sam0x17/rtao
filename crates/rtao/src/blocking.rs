@@ -839,6 +839,37 @@ impl SyncClient {
         })
     }
 
+    /// [`Self::prepare_call`] for an external signer of any `MultiSignature`
+    /// scheme, ECDSA included, which replaces `options.crypto_type`.
+    pub fn prepare_call_as(
+        &self,
+        call: rtao_client::CallBytes,
+        address: AccountId,
+        scheme: rtao_primitives::SignatureScheme,
+        options: PrepareOptions,
+    ) -> Result<rtao_client::UnsignedExtrinsic, Error> {
+        self.view.with_executor(move |executor| async move {
+            executor
+                .prepare_call_as(call, address, scheme, &options)
+                .await
+        })
+    }
+
+    /// [`Self::submit_signature`] for any external signature scheme, a raw
+    /// ECDSA signature included.
+    pub fn submit_external_signature(
+        &self,
+        unsigned: rtao_client::UnsignedExtrinsic,
+        signature: rtao_signer::ExternalSignature,
+        options: ExecuteOptions,
+    ) -> Result<ExtrinsicResult, Error> {
+        self.view.with_executor(move |executor| async move {
+            executor
+                .submit_external_signature(&unsigned, signature, &options)
+                .await
+        })
+    }
+
     /// Verify and submit an external signature under the executor's raw policy.
     pub fn submit_signature(
         &self,

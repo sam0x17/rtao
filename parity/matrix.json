@@ -9200,9 +9200,10 @@
           "crates/rtao-client/src/nonce.rs",
           "crates/rtao-client/src/submit.rs",
           "crates/rtao-client/src/offline.rs",
-          "crates/rtao-core-ext/src/ops/receipt.rs"
+          "crates/rtao-core-ext/src/ops/receipt.rs",
+          "crates/rtao-signer/src/external.rs (ExternalSignature::normalize, EcdsaSignature::recover_account)"
         ],
-        "synced_blob": "692cd5fe41a6c3ab73b0bb6ad9ccf43e49c6ceee"
+        "synced_blob": "1b9adfbb52f1dcd6e8a1b5ec16d63f52be89dc23"
       },
       {
         "kind": "ported",
@@ -13517,14 +13518,15 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_normalize_signature.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v490, not yet classified or ported"
+          "crates/rtao-signer/tests/external.rs",
+          "crates/rtao-client/tests/offline.rs::external_ecdsa_transfer_survives_prepare_sign_attach"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "2aa856557a3b2df316e5daabee77df7dcbee97c8"
       },
       {
         "kind": "n/a",

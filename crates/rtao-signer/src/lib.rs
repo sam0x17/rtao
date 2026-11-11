@@ -12,6 +12,7 @@ use std::{fmt, future::Future, pin::Pin, sync::Arc};
 mod authority;
 #[cfg(any(feature = "vault", feature = "extension"))]
 mod browser;
+mod external;
 
 /// Ledger signing through the core device API and injected backend seam.
 #[cfg(feature = "ledger")]
@@ -40,9 +41,10 @@ pub use vault::VaultSigner;
 pub use authority::{
     AuthoritySigner, AuthorizationProof, AuthorizationRequest, KeypairAuthoritySigner,
 };
+pub use external::{EcdsaSignature, ExternalSignature};
 use rtao_core::keyfile_json::{SecretInput, redacted_derivation_error};
 use rtao_core::{CoreError, keys::Keypair};
-pub use rtao_primitives::{AccountId, AuthorityType, CryptoType};
+pub use rtao_primitives::{AccountId, AuthorityType, CryptoType, SignatureScheme};
 
 /// A sendable future at the heterogeneous signer boundary.
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

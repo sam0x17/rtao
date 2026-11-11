@@ -2305,6 +2305,7 @@ dependencies = [
  "cfg-if",
  "ecdsa",
  "elliptic-curve",
+ "once_cell",
  "serdect",
  "sha2 0.10.9",
 ]
@@ -3203,6 +3204,8 @@ name = "rtao-signer"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.13.2",
+ "blake2",
+ "k256",
  "rtao-core",
  "rtao-primitives",
  "serde_json",

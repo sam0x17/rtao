@@ -303,3 +303,90 @@ impl TryFrom<u8> for CryptoType {
         }
     }
 }
+
+/// A `MultiSignature` scheme: the classical [`CryptoType`]s or ECDSA over
+/// secp256k1 (`MultiSignature::Ecdsa`, variant 2), whose account is the
+/// BLAKE2b-256 of the compressed public key.
+///
+/// rtao holds no ECDSA keys: an ECDSA account signs externally, and rtao
+/// prepares its transactions, checks its 65-byte raw signatures and attaches
+/// them (Python v490 `_transport/extrinsics.py`, D-180).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[non_exhaustive]
+#[repr(u8)]
+pub enum SignatureScheme {
+    /// Ed25519, `MultiSignature` variant zero.
+    Ed25519 = 0,
+    /// Sr25519, `MultiSignature` variant one.
+    Sr25519 = 1,
+    /// ECDSA over secp256k1, `MultiSignature` variant two.
+    Ecdsa = 2,
+}
+
+impl SignatureScheme {
+    /// The `MultiSignature` variant index, the core's crypto code.
+    pub const fn code(self) -> u8 {
+        self as u8
+    }
+
+    /// The raw signature length without a variant byte: 64 bytes for
+    /// Ed25519 and Sr25519, 65 (`r || s || v`) for ECDSA.
+    pub const fn signature_len(self) -> usize {
+        match self {
+            Self::Ed25519 | Self::Sr25519 => 64,
+            Self::Ecdsa => 65,
+        }
+    }
+
+    /// The classical algorithm, or `None` for ECDSA.
+    pub const fn crypto_type(self) -> Option<CryptoType> {
+        match self {
+            Self::Ed25519 => Some(CryptoType::Ed25519),
+            Self::Sr25519 => Some(CryptoType::Sr25519),
+            Self::Ecdsa => None,
+        }
+    }
+}
+
+impl From<CryptoType> for SignatureScheme {
+    fn from(value: CryptoType) -> Self {
+        match value {
+            CryptoType::Ed25519 => Self::Ed25519,
+            CryptoType::Sr25519 => Self::Sr25519,
+        }
+    }
+}
+
+impl From<SignatureScheme> for u8 {
+    fn from(value: SignatureScheme) -> Self {
+        value.code()
+    }
+}
+
+impl TryFrom<u8> for SignatureScheme {
+    type Error = crate::UnitError;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Ed25519),
+            1 => Ok(Self::Sr25519),
+            2 => Ok(Self::Ecdsa),
+            _ => Err(crate::UnitError::InvalidIdentifier {
+                kind: "signature scheme",
+                value: u64::from(value),
+                limit: 3,
+            }),
+        }
+    }
+}
+
+impl fmt::Display for SignatureScheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Ed25519 => "ed25519",
+            Self::Sr25519 => "sr25519",
+            Self::Ecdsa => "ecdsa",
+        })
+    }
+}

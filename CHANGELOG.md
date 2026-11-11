@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v490 hand ports: external ECDSA signatures (D-180)
+
+- External signers with ECDSA (secp256k1) accounts can sign rtao-prepared transactions, as in Python v490. The account is `blake2_256` of the compressed public key (`rtao_core::keys::account_id_from_ecdsa_public`). Prepare with `Client::prepare_public_as(call, account, SignatureScheme::Ecdsa, &opts)` (or `Executor::prepare_call_as`); the 17-field unsigned JSON carries `crypto_type` 2 and imports. Read the signer's reply with `ExternalSignature::normalize`/`normalize_hex` (65 bytes raw, or 66 with the variant byte), then attach or submit it with `Client::attach_external_signature`/`submit_external_signature` (or `Executor::submit_external_signature`, `SyncClient::submit_external_signature`).
+- Additive types: `rtao_primitives::SignatureScheme`, `rtao_signer::{EcdsaSignature, ExternalSignature}`, `UnsignedExtrinsic::signature_scheme`. `MultiSignature`, `CryptoType` and the existing methods are unchanged. `UnsignedExtrinsic::crypto_type()` reports `Sr25519` for an ECDSA transaction, which no classical signature satisfies.
+- ECDSA signatures are verified before they are attached, as the runtime verifies them (secp256k1 public-key recovery over the BLAKE2b-256 of the payload). A signature for another account, payload or scheme is refused without broadcasting. rtao-signer now depends on `k256`.
+- `_transport/extrinsics.py`, the last of issue #17's 20 sources, is blessed, and the new `test_normalize_signature.py` is classified.
+
 ### v490 hand ports: the core's strict verifier, password codec and ECDSA key helpers (D-179)
 
 - `rtao_core::keys::verify_strict` and `rtao_core::keyfile_env` are now the core's own (v490 shipped rtao's PR-U10). rtao's staged copies in `rtao-core-ext` are removed (`rtao_core_ext::verify_strict` and `rtao_core_ext::keyfile_env` no longer exist; use the `rtao_core` paths). One behavior difference: `verify_strict` with a hashed crypto code (4 or 6) now verifies the core's hashed message envelope instead of returning an error, as Python's `sp_core.verify_strict` does. Ed25519 and Sr25519 behavior is unchanged, and so is btauth's strict policy, which refuses hashed senders.
@@ -15,6 +22,7 @@
 - `AdminUtils.sudo_set_subnet_emission_weights_v2` and `sudo_set_subnet_gamma_emission_whitelisted` are available as generated calls (raw-only, as in Python).
 - Tests: `rtao_testkit::FakeState::default()` serves the pinned Finney metadata (now v490) and `rtao_testkit::fixtures::pinned_finney_metadata`/`pinned_finney_runtime` expose it. The three test failures on `main` after the 490 adoption (rtao-tx and rtao-catalog error counts, rtao-neuron validator surface) follow the pin.
 - 10 of issue #17's 20 sources are blessed: the emission weights and gamma sources, `_substrate.py`, `_transport/interface.py`, `pallets/admin-utils/src/lib.rs` and `eco-tests/src/mock.rs`; the new upstream `test_storage_exists.py` is classified and blessed.
+
 ### Post-quantum and hashed accounts first class, with btcli's defaults (D-170 to D-177)
 
 - **Behaviour change:** `Executor::new` routes account registration through MEV Shield by default when the network offers it (Python's `shielded=None`, D-170), superseding the opt-in `with_auto_shield(true)` of D-140. This covers `HashedAccounts.register`, `register_derived` and `register_derived_sponsored`, `Proxy.create_protected_pure` and `Utility.as_protected_derivative`, also inside wrappers and batches. Without an active Shield key the registration is planned unshielded with Python's warning. `with_auto_shield(false)` opts out (Python's `shielded=False`) and is now also on the facade's `rtao::Executor`. The blocking facade and `Multisig::approve` follow. The CLI still decides the route at review.

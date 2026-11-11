@@ -6,8 +6,8 @@ use rtao_client::{
     CallBytes, Mortality, NoncePolicy, Period, PublicPrepareOptions, SubmitOptions,
     UnsignedExtrinsic,
 };
-use rtao_primitives::{AccountId, CryptoType};
-use rtao_signer::MultiSignature;
+use rtao_primitives::{AccountId, CryptoType, SignatureScheme};
+use rtao_signer::{ExternalSignature, MultiSignature};
 use std::time::Duration;
 
 /// Public inputs for an external signing round trip.
@@ -63,10 +63,25 @@ impl Executor {
         address: AccountId,
         opts: &PrepareOptions,
     ) -> Result<UnsignedExtrinsic, TxError> {
+        self.prepare_call_as(call, address, opts.crypto_type.into(), opts)
+            .await
+    }
+
+    /// [`Self::prepare_call`] for an external signer of any `MultiSignature`
+    /// scheme, which replaces `opts.crypto_type`; for an ECDSA account the
+    /// address is `blake2_256` of its compressed secp256k1 key (D-180).
+    pub async fn prepare_call_as(
+        &self,
+        call: CallBytes,
+        address: AccountId,
+        scheme: SignatureScheme,
+        opts: &PrepareOptions,
+    ) -> Result<UnsignedExtrinsic, TxError> {
         self.client()
-            .prepare_public(
+            .prepare_public_as(
                 call,
                 address,
+                scheme,
                 &PublicPrepareOptions {
                     submit: SubmitOptions {
                         mortality: opts.period.map_or(Mortality::Immortal, |period| {
@@ -105,6 +120,18 @@ impl Executor {
         signature: MultiSignature,
         opts: &ExecuteOptions,
     ) -> Result<ExtrinsicResult, TxError> {
+        self.submit_external_signature(unsigned, signature.into(), opts)
+            .await
+    }
+
+    /// [`Self::submit_signature`] for any external signature scheme, a raw
+    /// ECDSA signature included (D-180), under the same policy and checks.
+    pub async fn submit_external_signature(
+        &self,
+        unsigned: &UnsignedExtrinsic,
+        signature: ExternalSignature,
+        opts: &ExecuteOptions,
+    ) -> Result<ExtrinsicResult, TxError> {
         self.enforce_raw_call(opts)?;
         opts.check_expected_call(unsigned.call())?;
         if opts.shielded || opts.proxy_for.is_some() || opts.force_proxy_type.is_some() {
@@ -115,7 +142,7 @@ impl Executor {
         }
         let result = self
             .client()
-            .submit_signature(unsigned, signature, &opts.submit_options())
+            .submit_external_signature(unsigned, signature, &opts.submit_options())
             .await;
         self.lift_submission(result, serde_json::Map::new())
     }

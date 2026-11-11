@@ -107,6 +107,9 @@ nix = { version = "0.30", default-features = false, features = ["signal", "proce
 qrcodegen = "1.8.0"
 rqrr = { version = "0.11.0", default-features = false }
 alloy-primitives = { version = "=1.7.3", default-features = false, features = ["std", "serde", "k256"] }
+# secp256k1 public-key recovery for external ECDSA signatures (D-180); the
+# version alloy-primitives already locks.
+k256 = { version = "0.13.4", default-features = false, features = ["ecdsa", "std"] }
 alloy-json-abi = { version = "=1.7.3", default-features = false, features = ["std"] }
 alloy-dyn-abi = { version = "=1.7.3", default-features = false, features = ["std"] }
 alloy-sol-types = { version = "=1.7.3", default-features = false, features = ["std"] }

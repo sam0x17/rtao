@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/interface.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/extrinsics.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/extrinsics.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/contract.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/protocols.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/result.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
@@ -16,11 +16,11 @@ use crate::{BlockRef, Client, ClientError, NonceLease, View, ViewExt};
 use bytes::Bytes;
 use futures::StreamExt;
 use rtao_core::{CoreError, DynValue, codec::Value, digest::ChainInfo, extrinsic::TxParams};
-use rtao_primitives::{AccountId, CryptoType, H256, TaoBalance};
+use rtao_primitives::{AccountId, CryptoType, H256, SignatureScheme, TaoBalance};
 use rtao_runtime::{CallBytes, RuntimeHandle};
 use rtao_signer::{
-    MultiSignature, SignPurpose, Signer, SignerCaps, SignerPayloadJson, SigningContext,
-    SigningRequest,
+    ExternalSignature, MultiSignature, SignPurpose, Signer, SignerCaps, SignerPayloadJson,
+    SigningContext, SigningRequest,
 };
 use serde_json::json;
 use std::{
@@ -134,8 +134,8 @@ pub struct UnsignedExtrinsic {
     pub(crate) call: CallBytes,
     /// Expected signing account.
     pub(crate) address: AccountId,
-    /// Expected MultiSignature algorithm.
-    pub(crate) crypto_type: CryptoType,
+    /// Expected MultiSignature scheme.
+    pub(crate) scheme: SignatureScheme,
     /// Normalized era carrier used by the core encoder.
     pub(crate) era: Value,
     /// Selected pool-aware nonce.
@@ -173,9 +173,18 @@ impl UnsignedExtrinsic {
     pub fn address(&self) -> AccountId {
         self.address
     }
-    /// Expected MultiSignature algorithm.
+    /// Expected classical MultiSignature algorithm.
+    ///
+    /// An ECDSA transaction ([`Self::signature_scheme`] is
+    /// [`SignatureScheme::Ecdsa`]) has no `CryptoType`: this reports
+    /// `Sr25519` for it, and no classical signature is accepted for it,
+    /// since every check compares the full scheme.
     pub fn crypto_type(&self) -> CryptoType {
-        self.crypto_type
+        self.scheme.crypto_type().unwrap_or(CryptoType::Sr25519)
+    }
+    /// Expected MultiSignature scheme, ECDSA included (D-180).
+    pub fn signature_scheme(&self) -> SignatureScheme {
+        self.scheme
     }
     /// Borrow the normalized era used by the core encoder.
     pub fn era(&self) -> &Value {
@@ -1165,6 +1174,19 @@ impl Client {
         signature: MultiSignature,
         opts: &SubmitOptions,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
+        self.submit_external_signature(unsigned, signature.into(), opts)
+            .await
+    }
+
+    /// [`Self::submit_signature`] for any external signature scheme, a raw
+    /// ECDSA signature included (D-180). The signature is verified against
+    /// the prepared account and payload before anything is sent.
+    pub async fn submit_external_signature(
+        &self,
+        unsigned: &UnsignedExtrinsic,
+        signature: ExternalSignature,
+        opts: &SubmitOptions,
+    ) -> Result<ExtrinsicReport, SubmitFailure> {
         let (scoped, _owner) = scoped_journal_options(opts)?;
         let opts = &scoped;
         let limits = SubmissionLimits::new(opts)?;
@@ -1176,10 +1198,10 @@ impl Client {
                     .await
                     .map_err(ClientError::Journal)?;
             }
-            unsigned.verify_signature(signature)?;
+            unsigned.verify_external_signature(&signature)?;
             let (bytes, hash) = limits
                 .admission
-                .run(self, self.attach_signature(unsigned, signature))
+                .run(self, self.attach_external_signature(unsigned, signature))
                 .await?;
             if let Some(journal) = &opts.journal {
                 journal
@@ -1339,7 +1361,7 @@ impl Client {
         Ok(UnsignedExtrinsic {
             call,
             address: signer.account(),
-            crypto_type: signer.crypto_type(),
+            scheme: signer.crypto_type().into(),
             era,
             nonce,
             tip: fees.0,
@@ -1389,7 +1411,18 @@ impl Client {
         unsigned: &UnsignedExtrinsic,
         signature: MultiSignature,
     ) -> Result<(Bytes, H256), ClientError> {
-        unsigned.verify_signature(signature)?;
+        self.attach_external_signature(unsigned, signature.into())
+            .await
+    }
+
+    /// [`Self::attach_signature`] for any external signature scheme, a raw
+    /// ECDSA signature included (D-180).
+    pub async fn attach_external_signature(
+        &self,
+        unsigned: &UnsignedExtrinsic,
+        signature: ExternalSignature,
+    ) -> Result<(Bytes, H256), ClientError> {
+        unsigned.verify_external_signature(&signature)?;
         // One live runtime version both re-checks signing and the stamps.
         self.ensure_signing_network()?;
         let (runtime, version) = self.refresh_runtime_version().await?;
@@ -1422,8 +1455,8 @@ impl Client {
             .encode_signed_extrinsic(
                 unsigned.call.as_bytes(),
                 unsigned.address.0,
-                &signature.bytes,
-                u8::from(signature.crypto),
+                signature.raw(),
+                signature.scheme().code(),
                 &unsigned.params(),
             )
             .map_err(CoreError::from)?;

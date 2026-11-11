@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_prepare_attach.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_normalize_signature.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Public fixture signing and adversarial unsigned-JSON imports.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -607,7 +608,10 @@ async fn altered_call_identity_era_payload_views_parts_and_hashes_refuse() {
         ("nonce", json!(4)),
         ("tip", json!(18)),
         ("tip_asset_id", json!(66)),
-        ("crypto_type", json!(2)),
+        // Not a MultiSignature variant (2 is ECDSA since D-180). The scheme is
+        // not signed: a changed valid scheme is refused at attachment, where
+        // the signature must verify for the account under it.
+        ("crypto_type", json!(3)),
         ("spec_version", json!(479)),
         ("transaction_version", json!(2)),
         ("era", json!({"period":128,"current":0})),
@@ -1126,4 +1130,167 @@ async fn literal_hex_byte_spans_and_some_u256_calls_import_before_fixture_signin
             .unwrap();
         imported.verify_signature(signature).unwrap();
     }
+}
+
+fn ecdsa_key() -> (k256::ecdsa::SigningKey, AccountId) {
+    // Public deterministic fixture key; no wallet material is accessed.
+    let key = k256::ecdsa::SigningKey::from_slice(&[1; 32]).unwrap();
+    let compressed = key.verifying_key().to_encoded_point(true);
+    let account = rtao_core::keys::account_id_from_ecdsa_public(compressed.as_bytes()).unwrap();
+    (key, AccountId(account))
+}
+
+fn ecdsa_sign(key: &k256::ecdsa::SigningKey, payload: &[u8]) -> [u8; 65] {
+    use blake2::{Blake2b, Digest, digest::consts::U32};
+    let digest: [u8; 32] = Blake2b::<U32>::digest(payload).into();
+    let (signature, id) = key.sign_prehash_recoverable(&digest).unwrap();
+    let mut raw = [0; 65];
+    raw[..64].copy_from_slice(&signature.to_bytes());
+    raw[64] = id.to_byte();
+    raw
+}
+
+// Issue RaoFoundation/subtensor#3306 blocked native transfers signed by external ECDSA keys.
+// pyt: unit/test_normalize_signature.py::test_external_ecdsa_transfer_survives_prepare_sign_attach
+#[tokio::test]
+async fn external_ecdsa_transfer_survives_prepare_sign_attach() {
+    use rtao_core::value_ext::ValueExt;
+    use rtao_primitives::SignatureScheme;
+    use rtao_signer::{EcdsaSignature, ExternalSignature};
+    let (client, _fake, classical) = fixture(CryptoType::Sr25519).await;
+    let (key, account) = ecdsa_key();
+    let runtime = client.refresh_runtime().await.unwrap();
+    let call = rtao_runtime::calls::balances::transfer_keep_alive(
+        rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(vec![9; 32])),
+        rtao_primitives::TaoBalance(123),
+    )
+    .compose(&runtime)
+    .unwrap();
+    let prepared = client
+        .prepare_public_as(
+            call.clone(),
+            account,
+            SignatureScheme::Ecdsa,
+            &PublicPrepareOptions {
+                tip: 3,
+                submit: SubmitOptions {
+                    mortality: Mortality::Immortal,
+                    nonce: NoncePolicy::Explicit(7),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(prepared.signature_scheme(), SignatureScheme::Ecdsa);
+    let value = prepared.to_json().unwrap();
+    assert_eq!(value["crypto_type"], 2);
+    assert_eq!(value["public_key"], format!("0x{}", hex::encode(account.0)));
+    let unsigned = import(&client, &value).await.unwrap();
+    assert_eq!(unsigned.signature_scheme(), SignatureScheme::Ecdsa);
+    assert_eq!(unsigned.to_json().unwrap(), value);
+    let payload = unsigned
+        .signing_request(SignPurpose::Extrinsic)
+        .payload
+        .to_vec();
+    let raw = ecdsa_sign(&key, &payload);
+    for prefixed in [false, true] {
+        for as_hex in [false, true] {
+            let mut reply = if prefixed { vec![2] } else { vec![] };
+            reply.extend_from_slice(&raw);
+            let signature = if as_hex {
+                ExternalSignature::normalize_hex(
+                    &format!("0x{}", hex::encode(&reply)),
+                    unsigned.signature_scheme(),
+                )
+            } else {
+                ExternalSignature::normalize(&reply, unsigned.signature_scheme())
+            }
+            .unwrap();
+            assert_eq!(signature, ExternalSignature::Ecdsa(EcdsaSignature(raw)));
+            let (bytes, _hash) = client
+                .attach_external_signature(&unsigned, signature)
+                .await
+                .unwrap();
+            let decoded = runtime.core().decode_extrinsic(&bytes, true).unwrap();
+            assert_eq!(
+                decoded
+                    .field("address")
+                    .and_then(ValueExt::as_str)
+                    .and_then(|address| address.parse::<AccountId>().ok()),
+                Some(account)
+            );
+            assert_eq!(decoded.field("nonce").and_then(ValueExt::as_u128), Some(7));
+            assert_eq!(decoded.field("tip").and_then(ValueExt::as_u128), Some(3));
+            assert_eq!(
+                decoded
+                    .field("signature")
+                    .and_then(|signature| signature.variant("Ecdsa"))
+                    .and_then(ValueExt::value_bytes),
+                Some(raw.to_vec())
+            );
+            assert!(bytes.ends_with(call.as_bytes()));
+        }
+    }
+    // Only the prepared account's ECDSA signature over this payload attaches.
+    let other = k256::ecdsa::SigningKey::from_slice(&[2; 32]).unwrap();
+    let wrong = ExternalSignature::Ecdsa(EcdsaSignature(ecdsa_sign(&other, &payload)));
+    assert!(
+        client
+            .attach_external_signature(&unsigned, wrong)
+            .await
+            .is_err()
+    );
+    let stale = ExternalSignature::Ecdsa(EcdsaSignature(ecdsa_sign(&key, b"another payload")));
+    assert!(
+        client
+            .attach_external_signature(&unsigned, stale)
+            .await
+            .is_err()
+    );
+    // A classical signature never attaches to an ECDSA transaction, and an
+    // ECDSA signature never attaches to a classical one.
+    let sr = classical
+        .sign(&unsigned.signing_request(SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    assert!(unsigned.verify_signature(sr).is_err());
+    assert!(client.attach_signature(&unsigned, sr).await.is_err());
+    let classical_tx = prepared_for(&client, classical.account()).await;
+    let ecdsa_reply = ExternalSignature::Ecdsa(EcdsaSignature(ecdsa_sign(
+        &key,
+        classical_tx.signing_request(SignPurpose::Extrinsic).payload,
+    )));
+    assert!(
+        client
+            .attach_external_signature(&classical_tx, ecdsa_reply)
+            .await
+            .is_err()
+    );
+    // A crypto type beyond the MultiSignature variants is refused on import.
+    let mut unknown = value.clone();
+    unknown["crypto_type"] = json!(3);
+    assert!(import(&client, &unknown).await.is_err());
+}
+
+async fn prepared_for(client: &Client, account: AccountId) -> rtao_client::UnsignedExtrinsic {
+    let runtime = client.refresh_runtime().await.unwrap();
+    client
+        .prepare_public(
+            rtao_runtime::calls::system::remark(vec![1])
+                .compose(&runtime)
+                .unwrap(),
+            account,
+            &PublicPrepareOptions {
+                submit: SubmitOptions {
+                    mortality: Mortality::Immortal,
+                    nonce: NoncePolicy::Explicit(1),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap()
 }

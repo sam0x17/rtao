@@ -42,7 +42,7 @@ pub mod pyfmt;
 /// Metadata type identity based ratio normalization.
 pub mod ratio;
 
-pub use account::{AccountId, CryptoType, DefaultAccount, Ss58Address};
+pub use account::{AccountId, CryptoType, DefaultAccount, SignatureScheme, Ss58Address};
 pub use account_mode::{AccountMode, AccountModeError, multisig_account_id};
 pub use authority::{AuthorityType, AuthorityTypeError, HASHED_PROOF_LENGTH, MLDSA_PROOF_LENGTH};
 pub use error::UnitError;

@@ -1,14 +1,14 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/contract.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/extrinsics.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/extrinsics.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Import separates untrusted JSON from an authenticated signing context.
 
 use crate::{BlockRef, Client, ClientError, NoncePolicy, SubmitOptions, UnsignedExtrinsic};
 use rtao_core::{CoreError, codec::Value, extrinsic::TxParams, value_ext::ValueExt};
-use rtao_primitives::{AccountId, CryptoType, H256};
+use rtao_primitives::{AccountId, CryptoType, H256, SignatureScheme};
 use rtao_runtime::{CallBytes, RuntimeHandle};
 use rtao_signer::{
-    BoxFuture, MultiSignature, Signer, SignerCaps, SignerError, SignerPayloadJson, SigningContext,
-    SigningRequest,
+    BoxFuture, ExternalSignature, MultiSignature, Signer, SignerCaps, SignerError,
+    SignerPayloadJson, SigningContext, SigningRequest,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::json;
@@ -139,8 +139,10 @@ impl UntrustedUnsignedExtrinsic {
         if fixed::<32>(&wire.public_key)? != address.0 {
             return Err(invalid("public_key does not match address"));
         }
-        let crypto_type =
-            CryptoType::try_from(wire.crypto_type).map_err(|e| invalid(e.to_string()))?;
+        // An ECDSA account (crypto type 2) signs externally; its public_key
+        // field is the account, blake2_256 of the compressed key.
+        let scheme =
+            SignatureScheme::try_from(wire.crypto_type).map_err(|e| invalid(e.to_string()))?;
         let era = parse_era(&wire.era)?;
         let (birth, expiry) = era_window(&era, finalized_height)?;
         if birth.is_none() && era_block_hash != genesis {
@@ -188,7 +190,7 @@ impl UntrustedUnsignedExtrinsic {
         Ok(UnsignedExtrinsic {
             call,
             address,
-            crypto_type,
+            scheme,
             era,
             nonce: wire.nonce,
             tip: wire.tip,
@@ -240,7 +242,7 @@ impl Serialize for UnsignedExtrinsic {
                 .ok_or_else(|| serde::ser::Error::custom("missing prepared address"))?
                 .to_owned(),
             public_key: hex_bytes(&self.address.0),
-            crypto_type: self.crypto_type.into(),
+            crypto_type: self.scheme.code(),
             era,
             nonce: self.nonce,
             tip: self.tip,
@@ -265,14 +267,21 @@ impl UnsignedExtrinsic {
     }
     /// Verify the negotiated signature over the immutable, size-normalized payload.
     pub fn verify_signature(&self, signature: MultiSignature) -> Result<(), ClientError> {
-        if signature.crypto != self.crypto_type
-            || !rtao_core::keys::verify_strict(
-                &self.payload,
-                &signature.bytes,
-                &self.address.to_ss58(42),
-                signature.crypto.into(),
-            )
-            .map_err(CoreError::from)?
+        self.verify_external_signature(&signature.into())
+    }
+
+    /// [`Self::verify_signature`] for any external signature scheme: the
+    /// signature's scheme must be the prepared one, and it must be the
+    /// prepared account's over the payload by the runtime's `MultiSignature`
+    /// rules (ECDSA by public-key recovery, D-180).
+    pub fn verify_external_signature(
+        &self,
+        signature: &ExternalSignature,
+    ) -> Result<(), ClientError> {
+        if signature.scheme() != self.scheme
+            || !signature
+                .verify(&self.payload, &self.address)
+                .map_err(|error| invalid(error.to_string()))?
         {
             return Err(invalid(
                 "signature does not verify for the prepared account and payload",
@@ -290,6 +299,23 @@ impl Client {
         address: AccountId,
         opts: &PublicPrepareOptions,
     ) -> Result<UnsignedExtrinsic, ClientError> {
+        self.prepare_public_as(call, address, opts.crypto_type.into(), opts)
+            .await
+    }
+
+    /// [`Self::prepare_public`] for an external signer of any
+    /// `MultiSignature` scheme, which replaces `opts.crypto_type`. For an
+    /// ECDSA account, `address` is the account: `blake2_256` of the
+    /// compressed secp256k1 key (`rtao_core::keys::account_id_from_ecdsa_public`).
+    /// Its signature is attached with [`Client::submit_external_signature`]
+    /// or [`Client::attach_external_signature`] (D-180).
+    pub async fn prepare_public_as(
+        &self,
+        call: CallBytes,
+        address: AccountId,
+        scheme: SignatureScheme,
+        opts: &PublicPrepareOptions,
+    ) -> Result<UnsignedExtrinsic, ClientError> {
         let limit = crate::submit::SubmissionLimits::new(&opts.submit)?.admission;
         limit
             .run(self, async {
@@ -299,10 +325,12 @@ impl Client {
                 };
                 let signer = PublicIdentity {
                     address,
-                    crypto: opts.crypto_type,
+                    // Preparation reads no algorithm from this signer beyond
+                    // the scheme recorded below.
+                    crypto: scheme.crypto_type().unwrap_or(opts.crypto_type),
                     metadata: opts.metadata_hash.is_some(),
                 };
-                let unsigned = self
+                let mut unsigned = self
                     .prepare_at_nonce_with_fees(
                         call,
                         &signer,
@@ -317,6 +345,7 @@ impl Client {
                         "requested metadata_hash does not match authenticated runtime",
                     ));
                 }
+                unsigned.scheme = scheme;
                 Ok(unsigned)
             })
             .await
