@@ -8185,7 +8185,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "ff8215891eb40893be3bec92dc7db9613ef7ab52"
+        "synced_blob": "f33db71a70da0e1a117f16dfd0c94642bf079e38"
       },
       {
         "kind": "n/a",
@@ -8230,7 +8230,7 @@
           "crates/rtao-intents/src/hyperparameters/planner.rs (selective owner current-value and freeze/cooldown planning)",
           "vendor/upstream/extracted/owner_map.json (33 owner names over 32 setters plus four operation policies and source provenance)"
         ],
-        "synced_blob": "cb5f50be2425fadf629dc357448ef0121e1e1ae4"
+        "synced_blob": "8aa8a8219d8b1d642b18a31d66998943efbb0bf7"
       },
       {
         "kind": "extracted",
@@ -9113,7 +9113,7 @@
           "crates/rtao-tx/src/executor.rs",
           "crates/rtao-rpc/src/session.rs"
         ],
-        "synced_blob": "d75700ec581a5d87fc258bb0966790a44ce3b703"
+        "synced_blob": "8e173e1362a6328370784326f00aa0f5b0ee42c7"
       },
       {
         "kind": "ported",
@@ -9218,7 +9218,7 @@
           "crates/rtao-core-ext/src/ops/fee.rs",
           "crates/rtao-core-ext/src/ops/extrinsic_lookup.rs"
         ],
-        "synced_blob": "22cdb716b676c91dd50f2e0780964ff893ce81c8"
+        "synced_blob": "1491f32a59605e4b4be0164ef5f046de0888beb5"
       },
       {
         "kind": "n/a",
@@ -9677,7 +9677,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/subnet_emission.rs"
         ],
-        "synced_blob": "4744f437d8fb4733398a7beb93155b61227e23db"
+        "synced_blob": "1413d585052ca18f7a7c69792dbd28f748b7e86e"
       },
       {
         "kind": "ported",
@@ -10032,7 +10032,7 @@
         "rust": [
           "crates/rtao-primitives/src/emission_weights.rs"
         ],
-        "synced_blob": "71b2c76d7f04471d6065519e281a1be7753f7239"
+        "synced_blob": "d6ddb11200afca73eb90e8e87ac7c7c81e4ea88d"
       },
       {
         "kind": "generated",
@@ -10919,7 +10919,7 @@
         "rust": [
           "crates/rtao-intents/src/emission_weights.rs"
         ],
-        "synced_blob": "d6764dac54418228a63a5d969cb0e019bf6ae1e5"
+        "synced_blob": "575e6ec5728a0ffdea80743a4c01480673a716d9"
       },
       {
         "kind": "ported",
@@ -11442,7 +11442,7 @@
           "rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "8cc78cffa8572f583a95cbe81326f702d034f30a"
+        "synced_blob": "e0ad1d9bf1214133b6d4166caced12436fea37ba"
       },
       {
         "kind": "ported",
@@ -12025,7 +12025,7 @@
           "crates/rtao-reads/tests/subnets.rs",
           "crates/rtao-cli/tests/subnet_emission_commands.rs"
         ],
-        "synced_blob": "a5a7a865a9cb315d43ea27c42d8e4e21aa005e7b"
+        "synced_blob": "82f50aa7a09c36856f13fc9b3bb7dfeb02df76ae"
       },
       {
         "kind": "ported",
@@ -12557,7 +12557,7 @@
           "crates/rtao-intents/src/gamma.rs",
           "crates/rtao-intents/tests/gamma.rs"
         ],
-        "synced_blob": "906b8730f526cbe2691655f6086a991787974b88"
+        "synced_blob": "0b48b3352b0580881c2a01549425f5651273e346"
       },
       {
         "kind": "ported",
@@ -13535,14 +13535,14 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_storage_exists.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v490, not yet classified or ported"
+          "crates/rtao-client/tests/snapshot.rs::storage_exists_tells_a_stored_default_from_a_missing_key"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "209e01e78f9f8b46884e55db151999712f2e7d74"
       }
     ],
     "intents": [

@@ -392,7 +392,17 @@ async fn default_flow(client: &Client, fake: &FakeChain) -> (Vec<String>, String
 /// requests it issued before submit endpoints existed.
 #[tokio::test]
 async fn without_a_submit_endpoint_requests_are_unchanged() {
-    let fake = FakeChain::from_state(FakeState::default());
+    // The digest covers signed bytes, which carry the spec version, so this
+    // test keeps the runtime it was recorded at rather than the pinned one
+    // the default fake serves (D-178).
+    let historical = rtao_core::runtime::Runtime::parse(
+        include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
+        488,
+        1,
+        42,
+    )
+    .unwrap();
+    let fake = FakeChain::from_state(FakeState::try_finney(historical).unwrap());
     let client = Client::from_rpc(RpcClient::new(fake.clone()), config())
         .await
         .unwrap();

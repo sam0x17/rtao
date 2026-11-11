@@ -48,7 +48,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
-      "sha256": "514348f4b0f79d40d24cb8411f996f97b0bbc247ce05ae76bc1d6f92335b82ca"
+      "sha256": "7b2a7d5bc4899af336887d3a8623f7b885f367821a6be86a48ce3cad845b2f08"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",

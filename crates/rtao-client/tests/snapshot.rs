@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/snapshot.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_storage_exists.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Snapshot siblings and connection-local display helpers.
 
 #![allow(clippy::unwrap_used, clippy::panic)] // Invalid fixtures must fail assertions.
@@ -139,4 +140,73 @@ async fn client_and_snapshot_balance_helpers_keep_symbols_without_rpc_after_clos
         }
         assert_eq!(chain.requests(), before);
     }
+}
+
+// pyt: unit/test_storage_exists.py::test_storage_presence_uses_exact_key_hash_without_decoding_defaults
+// pyt: unit/test_storage_exists.py::test_storage_presence_rejects_partial_keys_before_rpc
+// pyt: unit/test_storage_exists.py::test_storage_presence_adapter_preserves_the_requested_block
+#[tokio::test]
+async fn storage_exists_tells_a_stored_default_from_a_missing_key() {
+    use rtao_core::codec::Value;
+    let (client, chain) = setup().await;
+    let owned = rtao_primitives::AccountId([7; 32]);
+    let missing = rtao_primitives::AccountId([8; 32]);
+    chain.mutate_state(|state| {
+        // A stored zero account is the map's default value, yet present.
+        state
+            .seed_python(
+                "SubtensorModule",
+                "Owner",
+                &[json!(owned.to_string())],
+                json!(rtao_primitives::AccountId::ZERO.to_string()),
+            )
+            .unwrap();
+    });
+    let snapshot = client.at(BlockRef::Best).await.unwrap();
+    let key = |account: rtao_primitives::AccountId| [Value::Bytes(account.0.to_vec())];
+    assert!(
+        snapshot
+            .storage_exists("SubtensorModule", "Owner", &key(owned))
+            .await
+            .unwrap()
+    );
+    assert!(
+        !snapshot
+            .storage_exists("SubtensorModule", "Owner", &key(missing))
+            .await
+            .unwrap()
+    );
+    // Every storage read was made at the snapshot's pinned block.
+    let hash: String = std::iter::once("0x".to_owned())
+        .chain(
+            snapshot
+                .block()
+                .hash
+                .0
+                .iter()
+                .map(|byte| format!("{byte:02x}")),
+        )
+        .collect();
+    let reads: Vec<_> = chain
+        .requests()
+        .into_iter()
+        .filter(|request| request.method.starts_with("state_getStorage"))
+        .collect();
+    assert!(!reads.is_empty());
+    assert!(
+        reads
+            .iter()
+            .all(|request| request.params[1].as_str() == Some(hash.as_str())),
+        "{reads:?}"
+    );
+    // A partial key is refused before any request.
+    let before = chain.requests().len();
+    let error = snapshot
+        .storage_exists("SubtensorModule", "Owner", &[])
+        .await
+        .unwrap_err();
+    assert!(matches!(error, ClientError::Protocol(_)), "{error}");
+    assert!(error.to_string().contains("expects 1 key arguments, got 0"));
+    assert_eq!(chain.requests().len(), before);
+    client.close().await;
 }

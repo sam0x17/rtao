@@ -90,7 +90,9 @@ fn all_semantic_and_chain_error_records_preserve_documentation_and_sources() -> 
         .as_object()
         .ok_or("chain errors missing")?;
     assert_eq!(SEMANTIC_ERRORS.len(), 18);
-    assert_eq!(CHAIN_ERRORS.len(), 441);
+    // Every catalog chain error at the parity pin (441 at v488, 446 at v490).
+    assert!(chain.len() >= 441, "{} catalog chain errors", chain.len());
+    assert_eq!(CHAIN_ERRORS.len(), chain.len());
     let mut semantic_names = BTreeSet::new();
     for spec in &SEMANTIC_ERRORS {
         assert!(semantic_names.insert(spec.code.as_str()));

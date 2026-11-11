@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### v490 hand ports: gamma emission shares (D-178)
+
+- Subnet emission weights count the subnet's gamma shares (runtime 490 `SubtensorModule.SubnetGammaEmission`): `rtao_primitives::emission_weights::Rules` has a public `gamma_share` field (source-breaking for struct literals without `..Default::default()`), with `and_gamma` and `renormalize_with_gamma`; `rtao_reads::reads::subnets::gamma_emission_share` and `SubnetEmissionWeights::gamma_share` read them; `SetSubnetEmissionWeights` and `rtao subnets emission show/set/set-value/increase/decrease` include them in the sum and the preview. Help text says the other slots fill the rest.
+- A new gamma deposit is blocked only when its hotkey belongs to another coldkey; an unassociated hotkey is allowed (runtime 490). `ViewExt::storage_exists` tells a stored default from a missing key.
+- `AdminUtils.sudo_set_subnet_emission_weights_v2` and `sudo_set_subnet_gamma_emission_whitelisted` are available as generated calls (raw-only, as in Python).
+- Tests: `rtao_testkit::FakeState::default()` serves the pinned Finney metadata (now v490) and `rtao_testkit::fixtures::pinned_finney_metadata`/`pinned_finney_runtime` expose it. The three test failures on `main` after the 490 adoption (rtao-tx and rtao-catalog error counts, rtao-neuron validator surface) follow the pin.
+- 10 of issue #17's 20 sources are blessed: the emission weights and gamma sources, `_substrate.py`, `_transport/interface.py`, `pallets/admin-utils/src/lib.rs` and `eco-tests/src/mock.rs`; the new upstream `test_storage_exists.py` is classified and blessed.
 ### Post-quantum and hashed accounts first class, with btcli's defaults (D-170 to D-177)
 
 - **Behaviour change:** `Executor::new` routes account registration through MEV Shield by default when the network offers it (Python's `shielded=None`, D-170), superseding the opt-in `with_auto_shield(true)` of D-140. This covers `HashedAccounts.register`, `register_derived` and `register_derived_sponsored`, `Proxy.create_protected_pure` and `Utility.as_protected_derivative`, also inside wrappers and batches. Without an active Shield key the registration is planned unshielded with Python's warning. `with_auto_shield(false)` opts out (Python's `shielded=False`) and is now also on the facade's `rtao::Executor`. The blocking facade and `Multisig::approve` follow. The CLI still decides the route at review.

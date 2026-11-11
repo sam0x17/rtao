@@ -814,7 +814,7 @@ pub async fn validator_basket_summary<V: View + ?Sized>(
 }
 
 /// TAO burn/recycle cost of registering on a subnet.
-// py: sdk/python/bittensor/reads/subnets.py:79-82
+// py: sdk/python/bittensor/reads/subnets.py:195-204
 pub async fn burn<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<DynBalance, ReadError> {
     Ok(DynBalance::from_rao(
         view.storage(&st::subtensor_module::BURN, (netuid,))
@@ -825,7 +825,7 @@ pub async fn burn<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<DynBalan
 }
 
 /// Mechanism shares in mechanism order; unset values produce an empty list.
-// py: sdk/python/bittensor/reads/subnets.py:272-280
+// py: sdk/python/bittensor/reads/subnets.py:531-544
 pub async fn mechanism_emission_split<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -867,7 +867,7 @@ fn hyperparam_value(tagged: &JsonValue) -> Result<JsonValue, ReadError> {
 }
 
 /// Forward-compatible name-to-raw-value map, absent for a nonexistent subnet.
-// py: sdk/python/bittensor/reads/subnets.py:156-167
+// py: sdk/python/bittensor/reads/subnets.py:272-289
 pub async fn subnet_hyperparameters<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -911,7 +911,7 @@ pub async fn subnet_hyperparameters<V: View + ?Sized>(
 }
 
 /// Subnet identity text, preserving invalid bytes as 0x hex.
-// py: sdk/python/bittensor/reads/subnets.py:199-203
+// py: sdk/python/bittensor/reads/subnets.py:458-467
 pub async fn subnet_identity<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -923,7 +923,7 @@ pub async fn subnet_identity<V: View + ?Sized>(
 }
 
 /// Registered nonempty subnet names keyed by subnet ID.
-// py: sdk/python/bittensor/reads/subnets.py:206-214
+// py: sdk/python/bittensor/reads/subnets.py:470-479
 pub async fn subnet_names<V: View + ?Sized>(
     view: &V,
 ) -> Result<BTreeMap<NetUid, String>, ReadError> {
@@ -972,7 +972,7 @@ pub struct SubnetStartSchedule {
 }
 
 /// Earliest owner start-call block and current pinned head.
-// py: sdk/python/bittensor/reads/subnets.py:235-253
+// py: sdk/python/bittensor/reads/subnets.py:494-516
 pub async fn subnet_start_schedule<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,

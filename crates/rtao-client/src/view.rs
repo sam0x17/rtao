@@ -1,7 +1,7 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/interface.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/interface.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/snapshot.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/storage.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Read views whose multi-request operations retain one block identity.
 
 use std::{
@@ -1517,7 +1517,7 @@ pub trait ViewExt: View {
     /// applying the entry's default: a stored default value (the zero account
     /// in a `ValueQuery` map) is present, a missing key is not. Every key
     /// argument is required; a partial key is refused before any RPC.
-    // py: sdk/python/bittensor/_transport/interface.py:338-358 (v489)
+    // py: sdk/python/bittensor/_transport/interface.py:338-358
     fn storage_exists(
         &self,
         pallet: &str,

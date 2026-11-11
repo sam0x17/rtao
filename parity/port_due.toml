@@ -5,22 +5,6 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "eco-tests/src/mock.rs"
-kind = "n/a"
-from = "ff8215891eb40893be3bec92dc7db9613ef7ab52"
-to = "f33db71a70da0e1a117f16dfd0c94642bf079e38"
-tag = "v490"
-symbols = []
-
-[[file]]
-py = "pallets/admin-utils/src/lib.rs"
-kind = "ported"
-from = "cb5f50be2425fadf629dc357448ef0121e1e1ae4"
-to = "8aa8a8219d8b1d642b18a31d66998943efbb0bf7"
-tag = "v490"
-symbols = []
-
-[[file]]
 py = "sdk/bittensor-core-py/pyproject.toml"
 kind = "oracle-only"
 from = "bbf2f9ee76a2a915e16fc038397f11e2fe67d18e"
@@ -69,14 +53,6 @@ tag = "v490"
 symbols = []
 
 [[file]]
-py = "sdk/python/bittensor/_substrate.py"
-kind = "ported"
-from = "d75700ec581a5d87fc258bb0966790a44ce3b703"
-to = "8e173e1362a6328370784326f00aa0f5b0ee42c7"
-tag = "v490"
-symbols = ["bittensor._substrate.RpcSubstrate", "bittensor._substrate.RpcSubstrate.storage_exists", "bittensor._substrate.Substrate", "bittensor._substrate.Substrate.storage_exists"]
-
-[[file]]
 py = "sdk/python/bittensor/_transport/extrinsics.py"
 kind = "ported"
 from = "692cd5fe41a6c3ab73b0bb6ad9ccf43e49c6ceee"
@@ -85,68 +61,12 @@ tag = "v490"
 symbols = ["bittensor._transport.extrinsics.CRYPTO_ECDSA", "bittensor._transport.extrinsics.CRYPTO_ED25519", "bittensor._transport.extrinsics.CRYPTO_SR25519", "bittensor._transport.extrinsics.ECDSA_SIGNATURE_LEN", "bittensor._transport.extrinsics.ED25519_SIGNATURE_LEN", "bittensor._transport.extrinsics.PQ_CRYPTO_TYPES", "bittensor._transport.extrinsics.REGISTERED_CRYPTO_TYPES", "bittensor._transport.extrinsics.SR25519_SIGNATURE_LEN", "bittensor._transport.extrinsics._SIGNATURE_LENGTHS", "bittensor._transport.extrinsics._normalize_signature", "bittensor._transport.extrinsics.pq_lengths"]
 
 [[file]]
-py = "sdk/python/bittensor/_transport/interface.py"
-kind = "ported"
-from = "22cdb716b676c91dd50f2e0780964ff893ce81c8"
-to = "1491f32a59605e4b4be0164ef5f046de0888beb5"
-tag = "v490"
-symbols = ["bittensor._transport.interface.SubstrateConnection", "bittensor._transport.interface.SubstrateConnection.storage_exists"]
-
-[[file]]
-py = "sdk/python/bittensor/cli/commands/subnet_emission.py"
-kind = "ported"
-from = "4744f437d8fb4733398a7beb93155b61227e23db"
-to = "1413d585052ca18f7a7c69792dbd28f748b7e86e"
-tag = "v490"
-symbols = ["bittensor.cli.commands.subnet_emission._record", "bittensor.cli.commands.subnet_emission._renormalized_submit", "bittensor.cli.commands.subnet_emission.decrease", "bittensor.cli.commands.subnet_emission.increase", "bittensor.cli.commands.subnet_emission.set_value", "bittensor.cli.commands.subnet_emission.set_weights", "bittensor.cli.commands.subnet_emission.show"]
-
-[[file]]
-py = "sdk/python/bittensor/emission_weights.py"
-kind = "ported"
-from = "71b2c76d7f04471d6065519e281a1be7753f7239"
-to = "d6ddb11200afca73eb90e8e87ac7c7c81e4ea88d"
-tag = "v490"
-symbols = ["bittensor.emission_weights.Rules", "bittensor.emission_weights.Rules.gamma_share", "bittensor.emission_weights.Rules.table", "bittensor.emission_weights.and_gamma", "bittensor.emission_weights.renormalize", "bittensor.emission_weights.validate"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/emission_weights.py"
-kind = "ported"
-from = "d6764dac54418228a63a5d969cb0e019bf6ae1e5"
-to = "575e6ec5728a0ffdea80743a4c01480673a716d9"
-tag = "v490"
-symbols = ["bittensor.intents.emission_weights.RENORMALIZE_HELP", "bittensor.intents.emission_weights.SetSubnetEmissionWeights", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._gamma_share", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._inputs", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._merged", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._rules", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.build", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.preflight", "bittensor.intents.emission_weights.VALUES_HELP", "bittensor.intents.emission_weights.emission_weights_rate_limit_key", "bittensor.intents.emission_weights.gamma_emission_share", "bittensor.intents.emission_weights.root_preservation_inputs"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/gamma.py"
-kind = "ported"
-from = "906b8730f526cbe2691655f6086a991787974b88"
-to = "0b48b3352b0580881c2a01549425f5651273e346"
-tag = "v490"
-symbols = ["bittensor.intents.gamma.MoveGamma", "bittensor.intents.gamma.MoveGamma.blocks", "bittensor.intents.gamma._mint_preflight", "bittensor.intents.gamma._new_deposit_blocks", "bittensor.intents.gamma._staking_owner"]
-
-[[file]]
-py = "sdk/python/bittensor/reads/subnets.py"
-kind = "ported"
-from = "8cc78cffa8572f583a95cbe81326f702d034f30a"
-to = "e0ad1d9bf1214133b6d4166caced12436fea37ba"
-tag = "v490"
-symbols = ["bittensor.reads.subnets.SubnetEmissionWeights", "bittensor.reads.subnets.SubnetEmissionWeights.gamma_share", "bittensor.reads.subnets.SubnetEmissionWeights.rules", "bittensor.reads.subnets.gamma_emission_share", "bittensor.reads.subnets.subnet_emission_weights"]
-
-[[file]]
 py = "sdk/python/bittensor/sp_core.py"
 kind = "n/a"
 from = "431422f365d1b044dbcc954e3b548db84baad733"
 to = "e7fd769768eb608deb0f6700e1f93bdd53840bd1"
 tag = "v490"
 symbols = ["bittensor.sp_core.CRYPTO_ECDSA", "bittensor.sp_core.ECDSA_PUBLIC_KEY_LEN", "bittensor.sp_core.ECDSA_SIGNATURE_LEN", "bittensor.sp_core.ED25519_SIGNATURE_LEN", "bittensor.sp_core.SR25519_SIGNATURE_LEN", "bittensor.sp_core._CORE_HELPERS_SINCE", "bittensor.sp_core._core_helper", "bittensor.sp_core.ecdsa_account_id", "bittensor.sp_core.ecdsa_ss58_encode", "bittensor.sp_core.encode_password_for_environment", "bittensor.sp_core.verify_strict"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_emission_weights.py"
-kind = "ported"
-from = "a5a7a865a9cb315d43ea27c42d8e4e21aa005e7b"
-to = "82f50aa7a09c36856f13fc9b3bb7dfeb02df76ae"
-tag = "v490"
-symbols = ["tests.unit.test_emission_weights.GAMMA_SHARE", "tests.unit.test_emission_weights.GAMMA_WEIGHTS", "tests.unit.test_emission_weights.SHOW_FIELDS", "tests.unit.test_emission_weights._seed_gamma_share", "tests.unit.test_emission_weights.test_cli_counts_the_gamma_shares_in_the_sum", "tests.unit.test_emission_weights.test_gamma_shares_count_toward_the_sum", "tests.unit.test_emission_weights.test_intent_counts_the_gamma_shares_in_the_sum", "tests.unit.test_emission_weights.test_read_decodes_runtime_payload", "tests.unit.test_emission_weights.test_read_sums_the_gamma_shares"]
 
 [[file]]
 py = "sdk/python/tests/unit/test_sp_core_keypair.py"

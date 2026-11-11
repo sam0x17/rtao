@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/emission_weights.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Subnet emission weights: how a subnet splits its alpha emission.
 //!
 //! Each subnet carries a five-slot vector `[burn, recycle, owner, validator,
@@ -23,7 +23,7 @@ use serde_json::Value;
 
 pub use crate::SetSubnetEmissionWeights;
 
-// py: sdk/python/bittensor/intents/emission_weights.py:47-54
+// py: sdk/python/bittensor/intents/emission_weights.py:52-59
 /// `burn 5.00% / owner 18.00% / ...`, omitting a zero burn or recycle.
 fn vector_text(weights: &ew::Weights) -> String {
     ew::ADJUSTABLE_SLOTS
@@ -44,7 +44,7 @@ fn pct(value: f64) -> String {
     format!("{:.4}%", value * 100.0)
 }
 
-// py: sdk/python/bittensor/intents/emission_weights.py:61-80
+// py: sdk/python/bittensor/intents/emission_weights.py:66-85
 fn root_line(root: &ew::RootPreview) -> String {
     let baseline = pct(root.baseline_share);
     let (Some(_), Some(validators_after)) = (root.share_after, root.validators_after) else {
@@ -80,7 +80,7 @@ fn invalid(error: ew::EmissionWeightsError) -> IntentError {
     IntentError::Validation(error.to_string())
 }
 
-// py: sdk/python/bittensor/intents/emission_weights.py:112-126
+// py: sdk/python/bittensor/intents/emission_weights.py:118-132
 /// Normalized `(slot, parts)` updates, in the order given.
 ///
 /// Mirrors Python's constructor checks: slots and values pair up, at least
@@ -133,7 +133,7 @@ pub(crate) fn canonicalize(intent: &mut SetSubnetEmissionWeights) -> Result<(), 
     Ok(())
 }
 
-// py: sdk/python/bittensor/intents/emission_weights.py:144-149 (v489)
+// py: sdk/python/bittensor/intents/emission_weights.py:144-149
 fn merged(
     intent: &SetSubnetEmissionWeights,
     updates: &[(usize, u64)],
@@ -162,7 +162,7 @@ struct Inputs {
     gamma_share: u64,
 }
 
-// py: sdk/python/bittensor/intents/emission_weights.py:150-182
+// py: sdk/python/bittensor/intents/emission_weights.py:164-199
 async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inputs>, IntentError> {
     let snapshot = view.pin().await?;
     let Some(current) = subnet_emission_weights_info(&snapshot, netuid)
@@ -194,7 +194,7 @@ async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inp
 }
 
 impl SetSubnetEmissionWeights {
-    // py: sdk/python/bittensor/intents/emission_weights.py:201-242
+    // py: sdk/python/bittensor/intents/emission_weights.py:219-260
     async fn plan_preview<V: View + ?Sized>(
         &self,
         cx: &PreflightCx<'_, V>,
@@ -279,7 +279,7 @@ impl SetSubnetEmissionWeights {
         })
     }
 
-    // py: sdk/python/bittensor/intents/emission_weights.py:244-253
+    // py: sdk/python/bittensor/intents/emission_weights.py:262-271
     fn effect_lines(&self, preview: &ew::Preview) -> Vec<String> {
         let (before, after) = (&preview.before.weights, &preview.after.weights);
         vec![
@@ -295,7 +295,7 @@ impl SetSubnetEmissionWeights {
 }
 
 impl Intent for SetSubnetEmissionWeights {
-    // py: sdk/python/bittensor/intents/emission_weights.py:261-267
+    // py: sdk/python/bittensor/intents/emission_weights.py:279-285
     fn summary(&self) -> String {
         let parts = match updates(self) {
             Ok(updates) => updates
@@ -319,7 +319,7 @@ impl Intent for SetSubnetEmissionWeights {
         )
     }
 
-    // py: sdk/python/bittensor/intents/emission_weights.py:128-148
+    // py: sdk/python/bittensor/intents/emission_weights.py:134-162
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let updates = updates(self)?;
         let (uids, values): (Vec<u16>, Vec<u64>) = if self.renormalize {

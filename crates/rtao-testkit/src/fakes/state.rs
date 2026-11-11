@@ -248,14 +248,20 @@ impl Default for FakeState {
 
 impl FakeState {
     /// Parse the checked-in pinned Finney runtime and load extracted Python defaults.
+    ///
+    /// The runtime is the codegen input `upstream.toml` pins
+    /// ([`crate::fixtures::pinned_finney_runtime`]), so the fake serves the
+    /// metadata the generated surface was generated from at every pin.
     pub fn try_default() -> Result<Self, CoreError> {
-        let runtime = Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/finney/488.v15.scale"),
-            488,
-            1,
-            42,
-        )
-        .map_err(CoreError::from)?;
+        let runtime = crate::fixtures::pinned_finney_runtime()
+            .map_err(|error| CoreError::Codec(error.to_string()))?;
+        Self::try_finney(runtime)
+    }
+
+    /// [`Self::try_default`] serving a fixed historical Finney runtime, for
+    /// tests whose recorded bytes must not move with the pin (a request
+    /// digest, a signed payload).
+    pub fn try_finney(runtime: Runtime) -> Result<Self, CoreError> {
         let mut state = Self::new(Arc::new(runtime));
         state.genesis_hash =
             "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03".into();
@@ -2133,7 +2139,11 @@ mod tests {
         );
         assert_eq!(
             call(&mut state, "state_getRuntimeVersion", json!([]))?.get("specVersion"),
-            Some(&json!(488))
+            Some(&json!(
+                crate::fixtures::pinned_finney_metadata()
+                    .map_err(|error| CoreError::Codec(error.to_string()))?
+                    .1
+            ))
         );
         Ok(())
     }

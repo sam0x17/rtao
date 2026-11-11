@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/emission_weights.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Per-subnet emission weight vector: slot names, rules, parsing and renormalisation.
 //!
 //! A subnet's alpha emission is divided by a five-slot vector
@@ -57,7 +57,7 @@ pub const ADJUSTABLE_SLOTS: [usize; 5] = [BURN, RECYCLE, OWNER, VALIDATOR, MINER
 /// A complete emission weight vector in u64 parts of [`ONE`].
 pub type Weights = [u64; 5];
 
-// py: sdk/python/bittensor/emission_weights.py:54-56
+// py: sdk/python/bittensor/emission_weights.py:55-57
 /// `numerator / denominator` in parts of [`ONE`], floored as on chain.
 ///
 /// The quotient saturates at [`ONE`]; callers pass proper fractions.
@@ -168,7 +168,7 @@ impl From<i64> for SlotInput<'static> {
     }
 }
 
-// py: sdk/python/bittensor/emission_weights.py:83-100
+// py: sdk/python/bittensor/emission_weights.py:84-101
 /// Resolve a slot given by name (`"owner"`) or uid (`2`).
 pub fn slot_index<'a>(slot: impl Into<SlotInput<'a>>) -> Result<usize, EmissionWeightsError> {
     match slot.into() {
@@ -308,7 +308,7 @@ fn unreadable(shown: &str) -> EmissionWeightsError {
     ))
 }
 
-// py: sdk/python/bittensor/emission_weights.py:103-134
+// py: sdk/python/bittensor/emission_weights.py:104-135
 /// Turn a human share into u64 parts.
 ///
 /// Accepts a 0..1 fraction (`0.41` / `"0.41"`), a percentage (`"41%"`), or a
@@ -459,7 +459,7 @@ fn exact_decimal(text: &str) -> Option<Decimal> {
     })
 }
 
-// py: sdk/python/bittensor/emission_weights.py:137-152
+// py: sdk/python/bittensor/emission_weights.py:138-153
 fn fraction_to_parts(value: &Decimal, shown: &str) -> Result<u64, EmissionWeightsError> {
     let outside = || {
         EmissionWeightsError::new(format!(
@@ -500,13 +500,13 @@ fn fraction_to_parts(value: &Decimal, shown: &str) -> Result<u64, EmissionWeight
     Ok(parts.to_u64().unwrap_or(ONE))
 }
 
-// py: sdk/python/bittensor/emission_weights.py:155-157
+// py: sdk/python/bittensor/emission_weights.py:156-158
 /// u64 parts as a 0..1 float, rounding the exact quotient once.
 pub fn share_to_float(parts: u64) -> f64 {
     python::int_div_big_to_f64(&BigInt::from(parts), u128::from(ONE)).unwrap_or(f64::NAN)
 }
 
-// py: sdk/python/bittensor/emission_weights.py:160-162
+// py: sdk/python/bittensor/emission_weights.py:161-163
 /// Parts (u64 or a wider sum) as a percentage with `places` decimals, such as `"41.00%"`.
 pub fn format_share(parts: impl Into<u128>, places: usize) -> String {
     let share = python::int_div_big_to_f64(&BigInt::from(parts.into()), u128::from(ONE))
@@ -676,7 +676,7 @@ pub fn and_gamma(gamma_share: u64) -> String {
     }
 }
 
-// py: sdk/python/bittensor/emission_weights.py:248-256
+// py: sdk/python/bittensor/emission_weights.py:262-270
 /// One broken rule: the chain error name and an explanation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Violation {
@@ -692,14 +692,14 @@ impl fmt::Display for Violation {
     }
 }
 
-// py: sdk/python/bittensor/emission_weights.py:259-263
+// py: sdk/python/bittensor/emission_weights.py:273-277
 /// `[0, 0, owner, rest/2, rest - rest/2]`, the chain's seed vector.
 pub fn default_weights(owner: u64) -> Weights {
     let validator = (ONE - owner) / 2;
     [0, 0, owner, validator, ONE - owner - validator]
 }
 
-// py: sdk/python/bittensor/emission_weights.py:266-272
+// py: sdk/python/bittensor/emission_weights.py:280-286
 /// Coerce a chain-shaped vector of at most five slots to five entries.
 pub fn normalize_weights(weights: &[u64]) -> Result<Weights, EmissionWeightsError> {
     if weights.len() > SLOT_NAMES.len() {
@@ -713,7 +713,7 @@ pub fn normalize_weights(weights: &[u64]) -> Result<Weights, EmissionWeightsErro
     Ok(out)
 }
 
-// py: sdk/python/bittensor/emission_weights.py:275-281
+// py: sdk/python/bittensor/emission_weights.py:289-295
 /// Apply a sparse update exactly as the chain does: named slots are
 /// replaced; omitted slots keep their current value.
 pub fn merge(current: &Weights, updates: &[(usize, u64)]) -> Weights {
@@ -897,7 +897,7 @@ pub fn validate(weights: &Weights, rules: &Rules) -> Vec<Violation> {
     found
 }
 
-// py: sdk/python/bittensor/emission_weights.py:397-408
+// py: sdk/python/bittensor/emission_weights.py:413-424
 /// Root's share of the subnet's emission, `V * x / (x + A)` with `x = root_tao * tao_weight`.
 ///
 /// `validator` and `tao_weight` are 0..1 floats; `root_tao` and
@@ -915,7 +915,7 @@ pub fn root_emission_share(
     validator * weighted / (weighted + alpha_issuance)
 }
 
-// py: sdk/python/bittensor/emission_weights.py:411-420
+// py: sdk/python/bittensor/emission_weights.py:427-436
 /// Root's baseline share: what it earns with `V0` and the global `TaoWeight`.
 pub fn baseline_root_share(global_tao_weight: f64, root_tao: f64, alpha_issuance: f64) -> f64 {
     root_emission_share(
@@ -926,19 +926,19 @@ pub fn baseline_root_share(global_tao_weight: f64, root_tao: f64, alpha_issuance
     )
 }
 
-// py: sdk/python/bittensor/emission_weights.py:423-427
+// py: sdk/python/bittensor/emission_weights.py:439-443
 /// The validator share (0..1) a set must exceed right now: root's baseline share.
 pub fn validator_floor(global_tao_weight: f64, root_tao: f64, alpha_issuance: f64) -> f64 {
     baseline_root_share(global_tao_weight, root_tao, alpha_issuance)
 }
 
-// py: sdk/python/bittensor/emission_weights.py:430-433
+// py: sdk/python/bittensor/emission_weights.py:446-449
 /// Lowest accepted validator share in parts: one part above root's baseline.
 pub fn min_validator_parts(baseline_parts: u64) -> u64 {
     baseline_parts.saturating_add(1)
 }
 
-// py: sdk/python/bittensor/emission_weights.py:436-441
+// py: sdk/python/bittensor/emission_weights.py:452-457
 /// What root is paid (0..1): the baseline, capped at the validator slot.
 pub fn root_share_paid(validator_parts: u64, baseline_parts: u64) -> f64 {
     share_to_float(validator_parts.min(baseline_parts))
@@ -972,13 +972,13 @@ impl Shares {
     }
 }
 
-// py: sdk/python/bittensor/emission_weights.py:444-448
+// py: sdk/python/bittensor/emission_weights.py:460-464
 /// `{slot name: "41.00%"}` for display, in slot order.
 pub fn describe(weights: &Weights) -> [(&'static str, String); 5] {
     std::array::from_fn(|slot| (SLOT_NAMES[slot], format_share(weights[slot], 2)))
 }
 
-// py: sdk/python/bittensor/emission_weights.py:451-455
+// py: sdk/python/bittensor/emission_weights.py:467-471
 /// The vector as 0..1 floats keyed by slot name.
 pub fn shares(weights: &Weights) -> Shares {
     Shares {
@@ -1082,7 +1082,7 @@ pub struct RootInputs {
     pub alpha_issuance: u128,
 }
 
-// py: sdk/python/bittensor/emission_weights.py:458-505
+// py: sdk/python/bittensor/emission_weights.py:474-521
 /// The machine-readable preview of a vector change.
 ///
 /// `share_after` and `validators_after` are absent when `V_new <= r`, which
@@ -1117,7 +1117,7 @@ pub fn preview(before: &Weights, after: &Weights, inputs: &RootInputs) -> Previe
     }
 }
 
-// py: sdk/python/bittensor/emission_weights.py:508-525
+// py: sdk/python/bittensor/emission_weights.py:524-541
 /// When the subnet owner may next change the vector.
 ///
 /// `last_change_block` is the chain's `LastRateLimitedBlock` entry for the

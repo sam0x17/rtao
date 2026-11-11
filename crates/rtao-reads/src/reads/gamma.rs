@@ -160,7 +160,7 @@ pub struct MintQuote {
 /// Simulate a mint at the view: `(alpha burned, TAO value, gamma)` in chain
 /// units, or the chain error that stops it. `with_stake` selects
 /// `sim_mint_gamma_with_stake` (an alpha amount) over `sim_mint_gamma` (TAO).
-// py: sdk/python/bittensor/intents/gamma.py:61-66
+// py: sdk/python/bittensor/intents/gamma.py:60-65
 pub async fn sim_mint<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -361,7 +361,7 @@ pub struct Service {
 
 const SERVICES_STORAGE: &str = "SubtensorModule.Services";
 
-// py: sdk/python/bittensor/reads/subnets.py:574-578
+// py: sdk/python/bittensor/reads/subnets.py:591-594
 /// A url as text, or as hex when it holds characters a terminal would act on.
 pub fn url_text(raw: &str) -> String {
     if rtao_primitives::pyfmt::is_printable(raw) {
@@ -376,7 +376,7 @@ pub fn url_text(raw: &str) -> String {
 /// Each `url` points to its hotkey's own document of its services and the
 /// payments they accept; the chain does not check what it says. `owner`
 /// marks the subnet owner's hotkey while the owner owns it.
-// py: sdk/python/bittensor/reads/subnets.py:542-571
+// py: sdk/python/bittensor/reads/subnets.py:558-588
 pub async fn services<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,

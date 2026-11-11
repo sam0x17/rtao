@@ -74,7 +74,13 @@ fn all_406_named_errors_have_exact_classification_description_remediation_and_js
     let overrides = fixture.string_dict(RESULT, "_NAME_HELP_OVERRIDES")?;
     let explanations = fixture.string_dict(RESULT, "EXPLANATIONS")?;
     let names = fixture.dict(ERROR_MAP, "NAME_TO_CODE")?;
-    assert_eq!(names.len(), 441);
+    // One per catalog chain error at the parity pin (441 at v488, 446 at v490).
+    let catalogued = fixture.catalog["chain_errors"]
+        .as_object()
+        .ok_or("catalog chain errors missing")?
+        .len();
+    assert!(catalogued >= 441, "{catalogued} catalog chain errors");
+    assert_eq!(names.len(), catalogued);
     for row in names {
         let name = text(&row[0])?;
         let token = text(&row[1])?;

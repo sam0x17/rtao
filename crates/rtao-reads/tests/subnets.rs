@@ -1,5 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/subnets.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/subnets.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! First catalog reads through the public client and real SCALE fixtures.
 
 #![allow(clippy::unwrap_used)] // Assertions must fail when fake-chain fixtures or responses are invalid.
@@ -166,7 +166,7 @@ async fn subnet_emission_weights_decodes_the_runtime_payload_and_live_root_input
     assert_eq!(info.min_validator, baseline_parts + 1);
     assert_eq!(info.rules().min_validator, Some(baseline_parts + 1));
     assert!(!info.rules().created_via_lease);
-    // Runtime 488 metadata has no SubnetGammaEmission: no gamma shares.
+    // No gamma shares are stored for the subnet.
     assert_eq!((info.gamma_share, info.rules().gamma_share), (0, 0));
     assert_eq!((info.block, info.last_change_block), (100, 0));
     assert!(info.rate_limit().owner_can_change_now);
@@ -225,6 +225,88 @@ async fn subnet_emission_weights_decodes_the_runtime_payload_and_live_root_input
             .await
             .unwrap(),
         None
+    );
+    client.close().await;
+}
+
+// pyt: unit/test_emission_weights.py::test_read_sums_the_gamma_shares
+#[tokio::test]
+async fn subnet_emission_weights_sums_the_gamma_shares() {
+    use rtao_primitives::emission_weights as ew;
+    use rtao_runtime::storage::subtensor_module as st;
+    use rtao_testkit::fixtures::catalog_samples::emission_weights_info;
+    let netuid = NetUid(1);
+    let gamma = ew::parse_share("10%").unwrap();
+    let seeded = |runtime: Option<std::sync::Arc<rtao_core::runtime::Runtime>>| {
+        let mut state = match runtime {
+            Some(runtime) => FakeState::new(runtime),
+            None => FakeState::default(),
+        };
+        state
+            .seed_runtime(
+                "SubnetInfoRuntimeApi",
+                "get_subnet_emission_weights",
+                emission_weights_info(netuid),
+            )
+            .unwrap();
+        state
+    };
+    let mut state = seeded(None);
+    // Two subnets' gamma shares: 4% and 6%.
+    state
+        .seed(
+            &st::SUBNET_GAMMA_EMISSION,
+            (netuid,),
+            vec![
+                (NetUid(2), ew::parse_share("4%").unwrap()),
+                (NetUid(3), gamma - ew::parse_share("4%").unwrap()),
+            ],
+        )
+        .unwrap();
+    let client = Client::from_rpc(RpcClient::new(FakeChain::from_state(state)), config())
+        .await
+        .unwrap();
+    let info = subnets::subnet_emission_weights(&client, netuid)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(info.gamma_share, gamma);
+    assert_eq!(info.rules().gamma_share, gamma);
+    assert_eq!(
+        subnets::gamma_emission_share(&client, netuid)
+            .await
+            .unwrap(),
+        gamma
+    );
+    assert_eq!(
+        subnets::gamma_emission_share(&client, NetUid(2))
+            .await
+            .unwrap(),
+        0
+    );
+    client.close().await;
+
+    // A runtime without gamma emission (runtime 488) has no shares to count.
+    let historical = rtao_core::runtime::Runtime::parse(
+        include_bytes!("../../../vendor/metadata/finney/488.v15.scale"),
+        488,
+        1,
+        42,
+    )
+    .unwrap();
+    let client = Client::from_rpc(
+        RpcClient::new(FakeChain::from_state(seeded(Some(std::sync::Arc::new(
+            historical,
+        ))))),
+        config(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        subnets::gamma_emission_share(&client, netuid)
+            .await
+            .unwrap(),
+        0
     );
     client.close().await;
 }

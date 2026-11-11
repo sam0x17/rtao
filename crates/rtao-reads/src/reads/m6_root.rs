@@ -506,7 +506,7 @@ pub struct SubnetInfo {
 }
 
 /// Tempo, burn and neuron count fetched together at one immutable block.
-// py: sdk/python/bittensor/reads/subnets.py:30-43
+// py: sdk/python/bittensor/reads/subnets.py:138-161
 pub async fn subnet<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<SubnetInfo, ReadError> {
     let snapshot = view.pin().await?;
     let state = super::lifecycle::subnet_state(&snapshot, netuid).await?;
@@ -532,7 +532,7 @@ pub async fn subnet<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Subnet
 ///
 /// Missing entries in the tempo, burn and count maps produce zero, rather than
 /// a storage metadata default. Old runtimes use per-subnet lifecycle fallback.
-// py: sdk/python/bittensor/reads/subnets.py:47-70
+// py: sdk/python/bittensor/reads/subnets.py:164-192
 pub async fn subnets<V: View + ?Sized>(view: &V) -> Result<Vec<SubnetInfo>, ReadError> {
     let snapshot = view.pin().await?;
     let states = super::lifecycle::subnet_states(&snapshot).await?;
@@ -695,7 +695,7 @@ pub async fn subnet_listing<V: View + ?Sized>(view: &V) -> Result<SubnetListing,
 }
 
 /// Recorded signed EMA TAO flows in rao per block, retaining fractional rao.
-// py: sdk/python/bittensor/reads/subnets.py:93-111
+// py: sdk/python/bittensor/reads/subnets.py:214-233
 pub async fn subnet_tao_flows<V: View + ?Sized>(
     view: &V,
 ) -> Result<BTreeMap<NetUid, f64>, ReadError> {
@@ -715,7 +715,7 @@ pub async fn subnet_tao_flows<V: View + ?Sized>(
 }
 
 /// Current dynamic TAO cost to register a new subnet.
-// py: sdk/python/bittensor/reads/subnets.py:282-290
+// py: sdk/python/bittensor/reads/subnets.py:547-555
 pub async fn subnet_registration_cost<V: View + ?Sized>(view: &V) -> Result<DynBalance, ReadError> {
     let amount = view
         .call(

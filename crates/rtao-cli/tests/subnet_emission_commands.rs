@@ -1,5 +1,5 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnet_emission.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnet_emission.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! `subnets emission` views and checked writes against the encoded fake chain.
 
 use rtao::{
@@ -73,7 +73,7 @@ fn wallet() -> Result<TempRoot, Box<dyn std::error::Error>> {
     Ok(root)
 }
 
-// py: tests/unit/test_emission_weights.py:363-372 (_client)
+// py: tests/unit/test_emission_weights.py:673-678 (emission_cli)
 fn state() -> Result<FakeState, Box<dyn std::error::Error>> {
     let runtime = FakeState::try_default()?.runtime;
     let mut state = intent_state(runtime, "set_subnet_emission_weights")?;
@@ -626,6 +626,129 @@ async fn writes_dry_run_through_the_real_plan_with_structured_previews() -> Test
             .any(|request| request.method.starts_with("author_"))
     );
     client.close().await;
+    Ok(())
+}
+
+// pyt: unit/test_emission_weights.py::test_cli_counts_the_gamma_shares_in_the_sum
+#[tokio::test]
+async fn gamma_shares_count_in_the_sum() -> TestResult {
+    // The fixture subnet after its owner gave 10% of its emission, from the
+    // validator slot, to subnet 2's gamma.
+    let gamma = ew::parse_share("10%")?;
+    let mut weights = ew::default_weights(ew::DEFAULT_OWNER);
+    weights[ew::VALIDATOR] -= gamma;
+    let mut state = state()?;
+    state.seed_runtime(
+        "SubnetInfoRuntimeApi",
+        "get_subnet_emission_weights",
+        emission_info(weights),
+    )?;
+    state.seed(
+        &st::SUBNET_GAMMA_EMISSION,
+        (SUBNET,),
+        vec![(NetUid(2), gamma)],
+    )?;
+    let wallet = wallet()?;
+    let (client, _) = client(state).await?;
+    let netuid = netuid();
+    let total = |weights: &Value| -> Result<u128, Box<dyn std::error::Error>> {
+        Ok(weights
+            .as_array()
+            .ok_or("weights")?
+            .iter()
+            .filter_map(Value::as_u64)
+            .map(u128::from)
+            .sum())
+    };
+
+    let show = run(
+        &client,
+        wallet.path(),
+        &["--json", "subnets", "emission", "show", "--netuid", &netuid],
+    )
+    .await?;
+    assert_eq!(code(&show), 0, "{}", show.stderr);
+    let record: Value = serde_json::from_str(&show.stdout)?;
+    assert_eq!(record["gamma_share"], json!(gamma));
+
+    let value = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "set-value",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "owner",
+            "--value",
+            "10%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&value), 0, "{}", value.stderr);
+    let plan: Value = serde_json::from_str(&value.stdout)?;
+    assert_eq!(
+        total(&plan["preview"]["after"]["weights"])?,
+        u128::from(ONE - gamma)
+    );
+
+    let full = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "set",
+            "--netuid",
+            &netuid,
+            "--owner",
+            "18%",
+            "--validator",
+            "31%",
+            "--miner",
+            "41%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&full), 0, "{}", full.stderr);
+    let plan: Value = serde_json::from_str(&full.stdout)?;
+    assert_eq!(total(&plan["args"]["values"])?, u128::from(ONE - gamma));
+
+    // Without the gamma shares the same three slots fall 10% short of the sum.
+    let short = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "set",
+            "--netuid",
+            &netuid,
+            "--owner",
+            "18%",
+            "--validator",
+            "41%",
+            "--miner",
+            "41%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&short), 2, "{}", short.stdout);
+    assert!(
+        short
+            .stderr
+            .contains("burn + recycle + owner + validator + miner and the gamma shares (10.00%) must add up to 100%"),
+        "{}",
+        short.stderr
+    );
     Ok(())
 }
 

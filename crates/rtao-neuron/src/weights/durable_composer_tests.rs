@@ -720,14 +720,9 @@ mod encoder_validation {
     use super::*;
     use rtao_core::runtime::Runtime;
 
+    /// The pinned Finney codegen input, which moves with the pin (D-178).
     fn pinned() -> Runtime {
-        Runtime::parse(
-            include_bytes!("../../../../vendor/metadata/finney/488.v15.scale"),
-            488,
-            1,
-            42,
-        )
-        .expect("pinned metadata")
+        rtao_testkit::fixtures::pinned_finney_runtime().expect("pinned metadata")
     }
 
     fn runtime() -> RuntimeHandle {

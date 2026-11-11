@@ -1578,7 +1578,11 @@ mod tests {
                 .unwrap();
             assert_eq!(upgraded_call.stamp(), runtime.stamp());
             assert!(old_call.ensure_runtime(&runtime).is_err());
-            assert_eq!(old_runtime.spec_version(), 488);
+            // The fake serves the pinned Finney metadata (D-178).
+            assert_eq!(
+                old_runtime.spec_version(),
+                rtao_testkit::fixtures::pinned_finney_metadata().unwrap().1
+            );
             assert_eq!(old_runtime.transaction_version(), 1);
             assert_eq!(
                 raw.requests().len(),

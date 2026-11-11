@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/subnets.py @ 6a972693ae9580541225bd37696ac2fee26b8ae9 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/subnets.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/base.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Subnet catalog reads over pinned client views.
 
@@ -19,7 +19,7 @@ use crate::ReadError;
 ///
 /// Other fields retain the core corpus shapes. A missing subnet yields JSON
 /// `null`; the curated typed graph lives in `rtao-metagraph`.
-// py: sdk/python/bittensor/reads/subnets.py:170-190
+// py: sdk/python/bittensor/reads/subnets.py:435-455
 pub async fn metagraph<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<JsonValue, ReadError> {
     let graph = view
         .call_dyn(
@@ -43,7 +43,7 @@ fn normalize_metagraph(mut graph: JsonValue) -> Result<JsonValue, ReadError> {
 }
 
 /// Every chain-registered token symbol, keyed by native subnet identity.
-// py: sdk/python/bittensor/reads/subnets.py:217-226
+// py: sdk/python/bittensor/reads/subnets.py:482-491
 pub async fn token_symbols<V: View + ?Sized>(
     view: &V,
 ) -> Result<BTreeMap<NetUid, String>, ReadError> {
@@ -92,7 +92,7 @@ pub async fn token_symbols<V: View + ?Sized>(
 }
 
 /// `LastRateLimitedBlock` key for the owner's emission-weights change window.
-// py: sdk/python/bittensor/reads/subnets.py:179-181
+// py: sdk/python/bittensor/reads/subnets.py:292-294
 pub fn emission_weights_rate_limit_key(netuid: NetUid) -> DynValue {
     DynValue::new(Value::record(vec![(
         "OwnerHyperparamUpdate".into(),
@@ -116,7 +116,7 @@ pub struct RootPreservationInputs {
 }
 
 /// Read root TAO, the subnet's alpha issuance and the global `TaoWeight`.
-// py: sdk/python/bittensor/reads/subnets.py:184-197
+// py: sdk/python/bittensor/reads/subnets.py:297-310
 pub async fn root_preservation_inputs<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -141,7 +141,7 @@ pub async fn root_preservation_inputs<V: View + ?Sized>(
 /// `SubtensorModule.SubnetGammaEmission`): its five emission slots sum to one
 /// less it. Zero on a runtime without gamma shares, where the storage entry
 /// is absent from the live metadata, so the read works before and after 489.
-// py: sdk/python/bittensor/reads/subnets.py:313-317 (v489)
+// py: sdk/python/bittensor/reads/subnets.py:313-317
 pub async fn gamma_emission_share<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -194,7 +194,7 @@ pub async fn gamma_emission_share<V: View + ?Sized>(
 /// grown past the validator slot. `min_validator` is the lowest validator
 /// share in parts the chain accepts at this block, and `last_change_block` is
 /// when the owner last changed the vector (zero means never).
-// py: sdk/python/bittensor/reads/subnets.py:200-251
+// py: sdk/python/bittensor/reads/subnets.py:320-374
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct SubnetEmissionWeights {
     /// Subnet identity reported by the runtime.
@@ -365,7 +365,7 @@ pub async fn subnet_emission_weights_info<V: View + ?Sized>(
 /// Absent when the subnet does not exist; the root subnet has no vector.
 /// `min_validator` moves with root stake, alpha issuance and the global TAO
 /// weight, so it is a snapshot of the pinned block.
-// py: sdk/python/bittensor/reads/subnets.py:254-303
+// py: sdk/python/bittensor/reads/subnets.py:377-432
 pub async fn subnet_emission_weights<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,

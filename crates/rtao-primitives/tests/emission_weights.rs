@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Pure emission weight rules, parsing, renormalisation and previews.
 #![allow(clippy::unwrap_used)] // Test failures identify unexpected fixture values.
 
@@ -248,7 +248,7 @@ fn renormalize_rejects_overflow_and_incomplete_pin() {
     );
 }
 
-// Staged for runtime 489: Python v489 test_gamma_shares_count_toward_the_sum.
+// pyt: unit/test_emission_weights.py::test_gamma_shares_count_toward_the_sum
 #[test]
 fn gamma_shares_count_toward_the_sum() {
     let gamma = share("10%");

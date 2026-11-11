@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Emission weight intents planned through the real executor on FakeChain.
 #![cfg(all(feature = "emission_weights", feature = "staking"))]
 #![allow(clippy::unwrap_used, clippy::panic)] // Assertions must fail when fake-chain fixtures are invalid.
@@ -20,7 +20,7 @@ use rtao_testkit::{
     FakeChain, FakeState,
     fixtures::catalog_samples::{
         COLD, EMISSION_ALPHA_ISSUANCE, EMISSION_ROOT_TAO, EMISSION_TAO_WEIGHT, HOT, SUBNET,
-        emission_root_baseline_share, intent_state,
+        emission_root_baseline_share, emission_weights_info, intent_state,
     },
     rpc::RpcClient,
 };
@@ -68,7 +68,7 @@ fn rate_key() -> rtao_core::DynValue {
     emission_weights_rate_limit_key(SUBNET)
 }
 
-// py: tests/unit/test_emission_weights.py:395-404 (_client)
+// py: tests/unit/test_emission_weights.py:408-417 (_client)
 fn state() -> Result<FakeState> {
     let runtime = FakeState::try_default()?.runtime;
     let mut state = intent_state(runtime, "set_subnet_emission_weights")?;
@@ -417,6 +417,99 @@ async fn intent_build_sends_full_vector_when_renormalizing() -> Result<()> {
         admin_utils::sudo_set_subnet_emission_weights(SUBNET, vec![2, 4], vec![1, ONE / 2])
             .compose(&runtime)?
             .as_bytes()
+    );
+    client.close().await;
+    Ok(())
+}
+
+/// The fixture subnet after its owner gave 10% of its emission, from the
+/// validator slot, to subnet 2's gamma.
+fn gamma_share() -> u64 {
+    share("10%")
+}
+
+fn gamma_weights() -> ew::Weights {
+    let mut weights = ew::default_weights(DEFAULT_OWNER);
+    weights[ew::VALIDATOR] -= gamma_share();
+    weights
+}
+
+// py: tests/unit/test_emission_weights.py:579-591 (GAMMA_SHARE, _seed_gamma_share)
+fn seed_gamma_share(state: &mut FakeState) -> Result<()> {
+    let weights = gamma_weights();
+    let mut info = emission_weights_info(SUBNET);
+    info["weights"] = json!(weights);
+    info["validator"] = json!(weights[ew::VALIDATOR]);
+    state.seed_runtime("SubnetInfoRuntimeApi", "get_subnet_emission_weights", info)?;
+    state.seed(
+        &st::SUBNET_GAMMA_EMISSION,
+        (SUBNET,),
+        vec![(NetUid(2), gamma_share())],
+    )?;
+    Ok(())
+}
+
+fn total(weights: &[u64]) -> u128 {
+    weights.iter().map(|w| u128::from(*w)).sum()
+}
+
+// pyt: unit/test_emission_weights.py::test_intent_counts_the_gamma_shares_in_the_sum
+#[tokio::test]
+async fn intent_counts_the_gamma_shares_in_the_sum() -> Result<()> {
+    let mut state = state()?;
+    seed_gamma_share(&mut state)?;
+    let (client, _) = client(state).await?;
+    let runtime = client.refresh_runtime().await?;
+    let owner = intent(
+        json!({"netuid": SUBNET.0, "slots": ["owner"], "values": ["10%"], "renormalize": true}),
+    );
+    let plan = plan(&client, &owner).await;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    let after: Vec<u64> = serde_json::from_value(plan.preview["after"]["weights"].clone())?;
+    assert_eq!(total(&after), u128::from(ONE - gamma_share()));
+    let expected = ew::renormalize_with_gamma(
+        &gamma_weights(),
+        &[(ew::OWNER, share("10%"))],
+        gamma_share(),
+    )?;
+    assert_eq!(after, expected);
+    assert_eq!(
+        plan.call().as_bytes(),
+        admin_utils::sudo_set_subnet_emission_weights(
+            SUBNET,
+            vec![0, 1, 2, 3, 4],
+            expected.to_vec()
+        )
+        .compose(&runtime)?
+        .as_bytes()
+    );
+
+    // A verbatim update that keeps the sum passes; one that fills 100% alone does not.
+    let weights = gamma_weights();
+    let moved = intent(json!({
+        "netuid": SUBNET.0,
+        "slots": ["validator", "miner"],
+        "values": [weights[ew::VALIDATOR] + 1, weights[ew::MINER] - 1],
+    }));
+    let plan = self::plan(&client, &moved).await;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    let full = intent(json!({
+        "netuid": SUBNET.0,
+        "slots": ["validator"],
+        "values": [ew::default_weights(DEFAULT_OWNER)[ew::VALIDATOR]],
+    }));
+    let plan = self::plan(&client, &full).await;
+    assert_eq!(
+        plan.violations
+            .iter()
+            .map(|violation| violation.split(':').next().unwrap())
+            .collect::<Vec<_>>(),
+        ["EmissionWeightsDoNotSumToOne"]
+    );
+    assert!(
+        plan.violations[0].contains("and the gamma shares (10.00%)"),
+        "{}",
+        plan.violations[0]
     );
     client.close().await;
     Ok(())

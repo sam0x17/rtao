@@ -67,6 +67,48 @@ impl From<rtao_core::codec::Error> for FixtureError {
     }
 }
 
+/// The pinned Finney codegen input: the V15 metadata bytes and spec version
+/// that `upstream.toml` `[networks.finney.metadata]` names.
+///
+/// The generated surface comes from this metadata, so fakes and tests that
+/// read it follow a runtime adoption that moves the pin (D-165, D-178);
+/// `cargo xtask pin --check` verifies the bytes against `v15_sha256`.
+pub fn pinned_finney_metadata() -> Result<&'static (Vec<u8>, u32), FixtureError> {
+    static PINNED: std::sync::OnceLock<(Vec<u8>, u32)> = std::sync::OnceLock::new();
+    if let Some(pinned) = PINNED.get() {
+        return Ok(pinned);
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let pins = fs::read_to_string(root.join("upstream.toml"))?;
+    let section: Vec<&str> = pins
+        .split_once("\n[networks.finney.metadata]\n")
+        .ok_or_else(|| FixtureError::Invalid("upstream.toml pins no Finney metadata".into()))?
+        .1
+        .lines()
+        .take_while(|line| !line.starts_with('['))
+        .collect();
+    let field = |key: &str| {
+        section
+            .iter()
+            .find_map(|line| {
+                let (name, value) = line.split_once('=')?;
+                (name.trim() == key).then(|| value.trim().trim_matches('"').to_owned())
+            })
+            .ok_or_else(|| FixtureError::Invalid(format!("pinned Finney metadata lacks {key}")))
+    };
+    let spec = field("spec")?
+        .parse()
+        .map_err(|_| FixtureError::Invalid("pinned Finney spec is not a number".into()))?;
+    let bytes = fs::read(root.join(field("v15")?))?;
+    Ok(PINNED.get_or_init(|| (bytes, spec)))
+}
+
+/// Parse the pinned Finney metadata ([`pinned_finney_metadata`]).
+pub fn pinned_finney_runtime() -> Result<Runtime, FixtureError> {
+    let (bytes, spec) = pinned_finney_metadata()?;
+    Ok(Runtime::parse(bytes, *spec, 1, 42)?)
+}
+
 /// Decode a recorder's hex field, requiring the `0x` prefix.
 pub fn decode_hex(encoded: &str) -> Result<Vec<u8>, FixtureError> {
     let digits = encoded.strip_prefix("0x").ok_or_else(|| {

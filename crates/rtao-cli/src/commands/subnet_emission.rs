@@ -1,14 +1,13 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnet_emission.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/subnet_emission.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! `rtao subnets emission`: view and change how a subnet splits its alpha emission.
 //!
 //! The vector is `[burn, recycle, owner, validator, miner]`. `show` prints the
 //! vector, what root keeps, the allowed range of every slot and when the owner
 //! may change it next. `set` writes owner / validator / miner (and optionally
 //! burn / recycle) in one go; `set-value`, `increase` and `decrease` move one
-//! slot and rescale the others so the vector still sums to 100%. Every write is
-//! checked against the chain's rules locally first, and a rejected change
-//! names the rule and the allowed range, so nothing the chain would refuse is
-//! signed.
+//! slot and rescale the others to fill the rest. Every write is checked
+//! against the chain's rules locally first, and a rejected change names the
+//! rule and the allowed range, so nothing the chain would refuse is signed.
 //!
 //! Writes print the receipt at inclusion, as Python does, then wait up to
 //! [`FINALITY_WAIT`](crate::commands::subnet_emission::FINALITY_WAIT) (or
@@ -122,8 +121,8 @@ pub fn command() -> Command {
         ))
         .subcommand(with_globals(
             Command::new("set-value")
-                .about("Set one slot; the other slots are rescaled so the vector still sums to 100%.")
-                .long_about("Set one slot; the other slots are rescaled so the vector still sums to 100%.\n\nThe untouched slots keep their ratio: lowering owner from 18% to 10% hands the 8% to the other non-zero slots in their current proportions.")
+                .about("Set one slot; the other slots are rescaled to fill the rest.")
+                .long_about("Set one slot; the other slots are rescaled to fill the rest.\n\nThe untouched slots keep their ratio: lowering owner from 18% to 10% hands the 8% to the other non-zero slots in their current proportions.")
                 .after_help(format!("Example: rtao subnets emission set-value --netuid 4 --slot validator --value 20% --dry-run\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("slot", SLOT_HELP.into()))
@@ -132,7 +131,7 @@ pub fn command() -> Command {
         ))
         .subcommand(with_globals(
             Command::new("increase")
-                .about("Raise one slot by an amount; the other slots are rescaled to fill 100%.")
+                .about("Raise one slot by an amount; the other slots are rescaled to fill the rest.")
                 .after_help(format!("Example: rtao subnets emission increase --netuid 4 --slot miner --by 5%\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("slot", SLOT_HELP.into()))
@@ -141,7 +140,7 @@ pub fn command() -> Command {
         ))
         .subcommand(with_globals(
             Command::new("decrease")
-                .about("Lower one slot by an amount; the other slots are rescaled to fill 100%.")
+                .about("Lower one slot by an amount; the other slots are rescaled to fill the rest.")
                 .after_help(format!("Example: rtao subnets emission decrease --netuid 4 --slot validator --by 10%\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("slot", SLOT_HELP.into()))
@@ -312,7 +311,7 @@ async fn fetch(
         })
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:80-98
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:80-99
 /// The stable machine-readable shape of `show`.
 pub fn record(info: &SubnetEmissionWeights) -> Value {
     json!({
@@ -354,7 +353,7 @@ fn group_digits(digits: &str) -> String {
         .map_or_else(|_| digits.to_owned(), fmt_grouped)
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:101-103
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:102-104
 fn hours(blocks: u64) -> String {
     let hours = blocks as f64 * ew::BLOCK_SECONDS as f64 / 3600.0;
     if hours >= 48.0 {
@@ -364,7 +363,7 @@ fn hours(blocks: u64) -> String {
     }
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:106-115
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:107-116
 fn next_change(rate: &ew::RateLimitStatus) -> (String, String) {
     if rate.owner_can_change_now {
         let why = if rate.last_change_block == 0 {
@@ -402,7 +401,7 @@ fn range(rules: &ew::Rules, slot: &str) -> Option<(String, String)> {
         .map(|(_, rule, why)| (rule, why))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:123-128
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:124-129
 fn parse_share(ctx: &AppContext, raw: &str, flag: &str) -> Result<u64, CliError> {
     ew::parse_share(raw).map_err(|error| {
         report(
@@ -415,12 +414,12 @@ fn parse_share(ctx: &AppContext, raw: &str, flag: &str) -> Result<u64, CliError>
     })
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:131-136
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:132-137
 fn parse_slot(ctx: &AppContext, raw: &str) -> Result<usize, CliError> {
     ew::slot_index(raw).map_err(|error| report(ctx, 2, &error.to_string(), None, Some(SLOT_HELP)))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:139-168
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:140-169
 fn reject(
     ctx: &AppContext,
     info: &SubnetEmissionWeights,
@@ -477,7 +476,7 @@ fn reject(
     ))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:171-213
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:172-214
 /// Review-card rows: each moving slot, what root keeps, what validators are left.
 pub fn card(info: &SubnetEmissionWeights, preview: &ew::Preview) -> Vec<(String, Value)> {
     let (before, after) = (&preview.before.weights, &preview.after.weights);
@@ -533,7 +532,7 @@ pub fn card(info: &SubnetEmissionWeights, preview: &ew::Preview) -> Vec<(String,
     rows
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:216-239
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:217-240
 #[allow(clippy::too_many_arguments)]
 async fn submit(
     ctx: &mut AppContext,
@@ -885,7 +884,7 @@ async fn read_back(
     )))
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:242-250
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:243-251
 fn renormalized(
     ctx: &AppContext,
     info: &SubnetEmissionWeights,
@@ -903,7 +902,7 @@ fn renormalized(
     })
 }
 
-// py: sdk/python/bittensor/cli/commands/subnet_emission.py:253-327
+// py: sdk/python/bittensor/cli/commands/subnet_emission.py:254-328
 fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> {
     let netuid = info.netuid;
     let mut vector = Vec::new();
@@ -994,7 +993,7 @@ fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> 
             ],
             &record(info),
             Some(&format!(
-                "change one slot with `rtao subnets emission set-value --netuid {netuid} --slot owner --value 10%` (the other slots rescale to fill 100%); add --dry-run to preview"
+                "change one slot with `rtao subnets emission set-value --netuid {netuid} --slot owner --value 10%` (the other slots rescale to fill the rest); add --dry-run to preview"
             )),
         )
         .map_err(|error| CliError::failure(error.to_string()))
@@ -1015,7 +1014,7 @@ pub async fn execute(
             show(ctx, &info)?;
             Ok(None)
         }
-        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:330-376
+        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:331-379
         Request::Set {
             netuid,
             burn,
@@ -1070,7 +1069,7 @@ pub async fn execute(
             )
             .await
         }
-        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:379-403
+        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:382-406
         Request::SetValue {
             netuid,
             slot,
@@ -1093,7 +1092,7 @@ pub async fn execute(
             )
             .await
         }
-        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:406-448
+        // py: sdk/python/bittensor/cli/commands/subnet_emission.py:409-451
         Request::Adjust {
             netuid,
             slot,

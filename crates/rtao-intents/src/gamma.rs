@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/gamma.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/gamma.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Gamma intents: minting, deposits, spenders and daily spend caps, and spending.
 //!
 //! Gamma is not a balance unit: amounts are exact decimal strings of gamma,
@@ -73,7 +73,7 @@ fn gamma_string(amount: &Amount) -> String {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:131-132
+// py: sdk/python/bittensor/intents/gamma.py:142-143
 /// `"1,234.5 gamma"`: Python's `f"{Decimal(text):,f}"`.
 fn gamma_text(units: u128) -> String {
     let text = gamma_from_units(units);
@@ -95,7 +95,7 @@ fn cap_text(cap: Option<u64>) -> String {
     )
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:69-70
+// py: sdk/python/bittensor/intents/gamma.py:68-69
 fn min_out(gamma: u128, tolerance: Ratio) -> u128 {
     if tolerance.get() == 0.0 {
         // Python's integer zero tolerance keeps the quote exact (D-132).
@@ -172,7 +172,7 @@ async fn deposit<V: View + ?Sized>(
         .transpose()
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:96-101
+// py: sdk/python/bittensor/intents/gamma.py:113-118
 async fn service_spender<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -189,7 +189,7 @@ async fn service_spender<V: View + ?Sized>(
     json_account(&service.to_json(), "spender")
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:104-108
+// py: sdk/python/bittensor/intents/gamma.py:121-125
 async fn named_spender<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -202,7 +202,7 @@ async fn named_spender<V: View + ?Sized>(
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:111-113
+// py: sdk/python/bittensor/intents/gamma.py:128-130
 fn check_spender_or_service(
     op: &str,
     spender: Option<&Ss58Address>,
@@ -216,7 +216,7 @@ fn check_spender_or_service(
     Ok(())
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:97-110 (v489)
+// py: sdk/python/bittensor/intents/gamma.py:97-110
 /// What stops `signer` opening a new deposit at `hotkey`, as the runtime's
 /// `Owner::try_get` decides it (runtime 489): an unassociated hotkey (no
 /// `Owner` entry) may be used, a hotkey with a stored owner only by that
@@ -244,7 +244,7 @@ async fn new_deposit_blocks<V: View + ?Sized>(
     Ok(Vec::new())
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:125-131
+// py: sdk/python/bittensor/intents/gamma.py:133-139
 fn own_deposit_blocks(
     deposit: Option<&Deposit>,
     signer: AccountId,
@@ -278,7 +278,7 @@ fn read_error(error: rtao_reads::ReadError) -> IntentError {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:61-66
+// py: sdk/python/bittensor/intents/gamma.py:60-65
 async fn quote<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -305,7 +305,7 @@ struct MintTerms<'a> {
     cap: Option<u64>,
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:146-207
+// py: sdk/python/bittensor/intents/gamma.py:156-208
 /// A mint's preview: its quote, the deposit it credits and the hard stops
 /// the chain would refuse it with.
 async fn mint_preflight<V: View + ?Sized>(
@@ -446,7 +446,7 @@ impl MintGamma {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:210-289
+// py: sdk/python/bittensor/intents/gamma.py:211-292
 impl Intent for MintGamma {
     fn summary(&self) -> String {
         let amount = match self.amount_tao.resolve(NetUid::ROOT, false) {
@@ -520,7 +520,7 @@ impl MintGammaWithStake {
         }
     }
 
-    // py: sdk/python/bittensor/intents/gamma.py:331-333
+    // py: sdk/python/bittensor/intents/gamma.py:336-338
     /// The alpha the chain burns: at most the stake held.
     fn burned(&self, staked: u64) -> Result<u64, IntentError> {
         Ok(self
@@ -550,7 +550,7 @@ impl MintGammaWithStake {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:292-391
+// py: sdk/python/bittensor/intents/gamma.py:295-393
 impl Intent for MintGammaWithStake {
     fn summary(&self) -> String {
         let amount = match self.requested() {
@@ -663,7 +663,7 @@ impl MoveGamma {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:394-482
+// py: sdk/python/bittensor/intents/gamma.py:396-489
 impl Intent for MoveGamma {
     fn summary(&self) -> String {
         format!(
@@ -767,7 +767,7 @@ impl Intent for MoveGamma {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:485-518
+// py: sdk/python/bittensor/intents/gamma.py:492-523
 impl Intent for CloseGammaDeposit {
     fn summary(&self) -> String {
         format!(
@@ -802,7 +802,7 @@ impl Intent for CloseGammaDeposit {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:521-580
+// py: sdk/python/bittensor/intents/gamma.py:526-586
 impl Intent for SetGammaDepositSpender {
     fn summary(&self) -> String {
         let spender = match (&self.service_hotkey_ss58, &self.spender_ss58) {
@@ -870,7 +870,7 @@ impl SetGammaDepositDailySpendCap {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:583-627
+// py: sdk/python/bittensor/intents/gamma.py:589-637
 impl Intent for SetGammaDepositDailySpendCap {
     fn summary(&self) -> String {
         let cap = self.daily_spend_cap_gamma.as_ref().map_or_else(
@@ -931,7 +931,7 @@ pub struct GammaSpend {
     pub reference: [u8; 32],
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:74-84
+// py: sdk/python/bittensor/intents/gamma.py:80-90
 fn reference(value: Option<&Value>) -> Result<[u8; 32], IntentError> {
     let Some(value) = value else {
         return Ok([0; 32]);
@@ -953,7 +953,7 @@ fn reference(value: Option<&Value>) -> Result<[u8; 32], IntentError> {
 }
 
 impl SpendGamma {
-    // py: sdk/python/bittensor/intents/gamma.py:661-683
+    // py: sdk/python/bittensor/intents/gamma.py:671-691
     /// The entries, normalized and checked as Python's constructor does.
     pub fn entries(&self) -> Result<Vec<GammaSpend>, IntentError> {
         if !(1..=MAX_GAMMA_SPENDS).contains(&self.spends.len()) {
@@ -1024,7 +1024,7 @@ pub(crate) fn canonicalize(intent: &mut SpendGamma) -> Result<(), IntentError> {
     Ok(())
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:630-725
+// py: sdk/python/bittensor/intents/gamma.py:640-727
 impl Intent for SpendGamma {
     fn summary(&self) -> String {
         let Ok(entries) = self.entries() else {
