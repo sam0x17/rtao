@@ -23,6 +23,7 @@
 ### Core patch prepared for v490 (D-169, repository maintenance)
 
 - Upstream v490 already ships the hashed-account Ed25519 wipe that rtao's v488 adaptation added (RaoFoundation/subtensor#3317), so the core patch for v490 carries only the combined Ledger/erasure patch and the mnemonic-seed wipe. Fork branch `rtao-core-patch/v490` (`d7fd8762625a93b9837cde28d496b0819a976f0e`) is published and recorded as the v490 adaptation in `upstream.toml`; the core moves when the core bump runs. No check changes.
+- `fuzz/`, `ci/tls-two-providers/` and `ci/validator/probe/` lock the v490 core (`cargo update -p bittensor-core -p subtensor-macros -p w3f-bls -p fips204 -p subtensor-hashed`; only the source revisions move), matching the manifests the core bump rewrote.
 
 ### Runtime adoption fix (D-168, repository maintenance)
 
