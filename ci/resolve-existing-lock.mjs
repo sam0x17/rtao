@@ -51,7 +51,7 @@ const additions = new Map([
   ['rtao-cli', 'nix'],
   ['rtao-testkit', 'docify'],
   ['rtao-wallet', 'rustix'],
-  ['rtao-rpc', 'tokio-rustls'],
+  ['rtao-jsonrpc', 'tokio-rustls'],
 ]);
 const pinText = readFileSync('upstream.toml', 'utf8');
 const corePatch = pinText.match(/\[core\.patch\]\n[\s\S]*?^rev = "([0-9a-f]{40})"$/m);

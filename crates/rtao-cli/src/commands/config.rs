@@ -107,7 +107,7 @@ pub async fn run(store: &Store, output: &Output, matches: &ArgMatches) -> Result
                 if !settable().iter().any(|(candidate, _)| candidate == key) {
                     return Err(CliError::failure(format!(
                         "unknown config key {}",
-                        rtao_rpc::policy::python_string_repr(key)
+                        rtao_jsonrpc::policy::python_string_repr(key)
                     ))
                     .with_help(format!("settable keys: {}", key_names())));
                 }

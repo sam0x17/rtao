@@ -29,7 +29,7 @@ rtao-core = { path = "crates/rtao-core", version = "0.1.0", default-features = f
 rtao-primitives = { path = "crates/rtao-primitives", version = "0.1.0", default-features = false }
 rtao-catalog = { path = "crates/rtao-catalog", version = "0.1.0", default-features = false }
 rtao-runtime = { path = "crates/rtao-runtime", version = "0.1.0", default-features = false }
-rtao-rpc = { path = "crates/rtao-rpc", version = "0.1.0", default-features = false }
+rtao-jsonrpc = { path = "crates/rtao-jsonrpc", version = "0.1.0", default-features = false }
 rtao-signer = { path = "crates/rtao-signer", version = "0.1.0", default-features = false }
 rtao-wallet = { path = "crates/rtao-wallet", version = "0.1.0", default-features = false }
 rtao-client = { path = "crates/rtao-client", version = "0.1.0", default-features = false }

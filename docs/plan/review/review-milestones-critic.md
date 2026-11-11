@@ -195,7 +195,7 @@ with `UP/sdk/bittensor-core/Cargo.toml` reqwest under `host`; `REG/reqwest-0.13.
 ["__rustls-aws-lc-rs", …]`; architecture §11.3 FakeNode on `127.0.0.1:0` without TLS. [I] tokio-tungstenite 0.30 is not
 in the local registry; 0.28 is the version the architecture verified.
 
-**Fix.** Add to §2.7: "**TLS provider: `ring`, set explicitly.** `rtao-rpc` depends on `rustls` (`default-features =
+**Fix.** Add to §2.7: "**TLS provider: `ring`, set explicitly.** `rtao-jsonrpc` depends on `rustls` (`default-features =
 false, features = ["ring", "std", "tls12", "logging"]`) and connects with
 `tokio_tungstenite::connect_async_tls_with_config(req, cfg, false,
 Some(Connector::Rustls(Arc::new(ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider())).with_safe_default_protocol_versions()?.with_root_certificates(roots).with_no_client_auth()))))`,
@@ -357,7 +357,7 @@ change the signing seam, signers, generated descriptors, the test harness or `Ca
 
 **Evidence.** GitHub Docs, "Automatic token authentication → Using the GITHUB_TOKEN in a workflow": events triggered by
 the `GITHUB_TOKEN`, except `workflow_dispatch` and `repository_dispatch`, do not create new workflow runs. Appendix E
-`e2e.yml` paths list only `rtao-rpc`, `rtao-client`, `rtao-tx`, `rtao-intents`, `rtao-reads`, `rtao-neuron`,
+`e2e.yml` paths list only `rtao-jsonrpc`, `rtao-client`, `rtao-tx`, `rtao-intents`, `rtao-reads`, `rtao-neuron`,
 `rtao-metagraph`, `upstream.toml`, `vendor/**`.
 
 **Fix.** (1) In `drift.yml` and `pin-bump.yml`, mint a GitHub App installation token
@@ -516,7 +516,7 @@ not depend on `rtao-intents` anyway. Scenario 16 needs ciphertexts from a core b
 cannot happen inside rtao's workspace because its `[patch]` replaces that version. The testnet soak needs a registered
 hotkey with a validator permit before rtao can register or stake.
 
-**Evidence.** architecture §2.2 `rtao-testkit` depends on `rtao-client`, `rtao-rpc`, `rtao-tx`, `rtao-wallet`; §11.4
+**Evidence.** architecture §2.2 `rtao-testkit` depends on `rtao-client`, `rtao-jsonrpc`, `rtao-tx`, `rtao-wallet`; §11.4
 builder and knobs; metadata has every setup call (`SP/meta/explore/SubtensorModule_calls.txt:7, 16, 40, 69`;
 `AdminUtils_calls.txt:31-32, 47, 55, 66, 78, 95-97`); §1.3 (two `w3f-bls 0.1.3` sources → E0277).
 

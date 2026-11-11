@@ -300,7 +300,7 @@ async fn invalid_custom_code_normalization_preserves_author_ack_fate_and_known_c
                     &failure,
                     SubmitFailure::Unresolved { cause, reconciliation: None, .. }
                         if matches!(cause.as_ref(), SubmitFailure::Client(ClientError::Rpc(
-                            rtao_rpc::RpcError::JsonRpc {
+                            rtao_jsonrpc::RpcError::JsonRpc {
                                 code: actual_code,
                                 message: actual_message,
                                 data: actual_data,

@@ -209,7 +209,7 @@ pub fn chain_catalog(pallet: Option<&str>) -> Result<Value, CliError> {
     {
         return Err(CliError::failure(format!(
             "unknown pallet {}",
-            rtao_rpc::policy::python_string_repr(pallet)
+            rtao_jsonrpc::policy::python_string_repr(pallet)
         ))
         .with_help(format!(
             "valid pallets: {}",
@@ -308,7 +308,7 @@ pub fn run_explain(output: &Output, matches: &ArgMatches) -> Result<(), CliError
     }
     let matches = chain_matches(query)?;
     if matches.is_empty() {
-        return Err(CliError::failure(format!("unknown error code {}",rtao_rpc::policy::python_string_repr(query)))
+        return Err(CliError::failure(format!("unknown error code {}",rtao_jsonrpc::policy::python_string_repr(query)))
             .with_help("run `btcli explain` for the semantic codes, or `btcli explain --chain` for the chain error catalog"));
     }
     let mut text = matches

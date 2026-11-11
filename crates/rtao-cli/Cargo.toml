@@ -32,7 +32,7 @@ pow-gpu = ["rtao/pow-gpu", "rtao-intents/pow-gpu"]
 rtao = { workspace = true, features = ["client", "reads", "tx", "intents", "wallet-encrypted", "keychain", "owner"] }
 rtao-catalog.workspace = true
 rtao-runtime.workspace = true
-rtao-rpc.workspace = true
+rtao-jsonrpc.workspace = true
 rtao-intents = { workspace = true, features = ["all", "pow"] }
 toml_edit.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }

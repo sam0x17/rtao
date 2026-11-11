@@ -610,7 +610,7 @@ async fn cancellation_during_signing_keeps_record_before_any_broadcast() -> anyh
         .await
         .expect_err("cancel");
     assert!(
-        matches!(error, TxError::Rpc(rtao_rpc::RpcError::Timeout { .. })),
+        matches!(error, TxError::Rpc(rtao_jsonrpc::RpcError::Timeout { .. })),
         "signing must reach its deadline: {error}"
     );
     assert!(f.owner.cancel.is_cancelled());

@@ -154,7 +154,7 @@ node's `RPC_DEFAULT_MESSAGE_CAPACITY_PER_CONN = 64`; RPITIT `+ Send` futures thr
 - **Location**: P §14.3 #9 ("allow it in `rtao-signer` under feature `extension` [I]"); P §14.2 Q16; P §12.3 M1 task "tokio-tungstenite 0.30"; A §2.3 rule 2, §2.7, §12.4.
 - **Problem**: the bridge needs a WS client (`ExtensionSigner`) and an HTTP+WS server (`rtao extension bridge`, serving
   `bridge.html` on 127.0.0.1:39295). The natural server is axum `ws`, but axum 0.8.9 requires `tokio-tungstenite ^0.29`
-  while rtao-rpc pins 0.30 and deny bans duplicate `tungstenite`: `rtao-cli` (whose default features include `extension`)
+  while rtao-jsonrpc pins 0.30 and deny bans duplicate `tungstenite`: `rtao-cli` (whose default features include `extension`)
   fails `cargo deny` at M7, and every miner using axum WebSockets compiles two tungstenite stacks.
 - **Evidence**: crates.io index cache entry axum 0.8.9 → `{"name":"tokio-tungstenite","req":"^0.29.0","optional":true}`;
   REG/axum-0.8.8/Cargo.toml:65-68, 264-266; index tokio-tungstenite 0.30.0 → `tungstenite ^0.30.0`; A:544, A:573-575, A:705,
@@ -163,8 +163,8 @@ node's `RPC_DEFAULT_MESSAGE_CAPACITY_PER_CONN = 64`; RPITIT `+ Send` futures thr
   for axum 0.8.9); Renovate groups `axum` and `tokio-tungstenite`; Q16 becomes '0.29 handshake error API = 0.28', pinned
   by the same M1 `FakeNode` test. (b) Bridge server in `rtao-cli` (feature `extension`) on axum `ws`; bridge client and
   `ExtensionSigner` in `rtao-signer` (feature `extension`) on tokio-tungstenite. (c) Rule 2: '`tokio-tungstenite` only in
-  `rtao-rpc`, `rtao-testkit`, and under feature `extension` in `rtao-signer` and `rtao-cli` (directly or via `axum/ws`),
-  always at the single workspace version; `subxt-rpcs` only in `rtao-rpc`, `rtao-client`, `rtao-testkit`'. The deny ban stays."
+  `rtao-jsonrpc`, `rtao-testkit`, and under feature `extension` in `rtao-signer` and `rtao-cli` (directly or via `axum/ws`),
+  always at the single workspace version; `subxt-rpcs` only in `rtao-jsonrpc`, `rtao-client`, `rtao-testkit`'. The deny ban stays."
 
 ## F11 [major] PLAN.md — gap #5 decision: the metagraph read must live in `rtao-reads`
 - **Location**: P §14.3 #5 default "move the commitment machinery below `rtao-metagraph`; expose `metagraph()` as an extension trait or from the facade [I]"; P §12.3 M1 "`rtao-metagraph` (model and view)"; A §2.2, §4.8, §8.2.

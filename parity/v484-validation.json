@@ -752,7 +752,7 @@
     "crates/rtao-reads/tests/m6_root.rs": "b1fff1a3323d2c43ba01a8b052fe5c9f3eab324bb75b74f953695eaa394caa29",
     "crates/rtao-reads/tests/m6_staking.rs": "89fc2066453ef8523777a6efe8c417da9c01dbbae505f1ac3984318e32daa5d2",
     "crates/rtao-reads/tests/owner.rs": "8efa6c2c577c8895abea530184cfdcd09106ea633736e6f58680380d4b765e23",
-    "crates/rtao-rpc/src/generated/py_rpc.rs": "0f091def47148369de9fb915976beff7a2ed942f13fce48e7ea64f32a0f7a69d",
+    "crates/rtao-jsonrpc/src/generated/py_rpc.rs": "0f091def47148369de9fb915976beff7a2ed942f13fce48e7ea64f32a0f7a69d",
     "crates/rtao-runtime/src/generated/calls.rs": "767bccc705831a78c1727aea7d6704c621812c7709105c5fe14c27850a6eb26b",
     "crates/rtao-runtime/src/generated/constants.rs": "244302d71852a0d8c35d252b7c4b3fadf76cf777c5beb0915a73406c3e7fb85a",
     "crates/rtao-runtime/src/generated/errors.rs": "a10abda58aec112c307601e1f49d41cd82b9fffb5505d0f4324c874e9c737e91",

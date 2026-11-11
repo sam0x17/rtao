@@ -26,14 +26,14 @@ interop = ["docker"]
 core-policy = ["dep:bittensor-core"]
 core-oracle = ["docker", "core-policy"]
 ledger-emu = ["dep:bittensor-core", "bittensor-core/ledger", "rtao-core/ledger", "dep:rtao-signer", "rtao-signer/ledger", "rtao-signer/test-util"]
-rpc-rate-limit = ["rtao-rpc/rate-limit"]
-rpc-metrics = ["rtao-rpc/metrics"]
+rpc-rate-limit = ["rtao-jsonrpc/rate-limit"]
+rpc-metrics = ["rtao-jsonrpc/metrics"]
 journal-shield = ["rtao-client/test-util", "dep:rtao-signer", "dep:url"]
 
 [dependencies]
 bittensor-core = { workspace = true, optional = true, features = ["host"] }
 rtao-client = { workspace = true }
-rtao-rpc.workspace = true
+rtao-jsonrpc.workspace = true
 rtao-signer = { workspace = true, optional = true }
 toml_edit = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
@@ -78,7 +78,7 @@ sha2 = { workspace = true }
 rtao-catalog = { path = "../rtao-catalog", default-features = false }
 metrics = { workspace = true }
 scale-decode = { workspace = true }
-rtao-rpc = { path = "../rtao-rpc", default-features = false }
+rtao-jsonrpc = { path = "../rtao-jsonrpc", default-features = false }
 url = { workspace = true }
 
 [[test]]

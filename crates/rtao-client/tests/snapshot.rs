@@ -82,7 +82,7 @@ async fn snapshot_siblings_retain_observers_and_equal_references_need_no_rpc() {
     }
     assert!(matches!(
         snapshot.at(Some(BlockRef::Number(99))).await,
-        Err(ClientError::Rpc(rtao_rpc::RpcError::Closed))
+        Err(ClientError::Rpc(rtao_jsonrpc::RpcError::Closed))
     ));
     assert_eq!(chain.requests(), before);
 }

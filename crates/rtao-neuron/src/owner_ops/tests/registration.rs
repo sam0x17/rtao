@@ -128,7 +128,7 @@ async fn create_timeout_returns_exact_broadcast_hash_for_reconciliation() -> any
     let result = timed.create_subnet(HOTKEY, RegistrationWait::Receipt).await;
     let expected = attempted_hash(&chain);
     assert!(
-        matches!(result, Err(TxError::Rpc(rtao_rpc::RpcError::FateUnknown { hash })) if hash.0 == expected.0)
+        matches!(result, Err(TxError::Rpc(rtao_jsonrpc::RpcError::FateUnknown { hash })) if hash.0 == expected.0)
     );
     ops.client().close().await;
     Ok(())

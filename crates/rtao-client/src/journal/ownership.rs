@@ -25,8 +25,8 @@ impl JournalPreparation {
         binding.preparation_owner = Some(Arc::downgrade(&self.claims));
         binding
     }
-    pub(crate) fn author_ownership(&self, hash: H256) -> rtao_rpc::AuthorOwnership {
-        rtao_rpc::AuthorOwnership::new(rtao_rpc::H256(hash.0), self.claims.clone()).0
+    pub(crate) fn author_ownership(&self, hash: H256) -> rtao_jsonrpc::AuthorOwnership {
+        rtao_jsonrpc::AuthorOwnership::new(rtao_jsonrpc::H256(hash.0), self.claims.clone()).0
     }
 }
 impl JournalBinding {

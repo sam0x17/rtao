@@ -70,7 +70,7 @@ The source received only an equivalent Clippy conditional-style cleanup after
 the live run.
 
 The fixture used an independent temporary Cargo workspace with path dependency
-`rtao-rpc`, `futures = "0.3"`, `serde_json = "1"` with `arbitrary_precision`,
+`rtao-jsonrpc`, `futures = "0.3"`, `serde_json = "1"` with `arbitrary_precision`,
 `tokio = "1.53"` with `macros`, `rt-multi-thread`, `time`, `url = "2"`, and
 `tokio-tungstenite = "0.30"` with default features disabled and `connect`,
 `handshake`, `rustls-tls-native-roots`. These dependencies and the recorded
@@ -83,7 +83,7 @@ never accepts a higher rate or request count.
 `FakeNode`: discovery and two concurrently queued reads arrive at least
 900 ms apart, rejecting an unpaced discovery or the former eight-token
 startup burst. The existing submission-priority/cancelled-queue regression
-also passes. Strict Clippy passes for `rtao-rpc --all-features --all-targets`
+also passes. Strict Clippy passes for `rtao-jsonrpc --all-features --all-targets`
 and the isolated fixture. The full `rtao-testkit --test rpc --features
 rpc-rate-limit` suite passes all 39 tests with no failures or ignored tests.
 All builds and scratch used the recorded task root;

@@ -343,7 +343,7 @@ Recommendation for the synthesis:
 
 **Weaknesses under this lens**
 - **Handshake headers are lost.** jsonrpsee drops them, and C does not say so (§2.4).
-- **Its `FakeChain` as specified cannot test its own supervisor**, because it implements `RpcClientT` (C §11.3). C's `rtao-rpc` `test-util` "scripted transport" (C §2.2) may sit below the session, but C never says so (§2.4).
+- **Its `FakeChain` as specified cannot test its own supervisor**, because it implements `RpcClientT` (C §11.3). C's `rtao-jsonrpc` `test-util` "scripted transport" (C §2.2) may sit below the session, but C never says so (§2.4).
 - **Role and unit checks happen at run time.** `Executor` takes `&dyn DynIntent` plus `WalletSigners`, and `Balance` is
   tagged at run time.
 - **No metagraph fast path.**
@@ -526,7 +526,7 @@ From **A**:
 
 ## 8. Suggested shape of the synthesis (for the next author)
 
-- **Crates.** C's layout (`rtao-btcore`, `rtao-primitives`, `rtao-runtime`, `rtao-rpc`, `rtao-signer`, `rtao-client`,
+- **Crates.** C's layout (`rtao-btcore`, `rtao-primitives`, `rtao-runtime`, `rtao-jsonrpc`, `rtao-signer`, `rtao-client`,
   `rtao-wallet`, `rtao-tx`, `rtao-reads`, `rtao-intents`, `rtao-metagraph`, `rtao-auth`, `rtao-http`, `rtao-neuron`,
   `rtao-cli`, `rtao-testkit`, facade `rtao`), plus D's `rtao-core-ext`.
 - **Facade features.** C's `validator`, `miner` and `owner` features, plus a no-`host` profile for the first two

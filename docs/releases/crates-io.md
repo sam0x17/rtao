@@ -46,7 +46,7 @@ on that decision.
     `Localnet` and `Scenario`.
 
 `cargo package --list` succeeds for all 24 crates. `cargo package` (with
-verification) succeeds today only for `rtao-arena` and `rtao-rpc`, the two
+verification) succeeds today only for `rtao-arena` and `rtao-jsonrpc`, the two
 crates outside the `bittensor-core` graph.
 
 ## 2. Blockers before the first publish
@@ -57,7 +57,7 @@ where it decides something.
 1. **Git dependencies [dependency strategy].** crates.io refuses Git
    dependencies. `rtao-core`, `rtao-core-ext` and `rtao-testkit` declare
    `bittensor-core` directly, and every other crate except `rtao-arena` and
-   `rtao-rpc` reaches it through them. Through it the graph pulls in
+   `rtao-jsonrpc` reaches it through them. Through it the graph pulls in
    `subtensor-hashed`, the vendored `fips204` and `w3f-bls` forks,
    `subtensor-macros`, `tle` (ideal-lab5/timelock at a revision) and the
    polkadot-sdk crates of the RaoFoundation fork. rtao's fork patch of
@@ -131,7 +131,7 @@ and do not count. Crates on the same level are independent.
 
 | Level | Crates |
 |---|---|
-| 0 | `rtao-arena` (0.2.0), `rtao-core-ext`, `rtao-rpc` |
+| 0 | `rtao-arena` (0.2.0), `rtao-core-ext`, `rtao-jsonrpc` |
 | 1 | `rtao-core` |
 | 2 | `rtao-primitives` |
 | 3 | `rtao-catalog`, `rtao-runtime`, `rtao-signer` |

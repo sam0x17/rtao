@@ -429,12 +429,12 @@ status = "active"
 class = "stricter"
 milestone = "M9"
 pinning_tests = [
-  "rtao_rpc::session::frame_fuzz::tests::early_byte_budget_evicts_oldest_globally_and_accounts_for_identity_bytes",
-  "rtao_rpc::session::frame_fuzz::tests::unsolicited_early_updates_require_a_live_transmitted_current_subscription_request",
-  "rtao_rpc::session::frame_fuzz::tests::reconnect_resets_early_storage_and_old_streams_share_the_active_byte_budget",
-  "rtao_rpc::subscription::tests::active_byte_budget_evicts_oldest_across_streams_and_poll_releases_charge",
-  "rtao_rpc::subscription::tests::drained_and_closed_queues_release_high_water_backing_allocations",
-  "rtao_rpc::session::frame_fuzz::tests::raw_receive_logs_escape_terminal_controls_while_protocol_values_stay_exact",
+  "rtao_jsonrpc::session::frame_fuzz::tests::early_byte_budget_evicts_oldest_globally_and_accounts_for_identity_bytes",
+  "rtao_jsonrpc::session::frame_fuzz::tests::unsolicited_early_updates_require_a_live_transmitted_current_subscription_request",
+  "rtao_jsonrpc::session::frame_fuzz::tests::reconnect_resets_early_storage_and_old_streams_share_the_active_byte_budget",
+  "rtao_jsonrpc::subscription::tests::active_byte_budget_evicts_oldest_across_streams_and_poll_releases_charge",
+  "rtao_jsonrpc::subscription::tests::drained_and_closed_queues_release_high_water_backing_allocations",
+  "rtao_jsonrpc::session::frame_fuzz::tests::raw_receive_logs_escape_terminal_controls_while_protocol_values_stay_exact",
 ]
 upstream_report = "Independent source review and authored queue/lifecycle/logging regressions; hosted compilation and execution remain pending. No new upstream filing."
 upstream_link = "https://github.com/RaoFoundation/subtensor/blob/850f2755bb05a3851f948489f0ab27b0645cebce/sdk/python/bittensor/_transport/rpc.py"

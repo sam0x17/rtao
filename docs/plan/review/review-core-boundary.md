@@ -50,11 +50,11 @@ Fix (add a row to §2.7 and amend two):
 features = ["ring", "std", "tls12", "logging"] }` | One provider for the whole graph: the core's `host` already turns on
 `rustls/ring` (blocking reqwest 0.12); reqwest 0.13's default TLS would add `aws-lc-rs`, after which rustls has no
 default provider and tokio-tungstenite's built-in connector panics (`REG/rustls-0.23.45/src/crypto/mod.rs:243-286`,
-`REG/tokio-tungstenite-0.28.0/src/tls.rs:126`). rtao never relies on the process default: `rtao-rpc` builds
+`REG/tokio-tungstenite-0.28.0/src/tls.rs:126`). rtao never relies on the process default: `rtao-jsonrpc` builds
 `ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))` with native roots and
 connects with `connect_async_tls_with_config(request, ws_config, false, Some(Connector::Rustls(tls_config)))`; every reqwest client uses
 `ClientBuilder::tls_backend_preconfigured(tls_config)`. `aws-lc-rs`, `aws-lc-sys`, `native-tls` are banned in `deny.toml` and
-`deps-check`. Test: `rtao-rpc` connects to a loopback `wss://` FakeNode (self-signed cert) both in an `--all-features`
+`deps-check`. Test: `rtao-jsonrpc` connects to a loopback `wss://` FakeNode (self-signed cert) both in an `--all-features`
 build and in the no-host profile. |"
 WebSocket row: "`tokio-tungstenite 0.30` (`rustls-tls-native-roots`; connector supplied by rtao, see TLS)". HTTP row:
 "`reqwest 0.13.5` (`default-features = false`, features `rustls-no-provider`, `json`, `http2`, `charset`; preconfigured

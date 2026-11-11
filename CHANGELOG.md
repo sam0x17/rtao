@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Transport crate renamed `rtao-jsonrpc` (D-182)
+
+- Breaking: the JSON-RPC transport crate is `rtao-jsonrpc` (`use rtao_jsonrpc::...`); `rtao-rpc` is not published. Its metric names (`rtao_rpc_*`) are unchanged.
+
 ### crates.io packaging prep (D-181, repository maintenance)
 
 - Workspace path dependencies carry their versions, and dev-dependencies on workspace crates are path-only, so `cargo publish` writes registry requirements and strips the dev-dependency cycles.
@@ -827,7 +831,7 @@ without `NeuronRuntime`, against an endpoint paced to a few requests a minute.
 
 - `MetagraphSync` decides from the finalized height and its cached epoch schedule before making any request, so heads between refreshes cost nothing (D-096). An unpredicted epoch is refreshed at the predicted block or the fallback, whichever comes first.
 
-#### rtao-rpc
+#### rtao-jsonrpc
 
 - An HTTP 403/429 refusal of a reconnect handshake, after the session has connected, no longer ends the session (D-097). The session stays `Reconnecting`, waits the longer of the refusal's `Retry-After` (at most 10 minutes) and a backoff of 1 s doubling to 60 s per consecutive refusal, and dials again. Without `retry_forever` it becomes terminal after `max_retries` further refusals. A refused initial connect, a JSON-RPC policy error and a policy close (1008) stay terminal. New metric: `rtao_rpc_reconnect_refusals_total`.
 

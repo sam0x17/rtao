@@ -36,7 +36,7 @@ create a local fixture workspace, install tools or resume a retired build cache.
 
 ## Historical evidence, 2026-10-14
 
-`cargo test --locked -p rtao-rpc policy:: --lib` passed all 16 policy tests
+`cargo test --locked -p rtao-jsonrpc policy:: --lib` passed all 16 policy tests
 locally with Rust/Cargo 1.99.0. The tests consume the extracted v478
 constants, including the diagnostic limits, and cover the pinned Python
 classifier, metadata truthiness, response body shapes, Unicode sanitization,
@@ -45,7 +45,7 @@ values with parsed seconds, milliseconds, and HTTP-dates. Six upstream test
 functions have `pyt:` provenance in `policy.rs`; socket behavior is exercised by
 the separate transport parity suite.
 
-`cargo clippy --locked -p rtao-rpc --lib --all-features -- -D warnings` also
+`cargo clippy --locked -p rtao-jsonrpc --lib --all-features -- -D warnings` also
 passed after integration of the transport error and supervisor changes.
 
 The second-provider regression passed as an independent Cargo workspace under
@@ -63,7 +63,7 @@ bans remain in force. Both runs of the fixture test passed, most recently in
 0.20 seconds, with no ignored tests.
 
 The historical disposable workspace used path dependencies on
-`rtao-rpc` and `rtao-testkit`, the root's pinned `w3f-bls` patch, tokio's `macros`
+`rtao-jsonrpc` and `rtao-testkit`, the root's pinned `w3f-bls` patch, tokio's `macros`
 and `rt-multi-thread` features, `url`, and this rustls dependency:
 
 ```toml
@@ -78,7 +78,7 @@ async fn wss_with_two_compiled_providers_and_no_process_default()
     -> Result<(), Box<dyn std::error::Error>>
 {
     use std::time::Duration;
-    use rtao_rpc::{ReadMethod, Session, SessionConfig};
+    use rtao_jsonrpc::{ReadMethod, Session, SessionConfig};
     use rtao_testkit::FakeNode;
 
     assert!(rustls::crypto::CryptoProvider::get_default().is_none());

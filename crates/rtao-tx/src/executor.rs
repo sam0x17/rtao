@@ -1810,7 +1810,7 @@ impl Executor {
                 finality_lag,
             }),
             Err(SubmitFailure::Client(error)) => Err(error.into()),
-            Err(SubmitFailure::Submit(rtao_rpc::SubmitError::Rpc(error))) => {
+            Err(SubmitFailure::Submit(rtao_jsonrpc::SubmitError::Rpc(error))) => {
                 Err(rtao_client::ClientError::from(error).into())
             }
             Err(error) => Err(TxError::Chain(ChainError::new(error.to_string(), None))),
@@ -2041,7 +2041,7 @@ impl Executor {
                     ));
                 }
                 Err(SubmitFailure::Client(error)) => return Err(error.into()),
-                Err(SubmitFailure::Submit(rtao_rpc::SubmitError::Rpc(error))) => {
+                Err(SubmitFailure::Submit(rtao_jsonrpc::SubmitError::Rpc(error))) => {
                     return Err(rtao_client::ClientError::from(error).into());
                 }
                 Err(error) => return Err(TxError::Chain(ChainError::new(error.to_string(), None))),
@@ -2123,7 +2123,7 @@ impl Executor {
                 return Ok(());
             }
         }
-        Err(TxError::Rpc(rtao_rpc::RpcError::SubscriptionLost))
+        Err(TxError::Rpc(rtao_jsonrpc::RpcError::SubscriptionLost))
     }
 }
 
@@ -2391,7 +2391,7 @@ impl TimeBudget {
         })
     }
     fn timeout() -> TxError {
-        TxError::Rpc(rtao_rpc::RpcError::Timeout {
+        TxError::Rpc(rtao_jsonrpc::RpcError::Timeout {
             detail: "execution timed out without reaching the requested state".into(),
         })
     }

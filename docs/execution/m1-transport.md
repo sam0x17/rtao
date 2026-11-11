@@ -20,7 +20,7 @@ hosted report run 38876950939 refreshed their generated matrix entries at
 `b06a325`. These Rust results add no
 Python/oracle, HTTPS two-provider, live-network, platform or release claim.
 
-`rtao-rpc` now owns a single WebSocket supervisor and implements the real
+`rtao-jsonrpc` now owns a single WebSocket supervisor and implements the real
 `subxt_rpcs::client::RpcClientT` interface. `FakeNode` exercises it over loopback
 WebSockets; `FakeChain` implements that interface directly over the same encoded
 `FakeState` used by the socket fake.
@@ -64,14 +64,14 @@ run in free `ubuntu-latest` CI under Q30. The former execution root is retired
 and absent; do not recreate it or run this suite locally.
 
 ```text
-cargo test -p rtao-rpc --all-features --locked
+cargo test -p rtao-jsonrpc --all-features --locked
 cargo test -p rtao-testkit --features rpc-rate-limit,rpc-metrics \
   --test rpc --test rpc_lifecycle --test rpc_metrics --test fakes --locked
-cargo clippy -p rtao-rpc --all-features --all-targets --locked -- -D warnings
+cargo clippy -p rtao-jsonrpc --all-features --all-targets --locked -- -D warnings
 cargo clippy -p rtao-testkit --features rpc-rate-limit,rpc-metrics \
   --test rpc --test rpc_lifecycle --test rpc_metrics --locked --no-deps -- -D warnings
-cargo +1.89.0 check -p rtao-rpc --all-features --all-targets --locked
-cargo check -p rtao-rpc --no-default-features --locked
+cargo +1.89.0 check -p rtao-jsonrpc --all-features --all-targets --locked
+cargo check -p rtao-jsonrpc --no-default-features --locked
 ```
 
 The policy suite has 16 passing tests. The socket suite has 38 with the rate feature
@@ -98,7 +98,7 @@ Network names and endpoint presets remain sourced from generated catalog tables.
 The client constructs `EndpointPool` through the transport builders and chooses
 `RateLimit::PUBLIC` for the public presets. This preserves the transport crate's
 third-party-only dependency layer. A workspace consumer must enable the
-`rtao-rpc/rate-limit` feature explicitly because workspace path dependencies
+`rtao-jsonrpc/rate-limit` feature explicitly because workspace path dependencies
 disable default features.
 
 Those historical narrow checks alone established no milestone exit or release

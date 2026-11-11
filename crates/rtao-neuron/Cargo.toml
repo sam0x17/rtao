@@ -25,7 +25,7 @@ default = ["prometheus"]
 validator = ["rtao-intents/weights", "rtao-intents/serving"]
 miner = ["rtao-intents/serving", "rtao-btauth/server", "rtao-btauth/metagraph-policy", "dep:axum", "dep:reqwest", "dep:rustls", "dep:rustls-native-certs"]
 owner = ["rtao-intents/hyperparameters", "rtao-intents/registration", "rtao-intents/governance", "rtao-intents/identity"]
-prometheus = ["dep:metrics", "rtao-rpc/metrics"]
+prometheus = ["dep:metrics", "rtao-jsonrpc/metrics"]
 
 [dependencies]
 rtao-intents = { workspace = true }
@@ -40,7 +40,7 @@ rtao-core.workspace = true
 rtao-runtime.workspace = true
 rtao-core-ext.workspace = true
 rtao-catalog.workspace = true
-rtao-rpc.workspace = true
+rtao-jsonrpc.workspace = true
 rtao-reads.workspace = true
 anyhow.workspace = true
 clap.workspace = true

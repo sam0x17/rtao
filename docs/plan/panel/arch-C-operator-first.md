@@ -186,7 +186,7 @@ replaced because they are blocking and incomplete, and they are kept as test ora
 
 | Item | Why | What rtao does instead |
 |---|---|---|
-| `client::Client` | blocking `reqwest`, `ws://`->`http://` rewrite, polling receipts, no subscriptions/reconnect/nonce cache (`RES:B` §4.1; `CORE:client.rs:30-33` [V]) | `rtao-rpc` + `rtao-client`; `Client` is a differential oracle in e2e (§11.4 scenario 12) |
+| `client::Client` | blocking `reqwest`, `ws://`->`http://` rewrite, polling receipts, no subscriptions/reconnect/nonce cache (`RES:B` §4.1; `CORE:client.rs:30-33` [V]) | `rtao-jsonrpc` + `rtao-client`; `Client` is a differential oracle in e2e (§11.4 scenario 12) |
 | `client::Client::submit_shielded` | signs inner and carrier with `DEFAULT_ERA_PERIOD = 64` (`CORE:client.rs:32,633,644` [V]) while the runtime rejects `submit_encrypted` with an era above 8 (`SUB:runtime/src/check_mortality.rs:19,94-100` [V]); no inner-receipt resolution | §3.8 (era 8, inner scan) |
 | `transaction::{IntentCall, Policy, Plan, Executor}` | `Executor` holds `&Client` and `IntentCall::encode` takes `&Client` (`CORE:transaction.rs:828-830,998-1116` [V]); only 22 trusted constructors (`:251-826`) and the trusted semantics constructor is private, so the other 61 intents could only exist as raw/unbounded calls | `rtao-tx` + `rtao-intents`; the 22 constructors and `Policy::check` are differential oracles (call bytes via the public accessors `pallet()/function()/params()` at `:191-213` + `compose_call`) |
 | `timelock::generate_commit_v2` | reads the wall clock inside (`now_unix`, `CORE:timelock/mod.rs:45,177`) and uses the core epoch simulator (§1.6) | `TimelockCommitter` composes the same public pieces with an injected clock |
@@ -198,7 +198,7 @@ replaced because they are blocking and incomplete, and they are kept as test ora
 
 | Gap | Evidence | rtao supplies |
 |---|---|---|
-| async transport, subscriptions, reconnect, endpoint pools, policy refusals, archive fallback | `RES:B` §4.3 table; `RES:A1` §6.1 | `rtao-rpc` session (§3.2) |
+| async transport, subscriptions, reconnect, endpoint pools, policy refusals, archive fallback | `RES:B` §4.3 table; `RES:A1` §6.1 | `rtao-jsonrpc` session (§3.2) |
 | nonce cache, in-flight tracking, "fate unknown" reconciliation | `RES:B` §4.3 | `rtao-client::NonceManager`, reconciliation (§3.7) |
 | receipts by subscription + nested-wrapper failure decoding + MevShield failure events | `CORE:client.rs` polls (`RES:B` §4.1) | `rtao-client::outcome` |
 | V16 metadata | `CORE:runtime/mod.rs:194-199` | `RuntimeHandle::v16()` via `frame-metadata` 23 |
@@ -340,7 +340,7 @@ rtao/
 │  ├─ manifest.toml        # per-name status for every upstream intent/read/code/CLI command/setting (§4.7)
 │  └─ raw_only.toml        # chain calls deliberately not wrapped by an intent (coverage gate)
 ├─ crates/
-│  ├─ rtao-btcore/  rtao-primitives/  rtao-runtime/  rtao-rpc/  rtao-signer/  rtao-client/
+│  ├─ rtao-btcore/  rtao-primitives/  rtao-runtime/  rtao-jsonrpc/  rtao-signer/  rtao-client/
 │  ├─ rtao-wallet/  rtao-tx/  rtao-reads/  rtao-intents/  rtao-metagraph/  rtao-auth/  rtao-http/
 │  ├─ rtao-neuron/  rtao-cli/  rtao-testkit/  rtao-macros/  rtao/            (facade)
 │  └─ rtao-evm/  rtao-compat-synapse/  rtao-compat-epistula/  rtao-transport-quic/   (M7/M8, optional)
@@ -360,9 +360,9 @@ listed after it.
 | `rtao-btcore` | the only crate that names `bittensor_core`; re-exports the items in §1.2, maps `CoreError`, hosts the epoch shim and oracle tests | `keys`, `keyfiles`, `codec`, `runtime`, `extrinsic`, `shield`, `digest`, `timelock`, `pow`, `epoch`, `ledger`, `BITTENSOR_CORE_TAG` | `ledger`, `oracle` (dev: differential tests against `Client`/`Policy`) | `bittensor-core` (git tag) |
 | `rtao-primitives` | units and identities | `AccountId`, `H256`, `NetUid`, `MechId`, `Uid`, `NetUidStorageIndex`, `Rao`, `AlphaRao`, `Balance`, `Unit`, `PerU16`, `U64F64`, `I96F32`, `I64F64`, `I32F32`, `ProportionU64`, `StakeWeight`, `BlockNumber`, `AxonTarget` (uid, hotkey, socket address), `hparams::{HyperparamKind, HYPERPARAMS}` | `serde` (default), `schema` (schemars) | `rtao-btcore`, `parity-scale-codec`, `scale-encode`, `scale-decode` |
 | `rtao-runtime` | the subtensor surface: generated descriptors + hand-written typed models + surface verification | `calls::*`, `storage::*`, `apis::*`, `constants::*`, `events::*`, `errors::ERRORS`, `models::*`, `Call`, `StorageItem`, `RuntimeApiMethod`, `StaticEvent`, `verify_surface()`, `SelectiveMetagraphIndex` | - | `rtao-primitives`, `rtao-btcore` |
-| `rtao-rpc` | tokio JSON-RPC session implementing `subxt_rpcs::client::RpcClientT` | `Session`, `SessionConfig`, `SessionEvent`, `RpcError`, `Network`, `EndpointPool`, `RtaoRpcConfig` (for `LegacyRpcMethods`) | `rate-limit` (default), `test-util` (scripted transport with fault injection, the base of `rtao-testkit::FakeChain`) | `subxt-rpcs`, `jsonrpsee`, `tokio`, `governor` |
+| `rtao-jsonrpc` | tokio JSON-RPC session implementing `subxt_rpcs::client::RpcClientT` | `Session`, `SessionConfig`, `SessionEvent`, `RpcError`, `Network`, `EndpointPool`, `RtaoRpcConfig` (for `LegacyRpcMethods`) | `rate-limit` (default), `test-util` (scripted transport with fault injection, the base of `rtao-testkit::FakeChain`) | `subxt-rpcs`, `jsonrpsee`, `tokio`, `governor` |
 | `rtao-signer` | the signing contract and in-process/hardware/remote signers | `Signer`, `SigningRequest`, `SigningContext`, `SignerCaps`, `Signature`, `SignerPayloadJson`, `KeypairSigner`, `LedgerSigner`, `RemoteSigner`, `ExtensionSigner`, `VaultSigner` | `ledger`, `remote`, `extension`, `vault` | `rtao-primitives`, `rtao-btcore` |
-| `rtao-client` | the chain client | `Subtensor`, `Snapshot`, `BlockRef`, `HeadPolicy`, `RuntimeHandle`, `Events`, `RawEvent`, `TxRequest`, `TxReceipt`, `Inclusion`, `Mortality`, `NonceManager`, `CallBytes`, `compose::{sudo, proxy, batch_all, multisig}`, `shield::submit_shielded`, `EpochClock`, `EpochStatus`, waits | `shield` (default), `metadata-hash`, `subxt` (escape hatch), `test-util` | `rtao-rpc`, `rtao-runtime`, `rtao-signer`, `rtao-btcore` |
+| `rtao-client` | the chain client | `Subtensor`, `Snapshot`, `BlockRef`, `HeadPolicy`, `RuntimeHandle`, `Events`, `RawEvent`, `TxRequest`, `TxReceipt`, `Inclusion`, `Mortality`, `NonceManager`, `CallBytes`, `compose::{sudo, proxy, batch_all, multisig}`, `shield::submit_shielded`, `EpochClock`, `EpochStatus`, waits | `shield` (default), `metadata-hash`, `subxt` (escape hatch), `test-util` | `rtao-jsonrpc`, `rtao-runtime`, `rtao-signer`, `rtao-btcore` |
 | `rtao-wallet` | btwallet/btcli-compatible wallets | `Wallet`, `WalletRef`, `Keyfile`, `PasswordSource`, `resolve_password`, `create_*`, `regen_*`, `list_wallets` | `prompt` (default), `keychain-macos`, `keyring` | `rtao-signer`, `rtao-btcore` |
 | `rtao-macros` | proc macros | `#[derive(Intent)]`, `#[rtao::read]` | - | `syn`, `quote` |
 | `rtao-tx` | v11 product layer for mutations | `Intent`, `DynIntent`, `IntentMeta`, `Spend`, `Touches`, `Policy`, `Plan`, `Preflight`, `Executor`, `ExecOpts`, `ExtrinsicResult`, `ChainError`, `ErrorCode`, `TxError`, `UnsignedExtrinsic`, `ProxyType`, `MultisigAdapter`, `IntentRegistry`, `tools()` | `cli` (clap derives), `schema` (default) | `rtao-client`, `rtao-macros` |
@@ -373,7 +373,7 @@ listed after it.
 | `rtao-http` | btauth/1 for axum/tower and reqwest | `BtAuthLayer`, `VerifiedCaller`, `CallerPolicy`, `MetagraphPolicy`, `PerHotkeyLimiter`, `BtAuthClient`, `FanOut`, `RedisNonceStore` | `server`, `client`, `metagraph-policy`, `redis` | `rtao-auth`, (opt) `rtao-metagraph` |
 | `rtao-neuron` | the framework | `NeuronConfig`, `NeuronRuntime`, `Validator`, `Miner`, `NeuronCx`, `WeightScheduler`, `Cadence`, `AxonPublisher`, `StateStore`, `EmaScores`, `PruneRisk`, `OwnerOps`, `HyperparamPlanner`, `OwnerMonitor`, `telemetry::init` | `validator`, `miner`, `owner`, `auto-update`, `prometheus` (default) | `rtao-intents`, `rtao-metagraph`, `rtao-http`, `rtao-wallet` |
 | `rtao-cli` | the `rtao` binary (btcli-equivalent) | - | per command group | everything above |
-| `rtao-testkit` | harness | `Localnet`, `LocalnetProfile`, `FakeChain`, `Scenario`, fixture loaders, `interop::*` | `docker` (default), `interop` | `rtao-client`, `rtao-rpc/test-util`, `rtao-wallet` |
+| `rtao-testkit` | harness | `Localnet`, `LocalnetProfile`, `FakeChain`, `Scenario`, fixture loaders, `interop::*` | `docker` (default), `interop` | `rtao-client`, `rtao-jsonrpc/test-util`, `rtao-wallet` |
 | `rtao` | facade + prelude | re-exports | `validator`, `miner`, `owner`, `full`, `ledger`, `blocking`, `subxt`, … (§2.4) | all |
 | `rtao-evm` (M7) | EVM helpers parity (`PY:evm/`) | H160 mirror, EIP-191 association signature, `eth_*` RPC, precompile ABIs | - | `rtao-client`, `alloy-primitives`, `alloy-sol-types`, `k256` [I: crate choice] |
 | `rtao-compat-synapse` (M8) | v10 Synapse/Axon/Dendrite wire format | header codec, sha3 body hash with `PythonStr`, dendrite signer, axon verifier | - | `rtao-signer`, `axum`, `reqwest` |
@@ -394,7 +394,7 @@ A crate may depend only on crates in lower layers (the table in §2.2 lists the 
 | 0 | `bittensor-core` (git tag `v<spec>`; brings `tle`, patched `w3f-bls`, the RaoFoundation `sp-core` fork, `frame-metadata` 23) |
 | 1 | `rtao-btcore` |
 | 2 | `rtao-primitives` |
-| 3 | `rtao-runtime`, `rtao-signer`, `rtao-rpc` (third-party only), `rtao-macros` (proc-macro) |
+| 3 | `rtao-runtime`, `rtao-signer`, `rtao-jsonrpc` (third-party only), `rtao-macros` (proc-macro) |
 | 4 | `rtao-client`, `rtao-auth`, `rtao-wallet` |
 | 5 | `rtao-tx`, `rtao-reads`, `rtao-evm` |
 | 6 | `rtao-intents`, `rtao-metagraph` |
@@ -490,14 +490,14 @@ feature `scale-info` (§1.3), `axum 0.8.9`, `tower 0.5.3`,
 
 ---
 
-## 3. Chain client (`rtao-rpc`, `rtao-client`, `rtao-runtime`)
+## 3. Chain client (`rtao-jsonrpc`, `rtao-client`, `rtao-runtime`)
 
 ### 3.1 Async model
 
 - Everything is `async` on tokio's multi-thread runtime; no global state. `Subtensor` is a cheap `Clone`
   (`Arc` inner) and `Send + Sync`.
 - Background tasks owned by a client (all cancelled when the last clone drops): the session supervisor
-  (`rtao-rpc`), the head tracker (best + finalized subscriptions with gap backfill), the runtime-version
+  (`rtao-jsonrpc`), the head tracker (best + finalized subscriptions with gap backfill), the runtime-version
   watcher. Neuron services (metagraph sync, weight scheduler) live in `rtao-neuron`, not in the client.
 - Every read happens at a `Snapshot` (a block hash + its `RuntimeHandle`). There is no unpinned read API; the
   client's `HeadPolicy` (`Best` by default for parity with Python's head reads, `Finalized` in neuron runtimes)
@@ -505,7 +505,7 @@ feature `scale-info` (§1.3), `axum 0.8.9`, `tower 0.5.3`,
   blocks (`RES:A2` §1.3 lists `delegate_take`, `coldkey_swap_announcement`, `hotkey_identities`,
   `miner_collateral`).
 
-### 3.2 Transport: `rtao-rpc::Session`
+### 3.2 Transport: `rtao-jsonrpc::Session`
 
 `Session` implements `subxt_rpcs::client::RpcClientT` (`request_raw`, `subscribe_raw`;
 `REG:subxt-rpcs-0.51.1/src/client/rpc_client_t.rs` [V]), so the typed method wrappers in
@@ -2070,7 +2070,7 @@ carry the compat row and CLI binaries.
 | new bittensor-core tag | `core-pin.yml` | review `upstream-diff`, run oracles and corpus, bump | 0.5-2 days |
 | Python adds an intent/read/error | `catalog.yml` | implement from the upstream source and catalog schema | 0.5-1 day per intent, 1-2 h per read (`RES:H` §4(b)) |
 | btauth change | `watch.yml` | implement `btauth/2` side by side, keep v1 through the deprecation window | 0.5-1 day |
-| `subxt-rpcs`/`jsonrpsee` breaking release | Renovate/Dependabot weekly | confined to `rtao-rpc` | 0.5-2 days |
+| `subxt-rpcs`/`jsonrpsee` breaking release | Renovate/Dependabot weekly | confined to `rtao-jsonrpc` | 0.5-2 days |
 | metadata V17 appears | `drift.yml` alert | nothing until adopted (rtao requests 15 and 16 explicitly) | - |
 | localnet image policy change | `e2e.yml` failures | update `images.toml` | minutes |
 | polkadot-sdk fork bump | arrives with a core tag | `deny.toml` duplicate bans catch SCALE-stack splits | varies |
@@ -2109,7 +2109,7 @@ ends with green CI on all lanes it introduces.
 
 | # | Milestone | Deliverables | Exit criteria | EW |
 |---|---|---|---|---|
-| M0 | Foundations, harness, first typed read | workspace, pins, `clippy.toml`/`deny.toml`; `rtao-btcore` (re-exports, epoch shim + vectors); `rtao-primitives` core types; `rtao-rpc` session; `rtao-client` connect, runtime cache (Python-compatible disk cache), snapshots, typed storage/API/constants, lazy events; xtask `metadata fetch`, `codegen` (subset used by M1), `drift` prototype; models `MetagraphWire`, `SelectiveMetagraphWire`, `HyperparamEntry`; golden conformance; `FakeChain` v0; `Localnet` v0; `pr.yml` | `cargo run --example metagraph -- --network finney --netuid 1` prints a typed metagraph at a pinned block; golden tests green; nightly drift runs on finney/testnet/devnet with an empty report | 3 |
+| M0 | Foundations, harness, first typed read | workspace, pins, `clippy.toml`/`deny.toml`; `rtao-btcore` (re-exports, epoch shim + vectors); `rtao-primitives` core types; `rtao-jsonrpc` session; `rtao-client` connect, runtime cache (Python-compatible disk cache), snapshots, typed storage/API/constants, lazy events; xtask `metadata fetch`, `codegen` (subset used by M1), `drift` prototype; models `MetagraphWire`, `SelectiveMetagraphWire`, `HyperparamEntry`; golden conformance; `FakeChain` v0; `Localnet` v0; `pr.yml` | `cargo run --example metagraph -- --network finney --netuid 1` prints a typed metagraph at a pinned block; golden tests green; nightly drift runs on finney/testnet/devnet with an empty report | 3 |
 | M1 | Validator | `KeypairSigner`; wallet hotkey + coldkey unlock (password sources 1-4, 7); tx pipeline (nonce, era, fee, watch, outcome, reconciliation); `conform`, `TimelockCommitter`, mechanisms, Null raw u16; `EpochClock`; `MetagraphSync`; `rtao-auth`; `BtAuthClient`; `rtao-neuron` validator runtime (scheduler, state, telemetry, shutdown) | sample validator: 50 fast-localnet epochs with a commit per epoch and every reveal observed; 24 h on a testnet subnet with no missed reveal attributable to rtao; SIGTERM during a commit reconciles definitively (scenario 6) | 5 |
 | M2 | Miner | `BtAuthLayer`, `MetagraphPolicy`, `PerHotkeyLimiter`, Redis store; `AxonPublisher`; `PruneRisk`; miner runtime; Python interop lane (btauth, wallets, live subnet) | Python validator <-> rtao miner and rtao validator <-> Python miner pass in CI; `serve_axon` never resubmitted when unchanged | 3 |
 | M3 | Operational safety, owner tooling, CLI v0 | `rtao-tx` (macro, executor, policy, plan, results, error tables + gates); intents: registration (burned/PoW/root), owner group, serving, weights, transfer; shielded submission; `HyperparamPlanner`, `OwnerMonitor`; CLI v0 (§10.3); parity manifest seeded with every upstream name | owner scenario 9 and shielded scenario 10 green; `rtao tx … --dry-run --json` matches `btcli` for the M3 op set | 5 |

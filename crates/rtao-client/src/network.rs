@@ -4,8 +4,8 @@
 use std::{error::Error, fmt};
 
 use rtao_catalog::py;
+use rtao_jsonrpc::{EndpointPool, RateLimit};
 use rtao_primitives::H256;
-use rtao_rpc::{EndpointPool, RateLimit};
 use url::Url;
 
 use crate::generated::network_pins;
@@ -169,7 +169,10 @@ impl fmt::Debug for Network {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Network")
-            .field("endpoint", &rtao_rpc::policy::safe_endpoint(&self.endpoint))
+            .field(
+                "endpoint",
+                &rtao_jsonrpc::policy::safe_endpoint(&self.endpoint),
+            )
             .finish()
     }
 }
@@ -203,7 +206,7 @@ impl fmt::Display for NetworkError {
                 write!(
                     formatter,
                     "Unknown network {}. Known networks: [{known}], or pass a ws:// / wss:// endpoint directly.",
-                    rtao_rpc::policy::python_string_repr(input)
+                    rtao_jsonrpc::policy::python_string_repr(input)
                 )
             }
             Self::InvalidEndpoint => {

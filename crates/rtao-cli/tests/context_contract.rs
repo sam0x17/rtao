@@ -1663,7 +1663,7 @@ async fn transient_balance_failure_reprobes_known_zero_before_carrier_decision()
     let (ctx, _, _) = context(&[])?;
     chain.queue_transport_error(
         "state_queryStorageAt",
-        rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Timeout {
+        rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Timeout {
             detail: "fixture failure".into(),
         })),
     );
@@ -2143,7 +2143,7 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
     let (ctx, _, _) = context(&[])?;
     chain.queue_transport_error(
         "state_getKeysPaged",
-        rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Timeout {
+        rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Timeout {
             detail: "cosmetic fixture".into(),
         })),
     );
@@ -2157,29 +2157,29 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
     let connection_help = "check the endpoint and network connection, then retry";
     for (cause, detail) in [
         (
-            rtao_rpc::RpcError::Transport(" \u{1c}offline \n".into()),
+            rtao_jsonrpc::RpcError::Transport(" \u{1c}offline \n".into()),
             "offline",
         ),
         (
-            rtao_rpc::RpcError::Timeout {
+            rtao_jsonrpc::RpcError::Timeout {
                 detail: " \n".into(),
             },
             "the connection timed out without a response",
         ),
         (
-            rtao_rpc::RpcError::MaxRetriesExceeded {
+            rtao_jsonrpc::RpcError::MaxRetriesExceeded {
                 detail: "retries exhausted".into(),
             },
             "retries exhausted",
         ),
         (
-            rtao_rpc::RpcError::Handshake {
+            rtao_jsonrpc::RpcError::Handshake {
                 status: 503,
                 detail: "offline".into(),
             },
             "RPC endpoint rejected the WebSocket handshake (HTTP 503): offline",
         ),
-        (rtao_rpc::RpcError::Closed, "RPC session closed"),
+        (rtao_jsonrpc::RpcError::Closed, "RPC session closed"),
     ] {
         let client_error = rtao::client::ClientError::from(cause.clone());
         for converted in [
@@ -2274,7 +2274,7 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
             let calls = AtomicUsize::new(0);
             let error = ctx
                 .run_with(
-                    &RefusedConnection(rtao_rpc::RpcError::Transport("offline".into()).into()),
+                    &RefusedConnection(rtao_jsonrpc::RpcError::Transport("offline".into()).into()),
                     |_| async {
                         calls.fetch_add(1, Ordering::SeqCst);
                         Ok(())
@@ -2316,7 +2316,7 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
                 .run_with(&Connected(client), |_| async {
                     Err::<(), _>(
                         rtao_cli::error::CliError::from(rtao::client::ClientError::from(
-                            rtao_rpc::RpcError::Transport("offline".into()),
+                            rtao_jsonrpc::RpcError::Transport("offline".into()),
                         ))
                         .with_help("retain the primary guidance"),
                     )
@@ -2338,7 +2338,7 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
 
     let (client, _, _) = fixture(1_000_000_000).await?;
     let mut rendered = rtao_cli::error::CliError::from(rtao::client::ClientError::from(
-        rtao_rpc::RpcError::Transport("offline".into()),
+        rtao_jsonrpc::RpcError::Transport("offline".into()),
     ));
     rendered.message.clear();
     let rendered = ctx
@@ -2355,18 +2355,18 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
     // Node response/domain errors and ambiguous in-flight outcomes never
     // acquire an ordinary connection retry instruction.
     for cause in [
-        rtao_rpc::RpcError::Protocol("malformed fixture".into()),
-        rtao_rpc::RpcError::StateDiscarded {
+        rtao_jsonrpc::RpcError::Protocol("malformed fixture".into()),
+        rtao_jsonrpc::RpcError::StateDiscarded {
             block: "0xold".into(),
         },
-        rtao_rpc::RpcError::JsonRpc {
+        rtao_jsonrpc::RpcError::JsonRpc {
             code: -32000,
             message: "node refusal".into(),
             data: None,
             payload: Box::new(json!({"code":-32000,"message":"node refusal"})),
         },
-        rtao_rpc::RpcError::ConnectionLost { resent: false },
-        rtao_rpc::RpcError::SubscriptionLost,
+        rtao_jsonrpc::RpcError::ConnectionLost { resent: false },
+        rtao_jsonrpc::RpcError::SubscriptionLost,
     ] {
         let calls = AtomicUsize::new(0);
         let message = rtao::client::ClientError::from(cause.clone()).to_string();
@@ -3533,7 +3533,7 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         ),
         (None, "reduce the request or connection rate, then retry"),
     ] {
-        let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+        let policy = rtao_jsonrpc::policy::classify_rpc_error(&json!({
             "code":-32005,"message":"slow down",
             "data":{"policy":"rate","retry_after":retry},
         }))
@@ -3542,7 +3542,7 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         let (client, chain, keys) = fixture(1_000_000_000).await?;
         chain.queue_transport_error(
             "chain_getHeader",
-            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(Box::new(
                 policy.clone(),
             )))),
         );
@@ -3575,7 +3575,7 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         let start = chain.requests().len();
         chain.queue_transport_error(
             "chain_getHeader",
-            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(Box::new(
                 policy.clone(),
             )))),
         );
@@ -3628,9 +3628,9 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
             let start = chain.requests().len();
             chain.queue_transport_error(
                 method,
-                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
-                    policy.clone(),
-                )))),
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(
+                    Box::new(policy.clone()),
+                ))),
             );
             let (ctx, sink, reads) = context(&["--json"])?;
             let request = rtao_cli::commands::generated::QueryRequest {
@@ -3703,7 +3703,7 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
         let (client, chain, keys) = fixture(1_000_000_000).await?;
         chain.queue_transport_error(
             "system_health",
-            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(Box::new(
                 policy,
             )))),
         );
@@ -3738,8 +3738,8 @@ async fn typed_gateway_refusals_keep_retry_help_through_context_and_close_withou
     // Unknown-fate metadata is distinct from gateway refusal. Keep the submitted
     // hash and its caution, without introducing wait-and-retry guidance.
     let (client, chain, keys) = fixture(1_000_000_000).await?;
-    let hash = rtao_rpc::H256::from([29; 32]);
-    let cause = rtao_rpc::RpcError::FateUnknown { hash };
+    let hash = rtao_jsonrpc::H256::from([29; 32]);
+    let cause = rtao_jsonrpc::RpcError::FateUnknown { hash };
     let message = cause.to_string();
     chain.queue_transport_error(
         "system_health",

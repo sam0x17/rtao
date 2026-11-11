@@ -1485,7 +1485,7 @@ Hosted lock refresh
 [38822187126](https://github.com/sam0x17/rtao/actions/runs/38822187126) succeeded
 at clean `9a9d05344be0535dddb20f097bdd5ec14432329c`. Its artifact was authenticated
 and independently fetched twice; both generated locks are adopted. Each adds only
-the existing rtao-rpc -> tokio-rustls edge; all package identities and other
+the existing rtao-jsonrpc -> tokio-rustls edge; all package identities and other
 bytes are unchanged. The handwritten candidate was excluded. The bounded proof, archives and
 extraction trees are not retained. The existing
 resolver checks both locks under one 170-second deadline. Source reports are

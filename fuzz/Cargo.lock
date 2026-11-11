@@ -3138,8 +3138,8 @@ dependencies = [
  "regex",
  "rtao-catalog",
  "rtao-core",
+ "rtao-jsonrpc",
  "rtao-primitives",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "scale-decode",
@@ -3191,13 +3191,37 @@ dependencies = [
  "rtao-btauth",
  "rtao-client",
  "rtao-core",
+ "rtao-jsonrpc",
  "rtao-metagraph",
  "rtao-primitives",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "serde_json",
  "tower",
+]
+
+[[package]]
+name = "rtao-jsonrpc"
+version = "0.1.0"
+dependencies = [
+ "blake2",
+ "futures",
+ "hex",
+ "http",
+ "httpdate",
+ "primitive-types",
+ "rustls",
+ "rustls-native-certs",
+ "rustls-pki-types",
+ "serde",
+ "serde_json",
+ "subxt-rpcs",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "tracing",
+ "unicode-general-category",
+ "url",
 ]
 
 [[package]]
@@ -3257,30 +3281,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
-]
-
-[[package]]
-name = "rtao-rpc"
-version = "0.1.0"
-dependencies = [
- "blake2",
- "futures",
- "hex",
- "http",
- "httpdate",
- "primitive-types",
- "rustls",
- "rustls-native-certs",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "subxt-rpcs",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite",
- "tracing",
- "unicode-general-category",
- "url",
 ]
 
 [[package]]

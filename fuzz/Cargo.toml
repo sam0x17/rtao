@@ -18,7 +18,7 @@ rtao-core = { path = "../crates/rtao-core", default-features = false }
 rtao-client = { path = "../crates/rtao-client", default-features = false }
 rtao-metagraph = { path = "../crates/rtao-metagraph", default-features = false }
 rtao-runtime = { path = "../crates/rtao-runtime", default-features = false }
-rtao-rpc = { path = "../crates/rtao-rpc", default-features = false, features = ["fuzzing"] }
+rtao-jsonrpc = { path = "../crates/rtao-jsonrpc", default-features = false, features = ["fuzzing"] }
 rtao-btauth = { path = "../crates/rtao-btauth", default-features = false, features = ["server"] }
 rtao-primitives = { path = "../crates/rtao-primitives", default-features = false }
 rtao-signer = { path = "../crates/rtao-signer", default-features = false }

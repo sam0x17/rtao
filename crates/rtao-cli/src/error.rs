@@ -119,7 +119,7 @@ impl CliError {
         if matches!(self.diagnostic, Some(CliDiagnostic::Connection)) {
             self.diagnostic = None;
             let network = if network.starts_with("ws://") || network.starts_with("wss://") {
-                rtao_rpc::policy::safe_endpoint(network)
+                rtao_jsonrpc::policy::safe_endpoint(network)
             } else {
                 network.to_owned()
             };
@@ -140,7 +140,7 @@ impl fmt::Display for CliError {
 }
 impl std::error::Error for CliError {}
 
-fn rpc_policy_help(policy: &rtao_rpc::PolicyRefusal) -> String {
+fn rpc_policy_help(policy: &rtao_jsonrpc::PolicyRefusal) -> String {
     match policy.retry_after.as_deref().filter(|raw| !raw.is_empty()) {
         Some(raw) if raw.bytes().all(|byte| byte.is_ascii_digit()) => {
             format!("wait {raw} seconds, then retry")
@@ -160,7 +160,7 @@ pub(crate) fn unknown_fate_help(hash: &[u8; 32]) -> String {
 fn client_help(error: &rtao::client::ClientError) -> Option<String> {
     match error {
         rtao::client::ClientError::Signing(error) => error.help().map(str::to_owned),
-        rtao::client::ClientError::Rpc(rtao_rpc::RpcError::FateUnknown { hash }) => {
+        rtao::client::ClientError::Rpc(rtao_jsonrpc::RpcError::FateUnknown { hash }) => {
             Some(unknown_fate_help(&hash.0))
         }
         error => error.policy().map(rpc_policy_help),
@@ -171,11 +171,11 @@ fn ordinary_connection(error: &rtao::client::ClientError) -> bool {
     matches!(
         error,
         rtao::client::ClientError::Rpc(
-            rtao_rpc::RpcError::Transport(_)
-                | rtao_rpc::RpcError::Timeout { .. }
-                | rtao_rpc::RpcError::Handshake { .. }
-                | rtao_rpc::RpcError::MaxRetriesExceeded { .. }
-                | rtao_rpc::RpcError::Closed
+            rtao_jsonrpc::RpcError::Transport(_)
+                | rtao_jsonrpc::RpcError::Timeout { .. }
+                | rtao_jsonrpc::RpcError::Handshake { .. }
+                | rtao_jsonrpc::RpcError::MaxRetriesExceeded { .. }
+                | rtao_jsonrpc::RpcError::Closed
         )
     )
 }

@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 autotests = false
 
 [dependencies]
-rtao-rpc = { path = "../../crates/rtao-rpc", default-features = false }
+rtao-jsonrpc = { path = "../../crates/rtao-jsonrpc", default-features = false }
 rtao-testkit = { path = "../../crates/rtao-testkit", default-features = false }
 rustls = { version = "=0.23.46", default-features = false, features = ["ring", "aws_lc_rs", "std", "tls12"] }
 tokio = { version = "1.53", features = ["macros", "rt-multi-thread", "time"] }

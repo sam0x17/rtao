@@ -1170,7 +1170,7 @@ async fn admission_timeout_after_synchronous_stage_does_not_broadcast() {
             .submit_shielded(call(&client, 1).await, &signer, &opts)
             .await,
         Err(SubmitFailure::Client(ClientError::Rpc(
-            rtao_rpc::RpcError::Timeout { .. }
+            rtao_jsonrpc::RpcError::Timeout { .. }
         )))
     ));
     assert!(fake.state().lock().unwrap().submissions.is_empty());
@@ -1819,7 +1819,7 @@ async fn shield_preparation_failure_cancellation_and_deadline_leave_no_signing_m
                 assert!(matches!(
                     result,
                     Err(SubmitFailure::Client(ClientError::Rpc(
-                        rtao_rpc::RpcError::Timeout { .. }
+                        rtao_jsonrpc::RpcError::Timeout { .. }
                     )))
                 ));
             }

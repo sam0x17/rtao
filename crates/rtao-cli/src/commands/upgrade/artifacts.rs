@@ -113,7 +113,7 @@ pub(super) struct GithubFetch {
 
 impl GithubFetch {
     pub fn new() -> Result<Self, CliError> {
-        let tls = rtao_rpc::tls_config(&rtao_rpc::SessionConfig::default())
+        let tls = rtao_jsonrpc::tls_config(&rtao_jsonrpc::SessionConfig::default())
             .map_err(|_| CliError::failure("cannot initialize upgrade asset TLS"))?;
         let client = reqwest::Client::builder()
             .tls_backend_preconfigured((*tls).clone())

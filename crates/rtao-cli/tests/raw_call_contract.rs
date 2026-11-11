@@ -229,7 +229,7 @@ impl RawSignerFactory for Factory {
 struct RefuseFollowupAfterRelease<'a> {
     inner: &'a Factory,
     chain: &'a FakeChain,
-    policy: rtao_rpc::PolicyRefusal,
+    policy: rtao_jsonrpc::PolicyRefusal,
 }
 impl RawSignerFactory for RefuseFollowupAfterRelease<'_> {
     fn source<'a>(
@@ -253,9 +253,9 @@ impl RawSignerFactory for RefuseFollowupAfterRelease<'_> {
             );
             self.chain.queue_transport_error(
                 "chain_getHeader",
-                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
-                    self.policy.clone(),
-                )))),
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(
+                    Box::new(self.policy.clone()),
+                ))),
             );
             Ok(())
         })
@@ -1809,7 +1809,7 @@ async fn pending_followup_retains_timepoint_approvals_and_copyable_commands() ->
     let (refused_client, refused_chain) = fixture(&refused_keys).await?;
     let (refused_ctx, refused_sink) = context(&["--yes", "--json"])?;
     let inner = Factory::new([("alice".into(), refused_keys[0].clone())]);
-    let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+    let policy = rtao_jsonrpc::policy::classify_rpc_error(&json!({
         "code":-32005,"message":"slow down",
         "data":{"policy":"rate","retry_after":"12"},
     }))

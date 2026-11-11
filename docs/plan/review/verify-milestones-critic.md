@@ -231,7 +231,7 @@ there are no literal cases to extract. It is ported as proptests.
 
 Verified: PLAN §12.11 and architecture §14 M9 schedule the nightly lanes, while §2 and §9.6 promise 30% gates and M1
 has the baselines and a fuzz target. Fix error, checked against PLAN §12.7 and architecture §11.7:
-`UnsignedExtrinsic` import is M5, not M2, and JSON-RPC frame parsing is M1 (`rtao-rpc`), not M3.
+`UnsignedExtrinsic` import is M5, not M2, and JSON-RPC frame parsing is M1 (`rtao-jsonrpc`), not M3.
 
 ## MC-22: partially confirmed
 
@@ -262,7 +262,7 @@ by §15 "Ready in".
 `UP/LICENSE` is Apache-2.0, and `UP/` has no NOTICE file at depth 3 or less. The plan's default (an MIT LICENSE plus a
 NOTICE) omits the Apache-2.0 text (§4(a)) and in-file change notices (§4(b)). The fix labels only three crates
 `MIT AND Apache-2.0`, although file-for-file ports land in most crates (`rtao-tx`, `rtao-intents`, `rtao-reads`,
-`rtao-client`, `rtao-rpc`, `rtao-wallet`, `rtao-cli`, …). Forcing `rtao-core-ext` to Apache-2.0-only overrides the
+`rtao-client`, `rtao-jsonrpc`, `rtao-wallet`, `rtao-cli`, …). Forcing `rtao-core-ext` to Apache-2.0-only overrides the
 maintainer's Q1 for code the maintainer authors.
 
 ## MC-26: confirmed

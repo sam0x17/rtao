@@ -1175,9 +1175,9 @@ fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> 
         assert!(text.contains(help));
         assert!(text.contains(&docs));
 
-        let hash = rtao_rpc::H256::from([37; 32]);
+        let hash = rtao_jsonrpc::H256::from([37; 32]);
         let unknown = rtao_cli::error::CliError::from(rtao::tx::TxError::Rpc(
-            rtao_rpc::RpcError::FateUnknown { hash },
+            rtao_jsonrpc::RpcError::FateUnknown { hash },
         ));
         assert!(unknown.diagnostic.is_none());
         let (output, sink) = capture(true, quiet);

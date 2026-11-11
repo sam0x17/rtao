@@ -24,7 +24,7 @@ The crate has no default features.
 | `interop` | Enables `docker` for the retained interoperability test target. |
 | `core-oracle` | Combines `docker` and `core-policy` for the retained core comparison target. |
 | `ledger-emu` | Adds injected APDU replay channels and the upstream Ledger implementation. Scripted replies do not establish device or emulator acceptance. |
-| `rpc-rate-limit` | Enables `rtao-rpc/rate-limit`. |
-| `rpc-metrics` | Enables `rtao-rpc/metrics`. |
+| `rpc-rate-limit` | Enables `rtao-jsonrpc/rate-limit`. |
+| `rpc-metrics` | Enables `rtao-jsonrpc/metrics`. |
 
 Enabling a feature does not start a node, container or device.

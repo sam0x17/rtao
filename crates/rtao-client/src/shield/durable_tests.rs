@@ -81,8 +81,10 @@ impl Fixture {
         config.track_heads = false;
         config.runtime_cache_dir = None;
         config.config_store = None;
-        let session_config = rtao_rpc::SessionConfig::new(url::Url::parse(node.url()).unwrap());
-        let session = rtao_rpc::Session::connect(session_config).await.unwrap();
+        let session_config = rtao_jsonrpc::SessionConfig::new(url::Url::parse(node.url()).unwrap());
+        let session = rtao_jsonrpc::Session::connect(session_config)
+            .await
+            .unwrap();
         let client = Client::from_session(session, config.clone()).await.unwrap();
         let signer = KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap();
         let journal = OperationJournal::open(root.join("journal.json")).unwrap();
@@ -147,7 +149,7 @@ impl Fixture {
                 })
             }),
         );
-        let session = rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(
+        let session = rtao_jsonrpc::Session::connect(rtao_jsonrpc::SessionConfig::new(
             url::Url::parse(self.node.url()).unwrap(),
         ))
         .await

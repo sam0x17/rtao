@@ -14,8 +14,8 @@ use std::{
 use bytes::Bytes;
 use futures::{Stream, future::BoxFuture};
 use rtao_core::{CoreError, DynValue, codec::Value};
+use rtao_jsonrpc::ReadMethod;
 use rtao_primitives::{H256, IntoCoreValue};
-use rtao_rpc::ReadMethod;
 use rtao_runtime::{ConstantDescriptor, RuntimeApiDescriptor, RuntimeHandle, StorageDescriptor};
 use serde_json::{Value as JsonValue, json};
 
@@ -1961,7 +1961,7 @@ mod tests {
         ) -> RawRpcFuture<'a, RawRpcSubscription> {
             Box::pin(async {
                 Err(subxt_rpcs::Error::Client(Box::new(
-                    rtao_rpc::RpcError::Protocol("no subscriptions in view fixture".into()),
+                    rtao_jsonrpc::RpcError::Protocol("no subscriptions in view fixture".into()),
                 )))
             })
         }

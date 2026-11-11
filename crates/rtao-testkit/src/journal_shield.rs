@@ -334,9 +334,10 @@ impl JournalLab {
         config.track_heads = track_heads;
         config.runtime_cache_dir = None;
         config.config_store = None;
-        let session =
-            rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(url::Url::parse(node.url())?))
-                .await?;
+        let session = rtao_jsonrpc::Session::connect(rtao_jsonrpc::SessionConfig::new(
+            url::Url::parse(node.url())?,
+        ))
+        .await?;
         let client = Client::from_session(session, config.clone()).await?;
         if synthetic {
             client.enable_synthetic_journal_dispatch().await?;
@@ -620,9 +621,9 @@ impl JournalLab {
             control.external_journal = None;
         }
         self.journal = Some(journal);
-        let session = rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(url::Url::parse(
-            self.node.url(),
-        )?))
+        let session = rtao_jsonrpc::Session::connect(rtao_jsonrpc::SessionConfig::new(
+            url::Url::parse(self.node.url())?,
+        ))
         .await?;
         self.client = Client::from_session(session, self.config.clone()).await?;
         if self.synthetic {

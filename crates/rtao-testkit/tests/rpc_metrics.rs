@@ -4,7 +4,7 @@ use metrics::{
     Counter, CounterFn, Gauge, GaugeFn, Histogram, HistogramFn, Key, KeyName, Metadata, Recorder,
     SharedString, Unit,
 };
-use rtao_rpc::{ReadMethod, RpcError, Session, SessionConfig};
+use rtao_jsonrpc::{ReadMethod, RpcError, Session, SessionConfig};
 use rtao_testkit::{FakeNode, Reply};
 use serde_json::{Value, json};
 use std::{

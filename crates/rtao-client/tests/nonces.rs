@@ -126,7 +126,7 @@ impl RpcClientT for PausedRpc {
     ) -> RawRpcFuture<'a, RawRpcSubscription> {
         Box::pin(async {
             Err(subxt_rpcs::Error::Client(Box::new(
-                rtao_rpc::RpcError::Closed,
+                rtao_jsonrpc::RpcError::Closed,
             )))
         })
     }

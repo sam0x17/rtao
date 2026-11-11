@@ -5426,7 +5426,7 @@
         "crates/rtao-client/src/block_info.rs",
         "crates/rtao-tx/src/output.rs",
         "crates/rtao-tx/src/executor.rs",
-        "crates/rtao-rpc/src/session.rs"
+        "crates/rtao-jsonrpc/src/session.rs"
       ],
       "kind": "ported",
       "new_blob": "03316a548082418fa7e33523a34445370b0894d2",
@@ -5564,7 +5564,7 @@
         "old_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
       },
       "homes": [
-        "rtao_rpc::{RpcError,PolicyRefusal,policy::format_rpc_error}",
+        "rtao_jsonrpc::{RpcError,PolicyRefusal,policy::format_rpc_error}",
         "rtao_client::ClientError"
       ],
       "kind": "ported",
@@ -5685,12 +5685,12 @@
         "old_sha256": "1feb27cad691ff0b6b5284f087fd176b435fc16cfbf81b711f52ca647759af21"
       },
       "homes": [
-        "crates/rtao-rpc/src/session.rs",
-        "crates/rtao-rpc/src/session/handshake.rs",
-        "crates/rtao-rpc/src/types.rs",
-        "crates/rtao-rpc/src/policy.rs",
-        "crates/rtao-rpc/src/subscription.rs",
-        "crates/rtao-rpc/src/generated/py_rpc.rs"
+        "crates/rtao-jsonrpc/src/session.rs",
+        "crates/rtao-jsonrpc/src/session/handshake.rs",
+        "crates/rtao-jsonrpc/src/types.rs",
+        "crates/rtao-jsonrpc/src/policy.rs",
+        "crates/rtao-jsonrpc/src/subscription.rs",
+        "crates/rtao-jsonrpc/src/generated/py_rpc.rs"
       ],
       "kind": "ported",
       "new_blob": "132871ca8047858efc2d6c0991dcf818312b5303",
@@ -11487,7 +11487,7 @@
       },
       "homes": [
         "crates/rtao-testkit/tests/rpc.rs",
-        "crates/rtao-rpc/src/policy.rs",
+        "crates/rtao-jsonrpc/src/policy.rs",
         "crates/rtao-client/tests/public_rpc.rs",
         "xtask/src/extract_rpc_test_fixtures.rs",
         "crates/rtao-catalog/src/py.rs"

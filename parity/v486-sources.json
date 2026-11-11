@@ -1022,7 +1022,7 @@
         "crates/rtao-client/src/block_info.rs",
         "crates/rtao-tx/src/output.rs",
         "crates/rtao-tx/src/executor.rs",
-        "crates/rtao-rpc/src/session.rs"
+        "crates/rtao-jsonrpc/src/session.rs"
       ],
       "decision": "Exact source identity unchanged. Retain previous declared scope; no assertion of unchanged extraction, native implementation, runtime execution or oracle parity.",
       "diff_sha256": null
@@ -1094,7 +1094,7 @@
       "new_blob": "d48b44e8d8edb184c51005137a2de2f3a99198b2",
       "unchanged": true,
       "native_homes": [
-        "rtao_rpc::{RpcError,PolicyRefusal,policy::format_rpc_error}",
+        "rtao_jsonrpc::{RpcError,PolicyRefusal,policy::format_rpc_error}",
         "rtao_client::ClientError"
       ],
       "decision": "Exact source identity unchanged. Retain previous declared scope; no assertion of unchanged extraction, native implementation, runtime execution or oracle parity.",
@@ -1160,12 +1160,12 @@
       "new_blob": "132871ca8047858efc2d6c0991dcf818312b5303",
       "unchanged": true,
       "native_homes": [
-        "crates/rtao-rpc/src/session.rs",
-        "crates/rtao-rpc/src/session/handshake.rs",
-        "crates/rtao-rpc/src/types.rs",
-        "crates/rtao-rpc/src/policy.rs",
-        "crates/rtao-rpc/src/subscription.rs",
-        "crates/rtao-rpc/src/generated/py_rpc.rs"
+        "crates/rtao-jsonrpc/src/session.rs",
+        "crates/rtao-jsonrpc/src/session/handshake.rs",
+        "crates/rtao-jsonrpc/src/types.rs",
+        "crates/rtao-jsonrpc/src/policy.rs",
+        "crates/rtao-jsonrpc/src/subscription.rs",
+        "crates/rtao-jsonrpc/src/generated/py_rpc.rs"
       ],
       "decision": "Exact source identity unchanged. Retain previous declared scope; no assertion of unchanged extraction, native implementation, runtime execution or oracle parity.",
       "diff_sha256": null
@@ -4180,7 +4180,7 @@
       "unchanged": true,
       "native_homes": [
         "crates/rtao-testkit/tests/rpc.rs",
-        "crates/rtao-rpc/src/policy.rs",
+        "crates/rtao-jsonrpc/src/policy.rs",
         "crates/rtao-client/tests/public_rpc.rs",
         "xtask/src/extract_rpc_test_fixtures.rs",
         "crates/rtao-catalog/src/py.rs"

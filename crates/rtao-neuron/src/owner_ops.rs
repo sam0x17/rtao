@@ -520,8 +520,8 @@ pub(crate) fn policy(violations: Vec<String>) -> TxError {
 }
 pub(crate) fn successful<T>(result: ExtrinsicResult<T>) -> Result<ExtrinsicResult<T>, TxError> {
     if let Some(hash) = result.fate_unknown {
-        return Err(TxError::Rpc(rtao_rpc::RpcError::FateUnknown {
-            hash: rtao_rpc::H256(hash.0),
+        return Err(TxError::Rpc(rtao_jsonrpc::RpcError::FateUnknown {
+            hash: rtao_jsonrpc::H256(hash.0),
         }));
     }
     if result.success && result.fate_unknown.is_none() {

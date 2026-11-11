@@ -86,7 +86,7 @@ mark the item open.
     lists `to_raw` in `rtao_intents::hyperparameters`.
 20. `PY/extension/bridge.py` / `client.py`: the bridge is a WebSocket server and client (`websockets.asyncio.server`
     `bridge.py:14`, `websockets.asyncio.client` `client.py:11`); §6.5 puts the wire-compatible `ExtensionSigner` in
-    `rtao-signer`, but §2.3 rule 2 allows `tokio-tungstenite` only in `rtao-rpc` and `rtao-testkit`.
+    `rtao-signer`, but §2.3 rule 2 allows `tokio-tungstenite` only in `rtao-jsonrpc` and `rtao-testkit`.
 21. `PY/_live.py`, `PY/masked_input.py`: no explicit home (implied `rtao-cli`, §2.7 `rpassword`, D-003).
 22. `parity/map.toml` kinds (§4.9) have no value for vendored static assets (`evm/abi/*.json`, `extension/static`,
     `vault/static`).

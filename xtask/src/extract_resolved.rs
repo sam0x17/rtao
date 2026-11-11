@@ -3542,7 +3542,7 @@ fn outputs(root: &Path) -> Result<Vec<(&'static str, Vec<u8>)>> {
         ("vendor/upstream/extracted/rpc.json", pretty(&rpc)?),
         ("crates/rtao-catalog/src/py.rs", rustfmt(py)?),
         (
-            "crates/rtao-rpc/src/generated/py_rpc.rs",
+            "crates/rtao-jsonrpc/src/generated/py_rpc.rs",
             rustfmt(render_rpc(&rpc)?)?,
         ),
         (

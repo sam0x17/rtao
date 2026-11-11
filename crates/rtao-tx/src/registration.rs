@@ -57,7 +57,7 @@ pub(crate) async fn complete(
         };
         match deadline {
             Some(deadline) => tokio::time::timeout_at(deadline, wait).await.map_err(|_| {
-                TxError::Rpc(rtao_rpc::RpcError::Timeout {
+                TxError::Rpc(rtao_jsonrpc::RpcError::Timeout {
                     detail: "registration timed out without reaching NetworkAdded".into(),
                 })
             })?,
@@ -949,7 +949,7 @@ mod tests {
                     .unwrap_err();
                 assert!(matches!(
                     error.primary_cause(),
-                    TxError::Rpc(rtao_rpc::RpcError::Timeout { .. })
+                    TxError::Rpc(rtao_jsonrpc::RpcError::Timeout { .. })
                 ));
                 let retained = error.submitted_receipt().unwrap();
                 assert_eq!(retained.to_json(), expected.to_json());

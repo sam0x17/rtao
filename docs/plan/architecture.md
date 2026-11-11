@@ -136,7 +136,7 @@ B/C/D echoing `CommitRevealWeightsVersion`, A's inheritance of the core's epoch 
   oracle, localnet image). `parity_tag` moves on every finalized mainnet release. `core_tag` moves only when the core's
   inputs change. Its sources changed in 1 of the last 6 release pairs, and a second pair touched only tests
   [J-MA §1].
-- **Async I/O is rtao's**: a tokio-tungstenite JSON-RPC session (`rtao-rpc`) with `rpc.py` semantics and TLS from one
+- **Async I/O is rtao's**: a tokio-tungstenite JSON-RPC session (`rtao-jsonrpc`) with `rpc.py` semantics and TLS from one
   explicitly built `ring` rustls config (§2.7), exposed through `subxt_rpcs::client::RpcClientT` so `LegacyRpcMethods`,
   mocks and an optional subxt `OnlineClient` work on the same connection. On top sit a runtime cache that requires V15 metadata, block-pinned snapshots, coalesced reads, a
   submission pipeline with RAII nonce leases, the MEV-shield path, and gap-free head streams.
@@ -195,7 +195,7 @@ B/C/D echoing `CommitRevealWeightsVersion`, A's inheritance of the core's epoch 
 | Reused unchanged | `bittensor-core` (~13.6k lines with tests, [R] A1 §1) | 0 | upstream |
 | Staged for upstream | `rtao-core-ext` | ~2k | upstream style and lints; deleted as PRs merge |
 | Generated | `rtao-catalog`, `rtao-runtime/generated`, `rtao-intents/generated`, `rtao-reads/generated`, docs | ~14k | diff review only |
-| I/O and runtime | `rtao-rpc`, `rtao-client`, `rtao-signer`, `rtao-wallet`, `rtao-btauth` | ~13k | rtao, tested on `FakeNode` and localnet |
+| I/O and runtime | `rtao-jsonrpc`, `rtao-client`, `rtao-signer`, `rtao-wallet`, `rtao-btauth` | ~13k | rtao, tested on `FakeNode` and localnet |
 | Ported behavior | intent bodies, executor, read bodies, CLI groups | ~27k | Python oracle at `parity_tag` |
 | Framework | `rtao-neuron`, `rtao-metagraph` | ~7k | rtao (v11 ships no framework) |
 | Tooling | `xtask`, `rtao-testkit` | ~8k | rtao |
@@ -592,7 +592,7 @@ this design adds a **no-host profile**:
 
 | Item | Why | Instead |
 |---|---|---|
-| `client::Client` (blocking reqwest HTTP; `ws://` rewritten to `http://`; polling receipts; no subscriptions, nonce cache or pools; `client.rs:1-8,150-179,338-355,897-991`) | blocking I/O on tokio workers; Python-divergent era, anchor, fee and receipts | `rtao-rpc` + `rtao-client`; the core client runs only in the `core-oracle` test lane |
+| `client::Client` (blocking reqwest HTTP; `ws://` rewritten to `http://`; polling receipts; no subscriptions, nonce cache or pools; `client.rs:1-8,150-179,338-355,897-991`) | blocking I/O on tokio workers; Python-divergent era, anchor, fee and receipts | `rtao-jsonrpc` + `rtao-client`; the core client runs only in the `core-oracle` test lane |
 | `Client::submit_shielded` | era 64 (rejected as `Stale`), no inner-receipt resolution | `rtao-client::shield` (§3.11) |
 | `transaction::{Executor, IntentCall, Plan, Policy}` | `Executor<'a>` borrows `&Client` (`transaction.rs:997-1000`); 22 constructors; private semantics | `rtao-tx` (Python port), with a `Policy` equivalence test |
 | `timelock::generate_commit_v2` | wall clock inside; core epoch predicate | `TimelockCommitter` over staged `timelock_commit` |
@@ -801,7 +801,7 @@ rtao/
 │  ├─ rtao-primitives/     # ids, money, fixed point, ratios, AccountId, DefaultAccount, Python formatting (pyfmt), drand round math, axon targets
 │  ├─ rtao-catalog/        # GENERATED data: intent/read/error specs, ErrorCode, extracted Python + runtime tables
 │  ├─ rtao-runtime/        # GENERATED chain descriptors + typed call builders; hand models; shape hashes; verify_surface; RuntimeHandle, CallBytes (no I/O)
-│  ├─ rtao-rpc/            # tokio-tungstenite JSON-RPC session implementing subxt_rpcs::client::RpcClientT
+│  ├─ rtao-jsonrpc/            # tokio-tungstenite JSON-RPC session implementing subxt_rpcs::client::RpcClientT
 │  ├─ rtao-signer/         # Signer trait, roles, KeySource<R>, Keypair/Ledger/Vault/Extension signers; extension bridge server and client; Vault page server and QR
 │  ├─ rtao-wallet/         # btcli wallet layout, keyfiles (plaintext always; encrypted with feature), passwords
 │  ├─ rtao-client/         # Client, Snapshot, View, RuntimeCache, ReadPlan, HeadTracker, submission, shield, compose, waits, config (btcli files), ClientError
@@ -846,10 +846,10 @@ rtao/
 | `rtao-primitives` | vocabulary (§5) | `AccountId`, `DefaultAccount`, `H256`, `NetUid`, `MechId`, `Uid`, `NetUidStorageIndex`, `BlockNumber`, `TaoBalance`, `AlphaBalance`, `Balance<Tao>`, `Balance<Alpha>`, `DynBalance`, `Money`, `Amount`, `ResolvedAmount`, `Spend`, `PriceRao`, `StakeWeight`, `PerU16`, `Permill`, `Perbill`, `Percent`, `PerMillion`, `U64Normalized`, `U64F64`, `U96F32`, `I96F32`, `I64F64`, `I32F32`, `Ratio`, `CryptoType`, `IntoCoreValue`, `pyfmt`, `ratio::{ratio_fraction, RATIO_TYPE_DENOMINATORS}`, `hyperparams::{Hyperparam, HyperparamTable, proportion_to_raw}` (§5.5), `drand::{current_round, round_at, reveal_time, parse_duration, format_duration}` (§9.8), `axon::{AxonTarget, axon_base_url}` (§7.3), `evm::{h160_to_ss58, …}`, `json::{from_slice, from_str}` (`Value`-first parsing, §2.7 JSON row) | `serde` (default), `schemars` | `rtao-core` |
 | `rtao-catalog` | GENERATED, data only (§4.1) | `INTENTS: [IntentSpec; 83]`, `READS: [ReadSpec; 102]`, `ErrorCode`, `CHAIN_ERRORS`, `py::*` (extracted Python tables), `rt::*` (extracted runtime tables: custom codes, fee filters, `MAX_SHIELD_ERA_PERIOD`, `rate_limits`, chain rules), `hyperparams::TABLE` (a generated `HyperparamTable`, §5.5) | none | `rtao-primitives` |
 | `rtao-runtime` | chain surface (§3.7, §8.1) | GENERATED `storage::*`, `calls::*` (typed builders + `CallDescriptor`s), `runtime_apis::*`, `constants::*`, `events::*`, `errors::MODULE_ERRORS`, `extensions::EXPECTED`, `SelectiveMetagraphIndex`, `shapes`; hand-written `models::*`; `ShapeHash`, `verify_surface`, `SurfaceReport`; `RuntimeHandle`, `RuntimeEntry`, `MetadataLevel`, `CallBytes`, `ComposeError` (no I/O, §3.7) | none | `rtao-core`, `rtao-primitives` |
-| `rtao-rpc` | transport (§3.2) | `Session`, `SessionConfig`, `EndpointPool`, `ReadMethod`, `RpcError`, `PolicyRefusal`, `RefusalKind`, `SubmitError`, `SessionEvent`, `SessionState`, `RateLimit`; `impl subxt_rpcs::client::RpcClientT for Session` | `rate-limit` (default), `metrics` | none (third-party only; generated `py_rpc.rs` constants) |
+| `rtao-jsonrpc` | transport (§3.2) | `Session`, `SessionConfig`, `EndpointPool`, `ReadMethod`, `RpcError`, `PolicyRefusal`, `RefusalKind`, `SubmitError`, `SessionEvent`, `SessionState`, `RateLimit`; `impl subxt_rpcs::client::RpcClientT for Session` | `rate-limit` (default), `metrics` | none (third-party only; generated `py_rpc.rs` constants) |
 | `rtao-signer` | signing seam (§6.3) | `Signer`, `SignerCaps`, `SigningRequest`, `SigningContext`, `MultiSignature`, `Role`, `Coldkey`, `Hotkey`, `SignerRole`, `KeySource<R>`, `DynKeySource`, `KeypairSigner`, `LedgerSigner`, `VaultSigner`, `ExtensionSigner`, `extension::{BridgeServer, BridgeClient, connect_extension_signer, ensure_bridge, run_bridge, stop_bridge_daemon}`, `vault::{VaultSigner, VaultSessionServer, VaultError, VaultPageError, scan_vault_address}` (`RemoteSigner` is in `rtao-remote-signer`) | `ledger`, `vault` (the one-shot page server on axum with a hyper WebSocket upgrade, and the QR encoder, §6.5), `extension` (bridge client on `tokio-tungstenite`, bridge server on axum with a hyper upgrade, §6.5), `test-util` (makes the `LedgerBackend` seam and `LedgerSigner::with_backend` public for `rtao-testkit`, §6.5) | `rtao-core`, `rtao-primitives` |
 | `rtao-wallet` | btcli-compatible wallets (§6.1-6.2) | `Wallet`, `WalletRef`, `HotkeyFile`, `ColdkeyFile`, `PasswordSource`, `PasswordSources`, `PromptPolicy`, `resolve_wallet_password`, create/regen | `encrypted` (→ `rtao-core/host`), `keychain` (macOS), `keyring` (Linux, rtao extra), `prompt` | `rtao-signer`, `rtao-core` |
-| `rtao-client` | chain access (§3) | `Client` (`connect`, `from_rpc`, `nonces()`, `decode_scale`, `estimate_weight`, `estimate_shielded_carrier_fee`, `block_info`), `ClientConfig`, `ClientError`, `Network`, `HeadPolicy`, `Snapshot`, `View`, `DynView`, `RuntimeCache` (and re-exports of `rtao_runtime::{RuntimeHandle, MetadataLevel, CallBytes, ComposeError}`), `ReadPlan`, `HeadTracker`, `BlockHeader`, `BlockInfo`, `EpochEvent`, `WaitError`, `Events`, `EventRecord`, `SubmitOptions`, `SubmitFailure`, `Wait`, `Mortality`, `ShieldPeriod`, `ShieldCiphertext`, `NonceManager`, `NonceLease`, `ExtrinsicReport`, `PoolRejection`, `UnsignedExtrinsic`, `compose::*`, `config` (btcli files and caches, §10.2), `EpochClock`, `EpochStatus`, `wait_for_*`, `blocking::BlockingRuntime` | `blocking` (the runtime thread only; the facades are in `rtao::blocking`), `subxt` (escape hatch), `metrics`, `test-util` | `rtao-rpc`, `rtao-runtime`, `rtao-catalog`, `rtao-signer`, `rtao-core` |
+| `rtao-client` | chain access (§3) | `Client` (`connect`, `from_rpc`, `nonces()`, `decode_scale`, `estimate_weight`, `estimate_shielded_carrier_fee`, `block_info`), `ClientConfig`, `ClientError`, `Network`, `HeadPolicy`, `Snapshot`, `View`, `DynView`, `RuntimeCache` (and re-exports of `rtao_runtime::{RuntimeHandle, MetadataLevel, CallBytes, ComposeError}`), `ReadPlan`, `HeadTracker`, `BlockHeader`, `BlockInfo`, `EpochEvent`, `WaitError`, `Events`, `EventRecord`, `SubmitOptions`, `SubmitFailure`, `Wait`, `Mortality`, `ShieldPeriod`, `ShieldCiphertext`, `NonceManager`, `NonceLease`, `ExtrinsicReport`, `PoolRejection`, `UnsignedExtrinsic`, `compose::*`, `config` (btcli files and caches, §10.2), `EpochClock`, `EpochStatus`, `wait_for_*`, `blocking::BlockingRuntime` | `blocking` (the runtime thread only; the facades are in `rtao::blocking`), `subxt` (escape hatch), `metrics`, `test-util` | `rtao-jsonrpc`, `rtao-runtime`, `rtao-catalog`, `rtao-signer`, `rtao-core` |
 | `rtao-tx` | product layer for writes (§4.2-4.7) | `IntentInterface`, `Intent`, `DynIntent`, `BuildCx`, `PreflightCx`, `Built`, `IntentPreflight`, `Spend` (re-exported from `rtao-primitives`), `Executor`, `ExecuteOptions`, `PlanOptions`, `ShieldOptions`, `Plan`, `Policy`, `ExtrinsicResult<O>`, `ChainError`, `PolicyError`, `TxError`, `classify`, `multisig::{Multisig, ApproveOptions}` and the multisig funds preflight (§3.12, §4.6), `timelock::{seal, open, Timelocked, Reveal, OpenOptions, TimelockError, DrandClient}` (§9.8) | none | `rtao-client`, `rtao-catalog`, `rtao-signer` |
 | `rtao-intents` | the 83 intents (§4.2-4.5) | one struct per op (`AddStake`, `SetWeights`, …), `AnyIntent`, `weights::{conform, TimelockCommitter}`, `pow::PowSolver`, `hyperparameters::{Hyperparameter, to_raw}` (`to_raw` delegates to `rtao_catalog::hyperparams::TABLE`, §5.5), `MultisigAdapter`, `MultisigThreshold1Adapter` | one feature per Python group (`staking`, `weights`, `registration`, `transfer`, `evm`, `children`, `coldkey`, `collateral`, `lock`, `governance`, `hyperparameters`, `identity`, `root`, `serving`, `proxy`, `multisig`, `crowdloan`, `leasing`, `association`, `batch`), `all`, `pow` (→ core `host`), `pow-gpu` | `rtao-tx`, `rtao-reads` |
 | `rtao-reads` | the 102 reads (§4.8) | `ReadName`, `ReadSpec`, `ParamSpec`, `dispatch`, `ReadError`, read fns, 14 namespace types (`Balances`, `Chain`, `Delegation`, `Epochs`, `Hyperparameters`, `Identity`, `Leasing`, `Locks`, `Collateral`, `Neurons`, `Prices`, `Staking`, `Subnets`, `Weights`), read output models, `commitments::{NeuronCommitment, CommitmentMap, fetch_commitments, fetch_commitment_map}` (§8.2) | none | `rtao-client`, `rtao-catalog`, `rtao-runtime` |
@@ -862,7 +862,7 @@ rtao/
 | `rtao-transport-quic` | btlightning-compatible QUIC, M10 (§7.5) | `QuicClient`, `QuicClientConfig`, `QuicTarget`, `Reply`; `QuicServer`, `QuicServerConfig`, `QuicRouter`, `ServerStats`, `server::{HotkeyPolicy, SourcePolicy, Caller, HandlerError, ChunkSender}`; `wire`, `data::{to_data, from_data}`, `auth`, `tls` | `client`, `server` (both default) | `rtao-signer`, `rtao-core`, `rtao-primitives`; `rtao-btauth` (`server`, nonce store) |
 | `rtao-remote-signer` | `rtao-remote-signer/1`, M10 (§6.5, §7.5) | `wire` (`PROTOCOL`, `SIGN_PATH`, `ACCOUNTS_PATH`, request and response bodies); `RemoteSigner`, `RemoteSignerConfig`, `RemoteSignerError`; `server::{RemoteSignerServer, ServerConfig, RemotePolicy, ClientAllowlist, rebuild, RuntimeSource, PinnedRuntimeSource, ClientRuntimeSource}`; `daemon::{Daemon, DaemonConfig}`; binary `rtao-remote-signerd` | `client`, `server`, `server-online`, `server-bin`, `redis` (none default) | `rtao-btauth`, `rtao-signer`, `rtao-core`, `rtao-primitives`; `rtao-runtime`, `rtao-tx` (`server`), `rtao-client` (`server-online`), `rtao-wallet` (`server-bin`) |
 | `rtao-cli` | `rtao` binary (§10) | — | `ledger`, `vault`, `extension`, `evm` (all default on) | `rtao` (`full`) |
-| `rtao-testkit` | test infrastructure (§11) | `FakeNode`, `FakeChain`, `FakeState`, `Fault`, `RecordingView`, `Localnet`, `LocalnetProfile`, `Scenario`, `PinProxy` (block-pinning JSON-RPC proxy for interop lane 9, §11.6), `fixtures::*`, `oracle::*`, `ledger_emu::*` (the Speculos harness, with the Speculos TCP and replay transports that `LedgerDevice::with_transport` takes from the core patch, §1.11, §11.9) | `docker`, `interop`, `core-oracle`, `ledger-emu` (each gates its own `[[test]]` target, §11.1) | `rtao-client`, `rtao-rpc`, `rtao-tx`, `rtao-wallet` (plus `subxt-rpcs` for `FakeChain`), `rtao-signer` (feature `ledger-emu` enables its `test-util`, §2.3 rule 8) |
+| `rtao-testkit` | test infrastructure (§11) | `FakeNode`, `FakeChain`, `FakeState`, `Fault`, `RecordingView`, `Localnet`, `LocalnetProfile`, `Scenario`, `PinProxy` (block-pinning JSON-RPC proxy for interop lane 9, §11.6), `fixtures::*`, `oracle::*`, `ledger_emu::*` (the Speculos harness, with the Speculos TCP and replay transports that `LedgerDevice::with_transport` takes from the core patch, §1.11, §11.9) | `docker`, `interop`, `core-oracle`, `ledger-emu` (each gates its own `[[test]]` target, §11.1) | `rtao-client`, `rtao-jsonrpc`, `rtao-tx`, `rtao-wallet` (plus `subxt-rpcs` for `FakeChain`), `rtao-signer` (feature `ledger-emu` enables its `test-util`, §2.3 rule 8) |
 | `rtao` | facade (§2.4) | `prelude` (contents per feature, §2.4), re-exports per feature, `blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` (ports of `PY/sync.py` and `PY/_subtensor.py`, driven by `rtao_client::blocking::BlockingRuntime`; shared clients keyed by canonical endpoint, `PY/_subtensor.py:129-150`; `SyncClient` exposes all 14 namespaces, where Python's has 13, D-027) | §2.4 | all, optional per feature |
 
 The four M10 crates are optional and post-parity. `RemoteSigner` was planned as an `rtao-signer` feature, but
@@ -873,7 +873,7 @@ Two crates need a word of justification:
 
 - `rtao-runtime` is separate from `rtao-catalog`. A runtime bump regenerates descriptors; a Python bump regenerates
   catalog data. Each recompiles only its own dependents.
-- `rtao-rpc` is separate from `rtao-client`. The transport has no chain knowledge, so a WebSocket-library change
+- `rtao-jsonrpc` is separate from `rtao-client`. The transport has no chain knowledge, so a WebSocket-library change
   touches one crate, and `FakeNode` tests it in isolation.
 
 ### 2.3 Dependency layers and enforced rules
@@ -883,7 +883,7 @@ L0  bittensor-core (git, core_tag) · tokio · tokio-tungstenite · subxt-rpcs (
 L1  rtao-core-ext → bittensor-core
 L1' rtao-core     → bittensor-core, rtao-core-ext
 L2  rtao-primitives → rtao-core
-L3  rtao-catalog → primitives · rtao-runtime → core, primitives · rtao-rpc (third-party only) · rtao-signer → core, primitives
+L3  rtao-catalog → primitives · rtao-runtime → core, primitives · rtao-jsonrpc (third-party only) · rtao-signer → core, primitives
 L4  rtao-wallet → signer, core · rtao-client → rpc, runtime, catalog, signer, core
 L5  rtao-tx → client, catalog, signer · rtao-reads → client, catalog, runtime · rtao-evm → client, wallet
 L6  rtao-intents → tx, reads · rtao-metagraph → reads, runtime · rtao-btauth → signer, core, primitives (+ metagraph, optional)
@@ -895,11 +895,11 @@ L8  rtao (facade, incl. rtao::blocking) · rtao-cli → rtao · rtao-testkit (de
 `cargo xtask deps-check` runs in `pr-gates` over `cargo metadata` and `cargo tree`:
 
 1. Only `rtao-core`, `rtao-core-ext`, `rtao-testkit` and `xtask` may depend on `bittensor-core`.
-2. Only `rtao-rpc`, `rtao-testkit` and `rtao-signer` with feature `extension` or `vault` (the extension bridge client,
+2. Only `rtao-jsonrpc`, `rtao-testkit` and `rtao-signer` with feature `extension` or `vault` (the extension bridge client,
    and the WebSocket upgrades of the extension bridge server and the Vault page server, §6.5) may depend on
    `tokio-tungstenite`, all at the single workspace version. axum's
    own `ws` feature is not used: axum 0.8.9 requires `tokio-tungstenite ^0.29` (crates.io index), which would put a
-   second `tungstenite` next to 0.30 and trip the `deny.toml` duplicate ban. Only `rtao-rpc`, `rtao-client` and
+   second `tungstenite` next to 0.30 and trip the `deny.toml` duplicate ban. Only `rtao-jsonrpc`, `rtao-client` and
    `rtao-testkit` (`FakeChain`, §11.3) may depend on `subxt-rpcs`. `jsonrpsee` and `subxt` must be absent from the
    default graph and may appear only under the facade feature `subxt`. `deps-check` asserts the `extension` and `vault`
    gates, and that neither `jsonrpsee` nor `subxt` nor `rtao-signer/extension` nor `rtao-signer/vault` is in the no-host
@@ -952,7 +952,7 @@ extension       = ["rtao-signer/extension"]
 keychain        = ["rtao-wallet/keychain"]
 evm             = ["dep:rtao-evm"]
 blocking        = ["intents-all", "metagraph", "wallet", "rtao-client/blocking"]  # rtao::blocking: SyncClient, Subtensor, set_weights (PY/sync.py, PY/_subtensor.py)
-prometheus      = ["rtao-neuron?/prometheus", "rtao-rpc/metrics"]
+prometheus      = ["rtao-neuron?/prometheus", "rtao-jsonrpc/metrics"]
 subxt           = ["rtao-client/subxt"]                            # OnlineClient over the same Session (LegacyBackend)
 # M10 (post-parity, §7.5)
 compat-synapse  = ["dep:rtao-compat-synapse", "rtao-compat-synapse/axon", "rtao-compat-synapse/dendrite",
@@ -1103,12 +1103,12 @@ Versions are taken from [R] F §0.1 and the coexistence build, with registry che
 | Area | Crate | Notes |
 |---|---|---|
 | runtime | `tokio 1.53` | `rt-multi-thread, macros, sync, time, signal`; `test-util` in dev |
-| WebSocket | `tokio-tungstenite 0.30` (`rustls-tls-native-roots`; the connector is supplied by `rtao-rpc`, see TLS) | handshake `Error::Http(Box<Response<Option<Vec<u8>>>>)` and `CloseCode::Policy` = 1008 verified on 0.28.0 (`REG/tungstenite-0.28.0/src/error.rs:71`, `protocol/frame/coding.rs:154,214` [V]); 0.30 assumed API-stable [I], pinned by a `FakeNode` test; `connect_async_tls_with_config` and `WebSocketStream::from_raw_socket` exist in 0.30.0 (`src/connect.rs:61`, `src/lib.rs:218`) |
+| WebSocket | `tokio-tungstenite 0.30` (`rustls-tls-native-roots`; the connector is supplied by `rtao-jsonrpc`, see TLS) | handshake `Error::Http(Box<Response<Option<Vec<u8>>>>)` and `CloseCode::Policy` = 1008 verified on 0.28.0 (`REG/tungstenite-0.28.0/src/error.rs:71`, `protocol/frame/coding.rs:154,214` [V]); 0.30 assumed API-stable [I], pinned by a `FakeNode` test; `connect_async_tls_with_config` and `WebSocketStream::from_raw_socket` exist in 0.30.0 (`src/connect.rs:61`, `src/lib.rs:218`) |
 | RPC seam | `subxt-rpcs 0.51.1`, `default-features = false` | `RpcClientT` (`src/client/rpc_client_t.rs:26-52` [V]), `LegacyRpcMethods`, `Error::Client(Box<dyn Error>)` for typed errors (`src/lib.rs:69-94` [V]); no jsonrpsee without the default `jsonrpsee` feature (`Cargo.toml [features]` [V]) |
 | SCALE | `parity-scale-codec 3.7.5`, `scale-info 2.11.6`, `scale-decode 0.16.2`, `scale-encode 0.10.1`, `scale-type-resolver 0.2` (feature `scale-info`, enabled explicitly; [J-MA §3.3]), `frame-metadata 23.0.1` (tooling, V16) | one copy shared with the core ([R] feasibility-veneer-coexistence) |
 | HTTP | `axum 0.8.9` (without its `ws` feature, §2.3 rule 2), `tower 0.5.3`, `tower-http 0.7.1`, `http 1`, `reqwest 0.13.5` (`default-features = false`, features `rustls-no-provider`, `json`, `http2`, `charset`; preconfigured ring `ClientConfig`, see TLS) | btauth server and client, async drand, EVM RPC |
-| TLS | `rustls 0.23`, ring provider only: `[workspace.dependencies] rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }`, plus `rustls-native-certs` | One provider for the whole graph, chosen explicitly. The core's `host` enables `rustls/ring` through its blocking reqwest 0.12 (`UP/sdk/bittensor-core/Cargo.toml:60`), and reqwest 0.13's default `rustls` feature adds `aws-lc-rs`. With both (owner, CLI) or neither (`client`-only builds), rustls finds no process default and `ClientConfig::builder()` panics (`REG/rustls-0.23.45/src/crypto/mod.rs:243-286`, reproduced); tokio-tungstenite 0.30's built-in connector calls exactly that (`REG/tokio-tungstenite-0.30.0/src/tls.rs:126`). FakeNode, localnet, e2e and interop all use `ws://`, so only a TLS test catches it. Rules: (1) library crates never consult or install the process default. `rtao-rpc` builds `ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider())).with_safe_default_protocol_versions()` with the native roots plus `SessionConfig::extra_roots`, ALPN `http/1.1` only (WebSockets need HTTP/1.1), and connects with `connect_async_tls_with_config(request, Some(ws_config), false, Some(Connector::Rustls(cfg)))`. (2) Every rtao `reqwest` 0.13 client (`SignedClient`, `DrandClient`, `EvmRpc`, and `rtao-cli`'s GitHub-release fetcher for `upgrade` and indexer client for `wallet history`, `PY/cli/upgrade_helpers.py:103-129`, `PY/cli/commands/wallet.py:1335-1352`) is built with `ClientBuilder::tls_backend_preconfigured(config)`, where `config` is an **owned** `rustls::ClientConfig` with ALPN `h2` and `http/1.1`; an `Arc` is not recognized and `build()` fails (`REG/reqwest-0.13.5/src/async_impl/client.rs:2209-2228`). (3) Applications install ring as the process default, as a backstop for third-party code: `rtao-cli`'s `main` and the template binaries first call `let _ = rustls::crypto::ring::default_provider().install_default();`. With `rustls-no-provider`, a reqwest client built without a preconfigured config panics when no default exists (`client.rs:2499-2507`). (4) `deny.toml` and `deps-check` ban `aws-lc-rs`, `aws-lc-sys` and `native-tls` (§2.3 rule 7). `ring` matches the core's reqwest 0.12, so `host` builds keep one provider, and it needs only `cc`. Tests: `rtao-rpc` and `SignedClient` connect to a loopback `wss://`/`https://` `FakeNode` with a self-signed certificate (added through `extra_roots`), in an `--all-features` build, in the no-host profile, and in a build that also enables `rustls/aws-lc-rs` (third-party feature unification); the template's test asserts `CryptoProvider::get_default().is_some()` after `main` starts |
-| rate limits | `governor` [I: crate choice] | token buckets in `rtao-rpc` and `PerHotkeyLimiter` |
+| TLS | `rustls 0.23`, ring provider only: `[workspace.dependencies] rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }`, plus `rustls-native-certs` | One provider for the whole graph, chosen explicitly. The core's `host` enables `rustls/ring` through its blocking reqwest 0.12 (`UP/sdk/bittensor-core/Cargo.toml:60`), and reqwest 0.13's default `rustls` feature adds `aws-lc-rs`. With both (owner, CLI) or neither (`client`-only builds), rustls finds no process default and `ClientConfig::builder()` panics (`REG/rustls-0.23.45/src/crypto/mod.rs:243-286`, reproduced); tokio-tungstenite 0.30's built-in connector calls exactly that (`REG/tokio-tungstenite-0.30.0/src/tls.rs:126`). FakeNode, localnet, e2e and interop all use `ws://`, so only a TLS test catches it. Rules: (1) library crates never consult or install the process default. `rtao-jsonrpc` builds `ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider())).with_safe_default_protocol_versions()` with the native roots plus `SessionConfig::extra_roots`, ALPN `http/1.1` only (WebSockets need HTTP/1.1), and connects with `connect_async_tls_with_config(request, Some(ws_config), false, Some(Connector::Rustls(cfg)))`. (2) Every rtao `reqwest` 0.13 client (`SignedClient`, `DrandClient`, `EvmRpc`, and `rtao-cli`'s GitHub-release fetcher for `upgrade` and indexer client for `wallet history`, `PY/cli/upgrade_helpers.py:103-129`, `PY/cli/commands/wallet.py:1335-1352`) is built with `ClientBuilder::tls_backend_preconfigured(config)`, where `config` is an **owned** `rustls::ClientConfig` with ALPN `h2` and `http/1.1`; an `Arc` is not recognized and `build()` fails (`REG/reqwest-0.13.5/src/async_impl/client.rs:2209-2228`). (3) Applications install ring as the process default, as a backstop for third-party code: `rtao-cli`'s `main` and the template binaries first call `let _ = rustls::crypto::ring::default_provider().install_default();`. With `rustls-no-provider`, a reqwest client built without a preconfigured config panics when no default exists (`client.rs:2499-2507`). (4) `deny.toml` and `deps-check` ban `aws-lc-rs`, `aws-lc-sys` and `native-tls` (§2.3 rule 7). `ring` matches the core's reqwest 0.12, so `host` builds keep one provider, and it needs only `cc`. Tests: `rtao-jsonrpc` and `SignedClient` connect to a loopback `wss://`/`https://` `FakeNode` with a self-signed certificate (added through `extra_roots`), in an `--all-features` build, in the no-host profile, and in a build that also enables `rustls/aws-lc-rs` (third-party feature unification); the template's test asserts `CryptoProvider::get_default().is_some()` after `main` starts |
+| rate limits | `governor` [I: crate choice] | token buckets in `rtao-jsonrpc` and `PerHotkeyLimiter` |
 | concurrency | `arc-swap 1.9`, `dashmap 6`, `tokio-util` (`CancellationToken`) | |
 | CLI | `clap 4.6.7` (builder API for generated commands), `clap_complete`, `rpassword`, `comfy-table` | |
 | JSON | `serde_json 1` with `arbitrary_precision`: `[workspace.dependencies] serde_json = { version = "1.0.132", features = ["arbitrary_precision"] }` | The core enables the feature non-optionally (`UP/sdk/bittensor-core/Cargo.toml:40-42`) and needs it: `CORE/codec/value.rs:58-77` renders u128 and i128 values beyond 64 bits and U256 through it and substitutes 0 without it. Cargo unifies it into every rtao and subnet build, where non-integer numbers parsed from text fail inside `#[serde(untagged)]` enums and `#[serde(flatten)]` structs and `serde_json::Value` equality compares number spelling (`1e-05 != 1e-5`), measured on serde_json 1.0.154 (`REG/serde_json-1.0.154/src/de.rs:118-129, 937-953`, `src/number.rs:20-24, 72-73`). Rules: rtao depends on the feature itself, so its JSON stays digit-exact whatever upstream does; rtao's number-or-string and untagged input types (`WeightsArg`, `Amount`, `Ratio`) deserialize through `serde_json::Value` and read numbers from `Number::as_str()`; every text entry point (CLI `--args` and `call`, `execute_tool` from text, `UnsignedExtrinsic` import, `btcli.json` and the books, oracle vectors) parses through `rtao_primitives::json::{from_slice, from_str}`; subnet authors use `rtao::btauth::server::Json<T>` (§7.2); the oracle comparator never uses `Value` equality (§4.8). An M0 test pins direct versus `Value`-first parsing of untagged and flatten floats, a u128/U256 `to_corpus_json` round trip, and the comparator vectors of §4.8 |
@@ -1150,7 +1150,7 @@ integers at the exact domain/chain JSON boundaries. M0 tests pin these boundarie
 
 ---
 
-## 3. Chain client (`rtao-rpc`, `rtao-client`, `rtao-runtime`)
+## 3. Chain client (`rtao-jsonrpc`, `rtao-client`, `rtao-runtime`)
 
 The behavioral reference is the Python transport: `PY/_transport/*` (3,941 lines) and `PY/_substrate.py` (851 lines)
 ([R] A1 §1, [J-PD §3 A#5]). Every chain-defined step is delegated to the core.
@@ -1162,7 +1162,7 @@ The behavioral reference is the Python transport: `PY/_transport/*` (3,941 lines
   and which `rtao::blocking` drives (§2.2). `Client` is `Clone + Send + Sync` (an `Arc` inside) and holds no global
   state.
 - **Background tasks per `Client`**, all cancelled when the last clone drops:
-  - the `rtao-rpc` session supervisor (one task owns the socket);
+  - the `rtao-jsonrpc` session supervisor (one task owns the socket);
   - the `HeadTracker` (best and finalized subscriptions with gap backfill);
   - the runtime-version watcher (`state_subscribeRuntimeVersion`, with a 12 s TTL poll as fallback, which is Python's
     only mechanism, `PY/_transport/runtime.py:142-176`).
@@ -1189,7 +1189,7 @@ The behavioral reference is the Python transport: `PY/_transport/*` (3,941 lines
   deadline apart from the 60 s silence watchdog ([R] A1 §4.11), so rtao's library defaults are `None`. The framework
   sets explicit deadlines (§9.3).
 
-### 3.2 Transport: `rtao-rpc::Session`
+### 3.2 Transport: `rtao-jsonrpc::Session`
 
 **Library choice.** The session runs on `tokio-tungstenite` and implements `subxt_rpcs::client::RpcClientT`.
 
@@ -1307,7 +1307,7 @@ window Python also accepts as fate unknown.
 
 The classifier is a port of `_default_connect`, `_is_policy_rpc_error`, `classify_rpc_error` and `_policy_close_error`
 (`PY/_transport/rpc.py:84-135, 190-241` [V]). The constants are **extracted, not hand-copied** (§4.1) into the
-generated `rtao-rpc/src/generated/py_rpc.rs`:
+generated `rtao-jsonrpc/src/generated/py_rpc.rs`:
 
 - `_POLICY_RPC_ERROR_CODES = {-32004, -32005}`;
 - `_POLICY_RPC_METADATA_KEYS = {"policy", "reason", "retry_after", "retryAfter", "retry_after_ms", "retryAfterMs"}`;
@@ -1856,7 +1856,7 @@ pub enum Mortality { Immortal, Mortal(Period) }   // Period is rounded by era_bi
 #[non_exhaustive]
 pub enum SubmitFailure {                 // the executor maps it per the §3.9.5 table
     Client(ClientError),                 // metadata, encoding, signing disabled, policy refusal, connection exhausted
-    Submit(rtao_rpc::SubmitError),       // incl. FateUnknown { hash }
+    Submit(rtao_jsonrpc::SubmitError),       // incl. FateUnknown { hash }
     Pool(PoolRejection),                 // typed pool rejection (§3.9.5)
     Retracted { hash: H256 },            // watch ended after retraction; reconcile finalized history
     Expired { hash: H256, expiry: u64 }, // mortal validity passed without inclusion
@@ -2336,7 +2336,7 @@ result.
 | subscriptions receive an error on reconnect | `subscription_lost_on_reconnect` |
 | rotation after the configured consecutive failure threshold (default 5); give up after threshold x endpoints; backoff schedule | `rpc.rs::pool_rotation_backoff_and_exhaustion` (asserts default 5, exercises threshold 2 under a paused clock) |
 | handshake 403/429 with `X-RateLimit-*`, `Retry-After`, `X-RateLimit-Reset` fallback, body detail | `handshake_policy_refusal_headers` |
-| `-32004` message match; `-32005` with metadata keys; other `-32004` stays ordinary | `rtao-rpc/src/policy.rs::{policy_code_and_metadata_classification_are_strict, provider_defined_code_without_policy_contract_is_not_terminal, load_shed_policy_supports_camel_case_retry_metadata}`; socket boundary `rpc.rs::policy_rpc_error_preserves_server_details` |
+| `-32004` message match; `-32005` with metadata keys; other `-32004` stays ordinary | `rtao-jsonrpc/src/policy.rs::{policy_code_and_metadata_classification_are_strict, provider_defined_code_without_policy_contract_is_not_terminal, load_shed_policy_supports_camel_case_retry_metadata}`; socket boundary `rpc.rs::policy_rpc_error_preserves_server_details` |
 | close 1008 is terminal with the reason | `close_1008_is_terminal` |
 | `State already discarded` goes to the archive pool once | `rpc.rs::state_discarded_uses_archive_once` |
 | finalized-only hash cache across a reorg | `rtao-client/tests/connect.rs::number_cache_retains_only_finalized_hashes` |
@@ -2386,7 +2386,7 @@ Upstream surface at `parity_tag` [V]:
 | coldkey-pays-fee calls | runtime `fee_filters.rs:15-34` (`call_filter_group!`); Python mirror `PY/fee_filters.py:12-32` | `syn` over the **runtime** source (authoritative); CI asserts the Python mirror is equal |
 | `PROXY_TYPES` | `PY/intents/proxy.py:21-41` | extractor; CI asserts equality with the metadata `ProxyType` enum |
 | `SelectiveMetagraphIndex` 0..=76 | `pallets/subtensor/src/rpc_info/metagraph.rs` (`from_index` arms; the order equals the struct's field order, 77/77 [J-MA §3.2]) | `syn` extractor |
-| network table, era defaults, explorer and docs templates, retry substrings, shield bounds, multisig allowance, RPC policy constants | `PY/settings.py`, `PY/executor.py:45-66`, `PY/multisig.py`, `PY/_transport/rpc.py:52-66` | extractor → `rtao_catalog::py::*` and `rtao-rpc/src/generated/py_rpc.rs`. **No Python constant is hand-copied** |
+| network table, era defaults, explorer and docs templates, retry substrings, shield bounds, multisig allowance, RPC policy constants | `PY/settings.py`, `PY/executor.py:45-66`, `PY/multisig.py`, `PY/_transport/rpc.py:52-66` | extractor → `rtao_catalog::py::*` and `rtao-jsonrpc/src/generated/py_rpc.rs`. **No Python constant is hand-copied** |
 | environment variables | every `os.getenv`, `os.environ.get`, `os.environ[...]` and Typer `envvar=` in `PY/**` (28 names plus the computed `BT_PW_*` family) | extractor → `vendor/upstream/extracted/env_vars.json`, mapped in `parity/env.toml` (§4.9) |
 | covered pallets and raw-only calls | `UP/sdk/python/codegen/check.py:58-72, 74-300` | extractor → coverage gate (§4.9) |
 | samples and fake-substrate defaults | `PYT/harness/samples.py` (`INTENT_SAMPLES`, `READ_SAMPLES`), `PYT/harness/fake_substrate.py:34-77` (`DEFAULT_STORAGE/CONSTANTS/RUNTIME`) | extractor (dev keys resolved to ss58 through a fixed table) → oracle inputs and `FakeChain` defaults |
@@ -5092,7 +5092,7 @@ reconnect, resend and `FateUnknown` logic, so they cannot test it. rtao has two 
 pub struct FakeState { /* metadata (pinned V15 or golden), runtime versions, scripted heads (advance(n), forks),
                           storage by key, runtime-API responses, submit scripts, event scripts */ }
 
-/// A real JSON-RPC server on 127.0.0.1:0 (tokio-tungstenite). Exercises rtao-rpc end to end.
+/// A real JSON-RPC server on 127.0.0.1:0 (tokio-tungstenite). Exercises rtao-jsonrpc end to end.
 pub struct FakeNode { state: Arc<Mutex<FakeState>>, faults: FaultPlan }
 pub enum Fault {
     HandshakeRefuse { status: u16, headers: Vec<(String, String)>, body: String },  // 403/429 + X-RateLimit-*, Retry-After
@@ -5425,7 +5425,7 @@ checks for a specific change; no local campaigns, default nightly matrices or M9
   - btauth canonicalization at the boundaries (exactly `max_age` and `allowed_skew`);
   - the scheduler never double-submits inside a rate limit under random head sequences.
 - **`cargo fuzz`** (optional bounded hosted checks): btauth header parsing and `verify`, JSON-RPC frame parsing in
-  `rtao-rpc`, `MetagraphView` (arbitrary bytes and mutations of real payloads), event splitting, `UnsignedExtrinsic`
+  `rtao-jsonrpc`, `MetagraphView` (arbitrary bytes and mutations of real payloads), event splitting, `UnsignedExtrinsic`
   JSON import, keyfile detection and `keyfile_json`, and `decode_extrinsic`/`decode_id` wrapped at the boundary to
   catch panics. Keep ordinary failure regressions in hosted Rust tests as each parser lands. A targeted fuzz run
   uses a free hosted job and explicit time limit; no default campaign or longer M9 run is required.
@@ -6002,7 +6002,7 @@ changes as development needs them; no forced bump, full-pipeline replay or bot h
 | 38 | Use upstream's own recorders (Python, CI-only) for spec-current fixtures, through a wrapper that drops entries absent from the live metadata | A's Rust ports of the recorders; running them unchanged | identical formats, less code to maintain; `record_golden.py` hard-codes `SubtensorModule.Alpha`, which 477 no longer has | D §12.3; [R] H §5; `record_golden.py:41-49, 85, 169-181` |
 | 39 | C's framework, with Python era defaults and preflights that refuse only on certain rejections | C as-is (hard stake/permit refusals) | client-side stake-weight recomputation risks false negatives | J-CF §3.3 defect 5 |
 | 40 | Version key: `Zero` or `Fixed`, refuse below the chain's key; no follow-the-chain mode | B's `FromChain` | following defeats the owner's forced-upgrade lever; the check happens at reveal | C open question 5; [R] C1 §2.3 |
-| 41 | 19 crates: btauth in one crate with features; tx/intents split; separate `rtao-runtime` and `rtao-rpc` | D (14), C (18+4), B (23), A (near-monolith) | modular compile units without GAT-heavy sprawl | J-PD §4 A, §4 B |
+| 41 | 19 crates: btauth in one crate with features; tx/intents split; separate `rtao-runtime` and `rtao-jsonrpc` | D (14), C (18+4), B (23), A (near-monolith) | modular compile units without GAT-heavy sprawl | J-PD §4 A, §4 B |
 | 42 | `disallowed-methods` everywhere; the monorepo deny set only for money and `rtao-core-ext`; `subtensor-linting` only on `rtao-core-ext` | D's whole-workspace monorepo lints | keeps staged code upstream-ready without slowing contributors | J-PD §4 D |
 | 43 | CLI `tx`/`query` built at run time with clap's builder API | derive macros (B, C) | no per-command code; lower compile cost | J-PD graft 11; A §10.1 |
 | 44 | `rtao::blocking` (the facade) mirrors Python's `SyncClient`/`Subtensor`/`set_weights`, driven by `rtao_client::blocking::BlockingRuntime` | re-export the core's blocking `Client` (D); facades inside `rtao-client` | parity; the core client's product behavior diverges; the facades wrap reads, the executor and intents, which sit above `rtao-client` | `PY/sync.py:24-25, 401-476`; `PY/_subtensor.py:36, 167-205`; P-A §1.4 table; §2.3 |

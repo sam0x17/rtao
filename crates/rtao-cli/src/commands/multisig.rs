@@ -976,7 +976,8 @@ pub(crate) struct GithubFetch;
 impl UpgradeFetch for GithubFetch {
     fn bytes<'a>(&'a self, url: &'a str, api: bool) -> BoxFuture<'a, Result<Vec<u8>, CliError>> {
         Box::pin(async move {
-            let tls = rtao_rpc::tls_config(&rtao_rpc::SessionConfig::default()).map_err(failure)?;
+            let tls = rtao_jsonrpc::tls_config(&rtao_jsonrpc::SessionConfig::default())
+                .map_err(failure)?;
             let client = reqwest::Client::builder()
                 .tls_backend_preconfigured((*tls).clone())
                 .timeout(Duration::from_secs(60))

@@ -6086,12 +6086,12 @@ dependencies = [
  "rtao-core",
  "rtao-evm",
  "rtao-intents",
+ "rtao-jsonrpc",
  "rtao-metagraph",
  "rtao-neuron",
  "rtao-primitives",
  "rtao-reads",
  "rtao-remote-signer",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "rtao-testkit",
@@ -6167,8 +6167,8 @@ dependencies = [
  "rtao",
  "rtao-catalog",
  "rtao-intents",
+ "rtao-jsonrpc",
  "rtao-remote-signer",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-testkit",
  "rustls",
@@ -6207,8 +6207,8 @@ dependencies = [
  "regex",
  "rtao-catalog",
  "rtao-core",
+ "rtao-jsonrpc",
  "rtao-primitives",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "rtao-testkit",
@@ -6371,6 +6371,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtao-jsonrpc"
+version = "0.1.0"
+dependencies = [
+ "blake2",
+ "futures",
+ "hex",
+ "http",
+ "httpdate",
+ "metrics",
+ "primitive-types 0.13.1",
+ "rustls",
+ "rustls-native-certs",
+ "rustls-pki-types",
+ "serde",
+ "serde_json",
+ "subxt-rpcs",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "tracing",
+ "unicode-general-category",
+ "url",
+]
+
+[[package]]
 name = "rtao-metagraph"
 version = "0.1.0"
 dependencies = [
@@ -6416,10 +6441,10 @@ dependencies = [
  "rtao-core",
  "rtao-core-ext",
  "rtao-intents",
+ "rtao-jsonrpc",
  "rtao-metagraph",
  "rtao-primitives",
  "rtao-reads",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "rtao-testkit",
@@ -6520,31 +6545,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rtao-rpc"
-version = "0.1.0"
-dependencies = [
- "blake2",
- "futures",
- "hex",
- "http",
- "httpdate",
- "metrics",
- "primitive-types 0.13.1",
- "rustls",
- "rustls-native-certs",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "subxt-rpcs",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite",
- "tracing",
- "unicode-general-category",
- "url",
-]
-
-[[package]]
 name = "rtao-runtime"
 version = "0.1.0"
 dependencies = [
@@ -6622,11 +6622,11 @@ dependencies = [
  "rtao-client",
  "rtao-core",
  "rtao-intents",
+ "rtao-jsonrpc",
  "rtao-metagraph",
  "rtao-neuron",
  "rtao-primitives",
  "rtao-reads",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "rtao-tx",
@@ -6690,8 +6690,8 @@ dependencies = [
  "rtao-client",
  "rtao-core",
  "rtao-intents",
+ "rtao-jsonrpc",
  "rtao-primitives",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "rtao-testkit",
@@ -9954,10 +9954,10 @@ dependencies = [
  "rtao-client",
  "rtao-core",
  "rtao-intents",
+ "rtao-jsonrpc",
  "rtao-metagraph",
  "rtao-primitives",
  "rtao-reads",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "rtao-testkit",

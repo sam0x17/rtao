@@ -14,7 +14,7 @@ use std::{error::Error, future::pending, time::Duration};
 
 use blake2::{Blake2b, Digest, digest::consts::U32};
 use futures::StreamExt;
-use rtao_rpc::{
+use rtao_jsonrpc::{
     EndpointPool, ReadMethod, RpcError, Session, SessionConfig, SessionState, SubmitError,
     SubscriptionKind,
 };
@@ -415,8 +415,8 @@ async fn refused_reconnect_honours_retry_after_and_resends_pending_reads() -> Re
     let mut refused_events = 0;
     while let Ok(event) = events.try_recv() {
         match event {
-            rtao_rpc::SessionEvent::Reconnecting { .. } => refused_events += 1,
-            rtao_rpc::SessionEvent::PolicyRefused(refusal) => {
+            rtao_jsonrpc::SessionEvent::Reconnecting { .. } => refused_events += 1,
+            rtao_jsonrpc::SessionEvent::PolicyRefused(refusal) => {
                 return Err(format!("refusal ended the session: {refusal}").into());
             }
             _ => {}
@@ -463,7 +463,7 @@ async fn refused_reconnects_without_retry_forever_end_after_max_retries_without_
     assert_eq!(terminal.status_code, Some(403));
     assert_eq!(
         terminal.kind,
-        rtao_rpc::RefusalKind::Handshake { status: 403 }
+        rtao_jsonrpc::RefusalKind::Handshake { status: 403 }
     );
     assert!(matches!(
         &*session.state().borrow(),
@@ -474,7 +474,7 @@ async fn refused_reconnects_without_retry_forever_end_after_max_retries_without_
     assert_eq!(fallback.connect_attempts(), 0);
     let mut terminal_events = 0;
     while let Ok(event) = events.try_recv() {
-        if let rtao_rpc::SessionEvent::PolicyRefused(refusal) = event {
+        if let rtao_jsonrpc::SessionEvent::PolicyRefused(refusal) = event {
             assert_eq!(&refusal, terminal.as_ref());
             terminal_events += 1;
         }
@@ -1622,7 +1622,7 @@ async fn ratelimit_paces_public_presets() -> Result {
     }
     let mut cfg = SessionConfig::public(EndpointPool::new(Url::parse(node.url())?));
     cfg.silence_timeout = Duration::from_secs(5);
-    let burst = rtao_rpc::RateLimit::PUBLIC.burst as usize;
+    let burst = rtao_jsonrpc::RateLimit::PUBLIC.burst as usize;
     let session = Session::connect(cfg).await?;
     // Discovery plus `burst + 1` reads: the preset's burst covers the first
     // ten requests, then the sustained rate spaces the remaining two.
@@ -1670,7 +1670,7 @@ async fn rate_bucket_prioritizes_submissions_and_drops_cancelled_queue_entries()
         json!(format!("0x{}", "11".repeat(32))),
     );
     let mut cfg = config(&node)?;
-    cfg.rate_limit = Some(rtao_rpc::RateLimit {
+    cfg.rate_limit = Some(rtao_jsonrpc::RateLimit {
         per_second: 4.0,
         burst: 1,
     });
@@ -1821,7 +1821,7 @@ async fn policy_during_paced_reconnect(reads: usize, policy_close: bool) -> Resu
     let mut cfg = SessionConfig::public(pool);
     // The replay mechanics under test assume one token per second, independent
     // of the public preset's startup burst.
-    cfg.rate_limit = Some(rtao_rpc::RateLimit {
+    cfg.rate_limit = Some(rtao_jsonrpc::RateLimit {
         per_second: 1.0,
         burst: 1,
     });
@@ -1921,14 +1921,14 @@ async fn policy_during_paced_reconnect(reads: usize, policy_close: bool) -> Resu
         state => return Err(format!("policy became {state:?}").into()),
     };
     if policy_close {
-        assert_eq!(terminal.kind, rtao_rpc::RefusalKind::Close1008);
+        assert_eq!(terminal.kind, rtao_jsonrpc::RefusalKind::Close1008);
         assert_eq!(terminal.status_code, Some(1008));
         assert_eq!(terminal.reason.as_deref(), Some("slow [2J down"));
         assert!(terminal.payload.is_none());
     } else {
         assert_eq!(
             terminal.kind,
-            rtao_rpc::RefusalKind::JsonRpc { code: -32005 }
+            rtao_jsonrpc::RefusalKind::JsonRpc { code: -32005 }
         );
         assert_eq!(terminal.status_code, None);
         assert_eq!(terminal.policy.as_deref(), Some("public-rpc"));
@@ -1949,7 +1949,7 @@ async fn policy_during_paced_reconnect(reads: usize, policy_close: bool) -> Resu
         Err(RpcError::Policy(terminal.clone()))
     );
     assert!(
-        matches!(events.try_recv()?, rtao_rpc::SessionEvent::PolicyRefused(ref refusal) if refusal == terminal.as_ref())
+        matches!(events.try_recv()?, rtao_jsonrpc::SessionEvent::PolicyRefused(ref refusal) if refusal == terminal.as_ref())
     );
     assert!(matches!(
         events.try_recv(),
@@ -2021,9 +2021,9 @@ async fn owned_author_disconnect_retires_scope_without_replaying_on_native_recon
     node.queue_reply("author_submitExtrinsic", Reply::silent());
     let session = connect(&node).await?;
     let bytes = [31u8; 16];
-    let hash = rtao_rpc::H256::from_slice(&Blake2b::<U32>::digest(bytes));
+    let hash = rtao_jsonrpc::H256::from_slice(&Blake2b::<U32>::digest(bytes));
     let held = Arc::new(AtomicBool::new(true));
-    let (owner, retired) = rtao_rpc::AuthorOwnership::new(hash, Guard(held.clone()));
+    let (owner, retired) = rtao_jsonrpc::AuthorOwnership::new(hash, Guard(held.clone()));
     let submit = {
         let session = session.clone();
         tokio::spawn(async move { session.submit_owned(&bytes, owner).await })

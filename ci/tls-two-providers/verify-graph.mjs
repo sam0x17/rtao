@@ -51,7 +51,7 @@ assert.equal(rustls.version, field(shippedRustls[0], 'version'), 'exercise the s
 for (const feature of ['ring', 'aws_lc_rs']) {
   assert(nodes.get(rustls.id).features.includes(feature), 'missing rustls feature ' + feature);
 }
-for (const name of ['rtao-tls-two-providers', 'rtao-rpc', 'rtao-testkit']) {
+for (const name of ['rtao-tls-two-providers', 'rtao-jsonrpc', 'rtao-testkit']) {
   const pkg = exactly(name);
   const direct = nodes.get(pkg.id).deps.filter(dep => dep.name === 'rustls');
   assert.equal(direct.length, 1, name + ' must have one direct rustls dependency');
@@ -71,7 +71,7 @@ const sha = process.env.GITHUB_SHA;
 assert(/^[a-f0-9]{40}$/.test(sha || ''), 'exact source commit required');
 const inputs = ['ci/tls-two-providers/Cargo.toml', 'ci/tls-two-providers/Cargo.lock',
   'ci/tls-two-providers/tests/two_providers.rs', 'ci/tls-two-providers/verify-graph.mjs',
-  'Cargo.toml', 'Cargo.lock', 'crates/rtao-rpc/src/session.rs', 'crates/rtao-testkit/src/fakes/node.rs'];
+  'Cargo.toml', 'Cargo.lock', 'crates/rtao-jsonrpc/src/session.rs', 'crates/rtao-testkit/src/fakes/node.rs'];
 const hashes = Object.fromEntries(inputs.map(name => [name, digest(fs.readFileSync(path.join(root, name)))]));
 const proof = { schema: 1, phase, head: sha, workspace: 'ci/tls-two-providers',
   rustls: { version: rustls.version, features: [...nodes.get(rustls.id).features].sort() },

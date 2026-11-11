@@ -3,7 +3,7 @@
 
 use std::{error::Error, time::Duration};
 
-use rtao_rpc::{ReadMethod, Session, SessionConfig};
+use rtao_jsonrpc::{ReadMethod, Session, SessionConfig};
 use rtao_testkit::FakeNode;
 use url::Url;
 

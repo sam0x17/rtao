@@ -873,7 +873,7 @@ mod null_pruning {
     struct Factory {
         keys: Arc<Keys>,
         fail_release: std::sync::atomic::AtomicBool,
-        refuse_finalized_after_release: Mutex<Option<rtao_rpc::PolicyRefusal>>,
+        refuse_finalized_after_release: Mutex<Option<rtao_jsonrpc::PolicyRefusal>>,
     }
     impl ExternalSignerFactory for Factory {
         fn keys<'a>(
@@ -899,7 +899,7 @@ mod null_pruning {
                     assert!(success, "refuse only after a successful pruning receipt");
                     self.keys.signer.chain.queue_transport_error(
                         "chain_getFinalizedHead",
-                        rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(
+                        rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(
                             Box::new(policy),
                         ))),
                     );
@@ -1413,7 +1413,7 @@ mod null_pruning {
             (None, "reduce the request or connection rate, then retry"),
         ] {
             let mut f = fixture(260, vec![], false, true, false).await?;
-            let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+            let policy = rtao_jsonrpc::policy::classify_rpc_error(&json!({
                 "code":-32005,"message":"slow down",
                 "data":{"policy":"rate","retry_after":retry},
             }))
@@ -1422,9 +1422,9 @@ mod null_pruning {
             let start = f.chain.requests().len();
             f.chain.queue_transport_error(
                 "chain_getFinalizedHead",
-                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
-                    policy,
-                )))),
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(
+                    Box::new(policy),
+                ))),
             );
             let error = run(&mut f).await.err().ok_or("pruning refusal accepted")?;
             assert_eq!(error.code, 1);
@@ -1555,7 +1555,7 @@ mod null_pruning {
         // and release, so it exercises finish_action's recovery boundary.
         for fail_release in [false, true] {
             let mut f = fixture(260, vec![], false, false, false).await?;
-            let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+            let policy = rtao_jsonrpc::policy::classify_rpc_error(&json!({
                 "code":-32005,"message":"slow down",
                 "data":{"policy":"rate","retry_after":"12"},
             }))

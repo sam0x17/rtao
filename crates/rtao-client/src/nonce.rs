@@ -381,7 +381,7 @@ impl crate::Client {
             let (inner, alive, unavailable) = (inner.clone(), alive.clone(), unavailable.clone());
             Box::pin(async move {
                 let Some(client) = crate::Client::upgrade(&inner, &alive) else {
-                    return Err(rtao_rpc::RpcError::Closed.into());
+                    return Err(rtao_jsonrpc::RpcError::Closed.into());
                 };
                 client.wait_for_pending_carriers(who, &unavailable).await
             })
@@ -414,7 +414,7 @@ impl crate::Client {
                     self.ensure_open()?;
                     if matches!(
                         &error,
-                        ClientError::Rpc(rtao_rpc::RpcError::JsonRpc { code: -32601, .. })
+                        ClientError::Rpc(rtao_jsonrpc::RpcError::JsonRpc { code: -32601, .. })
                     ) {
                         unavailable.store(true, Ordering::Release);
                     }
@@ -462,7 +462,7 @@ impl crate::Client {
             );
             tokio::select! {
                 biased;
-                () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+                () = self.closed() => return Err(rtao_jsonrpc::RpcError::Closed.into()),
                 () = tokio::time::sleep(delay) => {}
             }
         }
@@ -483,7 +483,7 @@ impl crate::Client {
     ) -> Result<Vec<Option<u64>>, ClientError> {
         let pending = self
             .read_request(
-                rtao_rpc::ReadMethod::AuthorPendingExtrinsics,
+                rtao_jsonrpc::ReadMethod::AuthorPendingExtrinsics,
                 serde_json::json!([]),
             )
             .await?;

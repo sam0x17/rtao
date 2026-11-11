@@ -63,7 +63,7 @@ The fix misses that rtao-client's `NonceManager::{lease, lease_pair, fresh}` als
 
 **Corrected fix:** the reviewer's fix, plus:
 - replace `ChainError` with `ClientError` in §3.9.1 as well;
-- define `SubmitFailure { Client(ClientError), Submit(rtao_rpc::SubmitError), Pool(PoolRejection) }`;
+- define `SubmitFailure { Client(ClientError), Submit(rtao_jsonrpc::SubmitError), Pool(PoolRejection) }`;
 - map `SubmitFailure` in the executor following the §3.9.5 table.
 
 ### F04: confirmed
@@ -135,7 +135,7 @@ Verified from the crates.io index cache:
 
 The deny failure is conditional: it happens only if the bridge server uses axum `ws`, and the plan does not say how the server is built. The fix moves the server into rtao-cli. That drops Python's library exports `BridgeServer`, `run_bridge`, `ensure_bridge`, `start_bridge_daemon` and `stop_bridge_daemon` (`PY/extension/__init__.py:11-40`) and contradicts MM's `extension/bridge.py -> rtao_signer` row. The cited axum `ws` feature is at `REG/axum-0.8.8/Cargo.toml:133-139`, not :65-68.
 
-**Corrected fix:** keep (a) the version alignment as written. For (b), the server (`bridge.py`, `session.py`, `tokens.py`), the client and `ExtensionSigner` all live in `rtao-signer` under `extension`: the server on axum `ws`, the client on tokio-tungstenite. rtao-cli's `extension bridge` (`daemon.py`) only runs the server. For (c), rule 2 allows tokio-tungstenite in rtao-signer (feature `extension`, directly or through `axum/ws`) at the single workspace version, and allows `subxt-rpcs` in rtao-rpc, rtao-client and rtao-testkit.
+**Corrected fix:** keep (a) the version alignment as written. For (b), the server (`bridge.py`, `session.py`, `tokens.py`), the client and `ExtensionSigner` all live in `rtao-signer` under `extension`: the server on axum `ws`, the client on tokio-tungstenite. rtao-cli's `extension bridge` (`daemon.py`) only runs the server. For (c), rule 2 allows tokio-tungstenite in rtao-signer (feature `extension`, directly or through `axum/ws`) at the single workspace version, and allows `subxt-rpcs` in rtao-jsonrpc, rtao-client and rtao-testkit.
 
 ### F11: partially_confirmed
 What holds: the `commitments` read and the curated `Subnets::{metagraph, commitments}` need rtao-metagraph code, which sits at L6.

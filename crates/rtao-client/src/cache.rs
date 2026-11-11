@@ -843,7 +843,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
     use super::*;
     use parity_scale_codec::Encode;
-    use rtao_rpc::RpcError;
+    use rtao_jsonrpc::RpcError;
     use rtao_runtime::MetadataLevel;
     use serde_json::value::RawValue;
     use std::sync::{Mutex as StdMutex, atomic::AtomicU32};

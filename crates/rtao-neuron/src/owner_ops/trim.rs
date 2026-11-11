@@ -534,8 +534,8 @@ impl TrimNullSession {
         self.journal.record_result(receipt)?;
         self.validate_action(&action)?;
         if let Some(hash) = receipt.fate_unknown {
-            return Err(TxError::Rpc(rtao_rpc::RpcError::FateUnknown {
-                hash: rtao_rpc::H256(hash.0),
+            return Err(TxError::Rpc(rtao_jsonrpc::RpcError::FateUnknown {
+                hash: rtao_jsonrpc::H256(hash.0),
             }));
         }
         if receipt.inclusion != Inclusion::Finalized

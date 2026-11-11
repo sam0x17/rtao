@@ -987,7 +987,7 @@ async fn import_deadline_precedes_parsing_and_fresh_public_preparation_keeps_cac
             )
             .await,
         Err(rtao_client::ClientError::Rpc(
-            rtao_rpc::RpcError::Timeout { .. }
+            rtao_jsonrpc::RpcError::Timeout { .. }
         ))
     ));
     client.nonces().pin(&signer.account(), 90);

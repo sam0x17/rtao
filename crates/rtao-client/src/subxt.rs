@@ -99,7 +99,7 @@ impl RpcClientT for ClientRpc {
 
 fn closed_error() -> subxt_rpcs::Error {
     subxt_rpcs::Error::Client(Box::new(crate::ClientError::from(
-        rtao_rpc::RpcError::Closed,
+        rtao_jsonrpc::RpcError::Closed,
     )))
 }
 

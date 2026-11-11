@@ -427,7 +427,7 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
             (None, "reduce the request or connection rate, then retry"),
         ] {
             let (refused_client, refused_chain) = fake_client().await?;
-            let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+            let policy = rtao_jsonrpc::policy::classify_rpc_error(&json!({
                 "code":-32005,"message":"slow down",
                 "data":{"policy":"rate","retry_after":retry},
             }))
@@ -436,9 +436,9 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
             let start = refused_chain.requests().len();
             refused_chain.queue_transport_error(
                 "chain_getHeader",
-                rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
-                    policy,
-                )))),
+                rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(
+                    Box::new(policy),
+                ))),
             );
             let mut refused_ctx = context(&parsed)?;
             let sink = captured(&mut refused_ctx, true);

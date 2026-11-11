@@ -336,7 +336,7 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
         vec!["rtao", "misc", "crowd", "info", "11", "--json"],
         vec!["rtao", "misc", "crowd", "contributors", "11", "--json"],
     ] {
-        let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+        let policy = rtao_jsonrpc::policy::classify_rpc_error(&json!({
             "code":-32005,"message":"slow down",
             "data":{"policy":"rate","retry_after":"12"},
         }))
@@ -345,7 +345,7 @@ async fn missing_info_is_status_one_and_rpc_failure_is_never_reported_as_empty()
         let start = chain.requests().len();
         chain.queue_transport_error(
             "chain_getHeader",
-            rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::RpcError::Policy(Box::new(
+            rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::RpcError::Policy(Box::new(
                 policy,
             )))),
         );

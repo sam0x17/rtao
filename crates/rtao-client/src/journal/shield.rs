@@ -668,7 +668,13 @@ impl ShieldPreparation {
         inner: &UnsignedExtrinsic,
         carrier: &UnsignedExtrinsic,
         context: &QualifiedShieldRuntime,
-    ) -> Result<(rtao_rpc::AuthorOwnership, rtao_rpc::AuthorRetirement), JournalError> {
+    ) -> Result<
+        (
+            rtao_jsonrpc::AuthorOwnership,
+            rtao_jsonrpc::AuthorRetirement,
+        ),
+        JournalError,
+    > {
         // Recheck application semantics on the actual inner, never ciphertext.
         self.check_inner(client, inner, context).await?;
         context.check(&self.policy, carrier)?;
@@ -744,8 +750,8 @@ impl ShieldPreparation {
         })
         .await
         .map_err(|_| JournalError::Storage("shield authorization worker stopped".into()))??;
-        Ok(rtao_rpc::AuthorOwnership::new(
-            rtao_rpc::H256(hash.0),
+        Ok(rtao_jsonrpc::AuthorOwnership::new(
+            rtao_jsonrpc::H256(hash.0),
             self.claims,
         ))
     }

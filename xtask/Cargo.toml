@@ -38,7 +38,7 @@ rtao-intents = { workspace = true, features = ["weights", "serving", "transfer",
 rtao-signer.workspace = true
 rtao-tx.workspace = true
 rtao-metagraph.workspace = true
-rtao-rpc.workspace = true
+rtao-jsonrpc.workspace = true
 rtao-testkit = { workspace = true, features = ["docker"] }
 bytes.workspace = true
 serde.workspace = true

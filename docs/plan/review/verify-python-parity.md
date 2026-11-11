@@ -607,7 +607,7 @@ Verified:
 - `ensure_bridge` spawns `sys.executable -m bittensor.extension.daemon` (`session.py:121-140`). The token and pid files have
   environment overrides (`tokens.py:14`, `session.py:24`).
 - The bridge API is in `__all__` (`PY/__init__.py:198-206`).
-- Rule 2 (§2.3) forbids tokio-tungstenite outside rtao-rpc and rtao-testkit, and §6.5 never says what rtao spawns.
+- Rule 2 (§2.3) forbids tokio-tungstenite outside rtao-jsonrpc and rtao-testkit, and §6.5 never says what rtao spawns.
 
 The fix decides both. Also mirror the rule change in PLAN §4.2 rule 2 (line 199).
 
@@ -785,7 +785,7 @@ extracts `PY/result.py` in M2, so the tables do have a home and a milestone. Onl
 | `Subtensor`, `subtensor`, `SyncClient`, `set_weights`, `close_shared_clients` | `rtao::blocking` | M6 |
 | `Client`, `Snapshot` | `rtao_client` | M1 |
 | `Substrate` | `rtao_client::View` + `Client` over a custom `RpcClientT` | M1 |
-| `RpcSubstrate` | `rtao_rpc::Session` | M1 |
+| `RpcSubstrate` | `rtao_jsonrpc::Session` | M1 |
 | `BlockHeader` | `rtao_client::BlockHeader {number, parent_hash, raw}` | M1 |
 | `BlockInfo` | `rtao_client::BlockInfo` | M5 |
 | `EpochEvent` | `rtao_client::EpochEvent {netuid, block, previous}` | M2 |

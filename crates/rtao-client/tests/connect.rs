@@ -18,7 +18,7 @@ fn config(input: &str) -> ClientConfig {
 fn assert_closed<T>(result: Result<T, ClientError>) {
     assert!(matches!(
         result,
-        Err(ClientError::Rpc(rtao_rpc::RpcError::Closed))
+        Err(ClientError::Rpc(rtao_jsonrpc::RpcError::Closed))
     ));
 }
 

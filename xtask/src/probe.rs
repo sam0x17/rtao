@@ -21,12 +21,12 @@ use rtao_core::{
     ops::{metadata, runtime_api},
     value_ext::ValueExt,
 };
+use rtao_jsonrpc::{
+    EndpointPool, RateLimit, ReadMethod, RpcError, Session, SessionConfig, SessionEvent,
+};
 use rtao_metagraph::{DecodePath, DecodePreference, MetagraphOptions, SubnetsMetagraphExt};
 use rtao_primitives::{H256, NetUid};
 use rtao_reads::Namespaces;
-use rtao_rpc::{
-    EndpointPool, RateLimit, ReadMethod, RpcError, Session, SessionConfig, SessionEvent,
-};
 use rtao_runtime::RuntimeHandle;
 use rtao_testkit::rpc::RpcClient;
 use serde_json::{Value as Json, json};
@@ -344,7 +344,7 @@ async fn probe_network(root: &Path, label: &str) -> Result<Json> {
         "endpoint catalog exceeds bounded passive scope"
     );
     for (_, (role, url)) in endpoints {
-        let endpoint = rtao_rpc::policy::safe_endpoint(url.as_str());
+        let endpoint = rtao_jsonrpc::policy::safe_endpoint(url.as_str());
         let settings = passive_config(url);
         let observation = match tokio::time::timeout(
             Duration::from_secs(45),

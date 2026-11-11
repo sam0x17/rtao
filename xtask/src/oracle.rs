@@ -689,21 +689,21 @@ fn check_rpc_classification(document: &Value) -> Result<()> {
     );
     for row in rows {
         let payload = &row["payload"];
-        let native = rtao_rpc::classify_response(&json!({"error":payload}))
+        let native = rtao_jsonrpc::classify_response(&json!({"error":payload}))
             .err()
             .context("native RPC classifier accepted an error")?;
         let (kind, retry, policy, reason, block) = match &native {
-            rtao_rpc::RpcError::Policy(policy) => (
+            rtao_jsonrpc::RpcError::Policy(policy) => (
                 "RpcPolicyRejection",
                 policy.retry_after.clone(),
                 policy.policy.clone(),
                 policy.reason.clone(),
                 None,
             ),
-            rtao_rpc::RpcError::StateDiscarded { block } => {
+            rtao_jsonrpc::RpcError::StateDiscarded { block } => {
                 ("StateDiscardedError", None, None, None, Some(block.clone()))
             }
-            rtao_rpc::RpcError::JsonRpc { .. } => {
+            rtao_jsonrpc::RpcError::JsonRpc { .. } => {
                 ("SubstrateRequestException", None, None, None, None)
             }
             error => bail!("unexpected pure RPC classifier variant: {error:?}"),

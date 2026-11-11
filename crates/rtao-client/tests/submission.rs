@@ -695,7 +695,7 @@ async fn synchronous_signing_past_deadline_never_broadcasts() {
             .submit(call(&client, vec![]).await, &signer, &opts)
             .await,
         Err(SubmitFailure::Client(rtao_client::ClientError::Rpc(
-            rtao_rpc::RpcError::Timeout { .. }
+            rtao_jsonrpc::RpcError::Timeout { .. }
         )))
     ));
     assert!(fake.state().lock().unwrap().submissions.is_empty());
@@ -723,7 +723,7 @@ async fn standalone_preparation_honors_deadline_without_mutating_cached_nonce() 
             )
             .await,
         Err(rtao_client::ClientError::Rpc(
-            rtao_rpc::RpcError::Timeout { .. }
+            rtao_jsonrpc::RpcError::Timeout { .. }
         ))
     ));
     assert_eq!(
@@ -752,7 +752,7 @@ async fn admission_deadline_cancels_signing_and_invalidates_owned_or_supplied_le
         assert!(matches!(
             result,
             Err(SubmitFailure::Client(rtao_client::ClientError::Rpc(
-                rtao_rpc::RpcError::Timeout { .. }
+                rtao_jsonrpc::RpcError::Timeout { .. }
             )))
         ));
         assert_eq!(
@@ -789,7 +789,7 @@ async fn synchronous_signing_obeys_absolute_admission_budget_and_never_broadcast
     assert!(matches!(
         client.submit(call, &signer, &opts).await,
         Err(SubmitFailure::Client(rtao_client::ClientError::Rpc(
-            rtao_rpc::RpcError::Timeout { .. }
+            rtao_jsonrpc::RpcError::Timeout { .. }
         )))
     ));
     assert!(signer.entered.load(Ordering::SeqCst));
@@ -822,7 +822,7 @@ async fn admission_deadline_bounds_nonce_fetch_and_preparation_uses_the_shorter_
             )
             .await,
         Err(SubmitFailure::Client(rtao_client::ClientError::Rpc(
-            rtao_rpc::RpcError::Timeout { .. }
+            rtao_jsonrpc::RpcError::Timeout { .. }
         )))
     ));
     assert_eq!(
@@ -855,7 +855,7 @@ async fn admission_deadline_bounds_nonce_fetch_and_preparation_uses_the_shorter_
                 )
                 .await,
             Err(rtao_client::ClientError::Rpc(
-                rtao_rpc::RpcError::Timeout { .. }
+                rtao_jsonrpc::RpcError::Timeout { .. }
             ))
         ));
         assert_eq!(
@@ -1481,7 +1481,7 @@ async fn reconciliation_rpc_failure_or_deadline_retains_the_original_receipt_fai
                 assert!(matches!(
                     reconciliation.as_ref(),
                     SubmitFailure::Client(rtao_client::ClientError::Rpc(
-                        rtao_rpc::RpcError::Timeout { .. }
+                        rtao_jsonrpc::RpcError::Timeout { .. }
                     ))
                 ));
             } else {
@@ -1582,7 +1582,7 @@ async fn expired_full_budget_before_send_stays_hash_free_for_all_submit_entries(
         assert!(matches!(
             result,
             Err(SubmitFailure::Client(rtao_client::ClientError::Rpc(
-                rtao_rpc::RpcError::Timeout { .. }
+                rtao_jsonrpc::RpcError::Timeout { .. }
             )))
         ));
         assert!(fake.state().lock().unwrap().submissions.is_empty());
@@ -1619,7 +1619,7 @@ async fn closed_injected_client_refuses_both_pool_and_watch_broadcasts() {
         assert!(matches!(
             client.submit(call, &signer, &opts).await,
             Err(SubmitFailure::Client(rtao_client::ClientError::Rpc(
-                rtao_rpc::RpcError::Closed
+                rtao_jsonrpc::RpcError::Closed
             )))
         ));
         assert!(
@@ -1682,7 +1682,7 @@ async fn close_during_signing_cancels_the_operation_and_clears_the_lease() {
     assert!(matches!(
         task.await.unwrap(),
         Err(SubmitFailure::Client(rtao_client::ClientError::Rpc(
-            rtao_rpc::RpcError::Closed
+            rtao_jsonrpc::RpcError::Closed
         )))
     ));
     assert_eq!(client.nonces().cached(&account.to_string()).await, None);
@@ -1872,7 +1872,7 @@ impl subxt_rpcs::RpcClientT for LostAck {
                     serde_json::from_str(params.as_ref().unwrap().get()).unwrap();
                 let bytes =
                     hex::decode(params[0].as_str().unwrap().strip_prefix("0x").unwrap()).unwrap();
-                Some(rtao_rpc::H256(Blake2b::<U32>::digest(bytes).into()))
+                Some(rtao_jsonrpc::H256(Blake2b::<U32>::digest(bytes).into()))
             } else {
                 None
             };
@@ -1882,7 +1882,7 @@ impl subxt_rpcs::RpcClientT for LostAck {
             {
                 drop(reply);
                 return Err(subxt_rpcs::Error::Client(Box::new(
-                    rtao_rpc::SubmitError::FateUnknown { hash },
+                    rtao_jsonrpc::SubmitError::FateUnknown { hash },
                 )));
             }
             Ok(reply)
@@ -1916,7 +1916,7 @@ impl subxt_rpcs::RpcClientT for WatchTimeout {
                 // reports a transport timeout before its finalization item.
                 reply.stream = futures::stream::once(async {
                     Err(subxt_rpcs::Error::Client(Box::new(
-                        rtao_rpc::RpcError::Timeout {
+                        rtao_jsonrpc::RpcError::Timeout {
                             detail: "transaction watch transport timed out".into(),
                         },
                     )))

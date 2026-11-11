@@ -359,7 +359,7 @@ pub enum SubmitFailure {
     /// Ordinary metadata, encoding, signer or client failure.
     Client(ClientError),
     /// Typed submission transport failure, including unknown fate.
-    Submit(rtao_rpc::SubmitError),
+    Submit(rtao_jsonrpc::SubmitError),
     /// Pool or terminal watch rejection.
     Pool(PoolRejection),
     /// A transmitted transaction remains unresolved after a client failure.
@@ -483,7 +483,7 @@ impl SubmitFailure {
         match self {
             Self::Unresolved { hash, .. } | Self::Retracted { hash } => Some(*hash),
             Self::PendingShield { carrier_hash, .. } => Some(*carrier_hash),
-            Self::Submit(rtao_rpc::SubmitError::FateUnknown { hash }) => Some(H256(hash.0)),
+            Self::Submit(rtao_jsonrpc::SubmitError::FateUnknown { hash }) => Some(H256(hash.0)),
             _ => None,
         }
     }
@@ -787,7 +787,7 @@ impl Client {
         opts: &SubmitOptions,
         limit: OperationLimit,
         attempted_hash: &SubmissionAttempt,
-        ownership: Option<rtao_rpc::AuthorOwnership>,
+        ownership: Option<rtao_jsonrpc::AuthorOwnership>,
     ) -> Result<ExtrinsicReport, SubmitFailure> {
         limit.check(self)?;
         let wait = opts.wait;
@@ -867,14 +867,14 @@ impl Client {
         let mut retracted = false;
         loop {
             let item = tokio::select! {
-                ()=self.closed()=>return Err(ClientError::from(rtao_rpc::RpcError::Closed).into()),
+                ()=self.closed()=>return Err(ClientError::from(rtao_jsonrpc::RpcError::Closed).into()),
                 item=subscription.stream.next()=>item,
             };
             let Some(item) = item else {
                 if retracted {
                     return Err(SubmitFailure::Retracted { hash });
                 }
-                return Err(ClientError::from(rtao_rpc::RpcError::SubscriptionLost).into());
+                return Err(ClientError::from(rtao_jsonrpc::RpcError::SubscriptionLost).into());
             };
             let raw = match item {
                 Ok(raw) => raw,
@@ -1102,10 +1102,10 @@ impl Client {
                 if watch.borrow_and_update().number > previous {
                     return Ok(());
                 }
-                tokio::select! {()=self.closed()=>return Err(rtao_rpc::RpcError::Closed.into()),changed=watch.changed()=>changed.map_err(|_|ClientError::from(rtao_rpc::RpcError::Closed))?}
+                tokio::select! {()=self.closed()=>return Err(rtao_jsonrpc::RpcError::Closed.into()),changed=watch.changed()=>changed.map_err(|_|ClientError::from(rtao_jsonrpc::RpcError::Closed))?}
             }
         }
-        tokio::select! {()=self.closed()=>Err(rtao_rpc::RpcError::Closed.into()),()=tokio::time::sleep(Duration::from_secs(12))=>Ok(())}
+        tokio::select! {()=self.closed()=>Err(rtao_jsonrpc::RpcError::Closed.into()),()=tokio::time::sleep(Duration::from_secs(12))=>Ok(())}
     }
 
     /// Reconciliation scans the submission endpoint's finalized history: it
@@ -1615,7 +1615,7 @@ impl OperationLimit {
         Ok(Self { expires })
     }
     fn timeout() -> ClientError {
-        rtao_rpc::RpcError::Timeout {
+        rtao_jsonrpc::RpcError::Timeout {
             detail: "submission timed out without reaching the requested state".into(),
         }
         .into()
@@ -1642,7 +1642,7 @@ impl OperationLimit {
         let operation = async {
             tokio::select! {
                 biased;
-                () = client.closed() => Err(E::from(rtao_rpc::RpcError::Closed.into())),
+                () = client.closed() => Err(E::from(rtao_jsonrpc::RpcError::Closed.into())),
                 result = future => result,
             }
         };
@@ -1733,7 +1733,7 @@ fn author_ack_error(
     // A receipt RPC error is never a pool rejection. Only the author method's
     // explicit refusal may be classified this way.
     if attempted {
-        if let ClientError::Rpc(rtao_rpc::RpcError::JsonRpc {
+        if let ClientError::Rpc(rtao_jsonrpc::RpcError::JsonRpc {
             code,
             message,
             data,
@@ -1754,7 +1754,7 @@ fn author_ack_error(
                 return SubmitFailure::Pool(refusal);
             }
         }
-        if matches!(&error, ClientError::Rpc(rtao_rpc::RpcError::Policy(_))) {
+        if matches!(&error, ClientError::Rpc(rtao_jsonrpc::RpcError::Policy(_))) {
             attempt.refused.store(true, Ordering::Release);
         }
     }
@@ -1944,7 +1944,7 @@ async fn journal_author_ownership(
     client: &Client,
     opts: &SubmitOptions,
     hash: H256,
-) -> Result<Option<rtao_rpc::AuthorOwnership>, ClientError> {
+) -> Result<Option<rtao_jsonrpc::AuthorOwnership>, ClientError> {
     let Some(binding) = &opts.journal else {
         return Ok(None);
     };

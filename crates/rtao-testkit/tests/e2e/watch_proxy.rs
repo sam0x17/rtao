@@ -146,7 +146,8 @@ async fn accepted_watch_is_lost_once_and_the_production_session_recovers() -> su
     });
     let mut proxy = WatchProxy::start(node.url()).await?;
     let session =
-        rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(proxy.endpoint().parse()?)).await?;
+        rtao_jsonrpc::Session::connect(rtao_jsonrpc::SessionConfig::new(proxy.endpoint().parse()?))
+            .await?;
     let result = async {
         proxy.arm();
         let lost = tokio::time::timeout(
@@ -155,7 +156,7 @@ async fn accepted_watch_is_lost_once_and_the_production_session_recovers() -> su
         )
         .await?;
         assert!(
-            matches!(&lost, Err(rtao_rpc::SubmitError::FateUnknown { .. })),
+            matches!(&lost, Err(rtao_jsonrpc::SubmitError::FateUnknown { .. })),
             "accepted watch did not report unknown fate: {:?}",
             lost.err()
         );
@@ -163,7 +164,10 @@ async fn accepted_watch_is_lost_once_and_the_production_session_recovers() -> su
         assert_eq!(proxy.watches(), vec![vec![1, 2]]);
         let _: serde_json::Value = tokio::time::timeout(
             std::time::Duration::from_secs(10),
-            session.request(rtao_rpc::ReadMethod::SystemHealth, serde_json::json!([])),
+            session.request(
+                rtao_jsonrpc::ReadMethod::SystemHealth,
+                serde_json::json!([]),
+            ),
         )
         .await??;
         assert_eq!(

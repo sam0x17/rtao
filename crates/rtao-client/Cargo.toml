@@ -23,11 +23,11 @@ workspace = true
 [features]
 blocking = []
 subxt = ["dep:subxt"]
-metrics = ["rtao-rpc/metrics","dep:metrics"]
+metrics = ["rtao-jsonrpc/metrics","dep:metrics"]
 test-util = []
 
 [dependencies]
-rtao-rpc = { workspace = true, features = ["rate-limit"] }
+rtao-jsonrpc = { workspace = true, features = ["rate-limit"] }
 rtao-runtime = { workspace = true }
 rtao-catalog = { workspace = true }
 rtao-signer = { workspace = true }

@@ -789,7 +789,7 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/python/bittensor/_substrate.py"
-rs = ["crates/rtao-client/src/client.rs", "crates/rtao-client/src/error.rs", "crates/rtao-client/src/view.rs", "crates/rtao-client/src/submit.rs", "crates/rtao-client/src/block_info.rs", "crates/rtao-tx/src/output.rs", "crates/rtao-tx/src/executor.rs", "crates/rtao-rpc/src/session.rs"]
+rs = ["crates/rtao-client/src/client.rs", "crates/rtao-client/src/error.rs", "crates/rtao-client/src/view.rs", "crates/rtao-client/src/submit.rs", "crates/rtao-client/src/block_info.rs", "crates/rtao-tx/src/output.rs", "crates/rtao-tx/src/executor.rs", "crates/rtao-jsonrpc/src/session.rs"]
 kind = "ported"
 synced_blob = "8e173e1362a6328370784326f00aa0f5b0ee42c7"
 synced_tag = "v490"
@@ -843,7 +843,7 @@ notes = "Source reconciliation 2026-10-15: complete authenticated 245-line modul
 
 [[file]]
 py = "sdk/python/bittensor/_transport/errors.py"
-rs = ["rtao_rpc::{RpcError,PolicyRefusal,policy::format_rpc_error}","rtao_client::ClientError"]
+rs = ["rtao_jsonrpc::{RpcError,PolicyRefusal,policy::format_rpc_error}","rtao_client::ClientError"]
 kind = "ported"
 synced_blob = "866578aface30a9e425c4084fcdc7426e65d1ba0"
 synced_tag = "v490"
@@ -888,7 +888,7 @@ notes = "Source reconciliation 2026-10-15: complete authenticated four-protocol 
 
 [[file]]
 py = "sdk/python/bittensor/_transport/rpc.py"
-rs = ["crates/rtao-rpc/src/session.rs","crates/rtao-rpc/src/session/handshake.rs","crates/rtao-rpc/src/types.rs","crates/rtao-rpc/src/policy.rs","crates/rtao-rpc/src/subscription.rs","crates/rtao-rpc/src/generated/py_rpc.rs"]
+rs = ["crates/rtao-jsonrpc/src/session.rs","crates/rtao-jsonrpc/src/session/handshake.rs","crates/rtao-jsonrpc/src/types.rs","crates/rtao-jsonrpc/src/policy.rs","crates/rtao-jsonrpc/src/subscription.rs","crates/rtao-jsonrpc/src/generated/py_rpc.rs"]
 kind = "ported"
 synced_blob = "132871ca8047858efc2d6c0991dcf818312b5303"
 synced_tag = "v490"
@@ -2602,7 +2602,7 @@ kind = "extracted"
 synced_blob = "06abeb57ac889d85eeaf6456f97a48463726e4d7"
 synced_tag = "v490"
 milestone = "M1"
-notes = "Source reconciliation 2026-10-15: xtask extract authenticates resolved network/environment/default constants into py.rs and block-time inputs into hyperparams::TABLE with exact source provenance. Corrected stale home: rtao-rpc/src/generated/py_rpc.rs comes from _transport/rpc.py, not settings.py. Shared declaration round-trip fixtures preserve values and spans. Hosted source/test acceptance remains pending. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 1 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: xtask extract authenticates resolved network/environment/default constants into py.rs and block-time inputs into hyperparams::TABLE with exact source provenance. Corrected stale home: rtao-jsonrpc/src/generated/py_rpc.rs comes from _transport/rpc.py, not settings.py. Shared declaration round-trip fixtures preserve values and spans. Hosted source/test acceptance remains pending. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. All 1 recorded provenance-associated extraction fragments compare exactly after removing provenance objects. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
 
 [[file]]
 py = "sdk/python/bittensor/signing.py"
@@ -3226,7 +3226,7 @@ notes = "v484 source reconciliation: Review all fixture changes: renamed release
 
 [[file]]
 py = "sdk/python/tests/unit/test_rpc.py"
-rs = ["crates/rtao-testkit/tests/rpc.rs","crates/rtao-rpc/src/policy.rs","crates/rtao-client/tests/public_rpc.rs","xtask/src/extract_rpc_test_fixtures.rs","crates/rtao-catalog/src/py.rs"]
+rs = ["crates/rtao-testkit/tests/rpc.rs","crates/rtao-jsonrpc/src/policy.rs","crates/rtao-client/tests/public_rpc.rs","xtask/src/extract_rpc_test_fixtures.rs","crates/rtao-catalog/src/py.rs"]
 kind = "ported"
 synced_blob = "47ecc619720512a599ed8107f947f2dbee7d71f8"
 synced_tag = "v490"

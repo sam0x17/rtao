@@ -47,7 +47,7 @@ following client tests:
 - `rtao-metagraph/tests/decode.rs` compares all three decoders, checks truncated
   and trailing input, rejects native balance overflow and exercises arbitrary
   malformed bytes through a bounded property test.
-- `rtao-rpc/src/session/frame_fuzz.rs` contains ordinary tests for the production
+- `rtao-jsonrpc/src/session/frame_fuzz.rs` contains ordinary tests for the production
   dispatcher and its seeded state. The extra binary/text probe test is enabled
   by the workspace all-features selection.
 - `rtao-btauth/tests/conformance.rs` and `tests/server.rs` cover real signatures,

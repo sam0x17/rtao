@@ -222,7 +222,7 @@ async fn admission_budget_includes_private_key_resolution() {
                 }
             )
             .await,
-        Err(TxError::Rpc(rtao_rpc::RpcError::Timeout { .. }))
+        Err(TxError::Rpc(rtao_jsonrpc::RpcError::Timeout { .. }))
     ));
     assert!(fake.state().lock().unwrap().submissions.is_empty());
 }
@@ -516,7 +516,7 @@ async fn synchronous_plan_and_unlock_overruns_never_broadcast() {
                 }
             )
             .await,
-        Err(TxError::Rpc(rtao_rpc::RpcError::Timeout { .. }))
+        Err(TxError::Rpc(rtao_jsonrpc::RpcError::Timeout { .. }))
     ));
     assert!(matches!(
         executor
@@ -529,7 +529,7 @@ async fn synchronous_plan_and_unlock_overruns_never_broadcast() {
                 }
             )
             .await,
-        Err(TxError::Rpc(rtao_rpc::RpcError::Timeout { .. }))
+        Err(TxError::Rpc(rtao_jsonrpc::RpcError::Timeout { .. }))
     ));
     assert!(matches!(
         executor
@@ -542,7 +542,7 @@ async fn synchronous_plan_and_unlock_overruns_never_broadcast() {
                 }
             )
             .await,
-        Err(TxError::Rpc(rtao_rpc::RpcError::Timeout { .. }))
+        Err(TxError::Rpc(rtao_jsonrpc::RpcError::Timeout { .. }))
     ));
     assert_eq!(keys.unlocks.load(Ordering::SeqCst), 0);
     keys.unlock_delay = Duration::from_millis(25);
@@ -557,7 +557,7 @@ async fn synchronous_plan_and_unlock_overruns_never_broadcast() {
                 }
             )
             .await,
-        Err(TxError::Rpc(rtao_rpc::RpcError::Timeout { .. }))
+        Err(TxError::Rpc(rtao_jsonrpc::RpcError::Timeout { .. }))
     ));
     assert!(fake.state().lock().unwrap().submissions.is_empty());
 }
@@ -567,8 +567,8 @@ async fn unknown_transmitted_fate_is_retained_as_a_typed_result() {
     let (executor, fake, keys) = fixture().await;
     fake.queue_transport_error(
         "author_submitAndWatchExtrinsic",
-        rtao_testkit::rpc::Error::Client(Box::new(rtao_rpc::SubmitError::FateUnknown {
-            hash: rtao_rpc::H256([0; 32]),
+        rtao_testkit::rpc::Error::Client(Box::new(rtao_jsonrpc::SubmitError::FateUnknown {
+            hash: rtao_jsonrpc::H256([0; 32]),
         })),
     );
     let result = executor

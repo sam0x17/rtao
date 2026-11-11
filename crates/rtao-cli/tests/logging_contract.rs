@@ -98,7 +98,7 @@ fn reconfiguration_replaces_policy_without_duplicate_handlers() -> TestResult {
 fn raw_frame_debug_is_independently_masked_at_debug_level() {
     let debug = LogPolicy::resolve(2, false, None);
     let trace = LogPolicy::resolve(3, false, None);
-    assert!(debug.enabled("rtao_rpc::client", &Level::DEBUG));
+    assert!(debug.enabled("rtao_jsonrpc::client", &Level::DEBUG));
     assert!(!debug.enabled("rtao::rpc::raw", &Level::DEBUG));
     assert!(!debug.enabled("bittensor.transport.raw_websocket", &Level::DEBUG));
     assert!(trace.enabled("rtao::rpc::raw", &Level::DEBUG));

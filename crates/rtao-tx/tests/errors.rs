@@ -4,8 +4,8 @@ use std::{collections::BTreeMap, error::Error};
 
 use rtao_catalog::ErrorCode;
 use rtao_client::{ClientError, PoolRejection};
+use rtao_jsonrpc::RpcError;
 use rtao_primitives::UnitError;
-use rtao_rpc::RpcError;
 use rtao_tx::{ChainError, IntentError, PolicyError, TxError, classify};
 use serde_json::{Value, json};
 
@@ -362,7 +362,7 @@ fn gateway_policy_conversion_retains_retry_and_provider_metadata() -> TestResult
         "code": -32004, "message": "Too many requests",
         "data": {"retry_after": "17", "policy": "quota", "reason": "minute limit"},
     });
-    let refusal = rtao_rpc::policy::classify_rpc_error(&payload)
+    let refusal = rtao_jsonrpc::policy::classify_rpc_error(&payload)
         .ok_or("policy refusal was not recognized")?;
     let converted = TxError::from(IntentError::Client(ClientError::Rpc(RpcError::Policy(
         Box::new(refusal.clone()),

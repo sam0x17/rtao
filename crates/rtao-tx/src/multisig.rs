@@ -444,7 +444,7 @@ impl Multisig {
 }
 
 fn approval_timeout() -> TxError {
-    TxError::Rpc(rtao_rpc::RpcError::Timeout {
+    TxError::Rpc(rtao_jsonrpc::RpcError::Timeout {
         detail: "multisig approval timed out without reaching the requested state".into(),
     })
 }

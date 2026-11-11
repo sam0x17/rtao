@@ -33,7 +33,7 @@ async fn connect(endpoint: &str) -> LabResult<Client> {
     if url.scheme() != "ws" || !matches!(url.host_str(), Some("127.0.0.1" | "[::1]" | "::1")) {
         return Err("example accepts only its owned loopback peer".into());
     }
-    let session = rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(url)).await?;
+    let session = rtao_jsonrpc::Session::connect(rtao_jsonrpc::SessionConfig::new(url)).await?;
     let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
     config.track_heads = false;
     config.runtime_cache_dir = None;

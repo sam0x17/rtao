@@ -5,8 +5,8 @@
 use std::{borrow::Cow, fmt};
 
 use rtao_core::CoreError;
+use rtao_jsonrpc::{PolicyRefusal, RpcError, SubmitError};
 use rtao_primitives::H256;
-use rtao_rpc::{PolicyRefusal, RpcError, SubmitError};
 
 /// Failure of a client read, connection, or transaction helper.
 #[derive(Clone, Debug)]
@@ -214,7 +214,7 @@ impl From<subxt_rpcs::Error> for ClientError {
                 .and_then(|raw| serde_json::from_str(raw.get()).ok());
             let payload =
                 serde_json::json!({"code": error.code,"message":error.message,"data":data});
-            if let Some(policy) = rtao_rpc::policy::classify_rpc_error(&payload) {
+            if let Some(policy) = rtao_jsonrpc::policy::classify_rpc_error(&payload) {
                 return Self::Rpc(RpcError::Policy(Box::new(policy)));
             }
             return Self::Rpc(RpcError::JsonRpc {

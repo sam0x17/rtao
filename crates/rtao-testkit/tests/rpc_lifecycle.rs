@@ -1,6 +1,6 @@
 //! Socket regressions for transport lifecycle and connection-scoped identities.
 use futures::{SinkExt, StreamExt};
-use rtao_rpc::{ReadMethod, RpcError, Session, SessionConfig, SessionState, SubscriptionKind};
+use rtao_jsonrpc::{ReadMethod, RpcError, Session, SessionConfig, SessionState, SubscriptionKind};
 use rtao_testkit::{FakeNode, FakeState, Fault, FaultPlan, Reply};
 use serde_json::{Value, json};
 use std::{
@@ -352,7 +352,7 @@ async fn reconnect_retransmissions_consume_tokens_before_connected_gate_opens() 
     });
     let mut cfg = config(&node)?;
     cfg.silence_timeout = Duration::from_secs(3);
-    cfg.rate_limit = Some(rtao_rpc::RateLimit {
+    cfg.rate_limit = Some(rtao_jsonrpc::RateLimit {
         per_second: 4.0,
         burst: 3,
     });

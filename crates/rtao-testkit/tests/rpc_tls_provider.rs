@@ -7,7 +7,7 @@
 
 use std::{error::Error, sync::Arc, time::Duration};
 
-use rtao_rpc::{ReadMethod, Session, SessionConfig};
+use rtao_jsonrpc::{ReadMethod, Session, SessionConfig};
 use rtao_testkit::FakeNode;
 use serde_json::json;
 use url::Url;

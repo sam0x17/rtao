@@ -4,8 +4,8 @@
 use rtao_catalog::ErrorCode;
 use rtao_client::{ClientError, PoolRejection};
 use rtao_core::CoreError;
+use rtao_jsonrpc::{PolicyRefusal, RpcError};
 use rtao_primitives::UnitError;
-use rtao_rpc::{PolicyRefusal, RpcError};
 use rtao_signer::SignerError;
 use serde_json::{Value, json};
 use std::fmt;

@@ -312,7 +312,7 @@ pub enum ConfigError {
 
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use rtao_rpc::policy::python_string_repr as repr;
+        use rtao_jsonrpc::policy::python_string_repr as repr;
         match self {
             Self::MissingHome => f.write_str("a home directory is not available for btcli paths"),
             Self::UnknownKey { key } => {
@@ -819,7 +819,7 @@ pub(crate) fn python_repr(value: &Value) -> String {
         Value::Null => "None".to_owned(),
         Value::Bool(true) => "True".to_owned(),
         Value::Bool(false) => "False".to_owned(),
-        Value::String(value) => rtao_rpc::policy::python_string_repr(value),
+        Value::String(value) => rtao_jsonrpc::policy::python_string_repr(value),
         Value::Number(value) => {
             let spelling = value.as_str();
             if spelling.contains(['.', 'e', 'E']) {
@@ -848,7 +848,7 @@ pub(crate) fn python_repr(value: &Value) -> String {
                 .iter()
                 .map(|(key, value)| format!(
                     "{}: {}",
-                    rtao_rpc::policy::python_string_repr(key),
+                    rtao_jsonrpc::policy::python_string_repr(key),
                     python_repr(value)
                 ))
                 .collect::<Vec<_>>()

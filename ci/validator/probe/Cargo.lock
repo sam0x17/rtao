@@ -3099,8 +3099,8 @@ dependencies = [
  "regex",
  "rtao-catalog",
  "rtao-core",
+ "rtao-jsonrpc",
  "rtao-primitives",
- "rtao-rpc",
  "rtao-runtime",
  "rtao-signer",
  "scale-decode",
@@ -3141,26 +3141,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rtao-primitives"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "num-bigint",
- "num-traits",
- "parity-scale-codec",
- "rtao-core",
- "ryu",
- "scale-decode",
- "scale-info",
- "scale-type-resolver",
- "serde",
- "serde_json",
- "unicode-general-category",
- "url",
-]
-
-[[package]]
-name = "rtao-rpc"
+name = "rtao-jsonrpc"
 version = "0.1.0"
 dependencies = [
  "blake2",
@@ -3179,6 +3160,25 @@ dependencies = [
  "tokio-rustls",
  "tokio-tungstenite",
  "tracing",
+ "unicode-general-category",
+ "url",
+]
+
+[[package]]
+name = "rtao-primitives"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "num-bigint",
+ "num-traits",
+ "parity-scale-codec",
+ "rtao-core",
+ "ryu",
+ "scale-decode",
+ "scale-info",
+ "scale-type-resolver",
+ "serde",
+ "serde_json",
  "unicode-general-category",
  "url",
 ]
@@ -3225,8 +3225,8 @@ dependencies = [
  "rcgen",
  "rtao-client",
  "rtao-core",
+ "rtao-jsonrpc",
  "rtao-primitives",
- "rtao-rpc",
  "rtao-runtime",
  "rustls",
  "scale-info",

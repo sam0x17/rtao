@@ -5,8 +5,8 @@
 
 use futures::StreamExt;
 use rtao_client::{Client, ClientConfig, Finality, Network};
+use rtao_jsonrpc::{RpcError, policy::classify_rpc_error};
 use rtao_primitives::H256;
-use rtao_rpc::{RpcError, policy::classify_rpc_error};
 use rtao_testkit::{
     Reply,
     fakes::{FakeChain, FakeState},
@@ -326,7 +326,7 @@ async fn public_connection_error_text_uses_python_strip_without_rewriting_typed_
         ),
         (
             RpcError::FateUnknown {
-                hash: rtao_rpc::H256([7; 32]),
+                hash: rtao_jsonrpc::H256([7; 32]),
             },
             "Connection dropped while an extrinsic submission was in flight; the transaction may already be in the pool or on chain. Verify chain state before retrying.",
         ),

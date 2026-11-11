@@ -308,7 +308,7 @@ fn layer(name: &str) -> Option<u8> {
         "rtao-core-ext" => 1,
         "rtao-core" => 2,
         "rtao-primitives" => 3,
-        "rtao-catalog" | "rtao-runtime" | "rtao-rpc" | "rtao-signer" => 4,
+        "rtao-catalog" | "rtao-runtime" | "rtao-jsonrpc" | "rtao-signer" => 4,
         "rtao-wallet" | "rtao-client" => 5,
         "rtao-tx" | "rtao-reads" | "rtao-evm" => 6,
         "rtao-intents" | "rtao-metagraph" | "rtao-btauth" => 7,
@@ -352,8 +352,8 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
                         "layer violation: {owner} -> {name}"
                     );
                     ensure!(
-                        owner != "rtao-rpc",
-                        "rtao-rpc may depend only on third-party crates"
+                        owner != "rtao-jsonrpc",
+                        "rtao-jsonrpc may depend only on third-party crates"
                     );
                 }
             }
@@ -368,7 +368,7 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
             }
             if name == "tokio-tungstenite" {
                 ensure!(
-                    matches!(owner, "rtao-rpc" | "rtao-testkit" | "rtao-signer"),
+                    matches!(owner, "rtao-jsonrpc" | "rtao-testkit" | "rtao-signer"),
                     "{owner} directly depends on tokio-tungstenite"
                 );
                 let expected = workspace["workspace"]["dependencies"][name]
@@ -391,7 +391,7 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
             }
             if name == "subxt-rpcs" {
                 ensure!(
-                    matches!(owner, "rtao-rpc" | "rtao-client" | "rtao-testkit"),
+                    matches!(owner, "rtao-jsonrpc" | "rtao-client" | "rtao-testkit"),
                     "{owner} directly depends on subxt-rpcs"
                 );
                 ensure!(

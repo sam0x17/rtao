@@ -1,8 +1,8 @@
-# rtao-rpc
+# rtao-jsonrpc
 
-[![crates.io](https://img.shields.io/crates/v/rtao-rpc.svg)](https://crates.io/crates/rtao-rpc)
-[![docs.rs](https://img.shields.io/docsrs/rtao-rpc)](https://docs.rs/rtao-rpc)
-[![license](https://img.shields.io/crates/l/rtao-rpc.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+[![crates.io](https://img.shields.io/crates/v/rtao-jsonrpc.svg)](https://crates.io/crates/rtao-jsonrpc)
+[![docs.rs](https://img.shields.io/docsrs/rtao-jsonrpc)](https://docs.rs/rtao-jsonrpc)
+[![license](https://img.shields.io/crates/l/rtao-jsonrpc.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
 
 Asynchronous JSON-RPC over WebSocket for Bittensor clients.
 

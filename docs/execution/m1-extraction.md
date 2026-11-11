@@ -6,7 +6,7 @@ No Python interpreter runs. The parser is the existing RustPython 0.4.0 fallback
 
 The generated outputs include `settings.json`, `rpc.json`, and `named_tables.json`
 under `vendor/upstream/extracted/`, `rtao-catalog/src/py.rs`, and
-`rtao-rpc/src/generated/py_rpc.rs`. The corpus contains 623 values from 35 source
+`rtao-jsonrpc/src/generated/py_rpc.rs`. The corpus contains 623 values from 35 source
 modules, plus 20 settings, 17 RPC values, and the six btauth values. It includes
 all 83 catalog intent classes, their defaults and class variables, and the two
 multisig adapters. Every table carries a path, blob, tag, commit, and source span.
@@ -78,7 +78,7 @@ Q30; the commands below do not require a local rerun:
 - `cargo test --locked -p xtask extract`
 - `cargo test --locked -p rtao-catalog`
 - `cargo clippy --locked -p xtask -p rtao-catalog --all-targets -- -D warnings`
-- `cargo check --locked -p rtao-catalog -p rtao-rpc`
+- `cargo check --locked -p rtao-catalog -p rtao-jsonrpc`
 - `cargo +1.89.0 check --locked -p xtask -p rtao-catalog`
 
 The final extraction run passed all 22 selected generator tests and all four

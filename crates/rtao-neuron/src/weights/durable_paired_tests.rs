@@ -71,7 +71,7 @@ async fn native_paired_weight_lost_handoff_reopens_and_restores_one_reveal_while
     config.runtime_cache_dir = None;
     config.config_store = None;
     let connect = || {
-        rtao_rpc::Session::connect(rtao_rpc::SessionConfig::new(
+        rtao_jsonrpc::Session::connect(rtao_jsonrpc::SessionConfig::new(
             url::Url::parse(node.url()).expect("local fixture URL"),
         ))
     };
@@ -211,7 +211,8 @@ async fn native_paired_weight_lost_handoff_reopens_and_restores_one_reveal_while
             reply
         });
     });
-    let (custody, _) = rtao_rpc::AuthorOwnership::new(rtao_rpc::H256(carrier.hash.0), owner);
+    let (custody, _) =
+        rtao_jsonrpc::AuthorOwnership::new(rtao_jsonrpc::H256(carrier.hash.0), owner);
     let watch = session
         .submit_and_watch_owned(&carrier.bytes, custody)
         .await?;

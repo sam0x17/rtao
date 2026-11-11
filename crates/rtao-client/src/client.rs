@@ -15,8 +15,8 @@ use tokio_util::sync::{CancellationToken, DropGuard};
 
 use crate::{ClientError, Network, NonceManager, RuntimeCache, RuntimeHandle};
 use crate::{hash_hex, parse_hash, rpc_request};
+use rtao_jsonrpc::{Session, SessionConfig};
 use rtao_primitives::H256;
-use rtao_rpc::{Session, SessionConfig};
 
 /// Network, transport, and local-cache options for a connection.
 #[derive(Clone, Debug)]
@@ -175,11 +175,11 @@ impl SubmitRoute {
     /// The connected submission client, opening it on first use.
     pub(crate) async fn client(&self) -> Result<Client, ClientError> {
         if self.cancelled.is_cancelled() {
-            return Err(rtao_rpc::RpcError::Closed.into());
+            return Err(rtao_jsonrpc::RpcError::Closed.into());
         }
         let client = tokio::select! {
             biased;
-            () = self.cancelled.cancelled() => return Err(rtao_rpc::RpcError::Closed.into()),
+            () = self.cancelled.cancelled() => return Err(rtao_jsonrpc::RpcError::Closed.into()),
             // Boxed: the connection future is large and would otherwise be
             // inlined into every submission future that may open it.
             client = self.client.get_or_try_init(|| Box::pin(self.connect())) => client?,
@@ -204,7 +204,7 @@ impl SubmitRoute {
         }
         if self.cancelled.is_cancelled() {
             client.close_transport().await;
-            return Err(rtao_rpc::RpcError::Closed.into());
+            return Err(rtao_jsonrpc::RpcError::Closed.into());
         }
         Ok(client)
     }
@@ -221,7 +221,7 @@ impl SubmitRoute {
 /// The error keeps its variant, so retry and fate classification are
 /// unchanged; only a diagnostic gains the endpoint's role.
 fn submit_endpoint_context(error: ClientError) -> ClientError {
-    use rtao_rpc::RpcError;
+    use rtao_jsonrpc::RpcError;
     const ROLE: &str = "submit endpoint";
     let named = |detail: String| {
         if detail.is_empty() {
@@ -793,7 +793,7 @@ impl Client {
         self.ensure_open()?;
         let stream = tokio::select! {
             biased;
-            () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+            () = self.closed() => return Err(rtao_jsonrpc::RpcError::Closed.into()),
             stream = crate::head::HeadProvider::subscribe(&self.inner.rpc, finality) => {
                 stream.map_err(head_error)?
             }
@@ -1002,7 +1002,7 @@ impl Client {
 
     pub(crate) fn ensure_open(&self) -> Result<(), ClientError> {
         if self.inner.cancelled.is_cancelled() {
-            Err(rtao_rpc::RpcError::Closed.into())
+            Err(rtao_jsonrpc::RpcError::Closed.into())
         } else {
             Ok(())
         }
@@ -1017,7 +1017,7 @@ impl Client {
         self.ensure_open()?;
         let response = tokio::select! {
             biased;
-            () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+            () = self.closed() => return Err(rtao_jsonrpc::RpcError::Closed.into()),
             response = rpc_request(&self.inner.rpc, method, params) => response?,
         };
         serde_json::from_value(response).map_err(|error| ClientError::Protocol(error.to_string()))
@@ -1025,7 +1025,7 @@ impl Client {
 
     pub(crate) async fn read_request(
         &self,
-        method: rtao_rpc::ReadMethod,
+        method: rtao_jsonrpc::ReadMethod,
         params: Value,
     ) -> Result<Value, ClientError> {
         self.request(method.as_str(), params).await
@@ -1035,7 +1035,7 @@ impl Client {
         self.ensure_open()?;
         tokio::select! {
             biased;
-            () = self.closed() => Err(rtao_rpc::RpcError::Closed.into()),
+            () = self.closed() => Err(rtao_jsonrpc::RpcError::Closed.into()),
             runtime = self.inner.cache.runtime_at(at) => runtime,
         }
     }
@@ -1055,7 +1055,7 @@ impl Client {
         self.inner.cache.invalidate_head().await;
         tokio::select! {
             biased;
-            () = self.closed() => Err(rtao_rpc::RpcError::Closed.into()),
+            () = self.closed() => Err(rtao_jsonrpc::RpcError::Closed.into()),
             refreshed = self.inner.cache.refresh_head_version() => refreshed,
         }
     }
@@ -1071,7 +1071,7 @@ impl Client {
         let header = self.header_by_hash(hash).await?;
         let mut cache = tokio::select! {
             biased;
-            () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+            () = self.closed() => return Err(rtao_jsonrpc::RpcError::Closed.into()),
             cache = self.inner.hash_cache.lock() => cache,
         };
         let horizon = cache
@@ -1150,7 +1150,7 @@ impl Client {
                 self.ensure_open()?;
                 tokio::select! {
                     biased;
-                    () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+                    () = self.closed() => return Err(rtao_jsonrpc::RpcError::Closed.into()),
                     runtime = self.inner.cache.runtime_at_parent(hash, parent) => runtime?,
                 }
             }
@@ -1180,7 +1180,7 @@ impl Client {
         self.ensure_open()?;
         let mut cache = tokio::select! {
             biased;
-            () = self.closed() => return Err(rtao_rpc::RpcError::Closed.into()),
+            () = self.closed() => return Err(rtao_jsonrpc::RpcError::Closed.into()),
             cache = self.inner.hash_cache.lock() => cache,
         };
         if cache
@@ -1268,7 +1268,7 @@ impl Client {
     ) -> Result<Option<u32>, ClientError> {
         let raw: Value = self
             .read_request(
-                rtao_rpc::ReadMethod::ChainGetBlock,
+                rtao_jsonrpc::ReadMethod::ChainGetBlock,
                 json!([hash_hex(block_hash)]),
             )
             .await?;
@@ -1292,7 +1292,7 @@ impl Client {
 }
 
 fn startup_timeout_error(timeout: Duration) -> ClientError {
-    rtao_rpc::RpcError::Timeout {
+    rtao_jsonrpc::RpcError::Timeout {
         detail: format!(
             "client startup did not finish within {}s; the endpoint may be slow or \
              throttling this connection",
@@ -1348,7 +1348,7 @@ mod tests {
 
     #[test]
     fn submit_endpoint_context_names_the_role_and_keeps_the_variant() {
-        use rtao_rpc::RpcError;
+        use rtao_jsonrpc::RpcError;
         let wrap = |error: RpcError| match submit_endpoint_context(error.into()) {
             ClientError::Rpc(error) => error,
             other => panic!("variant changed: {other:?}"),

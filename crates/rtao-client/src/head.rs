@@ -4,8 +4,8 @@
 use blake2::{Blake2b, Digest, digest::consts::U32};
 use futures::{Stream, StreamExt};
 use parity_scale_codec::{Compact, Decode, Encode};
+use rtao_jsonrpc::{ReadMethod, RpcError, Session, SubscriptionKind};
 use rtao_primitives::H256;
-use rtao_rpc::{ReadMethod, RpcError, Session, SubscriptionKind};
 use serde_json::{Value, json};
 use std::{collections::VecDeque, error::Error, fmt, future::Future, pin::Pin, sync::Arc};
 use tokio::sync::{broadcast, watch};
@@ -218,7 +218,7 @@ impl HeadProvider for Session {
 
     fn block_hash(&self, number: u64) -> HeadFuture<'_, Option<H256>> {
         Box::pin(async move {
-            let result: Option<rtao_rpc::H256> = self
+            let result: Option<rtao_jsonrpc::H256> = self
                 .request(ReadMethod::ChainGetBlockHash, json!([number]))
                 .await?;
             Ok(result.map(|hash| H256(hash.0)))
@@ -1778,7 +1778,7 @@ mod tests {
             cancellation.clone(),
         )
         .await?;
-        let policy = rtao_rpc::policy::classify_rpc_error(&json!({
+        let policy = rtao_jsonrpc::policy::classify_rpc_error(&json!({
             "code":-32005, "message":"slow down", "data":{"policy":"work", "retry_after":"10"}
         }))
         .ok_or_else(|| HeadError::InvalidHeader("policy fixture not classified".into()))?;

@@ -92,7 +92,7 @@ async fn final_live_signing_readiness_obeys_both_deadlines_and_releases_owner() 
             matches!(
                 error,
                 rtao_client::SubmitFailure::Client(rtao_client::ClientError::Rpc(
-                    rtao_rpc::RpcError::Timeout { .. }
+                    rtao_jsonrpc::RpcError::Timeout { .. }
                 ))
             ),
             "{error:?}"
