@@ -467,7 +467,9 @@ impl fmt::Display for EpistulaError {
             Self::Store(error) => return error.fmt(f),
             Self::Signing(error) => return error.fmt(f),
             Self::Clock(error) => return error.fmt(f),
-            Self::UnsupportedCrypto => "Epistula requires an sr25519 signer",
+            Self::UnsupportedCrypto => {
+                "Epistula requires a classical sr25519 signer; hashed and post-quantum hotkeys are not supported"
+            }
             Self::Usage(message) => message,
         })
     }

@@ -142,6 +142,13 @@ impl Dendrite {
     ///
     /// Hardware signers refuse raw signing, so every call then fails with 422.
     pub fn new(signer: Arc<dyn Signer>) -> Result<Self, DendriteError> {
+        // Synapse signs with raw classical keys; a hashed or post-quantum key
+        // reports a nominal Sr25519 type but makes no raw signature (D-176).
+        if signer.authority().is_some() {
+            return Err(DendriteError::Configuration(
+                "the Synapse protocol supports classical sr25519 and ed25519 hotkeys only; hashed and post-quantum hotkeys are not supported".into(),
+            ));
+        }
         let tls = rustls::ClientConfig::builder_with_provider(Arc::new(
             rustls::crypto::ring::default_provider(),
         ))

@@ -252,3 +252,17 @@ async fn streaming_error_bodies_are_capped() {
         )
     );
 }
+
+/// A hashed hotkey cannot sign Synapse requests; the dendrite refuses it at
+/// construction (D-176).
+#[test]
+fn dendrites_refuse_hashed_hotkeys() {
+    let hashed = rtao_signer::KeypairAuthoritySigner::new(
+        rtao_core::keys::Keypair::from_seed(&[3; 32], rtao_core::keys::CRYPTO_HASHED).unwrap(),
+    )
+    .unwrap();
+    let Err(error) = Dendrite::new(Arc::new(hashed)) else {
+        panic!("a hashed hotkey was accepted");
+    };
+    assert!(error.to_string().contains("classical"), "{error}");
+}

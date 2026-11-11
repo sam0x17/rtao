@@ -368,6 +368,15 @@ async fn signing_refuses_misuse() -> TestResult {
         sign_headers(&ed, &Dialect::RTAO, opts(b"", Some(BOB))).await,
         Err(EpistulaError::UnsupportedCrypto)
     );
+    // A hashed key reports a nominal Sr25519 type; it is refused up front.
+    let hashed = rtao_signer::KeypairAuthoritySigner::new(rtao_core::keys::Keypair::from_seed(
+        &[3; 32],
+        rtao_core::keys::CRYPTO_HASHED,
+    )?)?;
+    assert_eq!(
+        sign_headers(&hashed, &Dialect::RTAO, opts(b"", Some(BOB))).await,
+        Err(EpistulaError::UnsupportedCrypto)
+    );
     // Fresh uuids are lowercase version-4 values and differ per attempt.
     let first = sign_headers(
         &signer,

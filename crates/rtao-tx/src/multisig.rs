@@ -251,11 +251,18 @@ impl Multisig {
             call.ensure_runtime(&snapshot.block().runtime)
                 .map_err(ClientError::from)?;
             // Python v488: account registration defaults to Shield when it is
-            // active (here behind the executor's auto-shield setting).
+            // active, unless the executor opted out (D-170).
             let shielded = options.shielded
                 || executor
                     .auto_shield_route(&snapshot, &snapshot.block().runtime, &call, &mut Vec::new())
                     .await?;
+            // A hashed or post-quantum signer's fee probes price its proof.
+            let descriptor = keys
+                .authority_descriptor(rtao_signer::SignerRole::Coldkey)
+                .filter(|descriptor| {
+                    rtao_primitives::receiving::descriptor_account(descriptor)
+                        .is_ok_and(|account| account == signer)
+                });
             self.preflight_funds(
                 client,
                 &snapshot,
@@ -263,6 +270,7 @@ impl Multisig {
                 &call,
                 options.signer_label.as_deref(),
                 shielded,
+                descriptor.as_deref(),
             )
             .await?;
             let runtime = &snapshot.block().runtime;
@@ -333,6 +341,7 @@ impl Multisig {
             .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn preflight_funds<V: View + ?Sized>(
         &self,
         client: &Client,
@@ -341,6 +350,7 @@ impl Multisig {
         call: &CallBytes,
         label: Option<&str>,
         shielded: bool,
+        descriptor: Option<&[u8]>,
     ) -> Result<(), TxError> {
         let preparation = async {
             let pending = view
@@ -424,6 +434,7 @@ impl Multisig {
                 opening,
                 outer_call: outer.as_ref(),
                 crypto_type: CryptoType::Sr25519,
+                descriptor,
                 signer_label: label,
                 shielded,
             },
@@ -491,6 +502,10 @@ pub struct FundsRequest<'a> {
     pub outer_call: Option<&'a CallBytes>,
     /// Public signature algorithm for the zero-signature fee probe.
     pub crypto_type: CryptoType,
+    /// The signer's hashed or post-quantum public descriptor, if it is one:
+    /// the fee probes then carry the scheme's proof length instead of a
+    /// 64-byte signature (D-177). `None` for a classical signer.
+    pub descriptor: Option<&'a [u8]>,
     /// Local display label for the funding help.
     pub signer_label: Option<&'a str>,
     /// The approval goes through MEV Shield: the check then quotes the
@@ -550,10 +565,16 @@ pub async fn check_multisig_funds<V: View + ?Sized>(
         } else {
             0
         };
+        let probe = match request.descriptor.and_then(|descriptor| {
+            rtao_primitives::AuthorityType::from_descriptor(descriptor).zip(Some(descriptor))
+        }) {
+            Some((kind, descriptor)) => rtao_client::ProbeSigner::Authority { kind, descriptor },
+            None => rtao_client::ProbeSigner::Classical(request.crypto_type),
+        };
         let mut fee = match request.outer_call {
             Some(call) => {
                 client
-                    .estimate_weight(call.clone(), request.signer, request.crypto_type)
+                    .estimate_weight_as(call.clone(), request.signer, probe)
                     .await?
                     .partial_fee
             }
@@ -565,8 +586,9 @@ pub async fn check_multisig_funds<V: View + ?Sized>(
                 .ok_or_else(|| ClientError::Protocol("no multisig approval to quote".into()))?;
             fee = fee.saturating_add(
                 client
-                    .estimate_shielded_carrier_fee(
+                    .estimate_shielded_carrier_fee_as(
                         request.signer,
+                        probe,
                         call.clone(),
                         rtao_catalog::py::MEV_SHIELD_ERA_PERIOD,
                     )

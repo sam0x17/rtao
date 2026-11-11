@@ -349,6 +349,7 @@ impl<I: Intent> Adapter<I> {
                     opening: timepoint.is_none(),
                     outer_call: Some(&outer),
                     crypto_type: self.crypto,
+                    descriptor: None,
                     signer_label: None,
                     shielded: false,
                 },

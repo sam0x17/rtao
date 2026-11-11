@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### Post-quantum and hashed accounts first class, with btcli's defaults (D-170 to D-175)
+### Post-quantum and hashed accounts first class, with btcli's defaults (D-170 to D-177)
 
 - **Behaviour change:** `Executor::new` routes account registration through MEV Shield by default when the network offers it (Python's `shielded=None`, D-170), superseding the opt-in `with_auto_shield(true)` of D-140. This covers `HashedAccounts.register`, `register_derived` and `register_derived_sponsored`, `Proxy.create_protected_pure` and `Utility.as_protected_derivative`, also inside wrappers and batches. Without an active Shield key the registration is planned unshielded with Python's warning. `with_auto_shield(false)` opts out (Python's `shielded=False`) and is now also on the facade's `rtao::Executor`. The blocking facade and `Multisig::approve` follow. The CLI still decides the route at review.
 - New keys keep btcli's defaults: sr25519, standard mode (D-170).
@@ -18,6 +18,8 @@
 - Post-quantum HTTP authentication, post-quantum message signing and external signers for hashed or post-quantum keys stay refused with Python's text. Upstream defines none of them (D-174).
 - **Behaviour change (CLI):** `wallet new-hotkey` for a key that registers defaults its registration payer to the wallet's own coldkey. `wallet create` and `new-coldkey` prompt for the payer instead of requiring `--registration-payer` (D-175).
 - `rtao evm pubkey` accepts a complete receiving address (D-175).
+- Epistula signing, the Synapse `Dendrite` and the QUIC handshake refuse a hashed or post-quantum hotkey up front, with a message saying these classical-only protocols do not support it. Before, the refusal came at the first raw signature (D-176).
+- Multisig funding checks price a hashed or post-quantum approver's proof instead of a 64-byte signature (`FundsRequest::descriptor`; `Multisig::approve` passes it). Source-breaking: `FundsRequest` literals need `descriptor` (D-177).
 
 ### Core bumped from v488 to v490 (D-127, D-136)
 

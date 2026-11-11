@@ -762,3 +762,17 @@ fn g20_lenient_decoding() {
     let bin: SynapsePacket = decode(&h("93 c4 04 6563686f 80 00")).unwrap();
     assert_eq!(bin.synapse_type, "echo");
 }
+
+/// A hashed hotkey reports a nominal Sr25519 type; the handshake refuses it
+/// before signing (D-176).
+#[tokio::test]
+async fn hashed_hotkeys_cannot_sign_handshakes() {
+    let hashed = rtao_signer::KeypairAuthoritySigner::new(
+        rtao_core::keys::Keypair::from_seed(&[3; 32], rtao_core::keys::CRYPTO_HASHED).unwrap(),
+    )
+    .unwrap();
+    let error = sign_handshake(&hashed, "AAAA", 1_700_000_000)
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("classical sr25519"), "{error}");
+}

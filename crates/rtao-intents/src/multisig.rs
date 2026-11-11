@@ -362,6 +362,7 @@ async fn build_approval<V: View + ?Sized>(
             opening: when.is_none(),
             outer_call: None,
             crypto_type: CryptoType::Sr25519,
+            descriptor: None,
             signer_label: None,
             shielded: false,
         },

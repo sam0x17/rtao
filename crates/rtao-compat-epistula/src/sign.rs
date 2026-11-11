@@ -158,7 +158,9 @@ pub async fn sign_headers(
     dialect: &Dialect,
     opts: SignOptions<'_>,
 ) -> Result<EpistulaHeaders, EpistulaError> {
-    if signer.crypto_type() != CryptoType::Sr25519 {
+    // A hashed or post-quantum key reports a nominal Sr25519 type but makes
+    // no raw signature; refuse it here rather than at signing (D-176).
+    if signer.crypto_type() != CryptoType::Sr25519 || signer.authority().is_some() {
         return Err(EpistulaError::UnsupportedCrypto);
     }
     let receiver = match opts.signed_for {

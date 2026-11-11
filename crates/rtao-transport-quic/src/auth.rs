@@ -125,6 +125,12 @@ async fn sign_b64(signer: &dyn Signer, message: &str) -> Result<String, AuthErro
     if crypto != CryptoType::Sr25519 {
         return Err(AuthError::UnsupportedCrypto(crypto));
     }
+    // A hashed or post-quantum key reports a nominal Sr25519 type (D-176).
+    if signer.authority().is_some() {
+        return Err(AuthError::Signer(SignerError::InvalidSignature(
+            "QUIC handshakes support classical sr25519 hotkeys only; hashed and post-quantum hotkeys are not supported".into(),
+        )));
+    }
     let signature = signer.sign_raw(message.as_bytes()).await?;
     Ok(BASE64_STANDARD.encode(signature))
 }

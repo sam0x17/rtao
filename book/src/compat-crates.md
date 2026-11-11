@@ -353,3 +353,11 @@ the Rust daemon (10/10) and the Rust client against a Python peer (2/2). The
 localnet check, which signs and submits a transfer and refuses replayed and
 tampered requests, passed in the hosted `remote-signer-localnet` job of
 [run 39027402084](https://github.com/sam0x17/rtao/actions/runs/39027402084).
+
+## Hashed and post-quantum hotkeys
+
+Epistula, Synapse and the QUIC handshake sign raw classical messages. Synapse
+accepts Sr25519 and Ed25519, and the others Sr25519 only. A hashed or
+post-quantum hotkey is refused before any request is made. Use btauth/1
+(`rtao::btauth`) for hashed Sr25519 or Ed25519 validator hotkeys. Upstream
+defines no post-quantum HTTP authentication.

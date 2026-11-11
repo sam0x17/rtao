@@ -1272,6 +1272,7 @@ async fn prepare_continuation(
             opening: false,
             outer_call: Some(&outer),
             crypto_type: CryptoType::Sr25519,
+            descriptor: None,
             signer_label: Some(selection.display_wallet()),
             shielded: false,
         },
