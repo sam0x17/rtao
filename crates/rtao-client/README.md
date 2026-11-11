@@ -1,5 +1,9 @@
 # rtao-client
 
+[![crates.io](https://img.shields.io/crates/v/rtao-client.svg)](https://crates.io/crates/rtao-client)
+[![docs.rs](https://img.shields.io/docsrs/rtao-client)](https://docs.rs/rtao-client)
+[![license](https://img.shields.io/crates/l/rtao-client.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Asynchronous Bittensor chain access over a supervised RPC session.
 
 `ClientConfig` selects a network, transport, cache paths and startup policy.

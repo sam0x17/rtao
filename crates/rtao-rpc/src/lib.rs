@@ -1,6 +1,7 @@
 //! Asynchronous Bittensor JSON-RPC transport.
 
 #![doc = include_str!("../README.md")]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 /// Data generated from the pinned upstream Python transport.

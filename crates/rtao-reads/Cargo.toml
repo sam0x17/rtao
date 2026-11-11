@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Typed Bittensor reads and namespaces."
+documentation = "https://docs.rs/rtao-reads"
+readme = "README.md"
 keywords = ["bittensor", "queries", "storage", "blockchain"]
 categories = ["cryptography::cryptocurrencies", "api-bindings"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
@@ -32,5 +35,7 @@ num-bigint = { workspace = true }
 num-traits = { workspace = true }
 
 [dev-dependencies]
-rtao-testkit = { workspace = true }
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
+rtao-testkit = { path = "../rtao-testkit", default-features = false }
 

@@ -1,5 +1,9 @@
 # rtao-wallet
 
+[![crates.io](https://img.shields.io/crates/v/rtao-wallet.svg)](https://crates.io/crates/rtao-wallet)
+[![docs.rs](https://img.shields.io/docsrs/rtao-wallet)](https://docs.rs/rtao-wallet)
+[![license](https://img.shields.io/crates/l/rtao-wallet.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Btcli-compatible wallet paths, keyfiles and explicit password resolution.
 
 `WalletRef` exposes wallet paths and public identities. `Wallet` adds key

@@ -1,9 +1,22 @@
 # rtao-cli
 
+[![crates.io](https://img.shields.io/crates/v/rtao-cli.svg)](https://crates.io/crates/rtao-cli)
+[![docs.rs](https://img.shields.io/docsrs/rtao-cli)](https://docs.rs/rtao-cli)
+[![license](https://img.shields.io/crates/l/rtao-cli.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 The `rtao` command-line application and its reusable command machinery.
 `application` builds the command tree; `context` resolves connection, wallet
 and submission settings. `commands` combines generated catalog operations with
 handwritten wallet, subnet, signing and diagnostic workflows.
+
+Install the `rtao` binary from crates.io:
+
+```sh
+cargo install --locked rtao-cli
+```
+
+To try an unreleased commit, install from Git instead:
+`cargo install --locked --git https://github.com/sam0x17/rtao rtao-cli`.
 
 Use a command's `--help` for its current arguments. JSON output preserves
 structured results; human renderers and prompts share the command's reviewed

@@ -1,5 +1,9 @@
 # rtao-core-ext
 
+[![crates.io](https://img.shields.io/crates/v/rtao-core-ext.svg)](https://crates.io/crates/rtao-core-ext)
+[![docs.rs](https://img.shields.io/docsrs/rtao-core-ext)](https://docs.rs/rtao-core-ext)
+[![license](https://img.shields.io/crates/l/rtao-core-ext.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Portable extensions staged for the pinned Bittensor core. Most consumers use
 their curated reexports through `rtao-core`.
 

@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Asynchronous Bittensor chain access."
+documentation = "https://docs.rs/rtao-client"
+readme = "README.md"
 keywords = ["bittensor", "rpc", "client", "blockchain", "substrate"]
 categories = ["cryptography::cryptocurrencies", "api-bindings", "asynchronous"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 features = ["blocking","subxt","metrics"]
 
@@ -56,8 +59,10 @@ chrono.workspace = true
 libc = "0.2"
 
 [dev-dependencies]
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
 blake2.workspace = true
 frame-metadata.workspace = true
 k256.workspace = true
-rtao-testkit.workspace = true
+rtao-testkit = { path = "../rtao-testkit", default-features = false }
 

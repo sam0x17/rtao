@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Bittensor validator, miner and owner runtimes."
+documentation = "https://docs.rs/rtao-neuron"
+readme = "README.md"
 keywords = ["bittensor", "validator", "miner", "subnet", "framework"]
 categories = ["cryptography::cryptocurrencies", "network-programming"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 all-features = true
 
@@ -60,8 +63,10 @@ rustls = { workspace = true, optional = true }
 rustls-native-certs = { workspace = true, optional = true }
 
 [dev-dependencies]
-rtao-client = { workspace = true, features = ["test-util"] }
-rtao-testkit = { workspace = true, features = ["journal-shield"] }
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
+rtao-client = { path = "../rtao-client", default-features = false, features = ["test-util"] }
+rtao-testkit = { path = "../rtao-testkit", default-features = false, features = ["journal-shield"] }
 frame-metadata.workspace = true
 scale-info.workspace = true
 tokio = { workspace = true, features = ["test-util"] }

@@ -1,5 +1,9 @@
 # rtao-neuron
 
+[![crates.io](https://img.shields.io/crates/v/rtao-neuron.svg)](https://crates.io/crates/rtao-neuron)
+[![docs.rs](https://img.shields.io/docsrs/rtao-neuron)](https://docs.rs/rtao-neuron)
+[![license](https://img.shields.io/crates/l/rtao-neuron.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Application runtimes for Bittensor validators and miners, with subnet-owner
 operations. Applications supply scoring, request handlers or owner actions;
 the framework coordinates configuration, public registration checks, chain

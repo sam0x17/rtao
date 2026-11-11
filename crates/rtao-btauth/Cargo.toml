@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0 AND MIT"
 repository.workspace = true
 description = "Signed HTTP authentication for Bittensor hotkeys (btauth/1)."
+documentation = "https://docs.rs/rtao-btauth"
+readme = "README.md"
 keywords = ["bittensor", "authentication", "http", "sr25519", "signature"]
 categories = ["authentication", "cryptography::cryptocurrencies", "web-programming::http-server"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 all-features = true
 

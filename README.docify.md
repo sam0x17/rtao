@@ -1,5 +1,12 @@
 # rtao
 
+[![crates.io](https://img.shields.io/crates/v/rtao.svg?logo=rust)](https://crates.io/crates/rtao)
+[![docs.rs](https://img.shields.io/docsrs/rtao?logo=docs.rs)](https://docs.rs/rtao)
+[![rtao-cli](https://img.shields.io/crates/v/rtao-cli.svg?label=rtao-cli)](https://crates.io/crates/rtao-cli)
+[![downloads](https://img.shields.io/crates/d/rtao.svg)](https://crates.io/crates/rtao)
+[![MSRV](https://img.shields.io/crates/msrv/rtao.svg?label=MSRV)](https://github.com/sam0x17/rtao/blob/main/Cargo.toml)
+[![license](https://img.shields.io/crates/l/rtao.svg)](#license)
+
 rtao is a Rust SDK, operator framework and CLI for Bittensor subnets. Chain
 encoding comes from the pinned `bittensor-core`; behavior follows the v11
 Python SDK. rtao owns asynchronous I/O and checks parity with upstream
@@ -8,15 +15,30 @@ arithmetic; negative and arbitrary-size Python balance arithmetic is excluded.
 
 ## Status
 
-rtao is under active development and has not been published to crates.io.
-There are no release tags or binaries yet. Depend on it from Git, pinned to a
-reviewed commit, and check the hosted CI results for that commit.
+rtao is under active development. Before 1.0, a minor release (0.x.0) may
+break public APIs or raise a persisted format's `readable_by`; a patch release
+does neither ([docs/releases/README.md](docs/releases/README.md)). Each release
+is an `rtao-vX.Y.Z` tag with notes on the
+[releases page](https://github.com/sam0x17/rtao/releases), and
+[CHANGELOG.md](CHANGELOG.md) lists every change.
 [COMPAT.md](COMPAT.md) records the core pin, metadata inputs and any validated
 runtime range.
 
 ## Getting started
 
 Rust 1.89 is the minimum supported version. Start with the read features:
+
+```toml
+[dependencies]
+rtao = { version = "0.1", default-features = false, features = ["client", "reads"] }
+```
+
+or run `cargo add rtao --no-default-features --features client,reads`.
+
+### From Git
+
+To use a commit that is not released yet, depend on it from Git, pinned to a
+reviewed commit, and check the hosted CI results for that commit:
 
 ```toml
 [dependencies]
@@ -30,7 +52,7 @@ Replace `<full commit>` with the reviewed commit you use. Cargo applies
 `[patch.crates-io]` only from the final workspace root, so the patch belongs in
 your application's root `Cargo.toml`. Its Git reference kind and value must
 match the core pin in that revision's [upstream.toml](upstream.toml); the
-example matches the current `v488` pin. The upstream core uses a vendored BLS
+example matches the current `v490` pin. The upstream core uses a vendored BLS
 implementation while `tle` requests its registry counterpart, and the patch
 joins those sources so timelock code builds consistently. The CLI checks the
 patch without connecting to a node and prints the exact line when it is
@@ -42,7 +64,7 @@ rtao doctor --manifest-path Cargo.toml
 
 ### Downstream BLS patch
 
-That `w3f-bls` line is the one `[patch]` an application needs to build.
+That `w3f-bls` line is the one `[patch]` a Git dependency needs to build.
 rtao's own `Cargo.toml` carries more `[patch]` tables. Cargo never applies a
 dependency's `[patch]`, so an application decides on each of them (D-115):
 
@@ -67,12 +89,13 @@ defaults are `client`, `reads` and `tx`.
 | Compatibility | `compat-synapse`, `compat-epistula`, `transport-quic`, `remote-signer`, `remote-signer-server` |
 
 `full` enables everything. The `rtao-cli` crate provides the `rtao` command
-line tool, and `templates/subnet` is a `cargo generate` template for a
-validator, miner and owner tool.
+line tool (`cargo install --locked rtao-cli`), and `templates/subnet` is a
+`cargo generate` template for a validator, miner and owner tool.
 
 ## Documentation
 
-The [book](book/src/introduction.md) covers getting started, the SDK, the CLI,
+The [API documentation](https://docs.rs/rtao) is on docs.rs, one page per
+crate. The [book](book/src/introduction.md) covers getting started, the SDK, the CLI,
 validators, miners, owner operations, signers and migration from the Python
 SDK. Several of its reference pages are generated; see
 [book/README.md](book/README.md) to build the complete book with

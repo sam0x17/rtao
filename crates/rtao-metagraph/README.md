@@ -1,5 +1,9 @@
 # rtao-metagraph
 
+[![crates.io](https://img.shields.io/crates/v/rtao-metagraph.svg)](https://crates.io/crates/rtao-metagraph)
+[![docs.rs](https://img.shields.io/docsrs/rtao-metagraph)](https://docs.rs/rtao-metagraph)
+[![license](https://img.shields.io/crates/l/rtao-metagraph.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Bittensor metagraph projections, borrowed views and synchronization.
 
 `Metagraph` owns a decoded graph and its runtime response. `MetagraphView`

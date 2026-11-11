@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Bittensor execution plans, policies and transaction results."
+documentation = "https://docs.rs/rtao-tx"
+readme = "README.md"
 keywords = ["bittensor", "transactions", "extrinsic", "blockchain"]
 categories = ["cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lints]
@@ -38,9 +41,11 @@ rustls-pki-types.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
-rtao-client = { workspace = true, features = ["test-util"] }
-rtao-testkit = { workspace = true, features = ["core-policy", "journal-shield"] }
-rtao-intents = { workspace = true, features = ["serving", "transfer", "registration", "hyperparameters", "staking", "children", "evm", "proxy"] }
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
+rtao-client = { path = "../rtao-client", default-features = false, features = ["test-util"] }
+rtao-testkit = { path = "../rtao-testkit", default-features = false, features = ["core-policy", "journal-shield"] }
+rtao-intents = { path = "../rtao-intents", default-features = false, features = ["serving", "transfer", "registration", "hyperparameters", "staking", "children", "evm", "proxy"] }
 tokio = { workspace = true, features = ["test-util"] }
 rcgen.workspace = true
 tokio-rustls.workspace = true

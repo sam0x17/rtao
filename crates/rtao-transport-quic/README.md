@@ -1,5 +1,9 @@
 # rtao-transport-quic
 
+[![crates.io](https://img.shields.io/crates/v/rtao-transport-quic.svg)](https://crates.io/crates/rtao-transport-quic)
+[![docs.rs](https://img.shields.io/docsrs/rtao-transport-quic)](https://docs.rs/rtao-transport-quic)
+[![license](https://img.shields.io/crates/l/rtao-transport-quic.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 A btlightning-compatible QUIC transport for Bittensor neurons, built on quinn
 and rustls with the ring provider.
 

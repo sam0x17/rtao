@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Fixtures and test infrastructure for rtao."
+documentation = "https://docs.rs/rtao-testkit"
+readme = "README.md"
 keywords = ["bittensor", "testing", "fixtures", "mock"]
 categories = ["development-tools::testing"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 features = ["rpc-rate-limit","rpc-metrics"]
 
@@ -55,14 +58,16 @@ tokio-rustls = { workspace = true }
 tokio-tungstenite = { workspace = true }
 
 [dev-dependencies]
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
 docify.workspace = true
-rtao-tx = { workspace = true }
-rtao-intents = { workspace = true, features = ["transfer", "weights", "staking", "emission_weights"] }
-rtao-reads = { workspace = true }
-rtao-neuron = { workspace = true, features = ["validator"] }
-rtao-metagraph = { workspace = true }
-rtao-wallet = { workspace = true }
-rtao-btauth = { workspace = true, features = ["client"] }
+rtao-tx = { path = "../rtao-tx", default-features = false }
+rtao-intents = { path = "../rtao-intents", default-features = false, features = ["transfer", "weights", "staking", "emission_weights"] }
+rtao-reads = { path = "../rtao-reads", default-features = false }
+rtao-neuron = { path = "../rtao-neuron", default-features = false, features = ["validator"] }
+rtao-metagraph = { path = "../rtao-metagraph", default-features = false }
+rtao-wallet = { path = "../rtao-wallet", default-features = false }
+rtao-btauth = { path = "../rtao-btauth", default-features = false, features = ["client"] }
 tokio-util = { workspace = true }
 ark-serialize = "=0.4.2"
 rand_chacha = "0.3.1"
@@ -70,10 +75,10 @@ rand_core = "0.6.4"
 tle = { git = "https://github.com/ideal-lab5/timelock", rev = "5416406cfd32799e31e1795393d4916894de4468", features = ["std"] }
 w3f-bls = { workspace = true, features = ["std"] }
 sha2 = { workspace = true }
-rtao-catalog = { workspace = true }
+rtao-catalog = { path = "../rtao-catalog", default-features = false }
 metrics = { workspace = true }
 scale-decode = { workspace = true }
-rtao-rpc = { workspace = true }
+rtao-rpc = { path = "../rtao-rpc", default-features = false }
 url = { workspace = true }
 
 [[test]]

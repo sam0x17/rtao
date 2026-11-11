@@ -12,8 +12,10 @@ subtensor chain. Every step runs on one Linux or macOS machine with Docker.
 - The `rtao` command line tool:
 
   ```sh
-  cargo install --locked --git https://github.com/sam0x17/rtao rtao-cli
+  cargo install --locked rtao-cli
   ```
+
+  To use an unreleased commit, add `--git https://github.com/sam0x17/rtao`.
 
 ## 1. Generate the project
 

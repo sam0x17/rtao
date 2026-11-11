@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Bittensor metagraph projections and synchronization."
+documentation = "https://docs.rs/rtao-metagraph"
+readme = "README.md"
 keywords = ["bittensor", "metagraph", "subnet", "blockchain"]
 categories = ["cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 all-features = true
 
@@ -39,12 +42,14 @@ arc-swap.workspace = true
 parity-scale-codec = { workspace = true, optional = true }
 
 [dev-dependencies]
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
 blake2 = "0.10"
 tokio = { workspace = true, features = ["test-util"] }
 criterion = "0.7"
 proptest.workspace = true
 parity-scale-codec.workspace = true
-rtao-testkit.workspace = true
+rtao-testkit = { path = "../rtao-testkit", default-features = false }
 
 [[bench]]
 name = "metagraph"

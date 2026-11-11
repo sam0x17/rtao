@@ -1,5 +1,9 @@
 # rtao-primitives
 
+[![crates.io](https://img.shields.io/crates/v/rtao-primitives.svg)](https://crates.io/crates/rtao-primitives)
+[![docs.rs](https://img.shields.io/docsrs/rtao-primitives)](https://docs.rs/rtao-primitives)
+[![license](https://img.shields.io/crates/l/rtao-primitives.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Shared Bittensor identifiers, amounts and value conversions.
 
 `AccountId` and `Ss58Address` represent accounts. `NetUid`, `Uid`, `MechId`,

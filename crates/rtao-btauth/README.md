@@ -1,5 +1,9 @@
 # rtao-btauth
 
+[![crates.io](https://img.shields.io/crates/v/rtao-btauth.svg)](https://crates.io/crates/rtao-btauth)
+[![docs.rs](https://img.shields.io/docsrs/rtao-btauth)](https://docs.rs/rtao-btauth)
+[![license](https://img.shields.io/crates/l/rtao-btauth.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Signed HTTP authentication (btauth/1) for Bittensor hotkeys.
 
 `build_payload` constructs the signing bytes and `sign` produces request

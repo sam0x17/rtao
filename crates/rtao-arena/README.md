@@ -1,5 +1,9 @@
 # rtao-arena
 
+[![crates.io](https://img.shields.io/crates/v/rtao-arena.svg)](https://crates.io/crates/rtao-arena)
+[![docs.rs](https://img.shields.io/docsrs/rtao-arena)](https://docs.rs/rtao-arena)
+[![license](https://img.shields.io/crates/l/rtao-arena.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Fixed-capacity memory for wasm32 and other constrained hosts whose linear
 memory must never grow.
 

@@ -1,5 +1,9 @@
 # rtao-reads
 
+[![crates.io](https://img.shields.io/crates/v/rtao-reads.svg)](https://crates.io/crates/rtao-reads)
+[![docs.rs](https://img.shields.io/docsrs/rtao-reads)](https://docs.rs/rtao-reads)
+[![license](https://img.shields.io/crates/l/rtao-reads.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Typed Bittensor queries and namespace extensions over `rtao_client::View`.
 Import `Namespaces` to access account, subnet and other catalog namespaces on
 a client, snapshot or another view implementation.

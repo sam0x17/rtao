@@ -1,5 +1,9 @@
 # rtao-signer
 
+[![crates.io](https://img.shields.io/crates/v/rtao-signer.svg)](https://crates.io/crates/rtao-signer)
+[![docs.rs](https://img.shields.io/docsrs/rtao-signer)](https://docs.rs/rtao-signer)
+[![license](https://img.shields.io/crates/l/rtao-signer.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Asynchronous signing contracts and public key sources for Bittensor.
 
 `Signer` receives a `SigningRequest` containing the exact prepared payload,

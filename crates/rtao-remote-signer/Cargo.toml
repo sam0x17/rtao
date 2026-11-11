@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Policy-checked remote transaction signing over btauth/1 (rtao-remote-signer/1)."
+documentation = "https://docs.rs/rtao-remote-signer"
+readme = "README.md"
 keywords = ["bittensor", "signer", "remote-signing", "transactions", "policy"]
 categories = ["cryptography::cryptocurrencies", "authentication"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 features = ["client", "server-bin", "redis"]
 
@@ -88,10 +91,12 @@ hyper-util = { workspace = true, optional = true, features = ["service"] }
 tracing-subscriber = { version = "0.3", optional = true, default-features = false, features = ["fmt"] }
 
 [dev-dependencies]
-rtao-testkit = { workspace = true }
-rtao-btauth = { workspace = true, features = ["client", "server"] }
-rtao-runtime = { workspace = true }
-rtao-client = { workspace = true }
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
+rtao-testkit = { path = "../rtao-testkit", default-features = false }
+rtao-btauth = { path = "../rtao-btauth", default-features = false, features = ["client", "server"] }
+rtao-runtime = { path = "../rtao-runtime", default-features = false }
+rtao-client = { path = "../rtao-client", default-features = false }
 tokio = { workspace = true, features = ["test-util"] }
 tower = { workspace = true }
 http-body-util = { workspace = true }
@@ -102,8 +107,8 @@ rcgen = { workspace = true }
 http = { workspace = true }
 axum = { workspace = true }
 sha2 = { workspace = true }
-rtao-wallet = { workspace = true }
-rtao-core = { workspace = true }
+rtao-wallet = { path = "../rtao-wallet", default-features = false }
+rtao-core = { path = "../rtao-core", default-features = false }
 url = { workspace = true }
 hex = { workspace = true }
 tracing = { workspace = true }

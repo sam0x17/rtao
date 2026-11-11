@@ -1,5 +1,9 @@
 # rtao-evm
 
+[![crates.io](https://img.shields.io/crates/v/rtao-evm.svg)](https://crates.io/crates/rtao-evm)
+[![docs.rs](https://img.shields.io/docsrs/rtao-evm)](https://docs.rs/rtao-evm)
+[![license](https://img.shields.io/crates/l/rtao-evm.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Ethereum wallet, transaction and precompile helpers for Bittensor.
 
 `EvmRpc` provides bounded HTTP JSON-RPC calls, transaction submission and

@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Rust SDK and operator framework for Bittensor subnets."
+documentation = "https://docs.rs/rtao"
+readme = "README.md"
 keywords = ["bittensor", "sdk", "blockchain", "substrate", "tao"]
 categories = ["cryptography::cryptocurrencies", "api-bindings"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 features = ["full","validator","miner","owner","pow-gpu","subxt"]
 
@@ -80,8 +83,10 @@ rtao-transport-quic = { workspace = true, optional = true }
 rtao-remote-signer = { workspace = true, optional = true }
 
 [dev-dependencies]
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
 docify.workspace = true
-rtao-testkit.workspace = true
+rtao-testkit = { path = "../rtao-testkit", default-features = false }
 anyhow.workspace = true
 axum.workspace = true
 clap.workspace = true

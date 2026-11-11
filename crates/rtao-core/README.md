@@ -1,5 +1,9 @@
 # rtao-core
 
+[![crates.io](https://img.shields.io/crates/v/rtao-core.svg)](https://crates.io/crates/rtao-core)
+[![docs.rs](https://img.shields.io/docsrs/rtao-core)](https://docs.rs/rtao-core)
+[![license](https://img.shields.io/crates/l/rtao-core.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 The curated interface to the pinned `bittensor-core`. This crate reexports
 chain codecs and cryptography and exposes the portable extensions maintained
 in `rtao-core-ext`.

@@ -22,26 +22,26 @@ expect_used = "deny"
 panic = "deny"
 
 [workspace.dependencies]
-rtao = { path = "crates/rtao", default-features = false }
-rtao-arena = { path = "crates/rtao-arena", default-features = false }
-rtao-core-ext = { path = "crates/rtao-core-ext", default-features = false }
-rtao-core = { path = "crates/rtao-core", default-features = false }
-rtao-primitives = { path = "crates/rtao-primitives", default-features = false }
-rtao-catalog = { path = "crates/rtao-catalog", default-features = false }
-rtao-runtime = { path = "crates/rtao-runtime", default-features = false }
-rtao-rpc = { path = "crates/rtao-rpc", default-features = false }
-rtao-signer = { path = "crates/rtao-signer", default-features = false }
-rtao-wallet = { path = "crates/rtao-wallet", default-features = false }
-rtao-client = { path = "crates/rtao-client", default-features = false }
-rtao-tx = { path = "crates/rtao-tx", default-features = false }
-rtao-reads = { path = "crates/rtao-reads", default-features = false }
-rtao-evm = { path = "crates/rtao-evm", default-features = false }
-rtao-intents = { path = "crates/rtao-intents", default-features = false }
-rtao-metagraph = { path = "crates/rtao-metagraph", default-features = false }
-rtao-btauth = { path = "crates/rtao-btauth", default-features = false }
-rtao-neuron = { path = "crates/rtao-neuron", default-features = false }
-rtao-cli = { path = "crates/rtao-cli", default-features = false }
-rtao-testkit = { path = "crates/rtao-testkit", default-features = false }
+rtao = { path = "crates/rtao", version = "0.1.0", default-features = false }
+rtao-arena = { path = "crates/rtao-arena", version = "0.2.0", default-features = false }
+rtao-core-ext = { path = "crates/rtao-core-ext", version = "0.1.0", default-features = false }
+rtao-core = { path = "crates/rtao-core", version = "0.1.0", default-features = false }
+rtao-primitives = { path = "crates/rtao-primitives", version = "0.1.0", default-features = false }
+rtao-catalog = { path = "crates/rtao-catalog", version = "0.1.0", default-features = false }
+rtao-runtime = { path = "crates/rtao-runtime", version = "0.1.0", default-features = false }
+rtao-rpc = { path = "crates/rtao-rpc", version = "0.1.0", default-features = false }
+rtao-signer = { path = "crates/rtao-signer", version = "0.1.0", default-features = false }
+rtao-wallet = { path = "crates/rtao-wallet", version = "0.1.0", default-features = false }
+rtao-client = { path = "crates/rtao-client", version = "0.1.0", default-features = false }
+rtao-tx = { path = "crates/rtao-tx", version = "0.1.0", default-features = false }
+rtao-reads = { path = "crates/rtao-reads", version = "0.1.0", default-features = false }
+rtao-evm = { path = "crates/rtao-evm", version = "0.1.0", default-features = false }
+rtao-intents = { path = "crates/rtao-intents", version = "0.1.0", default-features = false }
+rtao-metagraph = { path = "crates/rtao-metagraph", version = "0.1.0", default-features = false }
+rtao-btauth = { path = "crates/rtao-btauth", version = "0.1.0", default-features = false }
+rtao-neuron = { path = "crates/rtao-neuron", version = "0.1.0", default-features = false }
+rtao-cli = { path = "crates/rtao-cli", version = "0.1.0", default-features = false }
+rtao-testkit = { path = "crates/rtao-testkit", version = "0.1.0", default-features = false }
 bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490", default-features = false }
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490", default-features = false, features = ["std"] }
 subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
@@ -126,10 +126,10 @@ tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
 mime = "0.3"
 redis = { version = "0.32", default-features = false, features = ["tokio-comp", "script"] }
-rtao-remote-signer = { path = "crates/rtao-remote-signer", default-features = false }
-rtao-compat-synapse = { path = "crates/rtao-compat-synapse", default-features = false }
-rtao-compat-epistula = { path = "crates/rtao-compat-epistula", default-features = false }
-rtao-transport-quic = { path = "crates/rtao-transport-quic", default-features = false }
+rtao-remote-signer = { path = "crates/rtao-remote-signer", version = "0.1.0", default-features = false }
+rtao-compat-synapse = { path = "crates/rtao-compat-synapse", version = "0.1.0", default-features = false }
+rtao-compat-epistula = { path = "crates/rtao-compat-epistula", version = "0.1.0", default-features = false }
+rtao-transport-quic = { path = "crates/rtao-transport-quic", version = "0.1.0", default-features = false }
 
 [patch.crates-io]
 w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }

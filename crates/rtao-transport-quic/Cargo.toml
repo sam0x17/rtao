@@ -8,10 +8,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND MIT"
 repository.workspace = true
 description = "btlightning-compatible QUIC transport for Bittensor neurons, built on quinn."
+documentation = "https://docs.rs/rtao-transport-quic"
+readme = "README.md"
 keywords = ["bittensor", "quic", "btlightning", "transport", "quinn"]
 categories = ["network-programming", "cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 all-features = true
 

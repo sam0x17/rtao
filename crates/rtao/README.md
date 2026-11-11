@@ -1,5 +1,9 @@
 # rtao
 
+[![crates.io](https://img.shields.io/crates/v/rtao.svg)](https://crates.io/crates/rtao)
+[![docs.rs](https://img.shields.io/docsrs/rtao)](https://docs.rs/rtao)
+[![license](https://img.shields.io/crates/l/rtao.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 The public Rust SDK facade for Bittensor. Use `prelude` for common client,
 namespace, identifier and transaction traits. `core` and `primitives` expose
 the curated chain types even when default features are disabled.

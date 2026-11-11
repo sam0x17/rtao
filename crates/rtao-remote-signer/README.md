@@ -1,5 +1,9 @@
 # rtao-remote-signer
 
+[![crates.io](https://img.shields.io/crates/v/rtao-remote-signer.svg)](https://crates.io/crates/rtao-remote-signer)
+[![docs.rs](https://img.shields.io/docsrs/rtao-remote-signer)](https://docs.rs/rtao-remote-signer)
+[![license](https://img.shields.io/crates/l/rtao-remote-signer.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Policy-checked remote transaction signing for rtao, over the rtao-authored
 `rtao-remote-signer/1` protocol. The Python SDK has no counterpart.
 

@@ -1,5 +1,9 @@
 # rtao-compat-epistula
 
+[![crates.io](https://img.shields.io/crates/v/rtao-compat-epistula.svg)](https://crates.io/crates/rtao-compat-epistula)
+[![docs.rs](https://img.shields.io/docsrs/rtao-compat-epistula)](https://docs.rs/rtao-compat-epistula)
+[![license](https://img.shields.io/crates/l/rtao-compat-epistula.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Epistula v2 signed HTTP headers, compatible with the epistula.sybil.com
 reference, SN34 BitMind, the gobt boilerplate (SN4 Targon) and SN1 Apex
 clients.

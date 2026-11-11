@@ -1,5 +1,9 @@
 # rtao-catalog
 
+[![crates.io](https://img.shields.io/crates/v/rtao-catalog.svg)](https://crates.io/crates/rtao-catalog)
+[![docs.rs](https://img.shields.io/docsrs/rtao-catalog)](https://docs.rs/rtao-catalog)
+[![license](https://img.shields.io/crates/l/rtao-catalog.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Generated intent, read and error catalogs from the pinned Bittensor sources.
 These tables describe the upstream interfaces used by the client and CLI.
 

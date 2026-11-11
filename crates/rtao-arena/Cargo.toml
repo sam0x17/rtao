@@ -7,10 +7,13 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Fixed-capacity memory for wasm32 and other hosts whose linear memory must never grow."
+documentation = "https://docs.rs/rtao-arena"
+readme = "README.md"
 keywords = ["allocator", "arena", "no-std", "wasm", "tlsf"]
 categories = ["memory-management", "no-std", "wasm"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 all-features = true
 

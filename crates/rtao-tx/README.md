@@ -1,5 +1,9 @@
 # rtao-tx
 
+[![crates.io](https://img.shields.io/crates/v/rtao-tx.svg)](https://crates.io/crates/rtao-tx)
+[![docs.rs](https://img.shields.io/docsrs/rtao-tx)](https://docs.rs/rtao-tx)
+[![license](https://img.shields.io/crates/l/rtao-tx.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Transaction planning, semantic policy checks and submission for Bittensor.
 `Executor` uses an existing verified client, its runtime metadata and nonce
 manager. Intent implementations supply typed roles, preflight observations and

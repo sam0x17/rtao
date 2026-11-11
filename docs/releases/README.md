@@ -67,3 +67,7 @@ State, for this release:
    described in `ci/release/README.md`.
 5. A snapshot tag cut from the same commit reuses the curated notes as its
    annotation.
+
+Publishing the crates to crates.io adds a step between pushing the tag and
+creating the GitHub release; [crates-io.md](crates-io.md) has the order,
+commands and remaining blockers (D-181).

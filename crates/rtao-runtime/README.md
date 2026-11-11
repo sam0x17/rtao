@@ -1,5 +1,9 @@
 # rtao-runtime
 
+[![crates.io](https://img.shields.io/crates/v/rtao-runtime.svg)](https://crates.io/crates/rtao-runtime)
+[![docs.rs](https://img.shields.io/docsrs/rtao-runtime)](https://docs.rs/rtao-runtime)
+[![license](https://img.shields.io/crates/l/rtao-runtime.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Name-based Bittensor descriptors and typed runtime models. Generated
 descriptors identify calls, storage, constants, events and runtime APIs by
 name; the active metadata supplies encoded indices and storage hashers.

@@ -151,4 +151,63 @@ mod tests {
             root.join("docs/releases").join(format!("{tag}.md")),
         )?)
     }
+
+    /// Each published package carries the root license texts as regular files,
+    /// and every workspace path dependency names the version it points at, so
+    /// `cargo publish` writes a registry requirement (D-181).
+    #[test]
+    fn crates_carry_root_licenses_and_path_versions() -> Result<()> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root")?;
+        let manifest: DocumentMut = fs::read_to_string(root.join("Cargo.toml"))?.parse()?;
+        let workspace_version = manifest["workspace"]["package"]["version"]
+            .as_str()
+            .context("workspace version")?;
+        let dependencies = manifest["workspace"]["dependencies"]
+            .as_table()
+            .context("workspace dependencies")?;
+        let mut crates = 0;
+        for entry in fs::read_dir(root.join("crates"))? {
+            let dir = entry?.path();
+            let Ok(text) = fs::read_to_string(dir.join("Cargo.toml")) else {
+                continue;
+            };
+            crates += 1;
+            let crate_manifest: DocumentMut = text.parse()?;
+            let package = &crate_manifest["package"];
+            let name = package["name"].as_str().context("package name")?;
+            for file in ["LICENSE-MIT", "LICENSE-APACHE", "NOTICE"] {
+                let path = dir.join(file);
+                ensure!(
+                    fs::symlink_metadata(&path)
+                        .is_ok_and(|metadata| metadata.file_type().is_file()),
+                    "{name} lacks a regular {file}"
+                );
+                ensure!(
+                    fs::read(&path)? == fs::read(root.join(file))?,
+                    "{name}/{file} differs from the root {file}; copy it again"
+                );
+            }
+            let version = package["version"]
+                .as_str()
+                .or_else(|| {
+                    package["version"]
+                        .get("workspace")
+                        .map(|_| workspace_version)
+                })
+                .context("package version")?;
+            let declared = dependencies
+                .get(name)
+                .and_then(|item| item.get("version"))
+                .and_then(|item| item.as_str())
+                .with_context(|| format!("[workspace.dependencies] {name} has no version"))?;
+            ensure!(
+                declared == version,
+                "[workspace.dependencies] {name} is {declared}, the crate is {version}"
+            );
+        }
+        ensure!(crates >= 24, "found only {crates} crates");
+        Ok(())
+    }
 }

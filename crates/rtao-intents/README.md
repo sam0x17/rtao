@@ -1,5 +1,9 @@
 # rtao-intents
 
+[![crates.io](https://img.shields.io/crates/v/rtao-intents.svg)](https://crates.io/crates/rtao-intents)
+[![docs.rs](https://img.shields.io/docsrs/rtao-intents)](https://docs.rs/rtao-intents)
+[![license](https://img.shields.io/crates/l/rtao-intents.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Typed Bittensor transaction intents and the catalog dispatcher used by
 `rtao_tx::Executor`. Construct an intent from a public type, or use `Registry`
 to parse an enabled JSON tool operation. `executor(client)` installs that

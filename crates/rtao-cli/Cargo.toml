@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0 AND PSF-2.0"
 repository.workspace = true
 description = "The rtao command line application."
+documentation = "https://docs.rs/rtao-cli"
+readme = "README.md"
 keywords = ["bittensor", "cli", "btcli", "wallet", "blockchain"]
 categories = ["command-line-utilities", "cryptography::cryptocurrencies"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 features = ["ledger","vault","extension","evm","pow-gpu","remote-signer"]
 
@@ -63,8 +66,10 @@ libc = "0.2"
 nix = { workspace = true, features = ["term", "poll"] }
 
 [dev-dependencies]
-rtao-testkit.workspace = true
-rtao-remote-signer = { workspace = true, features = ["client", "server"] }
+# Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
+# so the testkit and intents dev-dependency cycles never reach crates.io (D-181).
+rtao-testkit = { path = "../rtao-testkit", default-features = false }
+rtao-remote-signer = { path = "../rtao-remote-signer", default-features = false, features = ["client", "server"] }
 
 [[bin]]
 name = "rtao"

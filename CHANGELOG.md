@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### crates.io packaging prep (D-181, repository maintenance)
+
+- Workspace path dependencies carry their versions, and dev-dependencies on workspace crates are path-only, so `cargo publish` writes registry requirements and strips the dev-dependency cycles.
+- Every crate ships copies of the root `LICENSE-MIT`, `LICENSE-APACHE` and `NOTICE` (an xtask test keeps them equal), and sets `documentation`, `readme` and its docs.rs target.
+- READMEs carry crates.io, docs.rs and licence badges. The root README and the book lead with the crates.io dependency and `cargo install --locked rtao-cli`, keeping Git for unreleased commits, and name the current `v490` pin.
+- `docs/releases/crates-io.md` lists the publish order, the commands and the blockers left before the first publish: the Git dependencies, the `ruint` patch and files read from outside a crate.
+
 ### v490 hand ports: external ECDSA signatures (D-180)
 
 - External signers with ECDSA (secp256k1) accounts can sign rtao-prepared transactions, as in Python v490. The account is `blake2_256` of the compressed public key (`rtao_core::keys::account_id_from_ecdsa_public`). Prepare with `Client::prepare_public_as(call, account, SignatureScheme::Ecdsa, &opts)` (or `Executor::prepare_call_as`); the 17-field unsigned JSON carries `crypto_type` 2 and imports. Read the signer's reply with `ExternalSignature::normalize`/`normalize_hex` (65 bytes raw, or 66 with the variant byte), then attach or submit it with `Client::attach_external_signature`/`submit_external_signature` (or `Executor::submit_external_signature`, `SyncClient::submit_external_signature`).

@@ -7,10 +7,13 @@ authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
 description = "Bittensor signing contracts and key sources."
+documentation = "https://docs.rs/rtao-signer"
+readme = "README.md"
 keywords = ["bittensor", "signer", "ledger", "sr25519", "ed25519"]
 categories = ["cryptography::cryptocurrencies", "cryptography"]
 
 [package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
 features = ["ledger","vault","extension"]
 

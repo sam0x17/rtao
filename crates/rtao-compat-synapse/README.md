@@ -1,5 +1,9 @@
 # rtao-compat-synapse
 
+[![crates.io](https://img.shields.io/crates/v/rtao-compat-synapse.svg)](https://crates.io/crates/rtao-compat-synapse)
+[![docs.rs](https://img.shields.io/docsrs/rtao-compat-synapse)](https://docs.rs/rtao-compat-synapse)
+[![license](https://img.shields.io/crates/l/rtao-compat-synapse.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Wire compatibility with `bittensor==10.5.0` Synapse, Axon and Dendrite peers.
 
 The v10 protocol carries a JSON-encoded pydantic model over plain HTTP. A

@@ -1,5 +1,9 @@
 # rtao-testkit
 
+[![crates.io](https://img.shields.io/crates/v/rtao-testkit.svg)](https://crates.io/crates/rtao-testkit)
+[![docs.rs](https://img.shields.io/docsrs/rtao-testkit)](https://docs.rs/rtao-testkit)
+[![license](https://img.shields.io/crates/l/rtao-testkit.svg)](https://github.com/sam0x17/rtao/blob/main/NOTICE)
+
 Fixtures and fake transports for client tests.
 
 `FakeState` stores encoded chain state. `FakeNode` serves that state through
