@@ -10,5 +10,11 @@ changed by rtao (cargo xtask forks) as follows.
 - [dependencies]: w3f-bls is rtao-upstream-w3f-bls (the republished w3f-bls), by exact version; the dependency name is unchanged
 - [dev-dependencies]: removed (ark-ed-on-bls12-381, criterion, hex, simulacrum)
 - [lints]: added, allowing upstream's existing warnings (deprecated, unused, unexpected_cfgs, Clippy's default set, rustdoc's lints), so rtao's warning-denying gates check rtao's own code
+- [package.metadata]: removed
+- comments: the original manifest's comments are not carried over
 
-No other file is modified. NOTICE and this file are added by rtao.
+The package leaves out these directories of tle, which only upstream's
+own tests, benchmarks and examples use: benches.
+
+No other file is modified. LICENSE (the source repository's root LICENSE),
+NOTICE and this file are added by rtao.

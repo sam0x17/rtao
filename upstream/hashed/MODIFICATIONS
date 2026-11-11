@@ -16,5 +16,10 @@ changed by rtao (cargo xtask forks) as follows.
 - [features]: std no longer enables hex/std, a feature of a removed dev-dependency
 - [features]: std no longer enables serde_json/std, a feature of a removed dev-dependency
 - [lints]: upstream's workspace lints replaced by allowing upstream's existing warnings (deprecated, unused, unexpected_cfgs, Clippy's default set, rustdoc's lints), so rtao's warning-denying gates check rtao's own code
+- comments: the original manifest's comments are not carried over
 
-No other file is modified. NOTICE and this file are added by rtao.
+The package leaves out these directories of primitives/hashed, which only upstream's
+own tests, benchmarks and examples use: tests.
+
+No other file is modified. LICENSE (the source repository's root LICENSE),
+NOTICE and this file are added by rtao.

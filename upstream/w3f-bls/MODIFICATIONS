@@ -9,5 +9,10 @@ changed by rtao (cargo xtask forks) as follows.
 - [lib]: library name kept as upstream's; library tests, benchmarks and doctests disabled, since upstream's test fixtures and dev-dependencies are not republished
 - [dev-dependencies]: removed (hex-literal)
 - [lints]: added, allowing upstream's existing warnings (deprecated, unused, unexpected_cfgs, Clippy's default set, rustdoc's lints), so rtao's warning-denying gates check rtao's own code
+- comments: the original manifest's leading comment is kept, under the generated header
 
-No other file is modified. NOTICE and this file are added by rtao.
+The package leaves out these directories of vendor/w3f-bls, which only upstream's
+own tests, benchmarks and examples use: examples.
+
+No other file is modified. LICENSE (the source repository's root LICENSE),
+NOTICE and this file are added by rtao.

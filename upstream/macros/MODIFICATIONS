@@ -10,4 +10,8 @@ changed by rtao (cargo xtask forks) as follows.
 - [dependencies]: dependencies inherited from the monorepo workspace written out in full
 - [lints]: upstream's workspace lints replaced by allowing upstream's existing warnings (deprecated, unused, unexpected_cfgs, Clippy's default set, rustdoc's lints), so rtao's warning-denying gates check rtao's own code
 
-No other file is modified. NOTICE and this file are added by rtao.
+The package leaves out these directories of support/macros, which only upstream's
+own tests, benchmarks and examples use: tests.
+
+No other file is modified. LICENSE (the source repository's root LICENSE),
+NOTICE and this file are added by rtao.

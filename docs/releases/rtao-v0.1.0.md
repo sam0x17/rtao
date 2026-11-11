@@ -6,10 +6,11 @@ version. The rendered notes (`cargo xtask release-notes --tag rtao-v0.1.0`)
 add the pins, the published packages and this version's changelog section.
 
 Every workspace crate is published at 0.1.0 (`rtao-arena` at 0.2.0). The core
-is `rtao-upstream-core` 0.490.0, rtao's unmodified republish of the reviewed
-`bittensor-core` v490 revision, with the five packages it took from Git; no
-consumer needs a `[patch]`, and `rtao doctor` checks a workspace's lock. The
-transport crate is `rtao-jsonrpc` (formerly unpublished as `rtao-rpc`).
+is `rtao-upstream-core` 0.490.0, rtao's republish of the reviewed
+`bittensor-core` v490 revision (the core patch, sources byte for byte), with
+the five packages it took from Git; no consumer needs a `[patch]`, and
+`rtao doctor` checks a workspace's lock. The transport crate is `rtao-jsonrpc`
+(formerly unpublished as `rtao-rpc`).
 Rust 1.90 is the minimum supported version.
 
 ## Changes by decision
@@ -59,7 +60,7 @@ widely pinned revision:
   `ProxyType` variants; a parity pin whose core inputs move holds the core
   instead of failing; new upstream surface is pending work, not a pin failure;
   adoption fixes in the hourly workflow (repository maintenance).
-- D-129, D-155, D-161, D-178: the v488 and v490 hand ports and the
+- D-129, D-135, D-137, D-155, D-161, D-178: the v488 and v490 hand ports and the
   classification of new upstream rows and tests.
 - D-130, D-132: typed gamma and service reads; the seven gamma intents.
 - D-133: a later multisig round rebuilds a call only when its build carries
@@ -91,11 +92,12 @@ widely pinned revision:
 - D-179: the core's strict verifier and password codec replace rtao's staged
   copies; ECDSA key helpers.
 - D-180: external ECDSA signatures, verified before attachment.
-- D-181 to D-184: crates.io publication. Packaging prep; the transport crate
+- D-181 to D-185: crates.io publication. Packaging prep; the transport crate
   renamed `rtao-jsonrpc`; the core graph republished as `rtao-upstream-*`
   packages, crates.io `ruint` (RUSTSEC-2026-0220 fixed) and Rust 1.90; build
   inputs copied into the crates that read them; release notes that fit GitHub's
-  limit.
+  limit; the republished core's `MODIFICATIONS` lists the files the core patch
+  changes.
 
 ## Journal compatibility
 

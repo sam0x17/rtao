@@ -44,9 +44,8 @@ packages (D-183); the transport crate is `rtao-jsonrpc` (D-182).
   - `rtao-testkit` is a normal dependency of the subnet template, for
     `Localnet` and `Scenario`.
 
-`cargo package --list` succeeds for all 24 crates. `cargo package` (with
-verification) succeeds today only for `rtao-arena` and `rtao-jsonrpc`, the two
-crates outside the `bittensor-core` graph.
+`cargo package --workspace --exclude xtask --locked` packages and verifies all
+30 packages: the 24 crates and the six republished packages (D-183).
 
 ## 2. What the first publish needed (done)
 

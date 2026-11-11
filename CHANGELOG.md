@@ -2,16 +2,20 @@
 
 ## Unreleased
 
+### Republished package notices (D-185, repository maintenance)
+
+- `rtao-upstream-core`'s `MODIFICATIONS` lists the five files rtao's reviewed core patch changes from the monorepo commit; generated manifests keep the original manifest's leading comment (the vendored `w3f-bls` notice) and `MODIFICATIONS` notes dropped comments and metadata and the upstream directories left out. The README and D-183 now say which crates.io polkadot-sdk releases differ from the monorepo's revision (`sp-externalities`, `sp-storage`, `sp-tracing`: `no_std` gating and derives only).
+
 ### Release notes for crates.io (D-184, repository maintenance)
 
-- `cargo xtask release-notes` names the published crates and the republished core, includes only the released version's CHANGELOG section and refuses a body over GitHub's 125,000-character limit. `docs/releases/crates-io.md` is the publish checklist; the curated 0.1.0 notes cover every decision to D-184.
+- `cargo xtask release-notes` names the published crates and the republished core, includes only the released version's CHANGELOG section and refuses a body over GitHub's 125,000-character limit. `docs/releases/crates-io.md` is the publish checklist; the curated 0.1.0 notes cover every decision to D-185.
 
 ### The core graph republished on crates.io (D-183)
 
-- Changed: rtao depends on `rtao-upstream-core`, `-hashed`, `-macros`, `-fips204`, `-w3f-bls` and `-tle` 0.490.0, unmodified republishes of the reviewed `bittensor-core` revision and the packages it took from Git, generated under `upstream/` by `cargo xtask forks`. Consumers need no `[patch]`: delete the `w3f-bls`, core-fork and `ruint` patches an earlier revision asked for.
+- Changed: rtao depends on `rtao-upstream-core`, `-hashed`, `-macros`, `-fips204`, `-w3f-bls` and `-tle` 0.490.0, republishes of the reviewed `bittensor-core` revision (rtao's core patch on v490) and the packages it took from Git, every source file byte for byte from those revisions, generated under `upstream/` by `cargo xtask forks`. Consumers need no `[patch]`: delete the `w3f-bls`, core-fork and `ruint` patches an earlier revision asked for.
 - Changed: the minimum supported Rust is 1.90; `rtao-evm` requires crates.io `ruint` 1.20.1 or newer (RUSTSEC-2026-0220) and `patches/ruint` is gone.
 - Changed: `rtao doctor` checks that a workspace locks the republished core and BLS fork at the versions (and crates.io checksums) its rtao-core records, and builds no other BLS implementation; `rtao_core::dependency_policy` checks `rtao-upstream-w3f-bls` and gains `BLS_PACKAGE`, `CORE_PACKAGE` and `CRATES_IO`; `rtao_core::UPSTREAM_CORE_VERSION` and `UPSTREAM_BLS_VERSION` name the versions.
-- Added: `cargo xtask forks check|write|refresh|verify-published|order` and `cargo xtask crate-inputs [--check]`. Crates that read workspace files at build time carry copies, so every crate packages and verifies on its own.
+- Added: `cargo xtask forks check|write|refresh|verify-packaged|verify-published|order` and `cargo xtask crate-inputs [--check]`. Crates that read workspace files at build time carry copies, so every crate packages and verifies on its own.
 
 ### Transport crate renamed `rtao-jsonrpc` (D-182)
 

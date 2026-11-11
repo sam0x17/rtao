@@ -26,8 +26,9 @@ Upstream secret constructors can include recovery material in errors. The
 higher-level `rtao-signer` and `rtao-wallet` APIs redact those diagnostics at
 their boundaries. Direct calls through `keys::Keypair` retain upstream behavior.
 
-The core is `rtao-upstream-core`, rtao's unmodified republish of the reviewed
-`bittensor-core` revision, with the BLS fork and `tle` it builds against
+The core is `rtao-upstream-core`, rtao's republish of the reviewed
+`bittensor-core` revision (sources byte for byte; its `MODIFICATIONS` lists what
+the core patch changes), with the BLS fork and `tle` it builds against
 ([workspace README](https://github.com/sam0x17/rtao#the-republished-core)).
 `UPSTREAM_CORE_VERSION` and `UPSTREAM_BLS_VERSION` name the versions this
 crate depends on. No `[patch]` is needed downstream.
