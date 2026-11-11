@@ -33,6 +33,13 @@ impl Executor {
         Self(self.0.with_clock(clock))
     }
 
+    /// Route account registration through MEV Shield by default (Python's
+    /// `shielded=None`; on unless disabled). See
+    /// [`rtao_tx::Executor::with_auto_shield`].
+    pub fn with_auto_shield(self, enabled: bool) -> Self {
+        Self(self.0.with_auto_shield(enabled))
+    }
+
     /// Replace the generated parser with an application-owned registry.
     pub fn with_registry(self, registry: Arc<dyn IntentRegistry>) -> Self {
         Self(self.0.with_registry(registry))

@@ -121,6 +121,15 @@ impl KeyView for UnlockedKeys<'_> {
     fn bare_signer_account(&self) -> Option<rtao::primitives::AccountId> {
         self.keys.bare_signer_account()
     }
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        self.keys.hotkey_descriptor()
+    }
+    fn local_descriptor(&self, account: &rtao::primitives::AccountId) -> Option<Vec<u8>> {
+        self.keys.local_descriptor(account)
+    }
+    fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+        self.keys.authority_descriptor(role)
+    }
 }
 impl DynKeySource for UnlockedKeys<'_> {
     fn signer_for<'a>(

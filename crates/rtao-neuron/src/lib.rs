@@ -22,6 +22,8 @@ mod publisher;
 mod reads;
 #[cfg(any(feature = "validator", feature = "miner"))]
 mod runtime;
+#[cfg(feature = "miner")]
+mod sender_schemes;
 #[cfg(any(feature = "validator", feature = "miner"))]
 mod shutdown;
 mod state;
@@ -69,6 +71,9 @@ pub use runtime::Validator;
 #[cfg(any(feature = "validator", feature = "miner"))]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "validator", feature = "miner"))))]
 pub use runtime::{NeuronCx, NeuronRuntime, client_config};
+#[cfg(feature = "miner")]
+#[cfg_attr(docsrs, doc(cfg(feature = "miner")))]
+pub use sender_schemes::FinalizedRegistrySchemes;
 pub use state::{EmaScores, LoadedState, ScoreError, StateCell, StateError, StateStore};
 pub use step::{Backoff, StepCadence, StepPolicy};
 pub use telemetry::{Metrics, Readiness};

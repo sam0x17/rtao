@@ -1,5 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/shielding.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
-//! The opt-in registration Shield default (D-140): Python's `shielded=None`.
+//! The registration Shield default (D-170, superseding D-140's opt-in):
+//! Python's `shielded=None`, on unless the executor opts out.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use rtao_client::{Client, ClientConfig, Network};
@@ -58,18 +59,10 @@ fn intent() -> CreatePureProxy {
 }
 
 #[tokio::test]
-async fn registration_takes_shield_only_when_opted_in_and_available() {
+async fn registration_takes_shield_by_default_when_available() {
     let signer = KeypairSigner::from_seed(&[7; 32], CryptoType::Sr25519).unwrap();
-    // Off by default: the explicit on/off is unchanged.
-    let plain = executor(true, &signer).await;
-    let plan = plain
-        .plan(&intent(), &signer, &PlanOptions::default())
-        .await
-        .unwrap();
-    assert!(!plan.shielded);
-    assert_eq!(plan.to_json()["shielded"], false);
-
-    let auto = executor(true, &signer).await.with_auto_shield(true);
+    // On by default, as Python's `shielded=None`.
+    let auto = executor(true, &signer).await;
     let plan = auto
         .plan(&intent(), &signer, &PlanOptions::default())
         .await
@@ -77,9 +70,31 @@ async fn registration_takes_shield_only_when_opted_in_and_available() {
     assert!(plan.shielded, "{:?}", plan.warnings);
     assert_eq!(plan.to_json()["shielded"], true);
 
+    // Python's explicit `shielded=False`: the executor opts out.
+    let plain = executor(true, &signer).await.with_auto_shield(false);
+    let plan = plain
+        .plan(&intent(), &signer, &PlanOptions::default())
+        .await
+        .unwrap();
+    assert!(!plan.shielded);
+    assert_eq!(plan.to_json()["shielded"], false);
+    // An explicit request still shields with the default off.
+    let plan = plain
+        .plan(
+            &intent(),
+            &signer,
+            &PlanOptions {
+                shielded: true,
+                ..PlanOptions::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(plan.shielded);
+
     // Without a shield key the registration is planned in the clear, with
-    // Python's warning.
-    let unavailable = executor(false, &signer).await.with_auto_shield(true);
+    // Python's warning, never silently.
+    let unavailable = executor(false, &signer).await;
     let plan = unavailable
         .plan(&intent(), &signer, &PlanOptions::default())
         .await
@@ -101,8 +116,7 @@ async fn ordinary_calls_never_take_the_automatic_route() {
         true,
         &KeypairSigner::from_seed(&[9; 32], CryptoType::Sr25519).unwrap(),
     )
-    .await
-    .with_auto_shield(true);
+    .await;
     // This payer is not protected, so the call is the plain Proxy.create_pure.
     let plan = auto
         .plan(&intent(), &signer, &PlanOptions::default())

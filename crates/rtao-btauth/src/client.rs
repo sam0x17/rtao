@@ -16,11 +16,11 @@ use http::{
 };
 pub use rtao_primitives::axon::{AxonTarget, Url, axon_base_url};
 use rtao_primitives::{AccountId, Uid};
-use rtao_signer::Signer;
+use rtao_signer::{Signer, SignerError};
 use serde::{Serialize, de::DeserializeOwned};
 use tokio::time::{Instant, timeout, timeout_at};
 
-use crate::{AuthError, Clock, SystemClock, sign};
+use crate::{AuthError, Clock, HashedHttpSigner, SystemClock, sign, sign_hashed};
 
 /// Timing, concurrency and response limits for one axon query call.
 #[derive(Debug, Clone)]
@@ -165,11 +165,29 @@ impl FanOutError {
     }
 }
 
+/// How a [`SignedClient`] signs (D-171): a classical key directly, a hashed
+/// SR/ED key at a generation read from finalized chain state, or not at all.
+#[derive(Clone, Debug)]
+enum HttpIdentity {
+    Classical,
+    Hashed(u64),
+    Unprepared(String),
+}
+
+const UNPREPARED_HASHED: &str = "hashed hotkey HTTP signing needs its finalized generation; call SignedClient::prepare_hashed with the generation read from finalized chain state";
+const POST_QUANTUM_HTTP: &str = "post-quantum HTTP signing is not supported (btauth defines no post-quantum scheme); use a classical or hashed SR/ED hotkey for HTTP";
+
 /// HTTP connection pool and signing identity shared by axon queries.
+///
+/// A classical (Sr25519/Ed25519) signer signs directly. A hashed SR/ED signer
+/// signs only after [`Self::prepare_hashed`] binds it to a finalized
+/// generation of at least one (Python `prepare_signer`); clones share that
+/// binding. A post-quantum signer is refused, as upstream.
 #[derive(Clone)]
 pub struct SignedClient {
     http: reqwest::Client,
     signer: Arc<dyn Signer>,
+    identity: Arc<std::sync::RwLock<HttpIdentity>>,
     clock: Arc<dyn Clock>,
     tls: rustls::ClientConfig,
 }
@@ -229,12 +247,126 @@ impl SignedClient {
     ) -> Result<Self, ClientError> {
         tls.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
         let http = http_client(tls.clone(), Duration::from_secs(3))?;
+        let identity = match signer.authority() {
+            None => HttpIdentity::Classical,
+            Some(authority) if authority.authority_type().is_post_quantum() => {
+                HttpIdentity::Unprepared(POST_QUANTUM_HTTP.into())
+            }
+            Some(_) => HttpIdentity::Unprepared(UNPREPARED_HASHED.into()),
+        };
         Ok(Self {
             http,
             signer,
+            identity: Arc::new(std::sync::RwLock::new(identity)),
             clock,
             tls,
         })
+    }
+    /// The signing identity.
+    pub fn signer(&self) -> &Arc<dyn Signer> {
+        &self.signer
+    }
+    /// Bind a hashed SR/ED signer to `generation`, which the caller read from
+    /// the account's finalized `HashedAccounts` record after checking its
+    /// descriptor (Python `prepare_signer`). Generation zero is refused (its
+    /// signatures would reveal the original identity key) and leaves the
+    /// client unable to sign until a later call succeeds; so is a classical
+    /// or post-quantum signer. Clones share the binding.
+    pub fn prepare_hashed(&self, generation: u64) -> Result<(), SignerError> {
+        let prepared = HashedHttpSigner::new(self.signer.clone(), generation);
+        let mut identity = self
+            .identity
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match prepared {
+            Ok(_) => {
+                *identity = HttpIdentity::Hashed(generation);
+                Ok(())
+            }
+            Err(error) => {
+                if self.signer.authority().is_some() {
+                    *identity = HttpIdentity::Unprepared(error.to_string());
+                }
+                Err(error)
+            }
+        }
+    }
+    /// Unbind a hashed signer, so requests are refused with `reason` until
+    /// [`Self::prepare_hashed`] succeeds again (for example when its
+    /// registration is missing from finalized state). No effect on a
+    /// classical signer.
+    pub fn unprepare_hashed(&self, reason: &str) {
+        if self.signer.authority().is_some() {
+            *self
+                .identity
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner) =
+                HttpIdentity::Unprepared(reason.to_owned());
+        }
+    }
+    /// The finalized generation a hashed signer is bound to, if any.
+    pub fn hashed_generation(&self) -> Option<u64> {
+        match *self
+            .identity
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+        {
+            HttpIdentity::Hashed(generation) => Some(generation),
+            _ => None,
+        }
+    }
+    /// Whether requests can be signed now.
+    pub fn ready(&self) -> Result<(), SignerError> {
+        match &*self
+            .identity
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+        {
+            HttpIdentity::Unprepared(reason) => Err(SignerError::InvalidSignature(reason.clone())),
+            _ => Ok(()),
+        }
+    }
+    async fn authenticate(
+        &self,
+        method: &Method,
+        target: &str,
+        body: &[u8],
+        receiver: &AccountId,
+    ) -> Result<HeaderMap, AuthError> {
+        let identity = self
+            .identity
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        match identity {
+            HttpIdentity::Classical => {
+                sign(
+                    self.signer.as_ref(),
+                    method,
+                    target,
+                    body,
+                    Some(receiver),
+                    self.clock.as_ref(),
+                )
+                .await
+            }
+            HttpIdentity::Hashed(generation) => {
+                let signer = HashedHttpSigner::new(self.signer.clone(), generation)
+                    .map_err(AuthError::Signing)?;
+                sign_hashed(
+                    &signer,
+                    method,
+                    target,
+                    body,
+                    Some(receiver),
+                    self.clock.as_ref(),
+                )
+                .await
+            }
+            HttpIdentity::Unprepared(reason) => {
+                Err(AuthError::Signing(SignerError::InvalidSignature(reason)))
+            }
+        }
     }
     /// Begin a receiver-bound request with an empty materialized body.
     pub fn request(
@@ -429,16 +561,10 @@ impl SignedClient {
             target.push('?');
             target.push_str(query);
         }
-        let authentication = sign(
-            self.signer.as_ref(),
-            method,
-            &target,
-            body,
-            Some(receiver),
-            self.clock.as_ref(),
-        )
-        .await
-        .map_err(ClientError::Auth)?;
+        let authentication = self
+            .authenticate(method, &target, body, receiver)
+            .await
+            .map_err(ClientError::Auth)?;
         let remaining = limit.saturating_sub(started.elapsed());
         let remaining = deadline.map_or(remaining, |at| {
             remaining.min(at.saturating_duration_since(Instant::now()))

@@ -10,8 +10,9 @@ use rtao_runtime::{
     Call, CallBytes, CallDescriptor, RuntimeHandle, calls::subtensor_module as calls,
 };
 use rtao_signer::{
-    AccountId, BoxFuture, CryptoType, Hotkey, KeySource, KeyView, MultiSignature, Signer,
-    SignerCaps, SignerError, SigningRequest,
+    AccountId, AuthoritySigner, AuthorityType, AuthorizationProof, AuthorizationRequest, BoxFuture,
+    CryptoType, Hotkey, KeySource, KeyView, MultiSignature, Signer, SignerCaps, SignerError,
+    SignerRole, SigningRequest,
 };
 use rtao_tx::{
     BuildCx, Built, ExecuteOptions, Intent, IntentError, IntentInterface, WeightsSubmitted,
@@ -65,6 +66,15 @@ impl<K: KeyView> KeyView for SigningKeys<'_, K> {
     fn bare_signer_account(&self) -> Option<AccountId> {
         self.keys.bare_signer_account()
     }
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        self.keys.hotkey_descriptor()
+    }
+    fn local_descriptor(&self, account: &AccountId) -> Option<Vec<u8>> {
+        self.keys.local_descriptor(account)
+    }
+    fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+        self.keys.authority_descriptor(role)
+    }
 }
 impl<K: KeySource<Hotkey>> KeySource<Hotkey> for SigningKeys<'_, K> {
     fn address(&self) -> Result<AccountId, SignerError> {
@@ -72,16 +82,84 @@ impl<K: KeySource<Hotkey>> KeySource<Hotkey> for SigningKeys<'_, K> {
     }
     async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
         let signer = self.keys.signer().await?;
-        Ok(Arc::new(SigningSigner {
-            signer,
-            signed: self.signed.clone(),
-        }))
+        Ok(Arc::new(SigningSigner::new(signer, self.signed.clone())))
     }
 }
 
 struct SigningSigner {
     signer: Arc<dyn Signer>,
     signed: Arc<AtomicBool>,
+    /// The inner signer's hashed or post-quantum authority, with the same
+    /// signed flag (D-171): an authorization proof counts as a signature.
+    authority: Option<SigningAuthority>,
+}
+impl SigningSigner {
+    fn new(signer: Arc<dyn Signer>, signed: Arc<AtomicBool>) -> Self {
+        let authority = signer.authority().map(|authority| SigningAuthority {
+            account: authority.account(),
+            authority_type: authority.authority_type(),
+            descriptor: authority.descriptor().to_vec(),
+            signer: signer.clone(),
+            signed: signed.clone(),
+        });
+        Self {
+            signer,
+            signed,
+            authority,
+        }
+    }
+}
+
+/// Forwards the inner signer's authority, setting the signed flag before
+/// any proof or message signature is requested.
+struct SigningAuthority {
+    account: AccountId,
+    authority_type: AuthorityType,
+    descriptor: Vec<u8>,
+    signer: Arc<dyn Signer>,
+    signed: Arc<AtomicBool>,
+}
+impl SigningAuthority {
+    fn inner(&self) -> Result<&dyn AuthoritySigner, SignerError> {
+        self.signer.authority().ok_or_else(|| {
+            SignerError::InvalidSignature("signer no longer exposes its authority".into())
+        })
+    }
+}
+impl AuthoritySigner for SigningAuthority {
+    fn account(&self) -> AccountId {
+        self.account
+    }
+    fn authority_type(&self) -> AuthorityType {
+        self.authority_type
+    }
+    fn descriptor(&self) -> &[u8] {
+        &self.descriptor
+    }
+    fn commitment(&self, generation: u64) -> Result<Vec<u8>, SignerError> {
+        self.inner()?.commitment(generation)
+    }
+    fn sign_authorization<'a>(
+        &'a self,
+        request: &'a AuthorizationRequest<'a>,
+    ) -> BoxFuture<'a, Result<AuthorizationProof, SignerError>> {
+        self.signed.store(true, Ordering::SeqCst);
+        match self.inner() {
+            Ok(inner) => inner.sign_authorization(request),
+            Err(error) => Box::pin(async move { Err(error) }),
+        }
+    }
+    fn sign_message<'a>(
+        &'a self,
+        generation: u64,
+        message: &'a [u8],
+    ) -> BoxFuture<'a, Result<Vec<u8>, SignerError>> {
+        self.signed.store(true, Ordering::SeqCst);
+        match self.inner() {
+            Ok(inner) => inner.sign_message(generation, message),
+            Err(error) => Box::pin(async move { Err(error) }),
+        }
+    }
 }
 impl Signer for SigningSigner {
     fn account(&self) -> AccountId {
@@ -109,6 +187,11 @@ impl Signer for SigningSigner {
     fn sign_raw<'a>(&'a self, message: &'a [u8]) -> BoxFuture<'a, Result<[u8; 64], SignerError>> {
         self.signed.store(true, Ordering::SeqCst);
         self.signer.sign_raw(message)
+    }
+    fn authority(&self) -> Option<&dyn AuthoritySigner> {
+        self.authority
+            .as_ref()
+            .map(|authority| authority as &dyn AuthoritySigner)
     }
 }
 
@@ -504,6 +587,61 @@ pub(super) fn uncertain(error: &anyhow::Error) -> bool {
 mod tests {
     #![allow(clippy::panic)]
     use super::*;
+    #[tokio::test]
+    #[allow(clippy::expect_used)]
+    async fn signing_wrapper_forwards_authority_and_counts_proofs() {
+        use rtao_core::keys::{
+            CRYPTO_FALCON512, CRYPTO_FALCON1024_HASHED, CRYPTO_HASHED, CRYPTO_HASHED_ED25519,
+            CRYPTO_MLDSA65, CRYPTO_MLDSA65_FIXED, Keypair,
+        };
+        use rtao_signer::{KeypairAuthoritySigner, SignPurpose};
+        for crypto in [
+            CRYPTO_HASHED,
+            CRYPTO_HASHED_ED25519,
+            CRYPTO_MLDSA65,
+            CRYPTO_MLDSA65_FIXED,
+            CRYPTO_FALCON512,
+            CRYPTO_FALCON1024_HASHED,
+        ] {
+            let key = KeypairAuthoritySigner::new(
+                Keypair::from_seed(&[crypto; 32], crypto).expect("keypair"),
+            )
+            .expect("authority signer");
+            let signing = Signing::default();
+            let source = key.clone();
+            let keys = signing.keys(&source);
+            // The descriptors stay visible through the wrapper, so fee quotes
+            // price the scheme's proof length.
+            assert_eq!(
+                keys.authority_descriptor(SignerRole::Hotkey).as_deref(),
+                Some(key.descriptor())
+            );
+            let signer = KeySource::<Hotkey>::signer(&keys).await.expect("signer");
+            let authority = signer.authority().expect("authority forwarded");
+            assert_eq!(authority.account(), AuthoritySigner::account(&key));
+            assert_eq!(authority.authority_type(), key.authority_type());
+            assert_eq!(authority.descriptor(), key.descriptor());
+            let generation = u64::from(!key.authority_type().is_stateless());
+            assert_eq!(
+                authority.commitment(generation).expect("commitment"),
+                key.commitment(generation).expect("commitment")
+            );
+            assert!(!signing.signed());
+            let payload = [1u8, 2, 3, 4];
+            let proof = authority
+                .sign_authorization(&AuthorizationRequest {
+                    payload: &payload,
+                    call: &payload[..2],
+                    generation,
+                    purpose: SignPurpose::Extrinsic,
+                })
+                .await
+                .expect("proof");
+            proof.check(key.authority_type()).expect("complete proof");
+            // A proof counts as a signature for durable recovery.
+            assert!(signing.signed(), "scheme {crypto}");
+        }
+    }
     #[test]
     fn execution_bounds_admission_by_the_window_and_inclusion_by_an_era_after_it() {
         let default = SubmissionOptions::default().execution(12.0);

@@ -66,7 +66,10 @@ pub struct PlanOptions {
     /// Select the MEV Shield route, as `ExecuteOptions::shielded` does for
     /// execution; a required-Shield intent selects it regardless. The fee is
     /// then the inner transaction plus its carrier (Python's
-    /// `preflight(shielded=True)` and `plan(shielded=True)`).
+    /// `preflight(shielded=True)` and `plan(shielded=True)`). `false` leaves
+    /// account registration to the executor's default route
+    /// ([`Executor::with_auto_shield`], on by default as Python's
+    /// `shielded=None`).
     pub shielded: bool,
     /// Mortal era period, as `ExecuteOptions::period`. On the Shield route the
     /// default (or none) quotes the carrier at the 8-block shield era, and only
@@ -125,7 +128,10 @@ pub struct ExecuteOptions {
     pub deadline: Option<Duration>,
     /// Bound preparation/signing and author RPC admission separately from inclusion.
     pub submit_deadline: Option<Duration>,
-    /// Explicit typed/raw shield opt-in, implemented by the shield execution path.
+    /// Explicit typed/raw shield opt-in, implemented by the shield execution
+    /// path. `false` leaves account registration to the executor's default
+    /// route ([`Executor::with_auto_shield`], on by default as Python's
+    /// `shielded=None`).
     pub shielded: bool,
     /// Authorize up to this permanent deposit for automatic recipient
     /// registration, separate from the payment and fees (D-148). A larger
@@ -307,21 +313,24 @@ impl Executor {
             policy: None,
             clock: Arc::new(SystemClock),
             registry: None,
-            auto_shield: false,
+            auto_shield: true,
         }
     }
     /// Route account registration through MEV Shield when the network offers
-    /// it, as Python's default `shielded=None` does (D-140). Off by default:
-    /// `ExecuteOptions::shielded` and `PlanOptions::shielded` stay an explicit
-    /// on/off, and with this setting off nothing changes. When on, a plan,
-    /// execution or raw call whose call registers a protected account
-    /// (`HashedAccounts.register`, `register_derived`,
-    /// `register_derived_sponsored`, `Proxy.create_protected_pure` or
-    /// `Utility.as_protected_derivative`, also inside proxy, multisig,
-    /// derivative, dispatch, sudo, `if_else` and batch wrappers) takes the
-    /// Shield route when `MevShield.NextKey` is set, and otherwise is planned
-    /// unshielded with a warning. An explicit `shielded` or a required-Shield
-    /// intent is unaffected.
+    /// it, as Python's default `shielded=None` does. On by default (D-170,
+    /// superseding D-140's opt-in): a plan, execution or raw call whose call
+    /// registers a protected account (`HashedAccounts.register`,
+    /// `register_derived`, `register_derived_sponsored`,
+    /// `Proxy.create_protected_pure` or `Utility.as_protected_derivative`,
+    /// also inside proxy, multisig, derivative, dispatch, sudo, `if_else` and
+    /// batch wrappers) takes the Shield route when `MevShield.NextKey` is set,
+    /// and otherwise is planned unshielded with Python's warning.
+    /// `ExecuteOptions::shielded = true`, `PlanOptions::shielded = true` and a
+    /// required-Shield intent always shield. `with_auto_shield(false)` is
+    /// Python's explicit `shielded=False`: registration then goes out
+    /// unshielded unless shielding is requested or required (the executor is
+    /// cheap to clone, so one call can opt out with
+    /// `executor.clone().with_auto_shield(false)`).
     pub fn with_auto_shield(mut self, enabled: bool) -> Self {
         self.auto_shield = enabled;
         self
@@ -2480,7 +2489,7 @@ fn is_sudo(runtime: &rtao_runtime::RuntimeHandle, call: &CallBytes) -> Result<bo
 }
 impl Executor {
     // py: sdk/python/bittensor/shielding.py:77-89
-    /// Python's `registration_shield_default`, behind the opt-in setting.
+    /// Python's `registration_shield_default`, unless the executor opted out.
     pub(crate) async fn auto_shield_route<V: View + ?Sized>(
         &self,
         view: &V,

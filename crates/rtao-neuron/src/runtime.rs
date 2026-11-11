@@ -513,6 +513,7 @@ pub(crate) async fn initialize_with_http_factory(
         }
         let signer = hotkey.unlock().await?;
         let http = make_http(signer)?;
+        refresh_http_identity(&client, &http, BlockRef::Finalized, &metrics).await;
         let (metagraph, _) = MetagraphSync::spawn(
             client.clone(),
             config.netuid,
@@ -712,6 +713,92 @@ async fn epoch_at(
         snapshot.block().runtime.spec_version(),
     ))
 }
+const GENERATION_ZERO_HTTP: &str = "hashed hotkey HTTP signing waits for generation zero to be retired: any finalized hotkey transaction (for example serve_axon or weights) retires it";
+
+/// Bind a hashed SR/ED hotkey's btauth signer to its generation at a
+/// finalized block (Python `prepare_signer`, D-171). Only the finalized
+/// record is read, its descriptor must be the signer's, and generation zero
+/// is never signed: the client then refuses requests and
+/// `rtao_http_signer_ready` is 0 until a finalized transaction retires it.
+/// Nothing is submitted for that. A read error keeps the previous binding.
+/// No effect for a classical hotkey; a post-quantum hotkey is refused.
+pub(crate) async fn refresh_http_identity(
+    client: &Client,
+    http: &SignedClient,
+    at: BlockRef,
+    metrics: &Metrics,
+) {
+    let Some(authority) = http.signer().authority() else {
+        return;
+    };
+    if authority.authority_type().is_post_quantum() {
+        metrics.gauge("rtao_http_signer_ready", 0.0);
+        return;
+    }
+    let account = authority.account();
+    let descriptor = authority.descriptor().to_vec();
+    let record = async {
+        let view = client.at(at).await?;
+        view.storage(
+            &rtao_runtime::storage::hashed_accounts::ACCOUNTS,
+            (account,),
+        )
+        .await
+        .map(|record| record.map(|record| record.to_json()))
+    }
+    .await;
+    let record = match record {
+        Ok(record) => record,
+        Err(error) => {
+            tracing::warn!(%error, "hashed hotkey generation read failed; keeping the previous HTTP signer");
+            return;
+        }
+    };
+    let generation = record
+        .filter(|record| {
+            record
+                .get("descriptor")
+                .and_then(|stored| rtao_primitives::receiving::descriptor_bytes(stored).ok())
+                .is_some_and(|stored| stored == descriptor)
+        })
+        .and_then(|record| record.get("generation").and_then(serde_json::Value::as_u64));
+    let previous = http.hashed_generation();
+    // Report a refusal once: at start, or when a bound signer loses its binding.
+    let report = previous.is_some() || matches!(at, BlockRef::Finalized);
+    let ready = match generation {
+        None => {
+            http.unprepare_hashed("hashed hotkey is not registered in finalized state");
+            if report {
+                tracing::warn!(
+                    "hashed hotkey is not registered in finalized state; HTTP requests are refused"
+                );
+            }
+            false
+        }
+        Some(0) => {
+            http.unprepare_hashed(GENERATION_ZERO_HTTP);
+            if report {
+                tracing::warn!("{GENERATION_ZERO_HTTP}");
+            }
+            false
+        }
+        Some(generation) => {
+            if previous != Some(generation) {
+                if let Err(error) = http.prepare_hashed(generation) {
+                    tracing::warn!(%error, "hashed hotkey HTTP signer refused");
+                    metrics.gauge("rtao_http_signer_ready", 0.0);
+                    return;
+                }
+                tracing::info!(
+                    generation,
+                    "hashed hotkey HTTP signer bound to its finalized generation"
+                );
+            }
+            true
+        }
+    };
+    metrics.gauge("rtao_http_signer_ready", if ready { 1.0 } else { 0.0 });
+}
 pub(crate) async fn finalized_worker(
     cx: NeuronCx,
     heads: watch::Sender<u64>,
@@ -739,6 +826,7 @@ pub(crate) async fn finalized_worker(
                     }
                 };
                 cx.epochs.observe(status); heads.send_replace(header.number);
+                refresh_http_identity(&cx.client, &cx.http, BlockRef::Hash(header.hash), &cx.metrics).await;
                 cx.metrics.gauge("rtao_spec_version", f64::from(spec_version));
                 cx.metrics.update_readiness(|ready| { ready.connected = true; ready.runtime_verified = verified; });
                 cx.metrics.gauge("rtao_chain_head{kind=\"finalized\"}", header.number as f64);

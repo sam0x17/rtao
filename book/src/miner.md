@@ -125,6 +125,25 @@ seconds. Keep the host clock synchronized. A signed client must sign the final
 request target and body and obtain a fresh nonce for every retry. The validator
 example uses `cx.http`, the framework's `SignedClient`, for this exchange.
 
+The sender's signature scheme is never taken from the request. By default the
+miner reads it from finalized chain state for each metagraph hotkey
+(`FinalizedRegistrySchemes`, refreshed when the metagraph changes and every
+50 finalized blocks):
+
+- A hotkey with a `HashedAccounts.Accounts` record must sign with the hashed
+  Sr25519 or Ed25519 scheme its descriptor names.
+- A classical hotkey is taken to be Sr25519, btcli's default hotkey type.
+- A post-quantum hotkey, or any sender outside the metagraph, is refused.
+  btauth defines no post-quantum scheme.
+
+The chain does not record whether a classical key is Sr25519 or Ed25519, so
+admit an Ed25519 validator hotkey with
+`with_trusted_senders(TrustedSchemes::new([(ss58, 0)])?)`. Its entries take
+precedence over the registry. `with_sender_schemes` replaces the registry
+entirely. For example, `rtao::btauth::DeclaredClassical` restores the pre-v490
+behaviour: a declared Sr25519 or Ed25519 scheme is trusted, and hashed senders
+are refused.
+
 The default raw body limit is 4 MiB. The authentication layer limits the stream
 before collection, and the runtime sets the inner axum `DefaultBodyLimit` to
 the same size. `with_body_limit(bytes)` changes both bounds. Full request bodies

@@ -97,6 +97,13 @@ async fn run_fixture(root: &std::path::Path) -> anyhow::Result<()> {
     let keypair = Keypair::from_uri("//Alice", CRYPTO_SR25519)?;
     let miner = KeypairSigner::from_uri("//Alice", CryptoType::Sr25519)?;
     let validator = KeypairSigner::from_uri("//Bob", CryptoType::Sr25519)?;
+    // A hashed Sr25519 validator hotkey, registered at generation 2 (D-171,
+    // D-172): the miner's default registry trusts its hashed scheme.
+    let hashed = rtao_signer::KeypairAuthoritySigner::new(Keypair::from_seed(
+        &[42; 32],
+        rtao_core::keys::CRYPTO_HASHED,
+    )?)?;
+    let hashed_account = rtao_signer::AuthoritySigner::account(&hashed);
     let mut config = NeuronConfig::load_with(
         root,
         &BTreeMap::from([
@@ -126,9 +133,21 @@ async fn run_fixture(root: &std::path::Path) -> anyhow::Result<()> {
     config.axon_port = address.port();
     config.axon_external_ip = Some("127.0.0.2".parse()?);
     let mut state = FakeState::try_default()?;
-    let graph = json!({"netuid":1,"block":100,"tempo":10,"last_step":90,"num_uids":2,
-        "hotkeys":[miner.account().to_string(),validator.account().to_string()],
-        "validator_permit":[false,true],"validators":[1],"total_stake":[0,1000000000]});
+    let graph = json!({"netuid":1,"block":100,"tempo":10,"last_step":90,"num_uids":3,
+        "hotkeys":[miner.account().to_string(),validator.account().to_string(),hashed_account.to_string()],
+        "validator_permit":[false,true,true],"validators":[1,2],"total_stake":[0,1000000000,1000000000]});
+    state.seed_python(
+        "HashedAccounts",
+        "Accounts",
+        &[json!(hashed_account.to_string())],
+        json!({
+            "descriptor": rtao_primitives::receiving::descriptor_value(
+                rtao_signer::AuthoritySigner::descriptor(&hashed)
+            )?,
+            "generation": 2,
+            "commitment": format!("0x{}", hex::encode(rtao_signer::AuthoritySigner::commitment(&hashed, 2)?)),
+        }),
+    )?;
     state.seed_runtime(
         "SubnetInfoRuntimeApi",
         "get_selective_mechagraph",
@@ -141,7 +160,8 @@ async fn run_fixture(root: &std::path::Path) -> anyhow::Result<()> {
         (NetUid(1), miner.account()),
         0u16,
     )?;
-    state.seed(&st::SUBNETWORK_N, (NetUid(1),), 2u16)?;
+    state.seed(&st::SUBNETWORK_N, (NetUid(1),), 3u16)?;
+    state.seed_typed("SubtensorModule", "Keys", (NetUid(1), 2u16), hashed_account)?;
     state.seed_typed(
         "SubtensorModule",
         "Keys",
@@ -235,6 +255,43 @@ async fn run_fixture(root: &std::path::Path) -> anyhow::Result<()> {
         let response: Value = serde_json::from_slice(&response.bytes().await?)?;
         assert_eq!(response["bytes"], 3 * 1024 * 1024);
         assert_eq!(response["requests"], 42);
+        // A hashed validator signs only once bound to its finalized generation.
+        let hashed_http = fixture_http_client(Arc::new(hashed))?;
+        let refused = hashed_http
+            .request(
+                Method::POST,
+                format!("http://{address}/echo").parse()?,
+                &miner.account(),
+            )
+            .json(&json!({"payload":"y"}))
+            .send()
+            .await
+            .err()
+            .ok_or_else(|| anyhow::anyhow!("unprepared hashed signer signed"))?;
+        assert!(
+            refused.to_string().contains("finalized generation"),
+            "{refused}"
+        );
+        crate::runtime::refresh_http_identity(
+            &cx.client,
+            &hashed_http,
+            rtao_client::BlockRef::Finalized,
+            &cx.metrics,
+        )
+        .await;
+        assert_eq!(hashed_http.hashed_generation(), Some(2));
+        let response = hashed_http
+            .request(
+                Method::POST,
+                format!("http://{address}/echo").parse()?,
+                &miner.account(),
+            )
+            .json(&json!({"payload":"y"}))
+            .send()
+            .await?;
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        let response: Value = serde_json::from_slice(&response.bytes().await?)?;
+        assert_eq!(response["requests"], 43);
         Ok::<_, anyhow::Error>(())
     }
     .await;
@@ -257,7 +314,64 @@ async fn run_fixture(root: &std::path::Path) -> anyhow::Result<()> {
         .load()
         .await?
         .ok_or_else(|| anyhow::anyhow!("final miner state was not saved"))?;
-    assert_eq!(saved.state["requests"], 42);
+    assert_eq!(saved.state["requests"], 43);
     assert!(node.mutate_state(|state| state.submissions.is_empty()));
+    Ok(())
+}
+
+/// Generation zero is never signed (D-171): the HTTP signer stays refused,
+/// with the explicit retirement message, and nothing is submitted.
+#[tokio::test]
+async fn hashed_http_signer_waits_for_generation_zero_retirement() -> anyhow::Result<()> {
+    use rtao_signer::{AuthoritySigner, KeypairAuthoritySigner};
+    let hashed = KeypairAuthoritySigner::new(Keypair::from_seed(
+        &[43; 32],
+        rtao_core::keys::CRYPTO_HASHED_ED25519,
+    )?)?;
+    for (generation, ready) in [(0u64, false), (3, true)] {
+        let mut state = FakeState::try_default()?;
+        state.seed_python(
+            "HashedAccounts",
+            "Accounts",
+            &[json!(AuthoritySigner::account(&hashed).to_string())],
+            json!({
+                "descriptor": rtao_primitives::receiving::descriptor_value(hashed.descriptor())?,
+                "generation": generation,
+                "commitment": format!("0x{}", hex::encode(hashed.commitment(generation)?)),
+            }),
+        )?;
+        let chain = rtao_testkit::FakeChain::from_state(state);
+        let mut config =
+            rtao_client::ClientConfig::new(rtao_client::Network::resolve_with("local", |_| None)?)?;
+        config.track_heads = false;
+        config.runtime_cache_dir = None;
+        config.config_store = None;
+        let client =
+            rtao_client::Client::from_rpc(rtao_testkit::rpc::RpcClient::new(chain.clone()), config)
+                .await?;
+        let http = fixture_http_client(Arc::new(hashed.clone()))?;
+        let metrics = Metrics::default();
+        crate::runtime::refresh_http_identity(
+            &client,
+            &http,
+            rtao_client::BlockRef::Finalized,
+            &metrics,
+        )
+        .await;
+        assert_eq!(http.ready().is_ok(), ready);
+        if ready {
+            assert_eq!(http.hashed_generation(), Some(generation));
+        } else {
+            let Err(error) = http.ready() else {
+                anyhow::bail!("generation zero was not refused");
+            };
+            assert!(
+                error.to_string().contains("generation zero to be retired"),
+                "{error}"
+            );
+        }
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+    }
     Ok(())
 }

@@ -12,7 +12,8 @@ use rtao_runtime::{
     storage::{subtensor_module as st, system},
 };
 use rtao_signer::{
-    BoxFuture, Coldkey, KeySource, KeyView, MultiSignature, Signer, SignerError, SigningRequest,
+    AuthoritySigner, AuthorityType, AuthorizationProof, AuthorizationRequest, BoxFuture, Coldkey,
+    KeySource, KeyView, MultiSignature, Signer, SignerError, SignerRole, SigningRequest,
 };
 use rtao_tx::{
     BuildCx, Built, ChainError, DynIntent, ExtrinsicResult, Intent, IntentError, IntentInterface,
@@ -751,6 +752,15 @@ impl<K: KeyView> KeyView for ReviewedKeys<'_, K> {
     fn bare_signer_account(&self) -> Option<AccountId> {
         self.keys.bare_signer_account()
     }
+    fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
+        self.keys.hotkey_descriptor()
+    }
+    fn local_descriptor(&self, account: &AccountId) -> Option<Vec<u8>> {
+        self.keys.local_descriptor(account)
+    }
+    fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
+        self.keys.authority_descriptor(role)
+    }
 }
 
 impl<K: KeySource<Coldkey>> KeySource<Coldkey> for ReviewedKeys<'_, K> {
@@ -758,18 +768,97 @@ impl<K: KeySource<Coldkey>> KeySource<Coldkey> for ReviewedKeys<'_, K> {
         self.keys.address()
     }
     async fn signer(&self) -> Result<Arc<dyn Signer>, SignerError> {
-        Ok(Arc::new(ReviewedSigner {
-            inner: self.keys.signer().await?,
+        let inner = self.keys.signer().await?;
+        let authority = inner.authority().map(|authority| ReviewedAuthority {
+            account: authority.account(),
+            authority_type: authority.authority_type(),
+            descriptor: authority.descriptor().to_vec(),
+            inner: inner.clone(),
             call: self.call.clone(),
             genesis: self.genesis,
+        });
+        Ok(Arc::new(ReviewedSigner {
+            inner,
+            call: self.call.clone(),
+            genesis: self.genesis,
+            authority,
         }))
     }
 }
+
+const REVIEW_DIFFERS: &str =
+    "Null pruning signing call or runtime differs from durable review; retain recovery journal";
 
 struct ReviewedSigner {
     inner: Arc<dyn Signer>,
     call: rtao_runtime::CallBytes,
     genesis: H256,
+    /// The inner hashed or post-quantum authority under the same review
+    /// binding (D-171).
+    authority: Option<ReviewedAuthority>,
+}
+
+/// The review binding on the authorization path: the proof's call must be the
+/// reviewed call and its payload must name the reviewed spec version,
+/// transaction version and genesis, or nothing is signed.
+struct ReviewedAuthority {
+    account: AccountId,
+    authority_type: AuthorityType,
+    descriptor: Vec<u8>,
+    inner: Arc<dyn Signer>,
+    call: rtao_runtime::CallBytes,
+    genesis: H256,
+}
+
+impl ReviewedAuthority {
+    fn inner(&self) -> Result<&dyn AuthoritySigner, SignerError> {
+        self.inner.authority().ok_or_else(|| {
+            SignerError::InvalidSignature("signer no longer exposes its authority".into())
+        })
+    }
+    fn reviewed(&self, request: &AuthorizationRequest<'_>) -> bool {
+        // The implicit data carries `CheckSpecVersion`, `CheckTxVersion` and
+        // `CheckGenesis` back to back after the call and the extra.
+        let mut versions = [0u8; 40];
+        versions[..4].copy_from_slice(&self.call.spec_version().to_le_bytes());
+        versions[4..8].copy_from_slice(&self.call.transaction_version().to_le_bytes());
+        versions[8..].copy_from_slice(&self.genesis.0);
+        request.call == self.call.as_bytes()
+            && request.purpose == rtao_signer::SignPurpose::Extrinsic
+            && request
+                .payload
+                .strip_prefix(self.call.as_bytes())
+                .is_some_and(|rest| rest.windows(versions.len()).any(|w| w == versions))
+    }
+}
+
+impl AuthoritySigner for ReviewedAuthority {
+    fn account(&self) -> AccountId {
+        self.account
+    }
+    fn authority_type(&self) -> AuthorityType {
+        self.authority_type
+    }
+    fn descriptor(&self) -> &[u8] {
+        &self.descriptor
+    }
+    fn commitment(&self, generation: u64) -> Result<Vec<u8>, SignerError> {
+        self.inner()?.commitment(generation)
+    }
+    fn sign_authorization<'a>(
+        &'a self,
+        request: &'a AuthorizationRequest<'a>,
+    ) -> BoxFuture<'a, Result<AuthorizationProof, SignerError>> {
+        if !self.reviewed(request) {
+            return Box::pin(async { Err(SignerError::InvalidSignature(REVIEW_DIFFERS.into())) });
+        }
+        match self.inner() {
+            Ok(inner) => inner.sign_authorization(request),
+            Err(error) => Box::pin(async move { Err(error) }),
+        }
+    }
+    // Null pruning signs only its reviewed extrinsic: message signing keeps
+    // the trait's refusal.
 }
 
 impl Signer for ReviewedSigner {
@@ -803,10 +892,15 @@ impl Signer for ReviewedSigner {
                 || request.context.genesis_hash != self.genesis.0
                 || request.purpose != rtao_signer::SignPurpose::Extrinsic
             {
-                return Err(SignerError::InvalidSignature("Null pruning signing call or runtime differs from durable review; retain recovery journal".into()));
+                return Err(SignerError::InvalidSignature(REVIEW_DIFFERS.into()));
             }
             self.inner.sign(request).await
         })
+    }
+    fn authority(&self) -> Option<&dyn AuthoritySigner> {
+        self.authority
+            .as_ref()
+            .map(|authority| authority as &dyn AuthoritySigner)
     }
 }
 

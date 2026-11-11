@@ -62,7 +62,10 @@ pub struct MinerRuntime<M: Miner> {
     body_limit: usize,
     nonce_store: Arc<dyn NonceStore>,
     verify: VerifyConfig,
-    sender_schemes: Arc<dyn rtao_btauth::SenderSchemes>,
+    /// An explicit source replaces the finalized registry (D-172).
+    sender_schemes: Option<Arc<dyn rtao_btauth::SenderSchemes>>,
+    /// Operator-trusted schemes consulted before the finalized registry.
+    trusted_senders: Option<rtao_btauth::TrustedSchemes>,
     limiter: Arc<PerHotkeyLimiter>,
     listener: Option<tokio::net::TcpListener>,
 }
@@ -81,9 +84,9 @@ impl NeuronRuntime<()> {
             body_limit: DEFAULT_BODY_LIMIT,
             nonce_store: Arc::new(InMemoryNonceStore::new()),
             verify: VerifyConfig::default(),
-            // Validators sign with classical hotkeys unless configured; a
-            // hashed sender needs a trusted scheme (D-153).
-            sender_schemes: Arc::new(rtao_btauth::DeclaredClassical),
+            // Sender schemes come from finalized chain state (D-172).
+            sender_schemes: None,
+            trusted_senders: None,
             limiter: Arc::new(PerHotkeyLimiter::default()),
             listener: None,
         }
@@ -130,12 +133,24 @@ impl<M: Miner> MinerRuntime<M> {
         self.verify = verify;
         self
     }
-    /// Trusted sender signature schemes (D-153). The default trusts a
-    /// declared Sr25519 or Ed25519 scheme and refuses hashed senders; pass
-    /// `rtao_btauth::TrustedSchemes` from a registry to admit hashed SR/ED
-    /// validator hotkeys.
+    /// Replace the default sender schemes (D-172) with an explicit source,
+    /// for example `rtao_btauth::TrustedSchemes` from configuration or
+    /// `rtao_btauth::DeclaredClassical` (rtao's behaviour before D-172).
+    ///
+    /// By default a [`crate::FinalizedRegistrySchemes`] maps each metagraph
+    /// hotkey to its finalized scheme: the hashed SR/ED scheme of its
+    /// `HashedAccounts` record, or Sr25519 for a classical hotkey, refreshed
+    /// on every metagraph change and every 50 finalized blocks.
     pub fn with_sender_schemes(mut self, schemes: Arc<dyn rtao_btauth::SenderSchemes>) -> Self {
-        self.sender_schemes = schemes;
+        self.sender_schemes = Some(schemes);
+        self
+    }
+    /// Trusted sender schemes that take precedence over the default
+    /// finalized registry, for example a classical Ed25519 validator hotkey
+    /// (code 0), which the chain does not record. Ignored when
+    /// [`Self::with_sender_schemes`] replaces the registry.
+    pub fn with_trusted_senders(mut self, trusted: rtao_btauth::TrustedSchemes) -> Self {
+        self.trusted_senders = Some(trusted);
         self
     }
     /// Replace the default bounded per-hotkey rate limiter.
@@ -179,9 +194,27 @@ impl<M: Miner> MinerRuntime<M> {
                 None => M::State::default(),
             });
             self.miner.on_start(&cx, &state).await?;
+            let (schemes, registry) = match self.sender_schemes {
+                Some(schemes) => (schemes, None),
+                None => {
+                    let mut registry = crate::FinalizedRegistrySchemes::new();
+                    if let Some(trusted) = self.trusted_senders {
+                        registry = registry.with_trusted(trusted);
+                    }
+                    let registry = Arc::new(registry);
+                    let hotkeys = metagraph_hotkeys(&cx.metagraph.load());
+                    if let Err(error) = registry.refresh(&cx.client, &hotkeys).await {
+                        // Fail closed until the worker's next refresh.
+                        tracing::warn!(%error, "sender scheme registry refresh failed");
+                    }
+                    (
+                        registry.clone() as Arc<dyn rtao_btauth::SenderSchemes>,
+                        Some(registry),
+                    )
+                }
+            };
             let verifier: Arc<Verifier<dyn NonceStore>> = Arc::new(
-                Verifier::new(account, self.verify, self.nonce_store)?
-                    .with_sender_schemes(self.sender_schemes),
+                Verifier::new(account, self.verify, self.nonce_store)?.with_sender_schemes(schemes),
             );
             let router = self
                 .miner
@@ -203,10 +236,10 @@ impl<M: Miner> MinerRuntime<M> {
             } else {
                 None
             };
-            Ok::<_, anyhow::Error>((store, state, router, listener, telemetry))
+            Ok::<_, anyhow::Error>((store, state, router, listener, telemetry, registry))
         }
         .await;
-        let (store, state, router, listener, telemetry) = match preparation {
+        let (store, state, router, listener, telemetry, registry) = match preparation {
             Ok(prepared) => prepared,
             Err(error) => {
                 cx.close().await;
@@ -227,6 +260,10 @@ impl<M: Miner> MinerRuntime<M> {
         tasks.spawn(async move {
             crate::runtime::finalized_worker(finalized_cx, heads, "miner", false).await
         });
+        if let Some(registry) = registry {
+            let registry_cx = cx.clone();
+            tasks.spawn(async move { registry_worker(registry, registry_cx).await });
+        }
         let graph_cx = cx.clone();
         let miner = self.miner.clone();
         let graph_state = state.clone();
@@ -270,6 +307,50 @@ impl<M: Miner> MinerRuntime<M> {
         let _ = signals.await;
         save?;
         result
+    }
+}
+fn metagraph_hotkeys(graph: &rtao_metagraph::Metagraph) -> Vec<rtao_primitives::AccountId> {
+    (0..graph.len())
+        .filter_map(|uid| u16::try_from(uid).ok())
+        .filter_map(|uid| graph.hotkey(rtao_primitives::Uid(uid)).copied())
+        .collect()
+}
+/// Refresh the default sender schemes (D-172) on every metagraph change and
+/// every 50 finalized blocks; a failed refresh keeps the previous mapping and
+/// is retried on the next finalized block.
+async fn registry_worker(
+    registry: Arc<crate::FinalizedRegistrySchemes>,
+    cx: NeuronCx,
+) -> anyhow::Result<()> {
+    const REFRESH_BLOCKS: u64 = 50;
+    let mut diffs = cx.metagraph.subscribe();
+    let mut epochs = cx.epochs.subscribe();
+    let mut refreshed_at = cx.epochs.status().block;
+    let mut stale = false;
+    loop {
+        tokio::select! {biased;
+            ()=cx.shutdown.cancelled()=>return Ok(()),
+            diff=diffs.recv()=>match diff {
+                Ok(_)|Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>stale=true,
+                Err(error)=>return Err(error.into()),
+            },
+            change=epochs.changed()=>{change?;},
+        }
+        let block = cx.epochs.status().block;
+        if !stale && block.saturating_sub(refreshed_at) < REFRESH_BLOCKS {
+            continue;
+        }
+        let hotkeys = metagraph_hotkeys(&cx.metagraph.load());
+        match registry.refresh(&cx.client, &hotkeys).await {
+            Ok(()) => {
+                stale = false;
+                refreshed_at = block;
+            }
+            Err(error) => {
+                stale = true;
+                tracing::warn!(%error, "sender scheme registry refresh failed");
+            }
+        }
     }
 }
 async fn graph_worker<M: Miner>(

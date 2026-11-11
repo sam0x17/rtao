@@ -146,6 +146,11 @@ impl Signer for LabSigner {
             Ok(signature)
         })
     }
+    /// The lab key is classical; forwarded so the wrapper never hides an
+    /// authority (D-171).
+    fn authority(&self) -> Option<&dyn rtao_signer::AuthoritySigner> {
+        self.key.authority()
+    }
 }
 /// Public identity plus counted resolution of the fixed synthetic signer.
 pub struct LabKeys {

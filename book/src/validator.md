@@ -34,6 +34,16 @@ guards cannot cross an await in a framework callback. `EmaScores` stores scores
 by hotkey and removes replaced or deregistered identities when your
 `on_metagraph` calls `state.apply(diff)`.
 
+A hashed Sr25519 or Ed25519 validator hotkey signs its HTTP requests at the
+generation recorded for it in finalized state, as Python's `prepare_signer`
+does. The framework reads that generation at startup and again on every
+finalized block. Generation zero is never signed, because its signatures would
+reveal the original identity key. Until a finalized transaction from the hotkey
+retires it, `cx.http` refuses requests with a message saying so, and
+`rtao_http_signer_ready` is 0. Any hotkey transaction works, for example
+`serve_axon` or a weights submission. The framework submits nothing for this
+on its own. A post-quantum hotkey cannot sign btauth requests.
+
 `FanOut::max_response_bytes` defaults to 1 MiB per miner response and must be
 positive. Both query APIs reject an oversized declared length or stop collecting
 when a chunk crosses the budget, before JSON decoding. `ResponseTooLarge` is

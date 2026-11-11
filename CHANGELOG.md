@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Post-quantum and hashed accounts first class, with btcli's defaults (D-170 to D-172)
+
+- **Behaviour change:** `Executor::new` routes account registration through MEV Shield by default when the network offers it (Python's `shielded=None`, D-170), superseding the opt-in `with_auto_shield(true)` of D-140. This covers `HashedAccounts.register`, `register_derived` and `register_derived_sponsored`, `Proxy.create_protected_pure` and `Utility.as_protected_derivative`, also inside wrappers and batches. Without an active Shield key the registration is planned unshielded with Python's warning. `with_auto_shield(false)` opts out (Python's `shielded=False`) and is now also on the facade's `rtao::Executor`. The blocking facade and `Multisig::approve` follow. The CLI still decides the route at review.
+- New keys keep btcli's defaults: sr25519, standard mode (D-170).
+- Weights and null-pruning wrappers now forward a hashed or post-quantum signer's authority and descriptors (D-171). Before, they made such hotkeys and owners unable to sign, and fee probes priced a 64-byte signature. The null-pruning review binding also guards the authorization path: same call, spec version, transaction version and genesis.
+- `SignedClient` signs with a hashed SR/ED hotkey once `prepare_hashed(generation)` binds it to a finalized generation of at least one (D-171). New: `prepare_hashed`, `unprepare_hashed`, `hashed_generation`, `ready`, `signer`. Validators and miners read that generation at startup and on every finalized block. While generation zero is unretired, requests are refused with an explicit message and `rtao_http_signer_ready` is 0; nothing is submitted for it. Post-quantum HTTP signing stays refused, as upstream.
+- **Behaviour change:** `MinerRuntime` trusts sender schemes from finalized chain state by default, through `rtao_neuron::FinalizedRegistrySchemes` (D-172, superseding D-153 (2)'s `DeclaredClassical`).
+  - A metagraph hotkey with a `HashedAccounts` record must sign with its hashed scheme.
+  - An unhashed hotkey is taken to be Sr25519.
+  - A post-quantum hotkey, or any sender outside the metagraph, is refused.
+  - Migration for Ed25519 classical validators: admit them with `with_trusted_senders(TrustedSchemes::new([(ss58, 0)])?)`, or restore the old policy with `with_sender_schemes(Arc::new(DeclaredClassical))`.
+
 ### Core bumped from v488 to v490 (D-127, D-136)
 
 - `bittensor-core` and its companions move from v488 to v490, the parity pin's core (`b3:c272a5b95e518b396708eecd865a660470682638280e85f7823c496fb5f3be3b`); `[parity] core_fingerprint` is gone. The reviewed core patch is carried onto v490 (fork revision `d7fd8762625a93b9837cde28d496b0819a976f0e`), and every downstream `[patch]` line names v490: applications that copy rtao's patch set must update theirs.

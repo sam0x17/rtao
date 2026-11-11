@@ -1653,6 +1653,7 @@ async fn reviewed_signer_refuses_changed_call_or_runtime_before_underlying_signi
         }),
         call: call.clone(),
         genesis: f.owner.client().genesis(),
+        authority: None,
     };
     let context = rtao_signer::SigningContext {
         metadata_bytes: runtime.core().metadata_bytes.clone(),
@@ -2907,6 +2908,116 @@ async fn test_state_reads_match_authenticated_admin_window_rows_at_one_hash() ->
         assert_eq!(f.chain.mutate_state(|state| state.submissions.len()), 0);
         assert!(!f.recovery.exists());
         f.owner.client().close().await;
+    }
+    Ok(())
+}
+
+/// The review binding also guards hashed and post-quantum owners (D-171): the
+/// wrapper forwards the authority and signs only the reviewed call under the
+/// reviewed runtime and genesis.
+#[tokio::test]
+async fn reviewed_authority_signs_only_the_reviewed_call() -> anyhow::Result<()> {
+    use rtao_core::keys::{CRYPTO_FALCON512_HASHED, CRYPTO_HASHED, CRYPTO_MLDSA65_FIXED, Keypair};
+    use rtao_signer::{AuthorizationRequest, KeypairAuthoritySigner, SignPurpose};
+    let runtime = rtao_runtime::RuntimeHandle::new(rtao_core::runtime::Runtime::parse(
+        include_bytes!("../../../../../vendor/metadata/finney/488.v15.scale"),
+        488,
+        1,
+        42,
+    )?)?;
+    let call = rtao_runtime::calls::subtensor_module::set_mechanism_weights(
+        NET,
+        MechId(0),
+        vec![1u16],
+        vec![1],
+        9,
+    )
+    .compose(&runtime)?;
+    let other = rtao_runtime::calls::subtensor_module::set_mechanism_weights(
+        NET,
+        MechId(0),
+        vec![2u16],
+        vec![1],
+        9,
+    )
+    .compose(&runtime)?;
+    let genesis = H256([5; 32]);
+    let payload = |call: &[u8], spec: u32, genesis: [u8; 32]| {
+        let mut payload = call.to_vec();
+        payload.extend_from_slice(&[0, 4, 0]); // era, nonce, tip
+        payload.extend_from_slice(&spec.to_le_bytes());
+        payload.extend_from_slice(&1u32.to_le_bytes());
+        payload.extend_from_slice(&genesis);
+        payload.extend_from_slice(&[9; 32]); // era block
+        payload.push(0); // no metadata hash
+        payload
+    };
+    for crypto in [CRYPTO_HASHED, CRYPTO_MLDSA65_FIXED, CRYPTO_FALCON512_HASHED] {
+        let key = KeypairAuthoritySigner::new(Keypair::from_seed(&[crypto; 32], crypto)?)?;
+        let keys = ReviewedKeys {
+            keys: &key,
+            call: call.clone(),
+            genesis,
+        };
+        assert_eq!(
+            keys.authority_descriptor(rtao_signer::SignerRole::Coldkey)
+                .as_deref(),
+            Some(key.descriptor())
+        );
+        let signer = KeySource::<Coldkey>::signer(&keys).await?;
+        let authority = signer.authority().context("authority forwarded")?;
+        assert_eq!(authority.descriptor(), key.descriptor());
+        let generation = u64::from(!key.authority_type().is_stateless());
+        fn request<'a>(
+            payload: &'a [u8],
+            call: &'a [u8],
+            generation: u64,
+            purpose: SignPurpose,
+        ) -> AuthorizationRequest<'a> {
+            AuthorizationRequest {
+                payload,
+                call,
+                generation,
+                purpose,
+            }
+        }
+        let good = payload(call.as_bytes(), 488, genesis.0);
+        let proof = authority
+            .sign_authorization(&request(
+                &good,
+                call.as_bytes(),
+                generation,
+                SignPurpose::Extrinsic,
+            ))
+            .await?;
+        proof.check(key.authority_type())?;
+        for (payload, signed_call, purpose) in [
+            (
+                payload(other.as_bytes(), 488, genesis.0),
+                other.as_bytes(),
+                SignPurpose::Extrinsic,
+            ),
+            (
+                payload(call.as_bytes(), 489, genesis.0),
+                call.as_bytes(),
+                SignPurpose::Extrinsic,
+            ),
+            (
+                payload(call.as_bytes(), 488, [6; 32]),
+                call.as_bytes(),
+                SignPurpose::Extrinsic,
+            ),
+            (good.clone(), call.as_bytes(), SignPurpose::ShieldInner),
+        ] {
+            let error = authority
+                .sign_authorization(&request(&payload, signed_call, generation, purpose))
+                .await
+                .expect_err("review binding refuses");
+            assert!(
+                error.to_string().contains("differs from durable review"),
+                "{error}"
+            );
+        }
     }
     Ok(())
 }

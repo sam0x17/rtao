@@ -3518,7 +3518,7 @@ kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Classified 2026-11-08 (D-155): contains_account_registration and registration_shield_default behind the executor's opt-in auto-shield setting (D-140); multisig approvals use the same route (D-154)."
+notes = "Classified 2026-11-08 (D-155): contains_account_registration and registration_shield_default behind the executor's opt-in auto-shield setting (D-140); multisig approvals use the same route (D-154). D-170: the auto-shield route is on by default (Python's shielded=None); Executor::with_auto_shield(false) is Python's shielded=False."
 
 [[file]]
 py = "sdk/python/bittensor/wallet_registration.py"
@@ -3923,7 +3923,7 @@ kind = "ported"
 synced_blob = "pending"
 synced_tag = "v488"
 milestone = "port due"
-notes = "Classified 2026-11-08 (D-155): Registration takes Shield only when opted in and active (D-140)."
+notes = "Classified 2026-11-08 (D-155): Registration takes Shield only when opted in and active (D-140). D-170: by default when active, as Python's shielded=None; with_auto_shield(false) opts out."
 
 [[file]]
 py = "sdk/python/tests/unit/test_registration_sponsorship.py"

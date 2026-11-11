@@ -987,7 +987,8 @@ pub async fn execute_with(
     validate_rounds(request)?;
     let runtime = View::runtime(client).await.map_err(CliError::from)?;
     let call = compose(&runtime, request)?;
-    let executor = rtao::Executor::new(client.clone());
+    // The review decides the Shield route (D-159); execution follows it.
+    let executor = rtao::Executor::new(client.clone()).with_auto_shield(false);
     let multisig = request
         .multisig
         .as_ref()
@@ -1061,7 +1062,8 @@ pub async fn execute_rounds_with(
     validate_rounds(request)?;
     let runtime = View::runtime(client).await.map_err(CliError::from)?;
     let call = compose(&runtime, request)?;
-    let executor = rtao::Executor::new(client.clone());
+    // The review decides the Shield route (D-159); execution follows it.
+    let executor = rtao::Executor::new(client.clone()).with_auto_shield(false);
     let multisig = request
         .multisig
         .as_ref()

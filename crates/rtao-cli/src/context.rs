@@ -840,7 +840,9 @@ impl AppContext {
         if force_proxy_type.is_some() && proxy_for.is_none() {
             return Err(CliError::input("--force-proxy-type requires --proxy-for"));
         }
-        let executor = rtao::Executor::new(client.clone());
+        // The review decides the Shield route (D-159), as Python's CLI passes
+        // an explicit `shielded`; execution follows it.
+        let executor = rtao::Executor::new(client.clone()).with_auto_shield(false);
         let spec = intent.semantic_intent_dyn().spec();
         // py: sdk/python/bittensor/cli/context.py:1155-1161
         match spec.origin {
@@ -3253,7 +3255,9 @@ impl AppContext {
         }
         let raw = crate::call::resolve_preset(self, &self.globals.wallet_name)?;
         let rounds = crate::call::plan_rounds(self, Some(&raw), SignerRole::Coldkey, None)?;
+        // Each round's review decides its Shield route (D-159).
         let group = rtao::Executor::new(client.clone())
+            .with_auto_shield(false)
             .multisig_with_mode(&raw.signatories, raw.threshold, raw.account_mode)
             .await
             .map_err(CliError::transaction)?;
