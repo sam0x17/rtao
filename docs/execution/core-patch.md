@@ -181,3 +181,34 @@ fork's checkout, so `[core.patch] shared` lists every path package of the
 core at its commit (computed from the core's manifests and checked by
 `pin --check`), and the fork's patch table keeps each at the core tag. The
 lock still holds exactly one package from the fork.
+
+## The v490 adaptation (D-169)
+
+Upstream shipped the hashed Ed25519 wipe: v490's `keys/hashed.rs` is the
+v488 adaptation's file byte for byte (blob `5b72f6c24b259df23cae033ed5acf79f483f0ef2`,
+from [RaoFoundation/subtensor#3317](https://github.com/RaoFoundation/subtensor/pull/3317)
+by way of Release 489), and its `Cargo.toml` already declares the
+`ed25519-zebra` dependency the combined patch adds. Unpatched v490 still fails
+`core-patch verify-security` (`keys/mod.rs` names `ed25519::Pair`), and the
+combined patch still leaves v488's post-quantum and hashed `from_mnemonic`
+arms returning a plain `Vec<u8>`.
+
+`rtao-core-patch/v490` therefore carries five commits on v490
+(`d967d13588834f4f5aaa8ef4c8fc1a865d581462`):
+
+- the four reviewed commits cherry-picked, ending at
+  `61d2902f5bc8d7e1d97a59a22594cd9651e6b832` (tree
+  `8bf0190a3577f43789004c58a34f04f41beab4b1`, equal to the combined diff
+  applied three-way to v490; the `Cargo.toml` hunk merges into v490's
+  identical line);
+- the v488 adaptation's seeds commit (`7ff3c1d0`) cherry-picked unchanged,
+  `d7fd8762625a93b9837cde28d496b0819a976f0e`.
+
+The adaptation recorded for `v490` is base `61d2902f`, rev `d7fd8762`,
+digest `1d71ea78bc18f20bd27c6221edb95e93747297b6a89c7cfeb47f78f1cf25fb14`.
+The v488 adaptation's `hashed.rs` commit is not carried; once the core is
+v490 only the v490 adaptation stays recorded. The erasure guard is unchanged:
+it now finds the hashed derivation's wiping owner and regression test in
+upstream's own source. Local evidence: `verify-security` passes the tip and
+refuses unpatched v490; the patched core's tests pass on toolchain 1.89 (138
+library tests, 143 with `ledger`, and the 8 integration tests).

@@ -14,6 +14,10 @@
 
 - Testnet finalized spec 490 (`:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`) at block 8416678; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/42895343113)). Source: upstream commit `d967d13588834f4f5aaa8ef4c8fc1a865d581462`, whose v490 prerelease wasm is this `:code`. The parity pin is unchanged.
 
+### Core patch prepared for v490 (D-169, repository maintenance)
+
+- Upstream v490 already ships the hashed-account Ed25519 wipe that rtao's v488 adaptation added (RaoFoundation/subtensor#3317), so the core patch for v490 carries only the combined Ledger/erasure patch and the mnemonic-seed wipe. Fork branch `rtao-core-patch/v490` (`d7fd8762625a93b9837cde28d496b0819a976f0e`) is published and recorded as the v490 adaptation in `upstream.toml`; the core moves when the core bump runs. No check changes.
+
 ### Runtime adoption fix (D-168, repository maintenance)
 
 - A scheduled runtime-adopt run that queued behind the dispatched Finney 490 adoption started after that adoption landed, re-ran it on its older checkout, failed, opened a failure issue and alert for the adopted runtime and closed the hand-port issue from that checkout's empty list. A run whose ref has since moved now decides again against the ref's present pins: when they no longer call for its action it is skipped (or its failure goes unreported) as superseded, and it leaves the hand-port issue alone. An unrelated commit changes nothing.
