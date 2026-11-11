@@ -1,9 +1,10 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/_money.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Gamma amounts: exact decimal strings and the chain's units.
 //!
-//! Gamma is not a [`Balance`](crate::Balance) unit. Python keeps a gamma
-//! amount as an exact decimal string (`"1.5"`) and converts it to the chain's
-//! units, [`GAMMA_UNITS`] per gamma, only when composing a call.
+//! Gamma is not a [`Balance`] unit. Python keeps a gamma amount as an exact
+//! decimal string (`"1.5"`) and converts it to the chain's units,
+//! [`GAMMA_UNITS`](crate::gamma::GAMMA_UNITS) per gamma, only when composing
+//! a call.
 
 use std::fmt;
 

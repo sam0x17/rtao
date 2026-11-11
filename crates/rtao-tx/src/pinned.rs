@@ -4,10 +4,11 @@
 //! A later approval round that must rebuild its call (for example to recover a
 //! pure proxy's reserve metadata) would otherwise re-derive prices and `ALL`
 //! amounts from current chain state, and the rebuilt bytes would no longer
-//! match the opening approval. Within [`scope`], builds that participate read
-//! those inputs from the pinned call instead. This is used only for a rebuild
-//! that is then compared byte for byte with the pinned call; it is never
-//! permission to accept an imported call or to skip a guard.
+//! match the opening approval. Within [`scope`](crate::pinned::scope), builds
+//! that participate read those inputs from the pinned call instead. This is
+//! used only for a rebuild that is then compared byte for byte with the
+//! pinned call; it is never permission to accept an imported call or to skip
+//! a guard.
 
 use crate::IntentError;
 use rtao_runtime::{CallBytes, RuntimeHandle};
