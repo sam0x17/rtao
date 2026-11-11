@@ -29,6 +29,7 @@ pub(crate) fn validate_account_mode(mode: &str) -> Result<AccountMode, IntentErr
 
 /// Check a hashed destination descriptor (hex) with the core's strict
 /// decoder; the executor's registration guard uses it (D-148).
+#[cfg_attr(not(any(feature = "transfer", feature = "coldkey")), allow(dead_code))]
 pub(crate) fn check_hashed_descriptor(descriptor: Option<&String>) -> Result<(), IntentError> {
     if let Some(descriptor) = descriptor {
         let bytes = rtao_primitives::pyfmt::bytes_fromhex(
