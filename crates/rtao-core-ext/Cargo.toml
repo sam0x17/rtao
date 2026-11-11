@@ -18,15 +18,12 @@ workspace = true
 
 [dependencies]
 bittensor-core.workspace = true
-schnorrkel.workspace = true
-ed25519-zebra.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 parity-scale-codec.workspace = true
 scale-info.workspace = true
 frame-metadata.workspace = true
 hex.workspace = true
-base64 = "0.22"
 zeroize.workspace = true
 
 [dev-dependencies]

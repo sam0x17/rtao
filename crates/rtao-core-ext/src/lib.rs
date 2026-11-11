@@ -16,11 +16,7 @@
 
 pub mod epoch_schedule;
 pub mod ir;
-pub mod keyfile_env;
 pub mod keyfile_json;
 pub mod ops;
 pub mod timelock_commit;
 pub mod value_ext;
-pub mod verify_strict;
-
-pub use verify_strict::verify_strict;

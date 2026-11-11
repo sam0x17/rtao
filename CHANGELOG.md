@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### v490 hand ports: the core's strict verifier, password codec and ECDSA key helpers (D-179)
+
+- `rtao_core::keys::verify_strict` and `rtao_core::keyfile_env` are now the core's own (v490 shipped rtao's PR-U10). rtao's staged copies in `rtao-core-ext` are removed (`rtao_core_ext::verify_strict` and `rtao_core_ext::keyfile_env` no longer exist; use the `rtao_core` paths). One behavior difference: `verify_strict` with a hashed crypto code (4 or 6) now verifies the core's hashed message envelope instead of returning an error, as Python's `sp_core.verify_strict` does. Ed25519 and Sr25519 behavior is unchanged, and so is btauth's strict policy, which refuses hashed senders.
+- `rtao_core::keys` re-exports `CRYPTO_ECDSA`, `ECDSA_PUBLIC_KEY_LEN`, `ED25519_SIGNATURE_LEN`, `SR25519_SIGNATURE_LEN`, `ECDSA_SIGNATURE_LEN`, `account_id_from_ecdsa_public` and `ss58_from_ecdsa_public`.
+- The nine core-derived sources of issue #17 are blessed (the core's `Cargo.toml`, `keyfiles/mod.rs`, `keys/mod.rs` and `lib.rs`, the binding's `pyproject.toml` and `keys.rs`, `sp_core.py`, `test_sp_core_keypair.py` and `test_sp_core_parity.py`), and the four new upstream rows are classified.
+
 ### v490 hand ports: gamma emission shares (D-178)
 
 - Subnet emission weights count the subnet's gamma shares (runtime 490 `SubtensorModule.SubnetGammaEmission`): `rtao_primitives::emission_weights::Rules` has a public `gamma_share` field (source-breaking for struct literals without `..Default::default()`), with `and_gamma` and `renormalize_with_gamma`; `rtao_reads::reads::subnets::gamma_emission_share` and `SubnetEmissionWeights::gamma_share` read them; `SetSubnetEmissionWeights` and `rtao subnets emission show/set/set-value/increase/decrease` include them in the sum and the preview. Help text says the other slots fill the rest.

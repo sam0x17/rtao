@@ -314,10 +314,10 @@ notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and reta
 py = "sdk/bittensor-core-py/pyproject.toml"
 rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "bbf2f9ee76a2a915e16fc038397f11e2fe67d18e"
-synced_tag = "v488"
+synced_blob = "c11c08784adfcdd8b859814dbf94ac6224717fa2"
+synced_tag = "v490"
 milestone = "M0"
-notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Maturin builds the named bittensor_core module from Cargo.toml with extension-module enabled. Static Python package version and Cargo core version are distinct; this source review proves no published-wheel availability or compatible release pair. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Maturin builds the named bittensor_core module from Cargo.toml with extension-module enabled. Static Python package version and Cargo core version are distinct; this source review proves no published-wheel availability or compatible release pair. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): the binding's static version moves to 0.1.10. The oracle image builds the binding from the exact parity tag's source and lock, so no version pin changes; no Python run claimed."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/digest.rs"
@@ -341,10 +341,10 @@ notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and reta
 py = "sdk/bittensor-core-py/src/keys.rs"
 rs = ["ci/oracle/Dockerfile (exact upstream tag/commit and locked path-dependency build)","ci/oracle/image_identity.py (source, binding and lock identity)","xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"]
 kind = "oracle-only"
-synced_blob = "29f1fbd4ecafb89047b32c4aadf17e610fa45bd0"
-synced_tag = "v488"
+synced_blob = "5d72071bcd275920dadf77c7d7ec972f43d3eb3b"
+synced_tag = "v490"
 milestone = "M0"
-notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed message text/0x/bytes coercion, key constructors and aliases, signing/verification, sealed-box/keyfile/password-environment forwarding and registered constants. This source input decision is not universal erasure or native-wallet equivalence evidence. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and retained artifact SHA256 authenticated. Reviewed message text/0x/bytes coercion, key constructors and aliases, signing/verification, sealed-box/keyfile/password-environment forwarding and registered constants. This source input decision is not universal erasure or native-wallet equivalence evidence. Dockerfile checks out the exact parity tag/commit, frozen uv uses ../bittensor-core-py, and image_identity verifies source/lock/interpreter/backend/binding identity. Authored source/guard witnesses: xtask::oracle::tests::{oracle_sources_parse_without_running_python, local_execution_fails_before_docker, rejects_unpinned_images_and_unsafe_paths}. This reconciles optional oracle dependency source under Q30; it does not certify all binding functions or a recorded corpus. Hosted image build, Python execution, native differential coverage and published wheel compatibility remain unverified; missing first optional oracle outputs do not block source reconciliation. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): the binding exports verify_strict, ecdsa_ss58_encode, ecdsa_account_id, encode_password_for_environment and the ECDSA code and length constants; rtao uses the same core functions natively through rtao_core::keys and rtao_core::keyfile_env. No Python run claimed."
 
 [[file]]
 py = "sdk/bittensor-core-py/src/ledger.rs"
@@ -404,10 +404,10 @@ notes = "Source-input reconciliation 2026-10-15: exact watched Git blob and reta
 py = "sdk/bittensor-core/Cargo.toml"
 rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
 kind = "n/a"
-synced_blob = "d150c4f8763b38324e5f79a535589dad8e93027c"
-synced_tag = "v488"
+synced_blob = "1aa5200a1e46a4849a030ae8a3854a550a97cce1"
+synced_tag = "v490"
 milestone = "M0"
-notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): ed25519-zebra becomes a direct core dependency (the hashed Ed25519 wipe, RaoFoundation/subtensor#3317); the combined core patch's Cargo.toml hunk merges onto it (D-169). Core-owned; nothing to port."
 
 [[file]]
 py = "sdk/bittensor-core/fixtures/ledger_proof_vector.json"
@@ -512,10 +512,10 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 py = "sdk/bittensor-core/src/keyfiles/mod.rs"
 rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
 kind = "n/a"
-synced_blob = "28dc206e4dd759b67ee4b6547fdd4d4939d0ea69"
-synced_tag = "v488"
+synced_blob = "4623def49d6f5400529c20d85954e4f89cdf627d"
+synced_tag = "v490"
 milestone = "M0"
-notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): the environment password functions delegate to the new keyfile_env module (encode/decode re-exported here; get_password_from_environment wraps the raw value in Zeroizing). rtao_core::keyfiles re-exports the same functions as before; the pure helpers are rtao_core::keyfile_env, now the core's module."
 
 [[file]]
 py = "sdk/bittensor-core/src/keys/base58.rs"
@@ -537,21 +537,21 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 
 [[file]]
 py = "sdk/bittensor-core/src/keys/mod.rs"
-rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)", "rtao_core::keys re-exports CRYPTO_ECDSA, ECDSA_PUBLIC_KEY_LEN, ED25519/SR25519/ECDSA_SIGNATURE_LEN, account_id_from_ecdsa_public, ss58_from_ecdsa_public and verify_strict"]
 kind = "n/a"
-synced_blob = "e1886bb247f761ffc59548875208daa375919f83"
-synced_tag = "v488"
+synced_blob = "b409441801949eb78b90e3c266bd06b1b19be879"
+synced_tag = "v490"
 milestone = "M0"
-notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): ECDSA crypto code, key and signature lengths, account_id_from_ecdsa_public/ss58_from_ecdsa_public (blake2_256 of the compressed key) and verify_strict (PR-U10 upstreamed: the core's per-scheme verifier without the <Bytes> retry, accepting the hashed message envelopes) are re-exported by rtao_core::keys; rtao's staged verify_strict is retired. Tests: crates/rtao-core/tests/keys.rs."
 
 [[file]]
 py = "sdk/bittensor-core/src/lib.rs"
 rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
 kind = "n/a"
-synced_blob = "c9be56a32861a2b426b3c784a1fd563c3630c5e2"
-synced_tag = "v488"
+synced_blob = "e4892df7e353f23c4a2ed2a914d751a8aac38daa"
+synced_tag = "v490"
 milestone = "M0"
-notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Core dependency-owned primitive, module or package configuration. rtao-core explicitly forwards the needed portable codec/keys/metadata/digest/ML-KEM/timelock/PoW/Ledger surface; other dependency internals remain upstream. core-surface/staged are curated API probes, not blanket behavioral coverage of this entire file. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): declares the portable keyfile_env module, re-exported as rtao_core::keyfile_env (rtao's staged copy retired)."
 
 [[file]]
 py = "sdk/bittensor-core/src/mlkem/mod.rs"
@@ -2626,10 +2626,10 @@ notes = "Source reconciliation 2026-10-15: complete authenticated Snapshot file 
 py = "sdk/python/bittensor/sp_core.py"
 rs = ["rtao_core::{keys,keyfiles,keyfile_env}; rtao_primitives::AccountId; signer/keypair API"]
 kind = "n/a"
-synced_blob = "431422f365d1b044dbcc954e3b548db84baad733"
-synced_tag = "v488"
+synced_blob = "e7fd769768eb608deb0f6700e1f93bdd53840bd1"
+synced_tag = "v490"
 milestone = "M0"
-notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. PyO3 aliases are replaced by rtao-core::{keys,keyfiles,keyfile_env}, AccountId and Keypair constructors/signing. Environment password access uses approved pure G10 boundaries. The mnemonic sign helper composes Keypair::from_mnemonic and sign; no binding module is shipped. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-147): the hashed and post-quantum crypto codes are rtao_primitives::AuthorityType (CLASSICAL_HASHED/MLDSA/FALCON/PQ/FIXED_PQ/HASHED/REGISTERED_CRYPTO_TYPES as its is_post_quantum, is_stateless and requires_registration; PQ_PROFILES as profile; pq_lengths as pq_lengths) and rtao_core::keys re-exports the core's CRYPTO_* codes, account_crypto_type, verify_hashed_authorization and verify_mldsa_authorization; is_stateless_pq_descriptor is rtao_primitives::receiving::is_stateless_pq_descriptor (is_stateless_mldsa_descriptor is that with profile 5); the receiving-address codecs are D-142's. Tests: authority::tests, tests/authority.rs (rtao-client)."
+notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. PyO3 aliases are replaced by rtao-core::{keys,keyfiles,keyfile_env}, AccountId and Keypair constructors/signing. Environment password access uses approved pure G10 boundaries. The mnemonic sign helper composes Keypair::from_mnemonic and sign; no binding module is shipped. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-147): the hashed and post-quantum crypto codes are rtao_primitives::AuthorityType (CLASSICAL_HASHED/MLDSA/FALCON/PQ/FIXED_PQ/HASHED/REGISTERED_CRYPTO_TYPES as its is_post_quantum, is_stateless and requires_registration; PQ_PROFILES as profile; pq_lengths as pq_lengths) and rtao_core::keys re-exports the core's CRYPTO_* codes, account_crypto_type, verify_hashed_authorization and verify_mldsa_authorization; is_stateless_pq_descriptor is rtao_primitives::receiving::is_stateless_pq_descriptor (is_stateless_mldsa_descriptor is that with profile 5); the receiving-address codecs are D-142's. Tests: authority::tests, tests/authority.rs (rtao-client). v490 (D-179): CRYPTO_ECDSA, ECDSA_PUBLIC_KEY_LEN, the three signature lengths, ecdsa_account_id (rtao_core::keys::account_id_from_ecdsa_public), ecdsa_ss58_encode (ss58_from_ecdsa_public), verify_strict and encode_password_for_environment are the core's, re-exported by rtao_core::keys and rtao_core::keyfile_env; rtao_primitives::SignatureScheme names the ECDSA MultiSignature variant (D-180). _core_helper's stand-in for an older installed core is not needed: Cargo resolves the pinned core at build time."
 
 [[file]]
 py = "sdk/python/bittensor/sync.py"
@@ -3253,21 +3253,21 @@ notes = "Source reconciliation 2026-10-15: all 19 functions/36 pytest cases mapp
 
 [[file]]
 py = "sdk/python/tests/unit/test_sp_core_keypair.py"
-rs = ["rtao_core::keys::Keypair (shared pinned primitive implementation)","rtao_signer::KeypairSigner; rtao_wallet key operations; rtao_cli wallet message fixtures"]
+rs = ["rtao_core::keys::Keypair (shared pinned primitive implementation)", "crates/rtao-core/tests/keys.rs"]
 kind = "oracle-only"
-synced_blob = "b0b10b4c56cd2e348d18ea38fa273085a28f2c32"
-synced_tag = "v488"
+synced_blob = "e88d04ad79e63510b0879df2da7d4c5a4938b293"
+synced_tag = "v490"
 milestone = "the milestone of the code each tests"
-notes = "Source reconciliation 2026-10-15: complete authenticated eight-case pytest assertion mapping reviewed against retained core keys/keyfiles and Python-binding delegation plus substantive native consumers. Covers Alice/scheme, public-only construction/verification, exact-byte sign/verify, mnemonic identity, sealed-box length(+48)/recipient roundtrip/wrong-key and sr25519-recipient refusal. Core primitives are reexported shared implementations, not a second cryptographic port; typed byte inputs/errors and guarded wallet/signers are native API adaptations. Retained dependency tests and related native fixtures provide specific coverage, not a complete eight-case native test port. Oracle-only is a source classification: ci/oracle does not execute this pytest module; fresh Python/current hosted execution is unclaimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: complete authenticated eight-case pytest assertion mapping reviewed against retained core keys/keyfiles and Python-binding delegation plus substantive native consumers. Covers Alice/scheme, public-only construction/verification, exact-byte sign/verify, mnemonic identity, sealed-box length(+48)/recipient roundtrip/wrong-key and sr25519-recipient refusal. Core primitives are reexported shared implementations, not a second cryptographic port; typed byte inputs/errors and guarded wallet/signers are native API adaptations. Retained dependency tests and related native fixtures provide specific coverage, not a complete eight-case native test port. Oracle-only is a source classification: ci/oracle does not execute this pytest module; fresh Python/current hosted execution is unclaimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): the four ECDSA cases (crypto code 2, key and signature lengths, account and SS58 as blake2_256 of the compressed key, non-compressed keys refused) are ported to crates/rtao-core/tests/keys.rs against rtao_core::keys. No Python run claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_sp_core_parity.py"
-rs = ["rtao_core::keys::Keypair (shared pinned primitive implementation)","rtao_core::keyfile_json; crates/rtao-core/tests/keyfile_json_diff.rs"]
+rs = ["rtao_core::keys::Keypair (shared pinned primitive implementation)", "rtao_core::keyfile_json; crates/rtao-core/tests/keyfile_json_diff.rs", "crates/rtao-core/tests/keys.rs"]
 kind = "oracle-only"
-synced_blob = "0739cc047714582bf2edfac477eec7f55b433eaf"
-synced_tag = "v488"
+synced_blob = "b83e325aa7e6582442f94d11d1c761d9f969f3e3"
+synced_tag = "v490"
 milestone = "the milestone of the code each tests"
-notes = "Source reconciliation 2026-10-15: complete authenticated four-case assertion mapping reviewed: exact Alice address, cross-instance sr25519 verification, deterministic ed25519 signing through the shared sp_core primitive, and signing-preserving keyfile reconstruction. Native byte/scheme APIs replace Python dynamic inputs; portable/host codec and raw signer fixtures provide substantive specific counterparts. Source delegation does not establish an independently executed cryptographic oracle, deterministic-signature assertion or complete four-case native test port. The active ledger patch is confined away from key/keyfile sources by pin guards. Oracle-only classification does not mean ci/oracle runs this pytest file; fresh Python/current hosted execution remains unclaimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "Source reconciliation 2026-10-15: complete authenticated four-case assertion mapping reviewed: exact Alice address, cross-instance sr25519 verification, deterministic ed25519 signing through the shared sp_core primitive, and signing-preserving keyfile reconstruction. Native byte/scheme APIs replace Python dynamic inputs; portable/host codec and raw signer fixtures provide substantive specific counterparts. Source delegation does not establish an independently executed cryptographic oracle, deterministic-signature assertion or complete four-case native test port. The active ledger patch is confined away from key/keyfile sources by pin guards. Oracle-only classification does not mean ci/oracle runs this pytest file; fresh Python/current hosted execution remains unclaimed. v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v490 (D-179): the strict verifier case (raw signatures verify, a <Bytes>-wrapped one only against the wrapped message, a short signature is a length error) and the pure password encoding case (WALLET_α vector, no environment write, empty name refused) are ported to crates/rtao-core/tests/keys.rs. No Python run claimed."
 
 [[file]]
 py = "sdk/python/tests/unit/test_storage_golden.py"
@@ -4089,30 +4089,30 @@ notes = "Classified 2026-11-09 (D-161): Partial: unlock refuses a secret that is
 
 [[file]]
 py = "sdk/bittensor-core/src/keyfile_env.rs"
-rs = ["pending: new upstream file at v490, not yet classified or ported"]
-kind = "ported"
-synced_blob = "pending"
+rs = ["rtao_core::keyfile_env (re-exported whole)"]
+kind = "n/a"
+synced_blob = "f86919fe6f9c09ee7a600432250ed1c3707ef3e5"
 synced_tag = "v490"
-milestone = "port due"
-notes = "Added by the v490 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+milestone = "M0"
+notes = "Added by the v490 runtime adoption (D-128): the file is new upstream. Classified 2026-11-11 (D-179): rtao's PR-U10 pure password encoding upstreamed byte for byte in behavior (rtao's staged rtao_core_ext::keyfile_env is retired; staged --check refuses a staged module the core provides). Core-owned; re-exported as rtao_core::keyfile_env; consumers: rtao-wallet password sources. Tests: crates/rtao-core/tests/password_environment.rs."
 
 [[file]]
 py = "sdk/bittensor-core/tests/password_environment.rs"
-rs = ["pending: new upstream file at v490, not yet classified or ported"]
-kind = "ported"
-synced_blob = "pending"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)", "crates/rtao-core/tests/password_environment.rs"]
+kind = "n/a"
+synced_blob = "3aebab6412e0d1f516e159bfd76fb17a3e5545b7"
 synced_tag = "v490"
-milestone = "port due"
-notes = "Added by the v490 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+milestone = "M0"
+notes = "Added by the v490 runtime adoption (D-128): the file is new upstream. Classified 2026-11-11 (D-179): the core's own tests of keyfile_env (rtao's PR-U10 tests upstreamed). rtao keeps its copy against the re-export in crates/rtao-core/tests/password_environment.rs (moved from rtao-core-ext)."
 
 [[file]]
 py = "sdk/bittensor-core/tests/verify_strict.rs"
-rs = ["pending: new upstream file at v490, not yet classified or ported"]
-kind = "ported"
-synced_blob = "pending"
+rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)", "crates/rtao-core/tests/verify_strict.rs"]
+kind = "n/a"
+synced_blob = "fe844f194130d3d8b766dfb4ea0da2c9a4755978"
 synced_tag = "v490"
-milestone = "port due"
-notes = "Added by the v490 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+milestone = "M0"
+notes = "Added by the v490 runtime adoption (D-128): the file is new upstream. Classified 2026-11-11 (D-179): the core's own tests of keys::verify_strict (rtao's PR-U10 tests upstreamed). rtao keeps its copy against rtao_core::keys::verify_strict in crates/rtao-core/tests/verify_strict.rs (moved from rtao-core-ext)."
 
 [[file]]
 py = "sdk/python/tests/unit/test_normalize_signature.py"
@@ -4125,12 +4125,12 @@ notes = "Added by the v490 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/tests/unit/test_sp_core_backend_compat.py"
-rs = ["pending: new upstream file at v490, not yet classified or ported"]
-kind = "ported"
-synced_blob = "pending"
+rs = ["none needed"]
+kind = "n/a"
+synced_blob = "3a23638d87aa3df124d0297637d3b5cc3aaa72e4"
 synced_tag = "v490"
-milestone = "port due"
-notes = "Added by the v490 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+milestone = "—"
+notes = "Added by the v490 runtime adoption (D-128): the file is new upstream. Classified 2026-11-11 (D-179): it loads sp_core.py over a stub native module older than its newest helpers and checks the _core_helper stand-ins. rtao has no installed-wheel skew: Cargo builds the pinned core with rtao, and a missing core symbol fails the build. Nothing to port."
 
 [[file]]
 py = "sdk/python/tests/unit/test_storage_exists.py"

@@ -3,7 +3,7 @@
 use std::error::Error;
 
 use bittensor_core::keys::{self, CRYPTO_ED25519, CRYPTO_SR25519, Keypair};
-use rtao_core_ext::verify_strict;
+use rtao_core::keys::verify_strict;
 
 #[test]
 fn raw_signatures_verify_and_wrapped_signatures_are_rejected() -> Result<(), Box<dyn Error>> {

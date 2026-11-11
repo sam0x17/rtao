@@ -18,10 +18,12 @@ pub mod dependency_policy;
 pub use error::CoreError;
 pub use value::DynValue;
 
+/// Pure btcli-compatible environment password encoding, without reading or
+/// changing process variables (the core's module since v490; rtao staged it
+/// as PR-U10).
+pub use bittensor_core::keyfile_env;
 /// Serializable runtime metadata inspection staged for upstream adoption.
 pub use rtao_core_ext::ir;
-/// Pure btcli-compatible environment password encoding.
-pub use rtao_core_ext::keyfile_env;
 /// Portable plaintext keyfile JSON and format detection.
 pub use rtao_core_ext::keyfile_json;
 /// Portable protocol construction and decoding staged for upstream adoption.
@@ -39,13 +41,15 @@ include!(concat!(env!("OUT_DIR"), "/core_pin.rs"));
 /// upstream `Keypair` retains its diagnostic behavior pending subtensor #3252.
 pub mod keys {
     pub use bittensor_core::keys::{
-        CRYPTO_ED25519, CRYPTO_FALCON512, CRYPTO_FALCON512_HASHED, CRYPTO_FALCON1024,
+        CRYPTO_ECDSA, CRYPTO_ED25519, CRYPTO_FALCON512, CRYPTO_FALCON512_HASHED, CRYPTO_FALCON1024,
         CRYPTO_FALCON1024_HASHED, CRYPTO_HASHED, CRYPTO_HASHED_ED25519, CRYPTO_MLDSA65,
-        CRYPTO_MLDSA65_FIXED, CRYPTO_SR25519, DEFAULT_SS58_FORMAT, Keypair, account_crypto_type,
-        decode_hashed_receiving_address, encode_hashed_receiving_address, public_key_from_ss58,
+        CRYPTO_MLDSA65_FIXED, CRYPTO_SR25519, DEFAULT_SS58_FORMAT, ECDSA_PUBLIC_KEY_LEN,
+        ECDSA_SIGNATURE_LEN, ED25519_SIGNATURE_LEN, Keypair, SR25519_SIGNATURE_LEN,
+        account_crypto_type, account_id_from_ecdsa_public, decode_hashed_receiving_address,
+        encode_hashed_receiving_address, public_key_from_ss58, ss58_from_ecdsa_public,
         ss58_from_public, verify, verify_hashed_authorization, verify_mldsa_authorization,
+        verify_strict,
     };
-    pub use rtao_core_ext::verify_strict;
 }
 
 /// Portable SCALE codecs and the core's decoded-value carrier.

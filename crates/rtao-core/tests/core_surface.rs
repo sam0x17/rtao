@@ -47,212 +47,239 @@ use bittensor_core::digest::generate_extrinsic_proof as SurfaceItem13;
 use bittensor_core::digest::metadata_digest as SurfaceItem14;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_ED25519 as SurfaceItem15;
+use bittensor_core::keyfile_env as SurfaceItem15;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_FALCON1024 as SurfaceItem16;
+use bittensor_core::keys::CRYPTO_ECDSA as SurfaceItem16;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_FALCON1024_HASHED as SurfaceItem17;
+use bittensor_core::keys::CRYPTO_ED25519 as SurfaceItem17;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_FALCON512 as SurfaceItem18;
+use bittensor_core::keys::CRYPTO_FALCON1024 as SurfaceItem18;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_FALCON512_HASHED as SurfaceItem19;
+use bittensor_core::keys::CRYPTO_FALCON1024_HASHED as SurfaceItem19;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_HASHED as SurfaceItem20;
+use bittensor_core::keys::CRYPTO_FALCON512 as SurfaceItem20;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_HASHED_ED25519 as SurfaceItem21;
+use bittensor_core::keys::CRYPTO_FALCON512_HASHED as SurfaceItem21;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_MLDSA65 as SurfaceItem22;
+use bittensor_core::keys::CRYPTO_HASHED as SurfaceItem22;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_MLDSA65_FIXED as SurfaceItem23;
+use bittensor_core::keys::CRYPTO_HASHED_ED25519 as SurfaceItem23;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::CRYPTO_SR25519 as SurfaceItem24;
+use bittensor_core::keys::CRYPTO_MLDSA65 as SurfaceItem24;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::DEFAULT_SS58_FORMAT as SurfaceItem25;
+use bittensor_core::keys::CRYPTO_MLDSA65_FIXED as SurfaceItem25;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::Keypair as SurfaceItem26;
+use bittensor_core::keys::CRYPTO_SR25519 as SurfaceItem26;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::account_crypto_type as SurfaceItem27;
+use bittensor_core::keys::DEFAULT_SS58_FORMAT as SurfaceItem27;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::decode_hashed_receiving_address as SurfaceItem28;
+use bittensor_core::keys::ECDSA_PUBLIC_KEY_LEN as SurfaceItem28;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::encode_hashed_receiving_address as SurfaceItem29;
+use bittensor_core::keys::ECDSA_SIGNATURE_LEN as SurfaceItem29;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::public_key_from_ss58 as SurfaceItem30;
+use bittensor_core::keys::ED25519_SIGNATURE_LEN as SurfaceItem30;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::ss58_from_public as SurfaceItem31;
+use bittensor_core::keys::Keypair as SurfaceItem31;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::verify as SurfaceItem32;
+use bittensor_core::keys::SR25519_SIGNATURE_LEN as SurfaceItem32;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::verify_hashed_authorization as SurfaceItem33;
+use bittensor_core::keys::account_crypto_type as SurfaceItem33;
 
 #[allow(unused_imports)]
-use bittensor_core::keys::verify_mldsa_authorization as SurfaceItem34;
+use bittensor_core::keys::account_id_from_ecdsa_public as SurfaceItem34;
 
 #[allow(unused_imports)]
-use bittensor_core::mlkem::KDF_ID as SurfaceItem35;
+use bittensor_core::keys::decode_hashed_receiving_address as SurfaceItem35;
 
 #[allow(unused_imports)]
-use bittensor_core::mlkem::MLKEM_NONCE_LEN as SurfaceItem36;
+use bittensor_core::keys::encode_hashed_receiving_address as SurfaceItem36;
 
 #[allow(unused_imports)]
-use bittensor_core::mlkem::seal as SurfaceItem37;
+use bittensor_core::keys::public_key_from_ss58 as SurfaceItem37;
 
 #[allow(unused_imports)]
-use bittensor_core::mlkem::twox_128 as SurfaceItem38;
+use bittensor_core::keys::ss58_from_ecdsa_public as SurfaceItem38;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::ConstantInfo as SurfaceItem39;
+use bittensor_core::keys::ss58_from_public as SurfaceItem39;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::ExtrinsicInfo as SurfaceItem40;
+use bittensor_core::keys::verify as SurfaceItem40;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::PalletInfo as SurfaceItem41;
+use bittensor_core::keys::verify_hashed_authorization as SurfaceItem41;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::Runtime as SurfaceItem42;
+use bittensor_core::keys::verify_mldsa_authorization as SurfaceItem42;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::RuntimeApiInfo as SurfaceItem43;
+use bittensor_core::keys::verify_strict as SurfaceItem43;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::RuntimeApiMethodInfo as SurfaceItem44;
+use bittensor_core::mlkem::KDF_ID as SurfaceItem44;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::RuntimeApiParamInfo as SurfaceItem45;
+use bittensor_core::mlkem::MLKEM_NONCE_LEN as SurfaceItem45;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::SignedExtensionInfo as SurfaceItem46;
+use bittensor_core::mlkem::seal as SurfaceItem46;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::StorageInfo as SurfaceItem47;
+use bittensor_core::mlkem::twox_128 as SurfaceItem47;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::type_string::Primitive as SurfaceItem48;
+use bittensor_core::runtime::ConstantInfo as SurfaceItem48;
 
 #[allow(unused_imports)]
-use bittensor_core::runtime::type_string::TypeSpec as SurfaceItem49;
+use bittensor_core::runtime::ExtrinsicInfo as SurfaceItem49;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::UserData as SurfaceItem50;
+use bittensor_core::runtime::PalletInfo as SurfaceItem50;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::WeightsTlockPayload as SurfaceItem51;
+use bittensor_core::runtime::Runtime as SurfaceItem51;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::constants as SurfaceItem52;
+use bittensor_core::runtime::RuntimeApiInfo as SurfaceItem52;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::decrypt_and_decompress as SurfaceItem53;
+use bittensor_core::runtime::RuntimeApiMethodInfo as SurfaceItem53;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::decrypt_with_signature as SurfaceItem54;
+use bittensor_core::runtime::RuntimeApiParamInfo as SurfaceItem54;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::encrypt_and_compress as SurfaceItem55;
+use bittensor_core::runtime::SignedExtensionInfo as SurfaceItem55;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::encrypt_at_round as SurfaceItem56;
+use bittensor_core::runtime::StorageInfo as SurfaceItem56;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::inner_ciphertext as SurfaceItem57;
+use bittensor_core::runtime::type_string::Primitive as SurfaceItem57;
 
 #[allow(unused_imports)]
-use bittensor_core::timelock::reveal_round as SurfaceItem58;
+use bittensor_core::runtime::type_string::TypeSpec as SurfaceItem58;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::decrypt_keyfile_data as SurfaceItem59;
+use bittensor_core::timelock::UserData as SurfaceItem59;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::deserialize_keypair_from_keyfile_data as SurfaceItem60;
+use bittensor_core::timelock::WeightsTlockPayload as SurfaceItem60;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::encrypt_keyfile_data as SurfaceItem61;
+use bittensor_core::timelock::constants as SurfaceItem61;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::get_password_from_environment as SurfaceItem62;
+use bittensor_core::timelock::decrypt_and_decompress as SurfaceItem62;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::keyfile_data_encryption_method as SurfaceItem63;
+use bittensor_core::timelock::decrypt_with_signature as SurfaceItem63;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::keyfile_data_is_encrypted as SurfaceItem64;
+use bittensor_core::timelock::encrypt_and_compress as SurfaceItem64;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::keyfile_data_is_encrypted_ansible as SurfaceItem65;
+use bittensor_core::timelock::encrypt_at_round as SurfaceItem65;
 
-#[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::keyfile_data_is_encrypted_legacy as SurfaceItem66;
+use bittensor_core::timelock::inner_ciphertext as SurfaceItem66;
+
+#[allow(unused_imports)]
+use bittensor_core::timelock::reveal_round as SurfaceItem67;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::keyfile_data_is_encrypted_nacl as SurfaceItem67;
+use bittensor_core::keyfiles::decrypt_keyfile_data as SurfaceItem68;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::keyfiles::serialized_keypair_to_keyfile_data as SurfaceItem68;
+use bittensor_core::keyfiles::deserialize_keypair_from_keyfile_data as SurfaceItem69;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::pow::GpuDevice as SurfaceItem69;
+use bittensor_core::keyfiles::encrypt_keyfile_data as SurfaceItem70;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::pow::GpuMiner as SurfaceItem70;
+use bittensor_core::keyfiles::get_password_from_environment as SurfaceItem71;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::pow::MAX_BATCH as SurfaceItem71;
+use bittensor_core::keyfiles::keyfile_data_encryption_method as SurfaceItem72;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::pow::PREFIX_LEN as SurfaceItem72;
+use bittensor_core::keyfiles::keyfile_data_is_encrypted as SurfaceItem73;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::pow::gpu_devices as SurfaceItem73;
+use bittensor_core::keyfiles::keyfile_data_is_encrypted_ansible as SurfaceItem74;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::pow::mine_cpu as SurfaceItem74;
+use bittensor_core::keyfiles::keyfile_data_is_encrypted_legacy as SurfaceItem75;
 
 #[cfg(feature = "host")]
 #[allow(unused_imports)]
-use bittensor_core::pow::seal as SurfaceItem75;
+use bittensor_core::keyfiles::keyfile_data_is_encrypted_nacl as SurfaceItem76;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::keyfiles::serialized_keypair_to_keyfile_data as SurfaceItem77;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::pow::GpuDevice as SurfaceItem78;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::pow::GpuMiner as SurfaceItem79;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::pow::MAX_BATCH as SurfaceItem80;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::pow::PREFIX_LEN as SurfaceItem81;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::pow::gpu_devices as SurfaceItem82;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::pow::mine_cpu as SurfaceItem83;
+
+#[cfg(feature = "host")]
+#[allow(unused_imports)]
+use bittensor_core::pow::seal as SurfaceItem84;
 
 #[cfg(feature = "ledger")]
 #[allow(unused_imports)]
-use bittensor_core::signers::ledger::LedgerAddress as SurfaceItem76;
+use bittensor_core::signers::ledger::LedgerAddress as SurfaceItem85;
 
 #[cfg(feature = "ledger")]
 #[allow(unused_imports)]
-use bittensor_core::signers::ledger::LedgerDevice as SurfaceItem77;
+use bittensor_core::signers::ledger::LedgerDevice as SurfaceItem86;
 
 #[cfg(feature = "host")]
 // The function pointer preserves the reviewed upstream signature.

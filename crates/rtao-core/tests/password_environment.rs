@@ -2,9 +2,7 @@
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bittensor_core::CoreError;
-use rtao_core_ext::keyfile_env::{
-    decode_password_from_environment, encode_password_for_environment,
-};
+use rtao_core::keyfile_env::{decode_password_from_environment, encode_password_for_environment};
 
 #[test]
 fn legacy_vectors_and_decoder_error_boundaries_are_preserved() -> Result<(), CoreError> {

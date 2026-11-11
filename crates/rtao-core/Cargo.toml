@@ -33,5 +33,8 @@ serde_json.workspace = true
 toml_edit.workspace = true
 
 [dev-dependencies]
+base64.workspace = true
+blake2.workspace = true
 toml_edit.workspace = true
+zeroize.workspace = true
 

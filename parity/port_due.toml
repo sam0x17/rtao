@@ -5,81 +5,9 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "sdk/bittensor-core-py/pyproject.toml"
-kind = "oracle-only"
-from = "bbf2f9ee76a2a915e16fc038397f11e2fe67d18e"
-to = "c11c08784adfcdd8b859814dbf94ac6224717fa2"
-tag = "v490"
-symbols = []
-
-[[file]]
-py = "sdk/bittensor-core-py/src/keys.rs"
-kind = "oracle-only"
-from = "29f1fbd4ecafb89047b32c4aadf17e610fa45bd0"
-to = "5d72071bcd275920dadf77c7d7ec972f43d3eb3b"
-tag = "v490"
-symbols = []
-
-[[file]]
-py = "sdk/bittensor-core/Cargo.toml"
-kind = "n/a"
-from = "d150c4f8763b38324e5f79a535589dad8e93027c"
-to = "1aa5200a1e46a4849a030ae8a3854a550a97cce1"
-tag = "v490"
-symbols = []
-
-[[file]]
-py = "sdk/bittensor-core/src/keyfiles/mod.rs"
-kind = "n/a"
-from = "28dc206e4dd759b67ee4b6547fdd4d4939d0ea69"
-to = "4623def49d6f5400529c20d85954e4f89cdf627d"
-tag = "v490"
-symbols = []
-
-[[file]]
-py = "sdk/bittensor-core/src/keys/mod.rs"
-kind = "n/a"
-from = "e1886bb247f761ffc59548875208daa375919f83"
-to = "b409441801949eb78b90e3c266bd06b1b19be879"
-tag = "v490"
-symbols = []
-
-[[file]]
-py = "sdk/bittensor-core/src/lib.rs"
-kind = "n/a"
-from = "c9be56a32861a2b426b3c784a1fd563c3630c5e2"
-to = "e4892df7e353f23c4a2ed2a914d751a8aac38daa"
-tag = "v490"
-symbols = []
-
-[[file]]
 py = "sdk/python/bittensor/_transport/extrinsics.py"
 kind = "ported"
 from = "692cd5fe41a6c3ab73b0bb6ad9ccf43e49c6ceee"
 to = "1b9adfbb52f1dcd6e8a1b5ec16d63f52be89dc23"
 tag = "v490"
 symbols = ["bittensor._transport.extrinsics.CRYPTO_ECDSA", "bittensor._transport.extrinsics.CRYPTO_ED25519", "bittensor._transport.extrinsics.CRYPTO_SR25519", "bittensor._transport.extrinsics.ECDSA_SIGNATURE_LEN", "bittensor._transport.extrinsics.ED25519_SIGNATURE_LEN", "bittensor._transport.extrinsics.PQ_CRYPTO_TYPES", "bittensor._transport.extrinsics.REGISTERED_CRYPTO_TYPES", "bittensor._transport.extrinsics.SR25519_SIGNATURE_LEN", "bittensor._transport.extrinsics._SIGNATURE_LENGTHS", "bittensor._transport.extrinsics._normalize_signature", "bittensor._transport.extrinsics.pq_lengths"]
-
-[[file]]
-py = "sdk/python/bittensor/sp_core.py"
-kind = "n/a"
-from = "431422f365d1b044dbcc954e3b548db84baad733"
-to = "e7fd769768eb608deb0f6700e1f93bdd53840bd1"
-tag = "v490"
-symbols = ["bittensor.sp_core.CRYPTO_ECDSA", "bittensor.sp_core.ECDSA_PUBLIC_KEY_LEN", "bittensor.sp_core.ECDSA_SIGNATURE_LEN", "bittensor.sp_core.ED25519_SIGNATURE_LEN", "bittensor.sp_core.SR25519_SIGNATURE_LEN", "bittensor.sp_core._CORE_HELPERS_SINCE", "bittensor.sp_core._core_helper", "bittensor.sp_core.ecdsa_account_id", "bittensor.sp_core.ecdsa_ss58_encode", "bittensor.sp_core.encode_password_for_environment", "bittensor.sp_core.verify_strict"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_sp_core_keypair.py"
-kind = "oracle-only"
-from = "b0b10b4c56cd2e348d18ea38fa273085a28f2c32"
-to = "e88d04ad79e63510b0879df2da7d4c5a4938b293"
-tag = "v490"
-symbols = ["tests.unit.test_sp_core_keypair._ECDSA_PUBKEY", "tests.unit.test_sp_core_keypair.test_ecdsa_crypto_type_is_multisignature_index", "tests.unit.test_sp_core_keypair.test_ecdsa_ss58_is_blake2_256_of_compressed_pubkey", "tests.unit.test_sp_core_keypair.test_ecdsa_ss58_rejects_non_compressed_keys", "tests.unit.test_sp_core_keypair.test_key_and_signature_lengths"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_sp_core_parity.py"
-kind = "oracle-only"
-from = "0739cc047714582bf2edfac477eec7f55b433eaf"
-to = "b83e325aa7e6582442f94d11d1c761d9f969f3e3"
-tag = "v490"
-symbols = ["tests.unit.test_sp_core_parity.test_pure_password_encoding_matches_legacy_bytes_without_environment_writes", "tests.unit.test_sp_core_parity.test_strict_verifier_omits_only_legacy_wrapper_fallback"]

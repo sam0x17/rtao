@@ -1306,7 +1306,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
  "pkcs8",
- "serde",
  "signature",
 ]
 
@@ -1321,7 +1320,6 @@ dependencies = [
  "hashbrown 0.16.1",
  "pkcs8",
  "rand_core 0.6.4",
- "serde",
  "sha2 0.10.9",
  "subtle",
  "zeroize",
@@ -3170,14 +3168,11 @@ dependencies = [
 name = "rtao-core-ext"
 version = "0.1.0"
 dependencies = [
- "base64",
  "bittensor-core",
- "ed25519-zebra",
  "frame-metadata",
  "hex",
  "parity-scale-codec",
  "scale-info",
- "schnorrkel",
  "serde",
  "serde_json",
  "zeroize",

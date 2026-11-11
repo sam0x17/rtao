@@ -2,6 +2,14 @@
 
 Filed 2026-10-14: [RaoFoundation/subtensor#3250](https://github.com/RaoFoundation/subtensor/pull/3250).
 
+Status 2026-11-11: the PR was closed unmerged, but its content shipped in the
+core at v490 (`sdk/bittensor-core/src/keyfile_env.rs`, `keys::verify_strict`,
+their binding exports and the `password_environment.rs` and `verify_strict.rs`
+tests). rtao retired its staged copies and re-exports the core's
+(`rtao_core::keyfile_env`, `rtao_core::keys::verify_strict`, D-179); the moved
+tests in `crates/rtao-core/tests/` check the core's behavior against the same
+vectors.
+
 | Item | Verified value |
 |---|---|
 | Base | `850f2755bb05a3851f948489f0ab27b0645cebce` (`main`, `v478`) |

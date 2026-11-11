@@ -8505,7 +8505,7 @@
           "ci/oracle/image_identity.py (source, binding and lock identity)",
           "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "bbf2f9ee76a2a915e16fc038397f11e2fe67d18e"
+        "synced_blob": "c11c08784adfcdd8b859814dbf94ac6224717fa2"
       },
       {
         "kind": "oracle-only",
@@ -8544,7 +8544,7 @@
           "ci/oracle/image_identity.py (source, binding and lock identity)",
           "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "29f1fbd4ecafb89047b32c4aadf17e610fa45bd0"
+        "synced_blob": "5d72071bcd275920dadf77c7d7ec972f43d3eb3b"
       },
       {
         "kind": "oracle-only",
@@ -8633,7 +8633,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "d150c4f8763b38324e5f79a535589dad8e93027c"
+        "synced_blob": "1aa5200a1e46a4849a030ae8a3854a550a97cce1"
       },
       {
         "kind": "n/a",
@@ -8765,7 +8765,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "28dc206e4dd759b67ee4b6547fdd4d4939d0ea69"
+        "synced_blob": "4623def49d6f5400529c20d85954e4f89cdf627d"
       },
       {
         "kind": "n/a",
@@ -8796,9 +8796,10 @@
         "python": "sdk/bittensor-core/src/keys/mod.rs",
         "rtao": "reconciled",
         "rust": [
-          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
+          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)",
+          "rtao_core::keys re-exports CRYPTO_ECDSA, ECDSA_PUBLIC_KEY_LEN, ED25519/SR25519/ECDSA_SIGNATURE_LEN, account_id_from_ecdsa_public, ss58_from_ecdsa_public and verify_strict"
         ],
-        "synced_blob": "e1886bb247f761ffc59548875208daa375919f83"
+        "synced_blob": "b409441801949eb78b90e3c266bd06b1b19be879"
       },
       {
         "kind": "n/a",
@@ -8809,7 +8810,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "c9be56a32861a2b426b3c784a1fd563c3630c5e2"
+        "synced_blob": "e4892df7e353f23c4a2ed2a914d751a8aac38daa"
       },
       {
         "kind": "n/a",
@@ -11515,7 +11516,7 @@
         "rust": [
           "rtao_core::{keys,keyfiles,keyfile_env}; rtao_primitives::AccountId; signer/keypair API"
         ],
-        "synced_blob": "431422f365d1b044dbcc954e3b548db84baad733"
+        "synced_blob": "e7fd769768eb608deb0f6700e1f93bdd53840bd1"
       },
       {
         "kind": "ported",
@@ -12309,9 +12310,9 @@
         "rtao": "reconciled",
         "rust": [
           "rtao_core::keys::Keypair (shared pinned primitive implementation)",
-          "rtao_signer::KeypairSigner; rtao_wallet key operations; rtao_cli wallet message fixtures"
+          "crates/rtao-core/tests/keys.rs"
         ],
-        "synced_blob": "b0b10b4c56cd2e348d18ea38fa273085a28f2c32"
+        "synced_blob": "e88d04ad79e63510b0879df2da7d4c5a4938b293"
       },
       {
         "kind": "oracle-only",
@@ -12321,9 +12322,10 @@
         "rtao": "reconciled",
         "rust": [
           "rtao_core::keys::Keypair (shared pinned primitive implementation)",
-          "rtao_core::keyfile_json; crates/rtao-core/tests/keyfile_json_diff.rs"
+          "rtao_core::keyfile_json; crates/rtao-core/tests/keyfile_json_diff.rs",
+          "crates/rtao-core/tests/keys.rs"
         ],
-        "synced_blob": "0739cc047714582bf2edfac477eec7f55b433eaf"
+        "synced_blob": "b83e325aa7e6582442f94d11d1c761d9f969f3e3"
       },
       {
         "kind": "oracle-only",
@@ -13479,37 +13481,39 @@
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
-        "milestone": "port due",
-        "oracle": "unverified",
+        "kind": "n/a",
+        "milestone": "M0",
+        "oracle": "not_required",
         "python": "sdk/bittensor-core/src/keyfile_env.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v490, not yet classified or ported"
+          "rtao_core::keyfile_env (re-exported whole)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f86919fe6f9c09ee7a600432250ed1c3707ef3e5"
       },
       {
-        "kind": "ported",
-        "milestone": "port due",
-        "oracle": "unverified",
+        "kind": "n/a",
+        "milestone": "M0",
+        "oracle": "not_required",
         "python": "sdk/bittensor-core/tests/password_environment.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v490, not yet classified or ported"
+          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)",
+          "crates/rtao-core/tests/password_environment.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3aebab6412e0d1f516e159bfd76fb17a3e5545b7"
       },
       {
-        "kind": "ported",
-        "milestone": "port due",
-        "oracle": "unverified",
+        "kind": "n/a",
+        "milestone": "M0",
+        "oracle": "not_required",
         "python": "sdk/bittensor-core/tests/verify_strict.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v490, not yet classified or ported"
+          "guarded by `core-surface` and `staged --check` (§1.6, §1.9)",
+          "crates/rtao-core/tests/verify_strict.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "fe844f194130d3d8b766dfb4ea0da2c9a4755978"
       },
       {
         "kind": "ported",
@@ -13523,15 +13527,15 @@
         "synced_blob": "pending"
       },
       {
-        "kind": "ported",
-        "milestone": "port due",
-        "oracle": "unverified",
+        "kind": "n/a",
+        "milestone": "—",
+        "oracle": "not_required",
         "python": "sdk/python/tests/unit/test_sp_core_backend_compat.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v490, not yet classified or ported"
+          "none needed"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3a23638d87aa3df124d0297637d3b5cc3aaa72e4"
       },
       {
         "kind": "ported",
