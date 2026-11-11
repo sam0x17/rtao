@@ -203,13 +203,18 @@ impl<M: Miner> MinerRuntime<M> {
                     }
                     let registry = Arc::new(registry);
                     let hotkeys = metagraph_hotkeys(&cx.metagraph.load());
-                    if let Err(error) = registry.refresh(&cx.client, &hotkeys).await {
-                        // Fail closed until the worker's next refresh.
-                        tracing::warn!(%error, "sender scheme registry refresh failed");
-                    }
+                    // A failed first read fails closed, and the worker retries
+                    // it on the next finalized block.
+                    let stale = match registry.refresh(&cx.client, &hotkeys).await {
+                        Ok(()) => false,
+                        Err(error) => {
+                            tracing::warn!(%error, "sender scheme registry refresh failed");
+                            true
+                        }
+                    };
                     (
                         registry.clone() as Arc<dyn rtao_btauth::SenderSchemes>,
-                        Some(registry),
+                        Some((registry, stale)),
                     )
                 }
             };
@@ -260,9 +265,9 @@ impl<M: Miner> MinerRuntime<M> {
         tasks.spawn(async move {
             crate::runtime::finalized_worker(finalized_cx, heads, "miner", false).await
         });
-        if let Some(registry) = registry {
+        if let Some((registry, stale)) = registry {
             let registry_cx = cx.clone();
-            tasks.spawn(async move { registry_worker(registry, registry_cx).await });
+            tasks.spawn(async move { registry_worker(registry, registry_cx, stale).await });
         }
         let graph_cx = cx.clone();
         let miner = self.miner.clone();
@@ -321,12 +326,12 @@ fn metagraph_hotkeys(graph: &rtao_metagraph::Metagraph) -> Vec<rtao_primitives::
 async fn registry_worker(
     registry: Arc<crate::FinalizedRegistrySchemes>,
     cx: NeuronCx,
+    mut stale: bool,
 ) -> anyhow::Result<()> {
     const REFRESH_BLOCKS: u64 = 50;
     let mut diffs = cx.metagraph.subscribe();
     let mut epochs = cx.epochs.subscribe();
     let mut refreshed_at = cx.epochs.status().block;
-    let mut stale = false;
     loop {
         tokio::select! {biased;
             ()=cx.shutdown.cancelled()=>return Ok(()),

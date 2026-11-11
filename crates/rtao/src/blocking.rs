@@ -174,6 +174,9 @@ struct Shared {
     client: tokio::sync::Mutex<Option<Client>>,
     token_symbols: Mutex<BTreeMap<NetUid, String>>,
     policy: Mutex<Option<Policy>>,
+    /// The executor's registration Shield default (D-170); `false` is
+    /// Python's explicit `shielded=False`.
+    auto_shield: AtomicBool,
     // Held through cleanup and worker shutdown. Repeated callers receive the
     // same recorded result, rather than observing an early closed flag.
     close_state: Mutex<Option<Result<(), CloseFailure>>>,
@@ -225,7 +228,8 @@ impl Shared {
     }
 
     async fn executor(&self) -> Result<crate::Executor, Error> {
-        let executor = crate::Executor::new(self.connected().await?);
+        let executor = crate::Executor::new(self.connected().await?)
+            .with_auto_shield(self.auto_shield.load(Ordering::Acquire));
         Ok(match self.policy()? {
             Some(policy) => executor.with_policy(policy),
             None => executor,
@@ -451,6 +455,7 @@ impl SyncClient {
                     client: tokio::sync::Mutex::new(None),
                     token_symbols: Mutex::new(BTreeMap::new()),
                     policy: Mutex::new(None),
+                    auto_shield: AtomicBool::new(true),
                     close_state: Mutex::new(None),
                     closed: AtomicBool::new(false),
                     mode: AtomicU8::new(0),
@@ -539,6 +544,24 @@ impl SyncClient {
             .lock()
             .map_err(|_| Error::Poisoned)? = policy;
         Ok(())
+    }
+
+    /// Whether subsequent executor operations route account registration
+    /// through MEV Shield when the network offers it (D-170, on by default as
+    /// Python's `shielded=None`).
+    pub fn auto_shield(&self) -> bool {
+        self.view.shared.auto_shield.load(Ordering::Acquire)
+    }
+
+    /// Turn the registration Shield default off (Python's explicit
+    /// `shielded=False`) or back on for subsequent executor operations, as
+    /// [`crate::Executor::with_auto_shield`] does. An explicit `shielded` and
+    /// a required-Shield intent are unaffected.
+    pub fn set_auto_shield(&self, enabled: bool) {
+        self.view
+            .shared
+            .auto_shield
+            .store(enabled, Ordering::Release);
     }
 
     /// Resolve a head, block number or hash into a read-only blocking snapshot.

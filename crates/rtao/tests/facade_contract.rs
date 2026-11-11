@@ -116,3 +116,18 @@ fn finney_construction_and_close_stay_cold() -> TestResult {
     assert!(!client.is_started());
     Ok(())
 }
+
+/// The blocking facade can express Python's explicit `shielded=False` for the
+/// registration Shield default (D-170) without connecting.
+#[test]
+fn registration_shield_default_is_on_and_can_be_turned_off_cold() -> TestResult {
+    let client = SyncClient::for_network("finney")?;
+    assert!(client.auto_shield());
+    client.set_auto_shield(false);
+    assert!(!client.auto_shield());
+    client.set_auto_shield(true);
+    assert!(client.auto_shield());
+    assert!(!client.is_started());
+    client.close()?;
+    Ok(())
+}
