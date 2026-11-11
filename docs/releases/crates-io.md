@@ -5,9 +5,8 @@ proper GitHub releases (D-181). This page is the checklist for that first
 publication and for later ones. It adds a crates.io step to the versioned
 release in [README.md](README.md) (D-121); it does not replace it.
 
-Placeholders marked **[dependency strategy]** wait for the decision on how the
-Git dependencies reach crates.io (section 2). Nothing else on this page depends
-on that decision.
+The core graph reaches crates.io through rtao's republished `rtao-upstream-*`
+packages (D-183); the transport crate is `rtao-jsonrpc` (D-182).
 
 ## 1. Packaging already in place (D-181)
 
@@ -49,80 +48,39 @@ on that decision.
 verification) succeeds today only for `rtao-arena` and `rtao-jsonrpc`, the two
 crates outside the `bittensor-core` graph.
 
-## 2. Blockers before the first publish
+## 2. What the first publish needed (done)
 
-Clear these in order. Each needs a commit on `main` with its own D-number
-where it decides something.
-
-1. **Git dependencies [dependency strategy].** crates.io refuses Git
-   dependencies. `rtao-core`, `rtao-core-ext` and `rtao-testkit` declare
-   `bittensor-core` directly, and every other crate except `rtao-arena` and
-   `rtao-jsonrpc` reaches it through them. Through it the graph pulls in
-   `subtensor-hashed`, the vendored `fips204` and `w3f-bls` forks,
-   `subtensor-macros`, `tle` (ideal-lab5/timelock at a revision) and the
-   polkadot-sdk crates of the RaoFoundation fork. rtao's fork patch of
-   `bittensor-core` (`docs/execution/core-patch.md`) has to survive whatever
-   replaces it.
-   - Decision: _[dependency strategy]_.
-   - Follow-ups, whichever strategy wins: `upstream.toml` and the core-patch
-     checks, `deny.toml` source rules,
-     `rtao_core::dependency_policy::validate_bls_lock`, `rtao doctor`, the
-     "Downstream BLS patch" section of the root README, the last paragraphs of
-     `crates/rtao/README.md` and `crates/rtao-core/README.md`, the patch
-     paragraph of `book/src/getting-started.md`, the downstream patch line in
-     `cargo xtask release-notes`, and the subnet template's patch tables
-     (`cargo xtask template` enforces them).
-2. **`ruint` patch.** `[patch.crates-io] ruint = { path = "patches/ruint" }`
-   does nothing for crates.io users. It is crates.io `ruint` 1.20.1 (the
-   RUSTSEC-2026-0220 fix) with `rust-version` lowered to 1.89. Published
-   `rtao-evm` users resolve `ruint` from crates.io instead. Before publishing,
-   give `rtao-evm` a direct `ruint` floor at the fixed release, and declare
-   the minimum Rust that floor needs (1.90) on `rtao-evm`, or raise the
-   workspace minimum.
-3. **Files read from outside the crate.** A `.crate` contains only its own
-   directory, so any `include_str!`, `include_bytes!` or build-script read
-   above it breaks verification and every dependant's build. Known cases in
-   non-test code:
-   - `rtao-core/build.rs` reads `upstream.toml`;
-   - `rtao-client/src/compat.rs` includes `compat.json`;
-   - `rtao-evm/src/precompiles.rs` includes `vendor/upstream/evm/abi/*`;
-   - `rtao-signer` includes the vault and extension pages from
-     `vendor/upstream/{vault,extension}/static/` (features `vault`,
-     `extension`);
-   - `rtao-testkit` includes `upstream.toml` and
-     `vendor/upstream/golden.json`, and reads `upstream.toml` at run time;
-   - several crates include `vendor/metadata/finney/*.scale` or
-     `parity/pending.toml`: `rtao-client` (`compose`, `compat`, `view`,
-     `read_decode`, `events`, `cache`, `legacy_api`), `rtao-runtime`
-     (`handle`, `shape`, `models/commitment_data`), `rtao-tx` (`executor`,
-     `plan`), `rtao-intents` (`serving`, `limit_orders`, `registry`) and
-     `rtao-cli` (`call`, `commands/multisig`). Some of these are inside
-     `#[cfg(test)]` modules. The `cargo package` verification of each crate is
-     the check.
-
-   The fix is to move or copy each input into the crate that reads it, with a
-   check that the copy equals its source, or to generate it there.
-4. **Release policy text.** D-181 records the new directive, and PLAN §3 and
-   §16 point to it. The fixed decision at the top of
-   `docs/plan/architecture.md` ("crates.io publishability is not a goal"),
-   its §12.8 release process, `ci/release/README.md` ("crates.io ... disabled")
-   and `release-plz.toml` (`publish = false`) still describe the Git-only
-   policy. Reconcile them when the dependency strategy lands.
-5. **The macOS lane.** D-121 runs the operator macOS lane on a local tag
-   before the tag is pushed. That stays the rule unless the maintainer amends
-   D-121, either by approving a hosted macOS job or by making the first
-   release a source release without macOS archives.
-6. **Curated notes.** `docs/releases/rtao-v0.1.0.md` stops at D-124. Bring it
-   up to the release commit, and recheck its journal compatibility section. The
-   header that `cargo xtask release-notes` renders promises Linux archives,
-   attestations and a downstream Git patch that a source release does not
-   have. Fix it to match the release that is actually made. Today the rendered
-   notes are 995 lines, 105,418 bytes. GitHub limits a release body to 125,000
-   characters, and the whole CHANGELOG is appended, so link the changelog or
-   include only this version's section.
-7. **CI badge.** Every commit on `main` since 2026-10-23 is `[skip ci]`, so a
-   `pr-gates` badge would show an old result. Add it only after `pr-gates`
+1. **Git dependencies (D-183).** `bittensor-core` and the five packages it
+   took from Git are republished as `rtao-upstream-core`, `-hashed`,
+   `-macros`, `-fips204`, `-w3f-bls` and `-tle`, generated under `upstream/` by
+   `cargo xtask forks` from the revisions in `upstream.toml` `[publish]`. They
+   are workspace members, so CI builds and lints what is published. The
+   polkadot-sdk crates come from their crates.io releases. No manifest carries
+   a `[patch]`.
+2. **`ruint` patch (D-183).** Gone. `rtao-evm` requires crates.io `ruint`
+   1.20.1 or newer and the workspace minimum is Rust 1.90.
+3. **Files read from outside the crate (D-183).** Build-time inputs
+   (`upstream.toml` for `rtao-core`'s build script and `rtao-testkit`'s
+   `Localnet::start`, `compat.json`, the EVM ABIs, the vault and extension
+   pages, the extracted named tables `rtao-testkit`'s fake chain loads) are copied into the crates that read them; `cargo xtask
+   crate-inputs --check` keeps the copies equal to their sources. Test-only
+   inputs stay where they are: tests do not run from a downloaded `.crate`.
+4. **Release policy text (D-184).** `docs/plan/architecture.md`,
+   `ci/release/README.md` and `release-plz.toml` describe crates.io
+   publication as the release step of this page.
+5. **The macOS lane.** Unchanged: D-121 runs it on a local tag before the tag
+   is pushed (`ssh` to the operator's Mac, as `ci/release/README.md` says). A
+   release that ships without macOS archives says so in its notes.
+6. **Curated notes (D-184).** `docs/releases/rtao-v0.1.0.md` covers the
+   decisions to the release commit. The rendered notes name the published
+   crates and the republished core, include only this version's CHANGELOG
+   section and link the rest; `cargo xtask release-notes` refuses notes over
+   GitHub's 125,000-character body limit.
+7. **CI badge.** Still waiting: add a `pr-gates` badge only after `pr-gates`
    passes on the release commit.
+
+Cut `## Unreleased` in `CHANGELOG.md` to `## 0.1.0 - <date>` in the release
+commit.
 
 ## 3. Publish order
 
@@ -131,6 +89,9 @@ and do not count. Crates on the same level are independent.
 
 | Level | Crates |
 |---|---|
+| U0 | `rtao-upstream-macros`, `rtao-upstream-fips204`, `rtao-upstream-w3f-bls` (0.490.0) |
+| U1 | `rtao-upstream-hashed`, `rtao-upstream-tle` |
+| U2 | `rtao-upstream-core` |
 | 0 | `rtao-arena` (0.2.0), `rtao-core-ext`, `rtao-jsonrpc` |
 | 1 | `rtao-core` |
 | 2 | `rtao-primitives` |
@@ -143,12 +104,12 @@ and do not count. Crates on the same level are independent.
 | 9 | `rtao` |
 | 10 | `rtao-cli` |
 
-Any crates added under the dependency strategy come first, before level 0:
-_[dependency strategy]_.
+`cargo xtask forks order` prints the U levels in order. The republished
+packages go first: every rtao crate that reaches the core needs them.
 
 crates.io rate-limits new crate names: a burst of 5, then one every 10
-minutes. The 24 names take at least 3 hours 10 minutes, and each name added
-under the dependency strategy adds 10 minutes. Either ask help@crates.io to raise the limit for the release
+minutes. The 30 names (24 crates and six republished packages) take at least 4 hours
+10 minutes. Either ask help@crates.io to raise the limit for the release
 window, or publish level by level and resume where the limit stopped.
 New versions of existing crates have a burst of 30, then one a minute.
 
@@ -166,10 +127,12 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-features --locked
 RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps --all-features --locked
 cargo xtask release-notes --tag rtao-vX.Y.Z > "$RTAO_TEMP_ROOT/notes.md"
+cargo xtask forks check                         # upstream/ equals the recorded revisions
+cargo xtask crate-inputs --check
 # Package and verify every crate in dependency order against a local overlay
 # of the not-yet-published workspace crates. Nothing is uploaded.
 cargo package --workspace --exclude xtask --locked
-cargo publish --workspace --exclude xtask --locked --dry-run
+cargo xtask forks verify-packaged                # archives equal the revisions; prints SHA256s
 ```
 
 `cargo package --workspace` must pass for every crate before anything is
@@ -213,8 +176,13 @@ crate it depends on is not published yet.
 
 ### After publishing
 
-- Add a second owner to every crate:
-  `cargo owner --add <github-user-or-team> <crate>`.
+- Record each republished package's `.crate` SHA256 as `checksum` in its
+  `upstream.toml` `[publish.<key>]` entry (the value `forks verify-packaged`
+  printed for the tagged commit), commit it and run
+  `cargo xtask forks verify-published`, which downloads every published
+  package and compares it with the recorded revision.
+- A second owner for every crate is the maintainer's decision; none is added
+  by default.
 - Install the CLI from crates.io in an empty `CARGO_HOME` and
   `CARGO_TARGET_DIR` under the task root, then check it:
   `cargo install --locked rtao-cli`, `rtao --version`.
@@ -229,9 +197,8 @@ crate it depends on is not published yet.
 - Set the repository homepage to `https://docs.rs/rtao` and its topics
   (`bittensor`, `rust`, `sdk`, `substrate`, `blockchain`, `cli`).
 - Switch `templates/subnet/Cargo.toml` from Git `branch = "main"` to
-  `version = "X.Y"` and update `cargo xtask template` to match. The template's
-  patch tables follow the dependency strategy:
-  _[dependency strategy]_.
+  `version = "X.Y"` and update `cargo xtask template` to match. The template
+  carries no `[patch]`.
 
 ## 5. Later releases
 
@@ -240,8 +207,12 @@ crate it depends on is not published yet.
   own number.
 - Run the preflight, the D-121 steps and the publish as above. Unchanged crates
   still get the new version: all workspace crates share one version.
-- A core bump that changes what the published crates depend on:
-  _[dependency strategy]_.
+- A core bump (`pin --core-bump`, `core-patch rebase`) refreshes `[publish]`,
+  regenerates `upstream/` at `0.<new tag>.0` and moves the exact requirements in
+  the root manifest. Publish the new `rtao-upstream-*` versions (U levels)
+  before the rtao crates that need them; the maintainer's standing approval
+  covers publishing new fork versions. A new adaptation revision of the same
+  tag raises the patch number (`0.490.1`).
 
 ## 6. Mistakes
 

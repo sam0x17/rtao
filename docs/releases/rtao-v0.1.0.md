@@ -1,8 +1,16 @@
 ## About this release
 
-The first versioned release (D-121). Earlier revisions were pinned by commit or
-snapshot tag; none of them is a version. Pins, archives and the full changelog
-follow in the rendered notes (`cargo xtask release-notes --tag rtao-v0.1.0`).
+The first versioned release (D-121) and the first on crates.io (D-181, D-183).
+Earlier revisions were pinned by commit or snapshot tag; none of them is a
+version. The rendered notes (`cargo xtask release-notes --tag rtao-v0.1.0`)
+add the pins, the published packages and this version's changelog section.
+
+Every workspace crate is published at 0.1.0 (`rtao-arena` at 0.2.0). The core
+is `rtao-upstream-core` 0.490.0, rtao's unmodified republish of the reviewed
+`bittensor-core` v490 revision, with the five packages it took from Git; no
+consumer needs a `[patch]`, and `rtao doctor` checks a workspace's lock. The
+transport crate is `rtao-jsonrpc` (formerly unpublished as `rtao-rpc`).
+Rust 1.90 is the minimum supported version.
 
 ## Changes by decision
 
@@ -34,6 +42,8 @@ widely pinned revision:
 - D-110 to D-115: the commit-reveal tag decision in `rtao-core`,
   `Timestamp.Now` by name, reveal period changes inside skipped spans, bounded
   `on_finalized`, typed `set_commitment` and the downstream `[patch]` set.
+- D-115: superseded by D-183. The downstream `[patch]` set is gone: the core
+  graph is republished on crates.io.
 - D-116: repository maintenance only: the hourly runtime adoption workflow
   approves a new Finney runtime on evidence from independent public endpoints
   and the release wasm. No library change.
@@ -45,6 +55,47 @@ widely pinned revision:
   instead of pausing; typed calls, reads and events whose compiled shape
   differs use live metadata by name with strict checks; shield guards
   qualify unlisted code from signing metadata by default.
+- D-125 to D-128, D-162 to D-168: runtimes 487 to 490 adopted. New
+  `ProxyType` variants; a parity pin whose core inputs move holds the core
+  instead of failing; new upstream surface is pending work, not a pin failure;
+  adoption fixes in the hourly workflow (repository maintenance).
+- D-129, D-155, D-161, D-178: the v488 and v490 hand ports and the
+  classification of new upstream rows and tests.
+- D-130, D-132: typed gamma and service reads; the seven gamma intents.
+- D-133: a later multisig round rebuilds a call only when its build carries
+  policy metadata, under the approved inputs.
+- D-134, D-140: the Shield carrier fee is quoted from the actual inner call; the
+  registration Shield default is an opt-in executor setting
+  (`Executor::with_auto_shield`).
+- D-136, D-138, D-139, D-142, D-169: the core moved from v478 to v488 and v490
+  through dispatched core bumps; the reviewed core patch carries adaptations
+  that keep the Ed25519 erasure repair for hashed keys and mnemonic seeds.
+- D-143 to D-145: safe multisig account derivation (`AccountMode`), receiving
+  addresses in reads and limit orders; new CLI multisig groups are safe.
+- D-146: superseded by D-183 for the patch tables; the subnet template builds
+  the reviewed core.
+- D-147 to D-152, D-156 to D-160, D-170 to D-177: hashed (rotating) and
+  post-quantum (ML-DSA-65, Falcon) accounts are first class, with btcli's
+  defaults: an additive authority signer through the ordinary signing seam,
+  wallets, registration, receiving destinations, CLI identities and output,
+  multisig fee checks for long proofs. Post-quantum HTTP authentication and
+  message signing stay refused, as upstream v490 defines none (D-174); the
+  classical-only compatibility protocols refuse those hotkeys up front
+  (D-176).
+- D-131, D-141, D-153, D-172, D-173: HTTP authentication and message
+  verification take each sender's scheme from configuration or finalized chain
+  state, never from the request, and fail closed without one. The miner trusts
+  finalized chain state by default.
+- D-154, D-158: EVM funding through native deposits, multisig protection and
+  approval obligations; EVM commands with native receiving identities.
+- D-179: the core's strict verifier and password codec replace rtao's staged
+  copies; ECDSA key helpers.
+- D-180: external ECDSA signatures, verified before attachment.
+- D-181 to D-184: crates.io publication. Packaging prep; the transport crate
+  renamed `rtao-jsonrpc`; the core graph republished as `rtao-upstream-*`
+  packages, crates.io `ruint` (RUSTSEC-2026-0220 fixed) and Rust 1.90; build
+  inputs copied into the crates that read them; release notes that fit GitHub's
+  limit.
 
 ## Journal compatibility
 
@@ -85,8 +136,14 @@ Rollback:
   record fields declares `readable_by`. This release opens its journal when the
   declaration covers it and refuses with a version error otherwise.
 
+Persisted formats are unchanged since D-120: no later decision adds a journal
+or record field. Hashed and post-quantum signing keys use the upstream keyfile
+formats of the pinned core (D-150).
+
 ## Not in this release
 
 - No validated runtime range is recorded in `COMPAT.md`.
-- The hosted release workflow is deferred, so this is a source release with
-  the macOS lane's archives; there are no hosted Linux archives or attestations.
+- The hosted release workflow is deferred, so there are no hosted Linux
+  archives or attestations; install the CLI from crates.io
+  (`cargo install --locked rtao-cli`). macOS archives are attached only when the
+  operator-run macOS lane ran for this tag.

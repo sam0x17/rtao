@@ -91,8 +91,9 @@ first. The signing key, wallets and shared caches are not disposable.
 dispatch is requested. Dry-run executes pinned `release-plz update`, regenerates
 compatibility and runs every local gate, without obtaining an App token,
 pushing, or creating a PR. After the handover, the App token enables release PRs
-and the facade's `rtao-v{{ version }}` tags. All packages use git-only mode;
-crates.io and release-plz's GitHub release creation are disabled.
+and the facade's `rtao-v{{ version }}` tags. All packages use git-only mode, and
+release-plz neither publishes nor creates GitHub releases: crates.io
+publication and the GitHub release follow `docs/releases/crates-io.md` (D-183).
 The checker is installed before the rehearsal, so release-plz cannot silently
 skip SemVer analysis. Upkeep also regenerates compatibility in the actual
 release PR, runs the full gates and pushes the generated files with the App

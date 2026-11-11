@@ -27,8 +27,11 @@ promise nothing about compatibility.
   - `## Journal compatibility`: the persisted formats this release reads and
     writes and what a rollback to the previous version does (see below).
 - **Rendered notes**, the output of `cargo xtask release-notes`: core and parity
-  pins, the CLI archive list, the downstream patch line, the curated notes and
-  `CHANGELOG.md`.
+  pins, the crates.io install lines, the republished core packages, the CLI
+  archive note, the curated notes and this version's `CHANGELOG.md` section,
+  under GitHub's 125,000-character release body limit.
+- **The crates on crates.io**, published from the tag before the GitHub
+  release is created ([crates-io.md](crates-io.md)).
 - `COMPAT.md` and `compat.json` at the tagged commit.
 
 ## Journal compatibility section

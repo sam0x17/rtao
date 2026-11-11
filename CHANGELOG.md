@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Release notes for crates.io (D-184, repository maintenance)
+
+- `cargo xtask release-notes` names the published crates and the republished core, includes only the released version's CHANGELOG section and refuses a body over GitHub's 125,000-character limit. `docs/releases/crates-io.md` is the publish checklist; the curated 0.1.0 notes cover every decision to D-184.
+
 ### The core graph republished on crates.io (D-183)
 
 - Changed: rtao depends on `rtao-upstream-core`, `-hashed`, `-macros`, `-fips204`, `-w3f-bls` and `-tle` 0.490.0, unmodified republishes of the reviewed `bittensor-core` revision and the packages it took from Git, generated under `upstream/` by `cargo xtask forks`. Consumers need no `[patch]`: delete the `w3f-bls`, core-fork and `ruint` patches an earlier revision asked for.

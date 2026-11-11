@@ -1,3 +1,5 @@
+# release-plz prepares versions and the facade tag only. crates.io publication
+# and the GitHub release follow docs/releases/crates-io.md (D-181, D-183).
 [workspace]
 git_only = true
 publish = false
