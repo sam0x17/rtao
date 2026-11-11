@@ -41,8 +41,7 @@ use super::{
 
 const PENDING_LIMIT: usize = 32;
 const CONNECTION_LIMIT: usize = 64;
-const BRIDGE_HTML: &[u8] =
-    include_bytes!("../../../../vendor/upstream/extension/static/bridge.html");
+const BRIDGE_HTML: &[u8] = include_bytes!("../../static/bridge.html");
 
 /// Explicit server start options. Defaults do not open a browser.
 #[derive(Clone, Debug)]

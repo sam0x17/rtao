@@ -37,9 +37,8 @@ use super::{
     random_id,
 };
 
-const HTML: &[u8] = include_bytes!("../../../../vendor/upstream/vault/static/vault.html");
-const SPECS_PNG: &[u8] =
-    include_bytes!("../../../../vendor/upstream/vault/static/bittensor-chain-specs.png");
+const HTML: &[u8] = include_bytes!("../../static/vault.html");
+const SPECS_PNG: &[u8] = include_bytes!("../../static/bittensor-chain-specs.png");
 const CONNECTION_LIMIT: usize = 16;
 
 /// Options for one ephemeral, loopback-only Vault page session.

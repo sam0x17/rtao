@@ -12,6 +12,8 @@ use rtao_core::dependency_policy::{
 use serde_json::Value as Json;
 use toml_edit::{DocumentMut, Item};
 
+// Only the disposable check and the republished versions are used here.
+#[allow(dead_code)]
 #[path = "../../crates/rtao-core/core_provenance.rs"]
 mod core_provenance;
 
@@ -140,8 +142,13 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
         core_provenance::require_disposable(root)
             .map_err(|error| anyhow::Error::msg(error.to_string()))?;
     }
+    // A disposable canary builds upstream's own packages from Git; its BLS
+    // graph is checked by core_canary::verify instead (D-183).
+    let canary = pins["core"].get("canary").is_some();
     let bls_source = bls_source(&pins)?;
-    check_bls(&lock, &pins)?;
+    if !canary {
+        check_bls(&lock, &pins)?;
+    }
     let aggregate = String::from_utf8(cargo(
         root,
         &[
@@ -160,7 +167,9 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
             "{p}",
         ],
     )?)?;
-    validate_bls_tree(&aggregate, &bls_source).map_err(anyhow::Error::msg)?;
+    if !canary {
+        validate_bls_tree(&aggregate, &bls_source).map_err(anyhow::Error::msg)?;
+    }
     check_generated(root)?;
 
     // Each cargo invocation selects exactly one package. A workspace-wide metadata
@@ -182,7 +191,9 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
                 checksum: None,
             })
             .collect();
-        validate_bls_built(&built, &bls_source).map_err(anyhow::Error::msg)?;
+        if !canary {
+            validate_bls_built(&built, &bls_source).map_err(anyhow::Error::msg)?;
+        }
         check_graph(&profile, &graph)?;
         println!(
             "deps-check: {}: {} normal/build packages",
@@ -196,7 +207,7 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
         root,
         &profile("core no-host", "rtao-core", false, &[], true, false),
         target.as_deref(),
-        Some("bittensor-core"),
+        Some("rtao-upstream-core"),
     )?;
     let staged_graph = tree(
         root,
@@ -305,6 +316,8 @@ fn parse_metadata(metadata: &Json) -> Result<Vec<Package>> {
 
 fn layer(name: &str) -> Option<u8> {
     Some(match name {
+        // The republished core graph (D-183) sits below every rtao crate.
+        name if name.starts_with("rtao-upstream-") => 0,
         "rtao-core-ext" => 1,
         "rtao-core" => 2,
         "rtao-primitives" => 3,
@@ -344,11 +357,15 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
                     );
                     let optional_policy =
                         owner == "rtao-btauth" && name == "rtao-metagraph" && dep.optional;
+                    // The republished packages depend on each other as upstream's did.
+                    let republished =
+                        owner.starts_with("rtao-upstream-") && name.starts_with("rtao-upstream-");
                     ensure!(
                         layer(name)
                             .zip(layer(owner))
                             .is_some_and(|(to, from)| to < from)
-                            || optional_policy,
+                            || optional_policy
+                            || republished,
                         "layer violation: {owner} -> {name}"
                     );
                     ensure!(
@@ -357,13 +374,13 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
                     );
                 }
             }
-            if name == "bittensor-core" {
+            if name == "rtao-upstream-core" {
                 ensure!(
                     matches!(
                         owner,
                         "rtao-core" | "rtao-core-ext" | "rtao-testkit" | "xtask"
                     ),
-                    "{owner} directly depends on bittensor-core"
+                    "{owner} directly depends on the core"
                 );
             }
             if name == "tokio-tungstenite" {
@@ -415,7 +432,7 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
             if owner == "rtao-core-ext" && dep.kind != "dev" {
                 ensure!(
                     [
-                        "bittensor-core",
+                        "rtao-upstream-core",
                         "serde",
                         "serde_json",
                         "parity-scale-codec",
@@ -424,7 +441,7 @@ fn check_declarations(packages: &[Package], workspace: &DocumentMut) -> Result<(
                         "frame-metadata",
                         "schnorrkel",
                         "ed25519-zebra",
-                        "subtensor-macros",
+                        "rtao-upstream-macros",
                         // Pure env-password compatibility and guarded keyfile
                         // buffers copy the core's portable direct dependencies.
                         "base64",
@@ -872,7 +889,7 @@ fn check_graph(profile: &Profile, graph: &Graph) -> Result<()> {
                 "{} contains no-host banned crate {name}",
                 profile.name
             );
-            if matches!(name, "bittensor-core" | "rtao-core") {
+            if matches!(name, "rtao-upstream-core" | "rtao-core") {
                 ensure!(
                     !features.contains("host"),
                     "{} enables {name}/host",
@@ -964,20 +981,10 @@ fn read_lock(lock: &DocumentMut) -> Result<Vec<Identity>> {
         .collect()
 }
 
+/// The recorded version of the republished BLS fork (D-183).
 fn bls_source(pins: &DocumentMut) -> Result<String> {
-    let repo = pins["monorepo"]["url"]
-        .as_str()
-        .context("upstream.toml missing monorepo.url")?;
-    let pin = core_provenance::effective(pins).map_err(anyhow::Error::msg)?;
-    let reference = if pin.branch.is_empty() {
-        pin.tag
-    } else {
-        pin.reference
-    };
-    Ok(format!(
-        "git+{repo}?{}={}#{}",
-        pin.selector, reference, pin.commit
-    ))
+    let (_, bls) = core_provenance::republished(pins).map_err(anyhow::Error::msg)?;
+    Ok(bls.to_owned())
 }
 
 fn check_bls(lock: &DocumentMut, pins: &DocumentMut) -> Result<()> {
@@ -1117,6 +1124,15 @@ fn oracle_warnings(root: &Path, graph: &Graph, lock: &[Identity]) -> Result<()> 
         .map(|p| p.name.as_str())
         .collect::<BTreeSet<_>>();
     for name in names {
+        // A republished package is checked byte for byte against its source
+        // revision by `forks check` (D-183); its identity here is not upstream's.
+        if crate::forks::FORKS.iter().any(|fork| fork.original == name)
+            && actual
+                .iter()
+                .any(|p| p.name == format!("rtao-upstream-{}", crate::forks::fork_key(name)))
+        {
+            continue;
+        }
         let ours: BTreeSet<_> = actual.iter().filter(|p| p.name == name).collect();
         let theirs: BTreeSet<_> = expected.iter().filter(|p| p.name == name).collect();
         if ours != theirs {
@@ -1304,11 +1320,11 @@ mod tests {
     fn layers_defaults_and_test_seams_are_enforced_from_declarations() -> Result<()> {
         let workspace: DocumentMut = "[workspace]\n".parse()?;
         let mut core = package("rtao-core");
-        core.dependencies.push(dep("bittensor-core"));
+        core.dependencies.push(dep("rtao-upstream-core"));
         let mut primitives = package("rtao-primitives");
         primitives.dependencies.push(dep("rtao-core"));
         check_declarations(&[core.clone(), primitives.clone()], &workspace)?;
-        primitives.dependencies.push(dep("bittensor-core"));
+        primitives.dependencies.push(dep("rtao-upstream-core"));
         ensure!(check_declarations(&[core.clone(), primitives.clone()], &workspace).is_err());
         primitives.dependencies.pop();
         if let Some(dependency) = primitives.dependencies.first_mut() {
@@ -1435,10 +1451,8 @@ mod tests {
 
     #[test]
     fn exact_bls_source_and_recorded_dormant_copy_are_required() -> Result<()> {
-        let pins: DocumentMut = "[monorepo]\nurl='https://github.com/RaoFoundation/subtensor.git'\n[core]\ntag='v478'\ncommit='1111111111111111111111111111111111111111'\n".parse()?;
-        let source = bls_source(&pins)?;
-        let good =
-            format!("version=4\n[[package]]\nname='w3f-bls'\nversion='0.1.3'\nsource='{source}'\n");
+        let pins: DocumentMut = "[core]\ntag='v478'\ncommit='1111111111111111111111111111111111111111'\n[publish.core]\nversion='0.478.0'\n[publish.w3f-bls]\nversion='0.478.0'\n".parse()?;
+        let good = "version=4\n[[package]]\nname='rtao-upstream-w3f-bls'\nversion='0.478.0'\n";
         check_bls(&good.parse()?, &pins)?;
         let dormant = format!(
             "[[package]]\nname='w3f-bls'\nversion='0.1.9'\nsource='{}'\nchecksum='{}'\n",
@@ -1446,22 +1460,21 @@ mod tests {
             rtao_core::dependency_policy::DORMANT_BLS_CHECKSUM
         );
         check_bls(&format!("{good}{dormant}").parse()?, &pins)?;
-        for source in [
-            "registry+https://github.com/rust-lang/crates.io-index",
-            "git+https://github.com/RaoFoundation/subtensor.git?tag=v477#1111111111111111111111111111111111111111",
-            "git+https://github.com/RaoFoundation/subtensor.git?tag=v478#other",
-            "git+https://github.com/other/subtensor.git?tag=v478#1111111111111111111111111111111111111111",
-        ] {
-            let bad = good.replace(&bls_source(&pins)?, source).parse()?;
-            ensure!(check_bls(&bad, &pins).is_err());
-        }
         for bad in [
+            good.replace("0.478.0", "0.478.1"),
+            good.replace(
+                "version='0.478.0'\n",
+                "version='0.478.0'\nsource='registry+https://other.invalid/index'\n",
+            ),
             format!("{good}{dormant}{dormant}"),
             format!(
                 "{good}{}",
                 dormant.replace("checksum=", "untrusted_checksum=")
             ),
             format!("{good}{}", dormant.replace("0.1.9", "0.1.10")),
+            format!(
+                "{good}[[package]]\nname='w3f-bls'\nversion='0.1.3'\nsource='git+https://github.com/RaoFoundation/subtensor.git?tag=v478#1111111111111111111111111111111111111111'\n"
+            ),
             format!("{good}{}", good.replace("version=4\n", "")),
             "version=4\npackage=[]\n".into(),
         ] {

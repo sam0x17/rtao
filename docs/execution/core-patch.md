@@ -212,3 +212,41 @@ it now finds the hashed derivation's wiping owner and regression test in
 upstream's own source. Local evidence: `verify-security` passes the tip and
 refuses unpatched v490; the patched core's tests pass on toolchain 1.89 (138
 library tests, 143 with `ledger`, and the 8 integration tests).
+
+## How the patched core reaches users (D-183)
+
+Before D-183 the root manifest and every secondary manifest carried `[patch]`
+tables binding `bittensor-core` to the fork revision and its own path packages
+to the core tag, and downstream workspaces had to copy them. crates.io accepts
+no Git dependency, so the patched core is now republished instead: `cargo
+xtask forks` generates `upstream/core` (`rtao-upstream-core`) from
+`[core.patch].rev`, and the five packages it takes from Git (`subtensor-hashed`,
+`subtensor-macros`, the vendored `fips204` and `w3f-bls`, and `tle`) from the
+core tag and the timelock revision the monorepo pins. Every file except
+`Cargo.toml`, `NOTICE` and `MODIFICATIONS` is the revision's file byte for byte;
+`upstream.toml` `[publish]` records each package's source, version
+(`0.<core tag>.<revision>`) and, once published, its `.crate` SHA256.
+
+The checks above are unchanged and extended:
+
+- `pin --check` (through `core_patch::verify_source`) regenerates every
+  package from the upstream cache and requires `upstream/` to equal it, and runs
+  the Ed25519 erasure check on the generated core's sources. The lock must
+  hold each republished package once at its recorded version and no package
+  from the fork, the polkadot-sdk Git repository or ideal-lab5/timelock.
+- No manifest may patch the core graph: the root, the template, the fuzz crate
+  and the two CI fixtures carry no `[patch]` for the monorepo, the fork or
+  `w3f-bls`.
+- The patched hosted probe builds `upstream/core`; the unpatched probe still
+  builds the tag from Git. `core-patch strip` rewrites the root manifest to the
+  original Git packages at the tag (`forks::as_git`), so "shipped crates
+  against the unpatched core" keeps its meaning; the core canary does the same
+  at `main`.
+- `forks verify-published` downloads each published `.crate`, compares every
+  file with `git show <rev>:<path>`, requires the published `Cargo.toml.orig` to
+  equal the generated manifest, repeats the Ed25519 erasure check on the
+  extracted core and compares the archive's SHA256 with the recorded one.
+
+A core bump (`pin --core-bump`, `core-patch rebase`) refreshes `[publish]`,
+regenerates `upstream/` and moves the root manifest's exact requirements; the
+maintainer's standing approval covers publishing the new versions.

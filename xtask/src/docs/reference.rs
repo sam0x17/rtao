@@ -955,7 +955,7 @@ pub(super) fn agent_card(root: &Path, pages: &BTreeMap<String, String>) -> Resul
             code(&format!("{path}::{constructor}"))
         ));
     }
-    text.push_str("\nUse `rtao doctor --manifest-path Cargo.toml` to check the downstream core/BLS patch contract without a chain connection. `rtao tools` emits JSON schemas and native metadata. Inspect `rtao tx <operation> --help` or `rtao query <read> --help` before constructing arguments. Supported mutations accept `--dry-run` for preview; unattended submission requires explicit approval through `--yes`. `--json` selects machine output. The [CLI guide](cli.md) explains output and confirmation rules.\n\n## Native catalog\n\n| Catalog | Entries | Implemented source entries |\n|---|---|---|\n");
+    text.push_str("\nUse `rtao doctor --manifest-path Cargo.toml` to check that a workspace locks and builds the republished core and BLS fork without a chain connection. `rtao tools` emits JSON schemas and native metadata. Inspect `rtao tx <operation> --help` or `rtao query <read> --help` before constructing arguments. Supported mutations accept `--dry-run` for preview; unattended submission requires explicit approval through `--yes`. `--json` selects machine output. The [CLI guide](cli.md) explains output and confirmation rules.\n\n## Native catalog\n\n| Catalog | Entries | Implemented source entries |\n|---|---|---|\n");
     for (title, path) in [
         ("Transactions", "catalog/intents.json"),
         ("Queries", "catalog/reads.json"),

@@ -1,5 +1,5 @@
 # Exact tool releases used by both pr-gates and cargo xtask gates.
-# Tooling follows stable; shipped crates are checked separately on Rust 1.89.
+# Tooling follows stable; shipped crates are checked separately on Rust 1.90.
 [tools]
 cargo-nextest = "0.9.143"
 cargo-hack = "0.6.45"

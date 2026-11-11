@@ -27,12 +27,9 @@ for (const name of ['aws-lc-rs', 'aws-lc-sys']) {
 }
 const workspace = fs.readFileSync(path.join(root, 'Cargo.toml'), 'utf8');
 const manifest = fs.readFileSync(path.join(fixture, 'Cargo.toml'), 'utf8');
-const start = workspace.indexOf('\n[patch.crates-io]\n');
-const fixtureStart = manifest.indexOf('\n[patch.crates-io]\n');
-assert(start >= 0 && fixtureStart >= 0, 'reviewed root patches must be retained');
-assert.equal(manifest.slice(fixtureStart), workspace.slice(start).replace(
-  'ruint = { path = "patches/ruint" }', 'ruint = { path = "../../patches/ruint" }',
-), 'the fixture must carry the same core/BLS/fixed-integer patches');
+// The core graph is republished (D-183): neither workspace patches anything.
+assert(!/^\[patch[.\]]/m.test(workspace) && !/^\[patch[.\]]/m.test(manifest),
+  'the root and the fixture must build without [patch]');
 const metadata = JSON.parse(execFileSync('cargo', [
   'metadata', '--locked', '--format-version', '1', '--manifest-path', path.join(fixture, 'Cargo.toml'),
 ], { cwd: root, encoding: 'utf8', timeout: 180000, maxBuffer: 16 * 1024 * 1024 }));

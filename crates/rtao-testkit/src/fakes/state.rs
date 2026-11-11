@@ -1305,16 +1305,16 @@ impl FakeState {
             .map(|(_, bytes)| bytes.as_slice())
     }
 
-    /// Load the three resolved defaults directly from the pinned Rust extraction.
+    /// Load the three resolved defaults directly from the pinned Rust extraction
+    /// (the crate's copy of `vendor/upstream/extracted/named_tables.json`).
     ///
     /// Removed runtime entries remain in the public source tables. A scalar
     /// zero default for a sequence becomes the native empty sequence, as the
     /// chain cannot encode Python's permissive scalar sentinel for that item.
     pub fn load_python_defaults(&mut self) -> Result<(), CoreError> {
-        let tables: Value = rtao_primitives::json::from_slice(include_bytes!(
-            "../../../../vendor/upstream/extracted/named_tables.json"
-        ))
-        .map_err(|e| CoreError::Codec(e.to_string()))?;
+        let tables: Value =
+            rtao_primitives::json::from_slice(include_bytes!("../../named_tables.json"))
+                .map_err(|e| CoreError::Codec(e.to_string()))?;
         let sources = tables
             .get("tables")
             .ok_or_else(|| CoreError::Codec("missing extracted tables".into()))?;

@@ -5,12 +5,14 @@ mod compat;
 mod core_canary;
 mod core_patch;
 mod core_surface;
+mod crate_inputs;
 mod deps_check;
 mod docs;
 mod drift;
 mod extract;
 mod extract_receipt;
 mod fingerprint;
+mod forks;
 mod fuzz;
 mod gates;
 mod import_upstream;
@@ -59,6 +61,8 @@ fn main() -> Result<()> {
         Some("template") => template::run(args.collect()),
         Some("core-surface") => core_surface::run(args.collect()),
         Some("core-patch") => core_patch::run(args.collect()),
+        Some("forks") => forks::run(args.collect()),
+        Some("crate-inputs") => crate_inputs::run(args.collect()),
         Some("lint-upstream") => lint_upstream::run(args.collect()),
         Some("staged") => staged::run(args.collect()),
         Some("extract") => extract::run(&args.collect::<Vec<_>>()),
@@ -105,7 +109,9 @@ fn main() -> Result<()> {
   cargo xtask parity seed\n\
   cargo xtask core-surface [--check]\n\
   cargo xtask staged --check\n\
-  cargo xtask lint-upstream\n\n\
+  cargo xtask lint-upstream\n\
+  cargo xtask forks check|write|refresh|verify-packaged|verify-published|order (the rtao-upstream-* packages, D-183)\n\
+  cargo xtask crate-inputs [--check] (copies of workspace files that published crates read)\n\n\
 Ordinary pin --check verifies committed pins without modifying files.\n\
 With --parity --check, pin checks finalized release provenance and refreshes image digests."
             );

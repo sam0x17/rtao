@@ -31,6 +31,8 @@ alloy-sol-types.workspace = true
 alloy-signer-local.workspace = true
 alloy-signer.workspace = true
 alloy-consensus.workspace = true
+# A floor only: the RUSTSEC-2026-0220 fix (D-183).
+ruint.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
 hex.workspace = true

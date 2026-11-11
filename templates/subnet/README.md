@@ -12,13 +12,13 @@ flags. They use `NeuronConfig` flags, environment and btcli configuration, and p
 application state on SIGTERM. They require an already registered hotkey. The
 miner admits metagraph members with validator permits by default.
 
-Use Rust 1.89 or newer. The pre-release SDK dependencies use `main`; Cargo.lock
-records their exact commit. At the first rtao release, select the same `rtao-v*`
-tag for all three SDK dependencies. Keep the root `[patch]` tables equal to the
-SDK revision's own: the `w3f-bls` patch at the SDK's core pin and the core patch
-at its reviewed fork revision, which wipes Ed25519 and hashed-account signing
-keys from memory. `rtao doctor` checks the core patch against the record beside
-the rtao-core that Cargo.lock resolves. Commit Cargo.lock after generation.
+Use Rust 1.90 or newer. The pre-release SDK dependencies use `main`; Cargo.lock
+records their exact commit. At the first rtao release, select the same release
+version for all three SDK dependencies. No `[patch]` is needed: the SDK depends
+on its republished core packages (`rtao-upstream-*`), which include the
+reviewed core changes that wipe Ed25519 and hashed-account signing keys from
+memory. `rtao doctor` checks that Cargo.lock resolves them at the versions the
+resolved rtao-core records. Commit Cargo.lock after generation.
 
 The generated workflow validates client source on free GitHub `ubuntu-latest`.
 It formats and lints the workspace, builds the validator, miner and owner tool,

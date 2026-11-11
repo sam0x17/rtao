@@ -12,7 +12,7 @@ not a pre-push requirement. Required hosted checks must pass before merging;
 pending or unavailable CI remains explicitly unverified.
 
 Before pushing, run `cargo fmt --all` and, for the crates you changed, a
-focused `cargo clippy` and `cargo test`. Rust 1.89 is the minimum supported
+focused `cargo clippy` and `cargo test`. Rust 1.90 is the minimum supported
 version for the libraries; `rust-toolchain.toml` pins the development
 toolchain and CI checks the MSRV separately. Use recorded fixtures and fake
 transports for client behavior tests. Live nodes, testnets, Docker services,

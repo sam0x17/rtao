@@ -156,7 +156,10 @@ pub fn run(args: &[String]) -> Result<()> {
     let count = if verify_only {
         verify(&root)?
     } else {
-        import(&root, &cache)?
+        let count = import(&root, &cache)?;
+        // The vault, extension and ABI imports have crate copies (D-183).
+        crate::crate_inputs::sync(&root)?;
+        count
     };
     println!(
         "{} {count} upstream artifacts",

@@ -1,4 +1,9 @@
 //! Shared dependency provenance checks used by maintenance tools and consumers.
+//!
+//! The core takes the chain's BLS fork (the monorepo's vendored `w3f-bls`)
+//! through rtao's republished package `rtao-upstream-w3f-bls` (D-183). A consumer's
+//! graph must build exactly that package, at the version this rtao revision
+//! records, and no other `w3f-bls`.
 
 use std::collections::BTreeSet;
 
@@ -15,93 +20,107 @@ pub struct LockedPackage<'a> {
     pub checksum: Option<&'a str>,
 }
 
-/// The only additional BLS lock entry admitted by PLAN.md Q26.
+/// Package name of rtao's republish of the chain's BLS fork.
+pub const BLS_PACKAGE: &str = "rtao-upstream-w3f-bls";
+/// Package name of rtao's republish of the core.
+pub const CORE_PACKAGE: &str = "rtao-upstream-core";
+/// Cargo's source identity of crates.io.
+pub const CRATES_IO: &str = "registry+https://github.com/rust-lang/crates.io-index";
+/// The only `w3f-bls` lock entry admitted by PLAN.md Q26: an optional
+/// dependency of `sp-core` that no build enables.
 pub const DORMANT_BLS_VERSION: &str = "0.1.9";
 /// Exact registry source for the recorded dormant BLS package.
-pub const DORMANT_BLS_SOURCE: &str = "registry+https://github.com/rust-lang/crates.io-index";
+pub const DORMANT_BLS_SOURCE: &str = CRATES_IO;
 /// Checksum of the recorded dormant BLS package.
 pub const DORMANT_BLS_CHECKSUM: &str =
     "e6bfb937b3d12077654a9e43e32a4e9c20177dd9fea0f3aba673e7840bb54f32";
 
-/// Require one pinned BLS lock identity and at most the recorded dormant entry.
+fn republished_source(source: Option<&str>) -> bool {
+    // A workspace path (rtao's own checkout, or a project that depends on it
+    // by path or Git) or crates.io.
+    source.is_none_or(|source| source == CRATES_IO || source.starts_with("git+"))
+}
+
+/// Require one republished BLS lock identity at `expected` and at most the
+/// recorded dormant `w3f-bls` entry.
 ///
-/// The caller supplies the fully resolved core Git source. This validates lock
-/// inventory only; [`validate_bls_tree`] must separately prove build provenance.
+/// This validates lock inventory only; [`validate_bls_tree`] must separately
+/// prove what is built.
 pub fn validate_bls_lock(packages: &[LockedPackage<'_>], expected: &str) -> Result<(), String> {
-    let mut pinned = 0;
+    let mut republished = 0;
     let mut dormant = 0;
-    for package in packages.iter().filter(|package| package.name == "w3f-bls") {
-        if package.version == "0.1.3" && package.source == Some(expected) {
-            pinned += 1;
-        } else if package.version == DORMANT_BLS_VERSION
-            && package.source == Some(DORMANT_BLS_SOURCE)
-            && package.checksum == Some(DORMANT_BLS_CHECKSUM)
-        {
-            dormant += 1;
-        } else {
-            return Err(format!(
-                "unapproved w3f-bls lock identity: version {} source {:?}; expected pinned 0.1.3 at {expected} or the recorded dormant 0.1.9 checksum",
-                package.version, package.source,
-            ));
+    for package in packages {
+        if package.name == BLS_PACKAGE {
+            if package.version != expected || !republished_source(package.source) {
+                return Err(format!(
+                    "unapproved {BLS_PACKAGE} lock identity: version {} source {:?}; expected {expected}",
+                    package.version, package.source,
+                ));
+            }
+            republished += 1;
+        } else if package.name == "w3f-bls" {
+            if package.version == DORMANT_BLS_VERSION
+                && package.source == Some(DORMANT_BLS_SOURCE)
+                && package.checksum == Some(DORMANT_BLS_CHECKSUM)
+            {
+                dormant += 1;
+            } else {
+                return Err(format!(
+                    "unapproved w3f-bls lock identity: version {} source {:?}; the core builds {BLS_PACKAGE} {expected}, and only the recorded dormant w3f-bls 0.1.9 may be locked",
+                    package.version, package.source,
+                ));
+            }
         }
     }
-    if pinned != 1 || dormant > 1 {
+    if republished != 1 || dormant > 1 {
         return Err(format!(
-            "BLS lock inventory requires one pinned identity and at most one recorded dormant entry; found pinned={pinned}, dormant={dormant}",
+            "BLS lock inventory requires one {BLS_PACKAGE} and at most one recorded dormant w3f-bls; found {republished} and {dormant}",
         ));
     }
     Ok(())
 }
 
-/// Require one resolved built BLS package at the full expected core source.
+/// Require exactly one built BLS package, the republished one at `expected`.
 pub fn validate_bls_built(packages: &[LockedPackage<'_>], expected: &str) -> Result<(), String> {
     let built: Vec<_> = packages
         .iter()
-        .filter(|package| package.name == "w3f-bls")
+        .filter(|package| package.name == "w3f-bls" || package.name == BLS_PACKAGE)
         .collect();
-    if built.len() != 1 || built[0].version != "0.1.3" || built[0].source != Some(expected) {
-        return Err("require exactly one built w3f-bls 0.1.3 at the immutable core pin".into());
+    if built.len() != 1
+        || built[0].name != BLS_PACKAGE
+        || built[0].version != expected
+        || !republished_source(built[0].source)
+    {
+        return Err(format!(
+            "require exactly one built {BLS_PACKAGE} {expected} and no w3f-bls"
+        ));
     }
     Ok(())
 }
 
-/// Require one built BLS identity at the full core pin.
+/// Require one built BLS identity, the republished package at `expected`.
 ///
 /// Input is `cargo tree --prefix none --format '{p}'` output with normal/build
-/// edges. Repeated paths to the same package are permitted. Registry BLS,
-/// alternate Git locations and commits, and a missing BLS package fail closed.
-/// Validate the full lock source first, since Cargo abbreviates displayed hashes.
+/// edges. Repeated paths to the same package are permitted. Any `w3f-bls`
+/// (registry, Git or path), another version or a missing BLS package fails.
 pub fn validate_bls_tree(output: &str, expected: &str) -> Result<(), String> {
-    let expected = expected
-        .strip_prefix("git+")
-        .ok_or("core source is not Git")?;
-    let (location, commit) = expected
-        .rsplit_once('#')
-        .ok_or("core source has no commit")?;
-    if commit.len() != 40 || !commit.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return Err("core source must name a full immutable commit".into());
-    }
     let mut seen = BTreeSet::new();
+    let version = format!("v{expected}");
     for line in output.lines() {
         let line = line.trim().strip_suffix(" (*)").unwrap_or(line.trim());
-        if line.split_whitespace().next() != Some("w3f-bls") {
-            continue;
+        let mut words = line.split_whitespace();
+        match words.next() {
+            Some("w3f-bls") => return Err(format!("unapproved built BLS implementation: {line}")),
+            Some(BLS_PACKAGE) => {
+                if words.next() != Some(version.as_str()) {
+                    return Err(format!(
+                        "built BLS differs from {BLS_PACKAGE} {expected}: {line}"
+                    ));
+                }
+                seen.insert(line);
+            }
+            _ => {}
         }
-        let source = line
-            .strip_prefix("w3f-bls v0.1.3 (")
-            .and_then(|value| value.strip_suffix(')'))
-            .ok_or_else(|| format!("unapproved built BLS implementation: {line}"))?;
-        let (actual_location, actual_commit) = source
-            .rsplit_once('#')
-            .ok_or_else(|| format!("built BLS has no immutable commit: {line}"))?;
-        if actual_location != location
-            || !(8..=40).contains(&actual_commit.len())
-            || !actual_commit.bytes().all(|byte| byte.is_ascii_hexdigit())
-            || !commit.starts_with(actual_commit)
-        {
-            return Err(format!("built BLS differs from core pin: {line}"));
-        }
-        seen.insert((actual_location, actual_commit));
     }
     if seen.len() != 1 {
         return Err(format!(
@@ -117,16 +136,15 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
 
-    const SOURCE: &str = "git+https://github.com/RaoFoundation/subtensor.git?tag=v478#1111111111111111111111111111111111111111";
-    const TREE: &str =
-        "w3f-bls v0.1.3 (https://github.com/RaoFoundation/subtensor.git?tag=v478#11111111)\n";
+    const VERSION: &str = "0.490.0";
+    const TREE: &str = "rtao-upstream-w3f-bls v0.490.0\n";
 
-    fn pinned() -> LockedPackage<'static> {
+    fn republished() -> LockedPackage<'static> {
         LockedPackage {
-            name: "w3f-bls",
-            version: "0.1.3",
-            source: Some(SOURCE),
-            checksum: None,
+            name: BLS_PACKAGE,
+            version: VERSION,
+            source: Some(CRATES_IO),
+            checksum: Some("checksum"),
         }
     }
     fn dormant() -> LockedPackage<'static> {
@@ -139,13 +157,23 @@ mod tests {
     }
 
     #[test]
-    fn recorded_dormant_lock_entry_requires_one_pinned_copy() {
-        validate_bls_lock(&[pinned()], SOURCE).unwrap();
-        validate_bls_lock(&[pinned(), dormant()], SOURCE).unwrap();
-        assert!(validate_bls_lock(&[], SOURCE).is_err());
-        assert!(validate_bls_lock(&[dormant()], SOURCE).is_err());
-        assert!(validate_bls_lock(&[pinned(), pinned()], SOURCE).is_err());
-        assert!(validate_bls_lock(&[pinned(), dormant(), dormant()], SOURCE).is_err());
+    fn recorded_dormant_lock_entry_requires_one_republished_copy() {
+        validate_bls_lock(&[republished()], VERSION).unwrap();
+        validate_bls_lock(
+            &[
+                LockedPackage {
+                    source: None,
+                    ..republished()
+                },
+                dormant(),
+            ],
+            VERSION,
+        )
+        .unwrap();
+        assert!(validate_bls_lock(&[], VERSION).is_err());
+        assert!(validate_bls_lock(&[dormant()], VERSION).is_err());
+        assert!(validate_bls_lock(&[republished(), republished()], VERSION).is_err());
+        assert!(validate_bls_lock(&[republished(), dormant(), dormant()], VERSION).is_err());
     }
 
     #[test]
@@ -156,7 +184,8 @@ mod tests {
                 ..dormant()
             },
             LockedPackage {
-                source: Some(SOURCE),
+                source: Some("git+https://github.com/RaoFoundation/subtensor.git?tag=v490#1"),
+                version: "0.1.3",
                 ..dormant()
             },
             LockedPackage {
@@ -167,39 +196,51 @@ mod tests {
                 checksum: Some("changed"),
                 ..dormant()
             },
+        ] {
+            assert!(validate_bls_lock(&[republished(), unexpected], VERSION).is_err());
+        }
+        for changed in [
             LockedPackage {
-                source: Some(DORMANT_BLS_SOURCE),
-                ..pinned()
+                version: "0.490.1",
+                ..republished()
+            },
+            LockedPackage {
+                source: Some("registry+https://example.invalid/index"),
+                ..republished()
             },
         ] {
-            assert!(validate_bls_lock(&[pinned(), unexpected], SOURCE).is_err());
+            assert!(validate_bls_lock(&[changed], VERSION).is_err());
         }
     }
 
     #[test]
     fn dormant_activation_and_missing_primary_are_rejected() {
-        validate_bls_built(&[pinned()], SOURCE).unwrap();
-        assert!(validate_bls_built(&[pinned(), dormant()], SOURCE).is_err());
-        assert!(validate_bls_built(&[dormant()], SOURCE).is_err());
-        assert!(validate_bls_built(&[], SOURCE).is_err());
-        validate_bls_tree(TREE, SOURCE).unwrap();
-        validate_bls_tree(&format!("{TREE}{TREE}"), SOURCE).unwrap();
-        validate_bls_tree(&format!("{TREE}{} (*)\n", TREE.trim()), SOURCE).unwrap();
-        assert!(validate_bls_tree("", SOURCE).is_err());
-        assert!(validate_bls_tree("w3f-bls v0.1.9\n", SOURCE).is_err());
-        assert!(validate_bls_tree(&format!("{TREE}w3f-bls v0.1.9\n"), SOURCE).is_err());
+        validate_bls_built(&[republished()], VERSION).unwrap();
+        assert!(validate_bls_built(&[republished(), dormant()], VERSION).is_err());
+        assert!(validate_bls_built(&[dormant()], VERSION).is_err());
+        assert!(validate_bls_built(&[], VERSION).is_err());
+        validate_bls_tree(TREE, VERSION).unwrap();
+        validate_bls_tree(&format!("{TREE}{TREE}"), VERSION).unwrap();
+        validate_bls_tree(&format!("{TREE}{} (*)\n", TREE.trim()), VERSION).unwrap();
+        validate_bls_tree(
+            "rtao-upstream-w3f-bls v0.490.0 (/work/rtao/upstream/w3f-bls)\n",
+            VERSION,
+        )
+        .unwrap();
+        assert!(validate_bls_tree("", VERSION).is_err());
+        assert!(validate_bls_tree("w3f-bls v0.1.9\n", VERSION).is_err());
+        assert!(validate_bls_tree(&format!("{TREE}w3f-bls v0.1.9\n"), VERSION).is_err());
     }
 
     #[test]
-    fn alternate_built_source_commit_and_version_are_rejected() {
+    fn alternate_built_versions_and_sources_are_rejected() {
         for changed in [
-            TREE.replace("11111111", "22222222"),
-            TREE.replace("RaoFoundation", "sam0x17"),
-            TREE.replace("v478", "v479"),
-            TREE.replace("v0.1.3", "v0.1.4"),
-            TREE.replace("11111111", "1111"),
+            TREE.replace("v0.490.0", "v0.490.1"),
+            format!("{TREE}rtao-upstream-w3f-bls v0.490.0 (/elsewhere)\n"),
+            "w3f-bls v0.1.3 (https://github.com/RaoFoundation/subtensor.git?tag=v490#d967d135)\n"
+                .to_owned(),
         ] {
-            assert!(validate_bls_tree(&changed, SOURCE).is_err());
+            assert!(validate_bls_tree(&changed, VERSION).is_err());
         }
     }
 }

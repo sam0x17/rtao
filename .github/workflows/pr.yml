@@ -81,8 +81,6 @@ jobs:
             target/pr-gates/ci/tools
       - name: Fetch locked dependencies for offline source and graph checks
         run: cargo fetch --locked
-      - name: Verify maintained fixed integer source
-        run: node ci/verify-ruint.mjs
       - run: cargo run --locked -p xtask -- gates --job check
         # Check gate: imported hashes, pin/lock, fmt, Clippy, dependencies, surface,
         # staged probes, upstream lints, extraction, all parity layers, nextest,
@@ -132,16 +130,12 @@ jobs:
           cache: false
           build-warnings: ""
       # Install the MSRV only on this disposable hosted runner.
-      - run: rustup toolchain install 1.89 --profile minimal --no-self-update
+      - run: rustup toolchain install 1.90 --profile minimal --no-self-update
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: . -> target/pr-gates/build
           cache-directories: ~/.cargo/git
       - run: cargo run --locked -p xtask -- gates --job msrv
-      - name: Check fixed integer source and no-allocation regressions on the MSRV
-        run: |
-          node ci/verify-ruint.mjs
-          timeout 180s cargo +1.89 test --locked --manifest-path ci/ruint-probe/Cargo.toml
 
   features:
     if: github.event_name != 'workflow_dispatch' || (!inputs.refresh_compat && !inputs.refresh_codegen && !inputs.refresh_lock && !inputs.prepare_core_patch && !inputs.refresh_tls_provider_lock && !inputs.refresh_canonical_abis && !inputs.m10_interop && !inputs.validate_compat)
@@ -223,8 +217,6 @@ jobs:
         run: |
           cargo fetch --locked
           cargo fetch --locked --manifest-path fuzz/Cargo.toml
-      - name: Verify fixed integer source before auditing its version
-        run: node ci/verify-ruint.mjs
       - run: cargo run --locked -p xtask -- gates --job supply
         # Pinned cargo-deny (all features, all checks) and cargo-audit 0.22.2.
       - name: Retain raw supply audit and graph evidence

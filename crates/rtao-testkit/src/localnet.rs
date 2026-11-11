@@ -219,7 +219,7 @@ impl Localnet {
         if let Some(endpoint) = std::env::var_os("E2E_ENDPOINT").filter(|value| !value.is_empty()) {
             return Self::connect(endpoint.to_string_lossy().as_ref(), profile).await;
         }
-        let pins = include_str!("../../../upstream.toml");
+        let pins = include_str!("../upstream.toml");
         let image = std::env::var("LOCALNET_IMAGE").unwrap_or(Self::pinned_image(pins, "pinned")?);
         Self::start_image(&image, profile, std::env::var_os("SKIP_PULL").is_some()).await
     }
@@ -786,7 +786,7 @@ mod tests {
     #[test]
     fn image_pins_profiles_ports_and_all_slot_keys_are_checked()
     -> Result<(), Box<dyn std::error::Error>> {
-        let pins = include_str!("../../../upstream.toml");
+        let pins = include_str!("../upstream.toml");
         for lane in ["pinned", "mainnet", "testnet", "devnet", "main"] {
             assert!(Localnet::pinned_image(pins, lane)?.contains("@sha256:"));
         }

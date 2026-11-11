@@ -96,7 +96,7 @@ macro_rules! precompile {
             abi_file: $file,
             description: $description,
             deprecated: $deprecated,
-            abi_json: include_str!(concat!("../../../vendor/upstream/evm/abi/", $file)),
+            abi_json: include_str!(concat!("../abi/", $file)),
         }
     };
 }

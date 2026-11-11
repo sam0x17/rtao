@@ -39,5 +39,7 @@ Before signing, inspect plans and set fee, spend and subnet limits appropriate
 to the application. A successful client check or plan does not prove a live
 runtime effect.
 
-Cargo consumers must repeat the workspace's pinned `w3f-bls` patch in their own
-root manifest. The repository README and `rtao doctor` describe that requirement.
+rtao depends on the core through its republished `rtao-upstream-*` packages,
+so consumers need no `[patch]`. The
+[repository README](https://github.com/sam0x17/rtao#the-republished-core)
+describes them, and `rtao doctor` checks a workspace's lock against them.

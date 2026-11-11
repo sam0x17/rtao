@@ -227,13 +227,13 @@ fn measure_build_weight(root: &Path, target: Option<&str>) -> Result<()> {
             "--edges",
             "features",
             "--invert",
-            "bittensor-core",
+            "rtao-upstream-core",
         ];
         if !joined.is_empty() {
             feature_arguments.extend(["--features", &joined]);
         }
         let feature_graph = capture(root, "cargo", &feature_arguments)?;
-        let host_enabled = feature_graph.contains("bittensor-core feature \"host\"");
+        let host_enabled = feature_graph.contains("rtao-upstream-core feature \"host\"");
         if matches!(*profile, "core-no-host" | "validator" | "miner") {
             ensure!(!host_enabled, "{profile} activated bittensor-core/host");
         }
@@ -494,6 +494,21 @@ fn core_input(pins: &DocumentMut, dependency: &Item) -> Result<Json> {
         .and_then(|section| section.get("url"))
         .and_then(Item::as_str)
         .context("monorepo source missing")?;
+    if dependency.get("git").is_none() {
+        // The republished core (D-183), generated from the core pin; a canary
+        // builds the Git core instead.
+        let expected = format!(
+            "={}",
+            crate::forks::version(pins, crate::forks::fork("core")?)?
+        );
+        ensure!(
+            crate::core_canary::commit(pins)?.is_none()
+                && dependency.get("package").and_then(Item::as_str) == Some("rtao-upstream-core")
+                && dependency.get("version").and_then(Item::as_str) == Some(expected.as_str()),
+            "core workspace dependency must be the recorded republished core"
+        );
+        return Ok(released);
+    }
     ensure!(
         dependency.get("git").and_then(Item::as_str) == Some(repository),
         "core repository differs from workspace dependency"
@@ -1164,6 +1179,8 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
     } else {
         crate::pin::atomic_write(&json_path, &json_bytes)?;
         crate::pin::atomic_write(&markdown_path, markdown.as_bytes())?;
+        // rtao-client compiles a copy of compat.json (D-183).
+        crate::crate_inputs::sync(root)?;
         println!("Generated {} and {}", options.json, options.markdown);
     }
     Ok(())
@@ -1269,6 +1286,22 @@ mod tests {
             .remove("tag");
         manifest["dependency"]["rev"] = toml_edit::value(released);
         assert!(core_input(&pins, &manifest["dependency"]).is_err());
+        // The republished core records the same release pin (D-183).
+        let mut republished = pins.clone();
+        republished["core"]
+            .as_table_like_mut()
+            .context("fixture core missing")?
+            .remove("canary");
+        republished["publish"]["core"]["version"] = toml_edit::value("0.478.0");
+        let dependency: DocumentMut =
+            "dependency={package='rtao-upstream-core',path='upstream/core',version='=0.478.0'}"
+                .parse()?;
+        assert_eq!(
+            core_input(&republished, &dependency["dependency"])?,
+            release
+        );
+        republished["publish"]["core"]["version"] = toml_edit::value("0.478.1");
+        assert!(core_input(&republished, &dependency["dependency"]).is_err());
         Ok(())
     }
 

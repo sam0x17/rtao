@@ -72,7 +72,7 @@ tokio-util = { workspace = true }
 ark-serialize = "=0.4.2"
 rand_chacha = "0.3.1"
 rand_core = "0.6.4"
-tle = { git = "https://github.com/ideal-lab5/timelock", rev = "5416406cfd32799e31e1795393d4916894de4468", features = ["std"] }
+tle = { workspace = true, features = ["std"] }
 w3f-bls = { workspace = true, features = ["std"] }
 sha2 = { workspace = true }
 rtao-catalog = { path = "../rtao-catalog", default-features = false }

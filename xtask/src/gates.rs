@@ -145,6 +145,8 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                 // alone cannot populate every version needed by its projection.
                 xtask(&["pin", "--check", "--prepare-cache"]),
                 xtask(&["pin", "--check"]),
+                // Copies of workspace files that published crates read (D-183).
+                xtask(&["crate-inputs", "--check"]),
                 cargo(&["fmt", "--all", "--check"]),
                 // Resolve source-map and witness errors before the longer
                 // compile/probe stages. All existing gates remain mandatory.
@@ -233,7 +235,7 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
         ],
         "msrv" => vec![
             cargo(&[
-                "+1.89",
+                "+1.90",
                 "check",
                 "--locked",
                 "-p",
@@ -243,7 +245,7 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                 "validator,miner,prometheus",
             ]),
             cargo(&[
-                "+1.89",
+                "+1.90",
                 "check",
                 "--locked",
                 "-p",
@@ -251,7 +253,7 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                 "--features",
                 "full",
             ]),
-            cargo(&["+1.89", "check", "--locked", "-p", "rtao-cli"]),
+            cargo(&["+1.90", "check", "--locked", "-p", "rtao-cli"]),
         ],
         "features" => {
             let mut steps = vec![
@@ -415,12 +417,12 @@ impl Environment {
     fn require_msrv(&self) -> Result<()> {
         let output = self
             .command("rustup")
-            .args(["run", "1.89", "rustc", "--version"])
+            .args(["run", "1.90", "rustc", "--version"])
             .output()?;
         ensure!(
             output.status.success()
-                && String::from_utf8_lossy(&output.stdout).starts_with("rustc 1.89."),
-            "Rust 1.89 is required for msrv; gates never installs toolchains or changes host settings"
+                && String::from_utf8_lossy(&output.stdout).starts_with("rustc 1.90."),
+            "Rust 1.90 is required for msrv; gates never installs toolchains or changes host settings"
         );
         Ok(())
     }
@@ -764,7 +766,7 @@ fn baseline(root: &Path) -> Result<Option<String>> {
 pub(crate) fn run(args: Vec<String>) -> Result<()> {
     if args == ["--help"] || args == ["-h"] {
         println!(
-            "cargo xtask gates [--job check|no-host|msrv|features|supply|semver] [--list]\nRuns Rust-only pr-gates in hosted GitHub CI, stopping on a blocking failure.\nRTAO_TEMP_ROOT must name the isolated hosted job root. Pinned tools install only there; the hosted MSRV job provides Rust 1.89.\n--list prints commands without executing gates or installing tools; invoking Cargo may still compile xtask. Inspect xtask/src/gates.rs locally instead.\nFull local gates are retired by Q30. Push source changes for applicable hosted checks; do not duplicate them locally."
+            "cargo xtask gates [--job check|no-host|msrv|features|supply|semver] [--list]\nRuns Rust-only pr-gates in hosted GitHub CI, stopping on a blocking failure.\nRTAO_TEMP_ROOT must name the isolated hosted job root. Pinned tools install only there; the hosted MSRV job provides Rust 1.90.\n--list prints commands without executing gates or installing tools; invoking Cargo may still compile xtask. Inspect xtask/src/gates.rs locally instead.\nFull local gates are retired by Q30. Push source changes for applicable hosted checks; do not duplicate them locally."
         );
         return Ok(());
     }
@@ -1383,7 +1385,7 @@ only_target = { package = "actual-target-dev", path = "target-dev" }
         let msrv = steps(root, "msrv", "", None)?;
         ensure!(msrv.len() == 3);
         ensure!(msrv.iter().all(|step| {
-            step.args.first().is_some_and(|arg| arg == "+1.89")
+            step.args.first().is_some_and(|arg| arg == "+1.90")
                 && !step
                     .args
                     .iter()

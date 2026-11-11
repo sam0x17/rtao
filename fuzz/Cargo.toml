@@ -3,7 +3,7 @@ name = "rtao-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
-rust-version = "1.89"
+rust-version = "1.90"
 license = "MIT OR Apache-2.0"
 
 [package.metadata]
@@ -91,16 +91,3 @@ path = "fuzz_targets/unsigned_extrinsic_json.rs"
 test = false
 doc = false
 bench = false
-
-# Keep this standalone workspace's crypto dependency on the verified core pin.
-[patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
-
-[patch."https://github.com/RaoFoundation/subtensor.git"]
-bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "d7fd8762625a93b9837cde28d496b0819a976f0e" }
-
-[patch."https://github.com/sam0x17/subtensor.git"]
-fips204 = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
-subtensor-hashed = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
-subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }

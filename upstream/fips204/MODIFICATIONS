@@ -1,0 +1,13 @@
+Modified files
+
+As required by section 4(b) of the Apache License 2.0: Cargo.toml is a
+modified version of vendor/fips204/Cargo.toml at https://github.com/RaoFoundation/subtensor.git d967d13588834f4f5aaa8ef4c8fc1a865d581462,
+changed by rtao (cargo xtask forks) as follows.
+
+- [package]: renamed from fips204 to rtao-upstream-fips204, version 0.490.0, with a new description, repository, homepage and documentation; `publish = false` removed
+- [lib]: library name kept as upstream's; library tests, benchmarks and doctests disabled, since upstream's test fixtures and dev-dependencies are not republished
+- [dev-dependencies]: removed (rand, rand_chacha)
+- [lints]: added, allowing upstream's existing warnings (deprecated, unused, unexpected_cfgs, Clippy's default set, rustdoc's lints), so rtao's warning-denying gates check rtao's own code
+- [workspace]: removed
+
+No other file is modified. NOTICE and this file are added by rtao.

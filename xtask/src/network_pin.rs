@@ -133,7 +133,7 @@ pub(super) fn run(
     // Publish the derived file first, then the authoritative pin last. A failed
     // publication fails the offline check and a repeat recovers matching bytes.
     crate::pin::atomic_write(&generated, render(&next)?.as_bytes())?;
-    crate::pin::atomic_write(&root.join("upstream.toml"), next.to_string().as_bytes())?;
+    crate::pin::write_pins(root, &next)?;
     println!("Recorded immutable genesis inputs for finney, test and devnet");
     Ok(())
 }

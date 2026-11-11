@@ -20,7 +20,7 @@ pub fn command_tree(commands: impl IntoIterator<Item = Command>) -> Command {
             .arg_required_else_help(true)
             .subcommand(
                 Command::new("doctor")
-                    .about("Check the workspace core pin, BLS patch and lockfile")
+                    .about("Check that the workspace locks and builds the republished core and BLS fork")
                     .arg(
                         Arg::new("manifest_path")
                             .long("manifest-path")

@@ -60,7 +60,7 @@ fn run_doctor(mut args: impl Iterator<Item = OsString>) -> Result<(), CliError> 
         eprintln!("rtao: warning: {}", terminal_text(&warning));
     }
     println!(
-        "Core pin and downstream BLS patch verified for {}",
+        "Republished core and BLS lock verified for {}",
         terminal_text(&check.manifest.display().to_string())
     );
     Ok(())

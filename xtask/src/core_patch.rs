@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::{Context, Result, bail, ensure};
 use serde_json::Value as Json;
-use toml_edit::{Array, DocumentMut, InlineTable, Item, Table, Value, value};
+use toml_edit::{Array, DocumentMut, Item, Table, Value, value};
 
 use crate::pin::{atomic_write, cached_repo, git, read_document};
 
@@ -275,95 +275,16 @@ fn validate_patch(patch: &Item) -> Result<()> {
     Ok(())
 }
 
-/// Lock source expected for the core, which is the fork only during a patch.
-pub(crate) fn expected_core_source(pins: &DocumentMut) -> Result<String> {
-    if let Some(patch) = patch(pins)? {
-        let rev = field(patch, "rev")?;
-        Ok(format!("git+{FORK}?rev={rev}#{rev}"))
-    } else {
-        let core = pins.get("core").context("core pin missing")?;
-        Ok(format!(
-            "git+{UPSTREAM}?tag={}#{}",
-            field(core, "tag")?,
-            field(core, "commit")?
-        ))
-    }
-}
-
-/// No package other than the single pinned core may resolve from the fork.
+/// The lock holds the republished packages at their recorded versions and no
+/// package from the fork (D-183).
 pub(crate) fn verify_lock(lock: &DocumentMut, pins: &DocumentMut) -> Result<()> {
-    let expected = expected_core_source(pins)?;
-    let patched = patch(pins)?.is_some();
-    let packages = lock["package"]
-        .as_array_of_tables()
-        .context("lock packages missing")?;
-    let mut cores = 0;
-    for package in packages {
-        let name = package
-            .get("name")
-            .and_then(Item::as_str)
-            .context("package name missing")?;
-        let source = package.get("source").and_then(Item::as_str).unwrap_or("");
-        if name == "bittensor-core" {
-            ensure!(
-                source == expected,
-                "core lock source differs from core patch/pin"
-            );
-            cores += 1;
-        }
-        if source.contains("github.com/sam0x17/subtensor") {
-            ensure!(
-                patched && name == "bittensor-core" && source == expected,
-                "unexpected fork package/source in lock: {name} {source}"
-            );
-        }
-    }
-    ensure!(cores == 1, "lock must contain exactly one bittensor-core");
-    Ok(())
+    crate::forks::verify_lock(lock, pins)
 }
 
-fn dependency(repo: &str, selector: &str, reference: &str) -> Item {
-    let mut dependency = InlineTable::new();
-    dependency.insert("git", Value::from(repo));
-    dependency.insert(selector, Value::from(reference));
-    Item::Value(Value::InlineTable(dependency))
-}
-
-fn remove_tables(manifest: &mut DocumentMut) -> Result<()> {
-    let tables = manifest["patch"]
-        .as_table_like_mut()
-        .context("patch table missing")?;
-    tables.remove(UPSTREAM);
-    tables.remove(FORK);
-    Ok(())
-}
-
-fn patch_tables(
-    manifest: &mut DocumentMut,
-    core_tag: &str,
-    rev: &str,
-    shared: &BTreeSet<String>,
-) -> Result<()> {
-    remove_tables(manifest)?;
-    let mut core = Table::new();
-    core.insert("bittensor-core", dependency(FORK, "rev", rev));
-    manifest["patch"][UPSTREAM] = Item::Table(core);
-    // The patched core's own path packages would otherwise come from the
-    // fork's checkout: keep every one at the core tag, so the core is the
-    // only package from the fork (D-139; v488 adds subtensor-hashed and
-    // its fips204).
-    let mut other = Table::new();
-    for name in shared {
-        other.insert(name, dependency(UPSTREAM, "tag", core_tag));
-    }
-    manifest["patch"][FORK] = Item::Table(other);
-    Ok(())
-}
-
-/// Standalone workspaces that build the core themselves. Cargo applies only a
-/// final workspace root's patches, so each carries the root's core patch
-/// tables, and the template hands them to every generated project: all build
-/// the reviewed core (the hashed-key wipe fix, D-139), never the bare tag.
+/// Standalone workspaces that build rtao: the subnet template, the fuzz crate
+/// and two CI fixtures. Each reaches the core through rtao's crates, which
+/// depend on the republished packages, so none carries a core `[patch]`
+/// (D-183; before it, each copied the root's patch tables, D-146).
 pub(crate) const SECONDARY_MANIFESTS: [&str; 4] = [
     "templates/subnet/Cargo.toml",
     "fuzz/Cargo.toml",
@@ -371,86 +292,37 @@ pub(crate) const SECONDARY_MANIFESTS: [&str; 4] = [
     "ci/tls-two-providers/Cargo.toml",
 ];
 
-/// Write the core patch tables to the root manifest and every secondary one.
-fn write_patch_tables(
-    root: &Path,
-    core_tag: &str,
-    rev: &str,
-    shared: &BTreeSet<String>,
-    pins: &DocumentMut,
-) -> Result<()> {
-    for path in std::iter::once("Cargo.toml").chain(SECONDARY_MANIFESTS) {
-        let mut manifest = read_document(&root.join(path))?;
-        patch_tables(&mut manifest, core_tag, rev, shared)?;
-        verify_tables(&manifest, pins).with_context(|| format!("core patch tables of {path}"))?;
-        atomic_write(&root.join(path), manifest.to_string().as_bytes())?;
-    }
+/// A manifest building rtao patches nothing in the core graph: neither of
+/// the core's Git URLs nor the crates.io `w3f-bls`.
+fn verify_tables(manifest: &DocumentMut) -> Result<()> {
+    let Some(patch) = manifest.get("patch") else {
+        return Ok(());
+    };
+    let patch = patch.as_table_like().context("patch must be a table")?;
+    ensure!(
+        patch.get(UPSTREAM).is_none() && patch.get(FORK).is_none(),
+        "core patch tables are obsolete: rtao depends on the republished core (D-183)"
+    );
+    ensure!(
+        patch
+            .get("crates-io")
+            .and_then(|table| table.get("w3f-bls"))
+            .is_none(),
+        "the w3f-bls patch is obsolete: the republished tle depends on the republished BLS fork (D-183)"
+    );
     Ok(())
 }
 
-/// The template's core patch tables equal the root's.
-pub(crate) fn verify_template_tables(manifest: &DocumentMut, pins: &DocumentMut) -> Result<()> {
-    verify_tables(manifest, pins)
-        .context("templates/subnet/Cargo.toml must carry the root's core patch tables (D-146)")
+/// The template carries no core patch.
+pub(crate) fn verify_template_tables(manifest: &DocumentMut) -> Result<()> {
+    verify_tables(manifest).context("templates/subnet/Cargo.toml must not patch the core graph")
 }
 
-/// Every secondary manifest's core patch tables equal the root's.
-fn verify_secondary_tables(root: &Path, pins: &DocumentMut) -> Result<()> {
+/// No secondary manifest patches the core graph.
+fn verify_secondary_tables(root: &Path) -> Result<()> {
     for path in SECONDARY_MANIFESTS {
-        verify_tables(&read_document(&root.join(path))?, pins)
-            .with_context(|| format!("{path} must carry the root's core patch tables (D-146)"))?;
-    }
-    Ok(())
-}
-
-fn verify_tables(manifest: &DocumentMut, pins: &DocumentMut) -> Result<()> {
-    let actual = manifest["patch"]
-        .as_table_like()
-        .context("patch table missing")?;
-    if let Some(patch) = patch(pins)? {
-        let mut expected = manifest.clone();
-        patch_tables(
-            &mut expected,
-            field(&pins["core"], "tag")?,
-            field(patch, "rev")?,
-            &shared(patch)?,
-        )?;
-        for repo in [UPSTREAM, FORK] {
-            let left = actual.get(repo).context("core patch Cargo table missing")?;
-            let right = &expected["patch"][repo];
-            let left = left
-                .as_table_like()
-                .context("core patch entry must be a table")?;
-            let right = right.as_table_like().context("expected core patch table")?;
-            ensure!(
-                left.len() == right.len(),
-                "unexpected core patch dependency count: {repo}"
-            );
-            for (name, expected) in right.iter() {
-                let actual = left
-                    .get(name)
-                    .and_then(Item::as_table_like)
-                    .context("core patch dependency missing")?;
-                let expected = expected
-                    .as_table_like()
-                    .context("expected core patch dependency")?;
-                ensure!(
-                    actual.len() == expected.len(),
-                    "unexpected core patch dependency fields: {name}"
-                );
-                for (key, expected) in expected.iter() {
-                    ensure!(
-                        actual.get(key).and_then(Item::as_str) == expected.as_str(),
-                        "core patch dependency differs: {name}.{key}"
-                    );
-                }
-            }
-        }
-    } else {
-        ensure!(
-            actual.get(UPSTREAM).is_none() && actual.get(FORK).is_none(),
-            "core patch Cargo tables exist without core.patch"
-        );
+        verify_tables(&read_document(&root.join(path))?)
+            .with_context(|| format!("{path} must not patch the core graph"))?;
     }
     Ok(())
 }
@@ -639,7 +511,10 @@ fn verify_review(repo: &Path, entry: &Item) -> Result<()> {
 // core is parsed; no type position may name `ed25519::Pair` (it does not wipe
 // its expanded key), the stored variant and derivation owner must hold
 // `Zeroizing<SigningKey>`, and the meaningful regressions must remain tests.
-fn verify_security_source_text(manifest: &str, sources: &[(String, String)]) -> Result<()> {
+pub(crate) fn verify_security_source_text(
+    manifest: &str,
+    sources: &[(String, String)],
+) -> Result<()> {
     use syn::visit::Visit;
     ensure!(
         manifest.contains("ed25519-zebra = { version = \"4.0\", default-features = false }"),
@@ -1017,19 +892,21 @@ fn probe(root: &Path, pins: &DocumentMut, patched: bool) -> Result<Output> {
     fs::create_dir_all(directory.join("src"))?;
     let core = &pins["core"];
     let core_tag = field(core, "tag")?;
-    let mut manifest: DocumentMut = format!(
-        "[workspace]\n[package]\nname = \"rtao-core-patch-probe\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[dependencies]\nbittensor-core = {{ git = {UPSTREAM:?}, tag = {core_tag:?}, default-features = false, features = [\"ledger\"] }}\n[patch.crates-io]\nw3f-bls = {{ git = {UPSTREAM:?}, tag = {core_tag:?} }}\n"
-    ).parse()?;
-    if patched {
-        let entry = patch(pins)?.context("patch missing")?;
-        patch_tables(
-            &mut manifest,
-            core_tag,
-            field(entry, "rev")?,
-            &shared(entry)?,
-        )?;
-    }
-    fs::write(directory.join("Cargo.toml"), manifest.to_string())?;
+    // The patched probe builds the republished core, which is generated from
+    // the patch revision (D-183); the unpatched one builds the tag from Git.
+    let manifest = if patched {
+        patch(pins)?.context("patch missing")?;
+        let core = root.join(crate::forks::DIRECTORY).join("core");
+        format!(
+            "[workspace]\n[package]\nname = \"rtao-core-patch-probe\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[dependencies]\nbittensor-core = {{ package = \"rtao-upstream-core\", path = {:?}, default-features = false, features = [\"ledger\"] }}\n",
+            core.to_string_lossy()
+        )
+    } else {
+        format!(
+            "[workspace]\n[package]\nname = \"rtao-core-patch-probe\"\nversion = \"0.0.0\"\nedition = \"2024\"\n[dependencies]\nbittensor-core = {{ git = {UPSTREAM:?}, tag = {core_tag:?}, default-features = false, features = [\"ledger\"] }}\n[patch.crates-io]\nw3f-bls = {{ git = {UPSTREAM:?}, tag = {core_tag:?} }}\n"
+        )
+    };
+    fs::write(directory.join("Cargo.toml"), manifest)?;
     // Reuse only the small lock inventory, never compiled output. This keeps
     // isolated probes on reviewed dependency versions while Cargo adjusts the
     // single core source for the unpatched comparison.
@@ -1079,8 +956,8 @@ pub(crate) fn verify_source(root: &Path, pins: &DocumentMut) -> Result<()> {
 /// As `verify_source`; `lock` false skips only the lockfile check, for a
 /// candidate whose moved core is re-resolved and fully checked afterwards.
 pub(crate) fn verify_source_with(root: &Path, pins: &DocumentMut, lock: bool) -> Result<()> {
-    verify_tables(&read_document(&root.join("Cargo.toml"))?, pins)?;
-    verify_secondary_tables(root, pins)?;
+    verify_tables(&read_document(&root.join("Cargo.toml"))?)?;
+    verify_secondary_tables(root)?;
     verify_clippy(root)?;
     if lock {
         verify_lock(&read_document(&root.join("Cargo.lock"))?, pins)?;
@@ -1105,6 +982,8 @@ pub(crate) fn verify_source_with(root: &Path, pins: &DocumentMut, lock: bool) ->
         );
         verify_security_source(&repo, rev)?;
     }
+    // upstream/ is generated from the recorded revisions (D-183).
+    crate::forks::check(root, pins)?;
     Ok(())
 }
 
@@ -1401,7 +1280,8 @@ pub(crate) fn rebase_candidate(
             // at the already reviewed combined commit. Hosted CI only reads the fork.
             let mut prepared = next.clone();
             prepared["core"]["patch"] = entry;
-            write_patch_tables(root, &target, remote, &shared_packages, &prepared)?;
+            // The caller regenerates the republished core from the adopted
+            // revision (forks::refresh, D-183).
             *next = prepared;
             println!(
                 "Adopted existing append-only core patch branch {branch} at {remote}; validate the hosted candidate before source adoption."
@@ -1585,8 +1465,10 @@ fn rebase(root: &Path, pins: &DocumentMut, target: &str) -> Result<()> {
     }
     let mut next = pins.clone();
     rebase_candidate(root, pins, &mut next)?;
-    atomic_write(&root.join("upstream.toml"), next.to_string().as_bytes())?;
-    Ok(())
+    crate::forks::refresh(root, &mut next)?;
+    crate::pin::write_pins(root, &next)?;
+    crate::forks::write(root, &next)?;
+    crate::forks::write_workspace(root, &next)
 }
 
 pub(crate) fn run(arguments: Vec<String>) -> Result<()> {
@@ -1603,17 +1485,17 @@ pub(crate) fn run(arguments: Vec<String>) -> Result<()> {
                 std::env::var("RTAO_CORE_UNPATCHED_DISPOSABLE").as_deref() == Ok("1"),
                 "core-patch strip requires RTAO_CORE_UNPATCHED_DISPOSABLE=1 in a disposable hosted checkout"
             );
-            for path in std::iter::once("Cargo.toml").chain(SECONDARY_MANIFESTS) {
-                let mut manifest = read_document(&root.join(path))?;
-                remove_tables(&mut manifest)?;
-                atomic_write(&root.join(path), manifest.to_string().as_bytes())?;
-            }
+            // The shipped crates build the tag itself from Git, instead of the
+            // republished core generated from the patch revision (D-183).
             let mut pins = read_document(&root.join("upstream.toml"))?;
+            let mut manifest = read_document(&root.join("Cargo.toml"))?;
+            crate::forks::as_git(&mut manifest, &pins)?;
+            atomic_write(&root.join("Cargo.toml"), manifest.to_string().as_bytes())?;
             pins["core"]
                 .as_table_like_mut()
                 .context("core table missing")?
                 .remove("patch");
-            atomic_write(&root.join("upstream.toml"), pins.to_string().as_bytes())?;
+            crate::pin::write_pins(root, &pins)?;
             Ok(())
         }
         [command, rev, rest @ ..] if command == "verify-security" && rest.len() <= 1 => {
@@ -1645,39 +1527,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn secondary_manifests_carry_the_root_core_patch() -> Result<()> {
-        // The committed template, fuzz and CI workspaces follow the root's
-        // reviewed core patch (D-146); a stale revision or a missing table fails.
+    fn secondary_manifests_carry_no_core_patch() -> Result<()> {
+        // The committed template, fuzz and CI workspaces reach the republished
+        // core through rtao's crates (D-183); an old patch table fails.
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .context("workspace root missing")?;
-        let pins = read_document(&root.join("upstream.toml"))?;
-        verify_secondary_tables(root, &pins)?;
-        let Some(entry) = patch(&pins)? else {
-            return Ok(());
-        };
+        verify_tables(&read_document(&root.join("Cargo.toml"))?)?;
+        verify_secondary_tables(root)?;
         for path in SECONDARY_MANIFESTS {
             let manifest = read_document(&root.join(path))?;
             let mut stale = manifest.clone();
             stale["patch"][UPSTREAM]["bittensor-core"]["rev"] = value("3".repeat(40));
-            assert!(verify_tables(&stale, &pins).is_err(), "{path}");
-            let mut missing = manifest.clone();
-            remove_tables(&mut missing)?;
-            assert!(verify_tables(&missing, &pins).is_err(), "{path}");
-            let mut rewritten = missing;
-            patch_tables(
-                &mut rewritten,
-                field(&pins["core"], "tag")?,
-                field(entry, "rev")?,
-                &shared(entry)?,
-            )?;
-            verify_tables(&rewritten, &pins)?;
+            assert!(verify_tables(&stale).is_err(), "{path}");
+            let mut fork = manifest.clone();
+            fork["patch"][FORK]["w3f-bls"]["tag"] = value("v490");
+            assert!(verify_tables(&fork).is_err(), "{path}");
+            let mut bls = manifest.clone();
+            bls["patch"]["crates-io"]["w3f-bls"]["tag"] = value("v490");
+            assert!(verify_tables(&bls).is_err(), "{path}");
         }
         Ok(())
     }
 
     #[test]
-    fn tables_and_lock_bind_only_the_core_to_the_fork() -> Result<()> {
+    fn patch_record_keeps_every_shared_package() -> Result<()> {
         let base = "1".repeat(40);
         let rev = "2".repeat(40);
         let mut pins: DocumentMut = format!("[core]\ntag='v478'\ncommit='{base}'\n").parse()?;
@@ -1708,51 +1582,14 @@ mod tests {
             entry.insert(key, value(array));
         }
         pins["core"]["patch"] = Item::Table(entry);
-        let mut manifest: DocumentMut =
-            "[patch.crates-io]\nw3f-bls={git='upstream',tag='v478'}\n".parse()?;
-        let shared_names: BTreeSet<String> = SHARED_BASE.iter().map(|n| n.to_string()).collect();
-        patch_tables(&mut manifest, "v478", &rev, &shared_names)?;
-        verify_tables(&manifest, &pins)?;
-        // A core with more path packages (v488's subtensor-hashed and
-        // fips204) keeps every one of them at the core tag.
-        let mut wider = pins.clone();
-        let mut names = Array::new();
-        for name in ["fips204", "subtensor-hashed", "subtensor-macros", "w3f-bls"] {
-            names.push(name);
-        }
-        wider["core"]["patch"]["shared"] = value(names);
-        assert!(verify_tables(&manifest, &wider).is_err());
-        let mut wide_manifest = manifest.clone();
-        patch_tables(
-            &mut wide_manifest,
-            "v478",
-            &rev,
-            &shared(&wider["core"]["patch"])?,
-        )?;
-        verify_tables(&wide_manifest, &wider)?;
-        assert_eq!(
-            wide_manifest["patch"][FORK]["subtensor-hashed"]["tag"].as_str(),
-            Some("v478")
-        );
+        assert!(patch(&pins)?.is_some());
         let mut lost = pins.clone();
         let mut names = Array::new();
         names.push("w3f-bls");
         lost["core"]["patch"]["shared"] = value(names);
         assert!(shared(&lost["core"]["patch"]).is_err());
-        let source = expected_core_source(&pins)?;
-        let lock: DocumentMut =
-            format!("[[package]]\nname='bittensor-core'\nsource='{source}'\n").parse()?;
-        verify_lock(&lock, &pins)?;
-        let wrong: DocumentMut = format!(
-            "{}\n[[package]]\nname='subtensor-macros'\nsource='{source}'\n",
-            lock
-        )
-        .parse()?;
-        assert!(verify_lock(&wrong, &pins).is_err());
-        manifest["patch"][FORK]["w3f-bls"]["tag"] = value("v477");
-        assert!(verify_tables(&manifest, &pins).is_err());
         pins["core"]["patch"]["base"] = value("3".repeat(40));
-        assert!(expected_core_source(&pins).is_err());
+        assert!(patch(&pins).is_err());
         Ok(())
     }
 

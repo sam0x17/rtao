@@ -1,5 +1,5 @@
-# Rust 1.89 slim-bookworm, exact linux/amd64 manifest.
-FROM rust:1.89-slim-bookworm@sha256:c9ac3fa8945b61dede1e4500d25028aa8fd8a8fe46365fcf9c0422f8d999b9b0 AS build
+# Rust 1.90 slim-bookworm, exact linux/amd64 manifest.
+FROM rust:1.90-slim-bookworm@sha256:4f572135209e89d488fadb81d8a07309857f9b9c5280b54c85a44b71629e8cca AS build
 WORKDIR /workspace
 COPY . .
 ARG BUILD_PACKAGE=rtao-neuron

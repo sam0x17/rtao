@@ -6,7 +6,7 @@ subtensor chain. Every step runs on one Linux or macOS machine with Docker.
 
 ## Prerequisites
 
-- Rust 1.89 or newer and Docker.
+- Rust 1.90 or newer and Docker.
 - [`cargo-generate`](https://github.com/cargo-generate/cargo-generate) 0.23.12
   or newer: `cargo install cargo-generate`.
 - The `rtao` command line tool:

@@ -1,0 +1,14 @@
+rtao-upstream-macros
+
+This package republishes subtensor-macros from RaoFoundation/subtensor v490 so that rtao
+(https://github.com/sam0x17/rtao) can be published on crates.io, which does not accept Git
+dependencies. It is not affiliated with or endorsed by the authors of
+subtensor-macros. Report problems with this package to rtao.
+
+Source: https://github.com/RaoFoundation/subtensor.git
+Revision: d967d13588834f4f5aaa8ef4c8fc1a865d581462
+Path: support/macros
+
+Every file except Cargo.toml, NOTICE and MODIFICATIONS is the file at
+that path and revision, byte for byte. The package declares the MIT licence; LICENSE is the source repository's root LICENSE, included as it is published.
+MODIFICATIONS lists how Cargo.toml differs from the original manifest.

@@ -1,0 +1,14 @@
+rtao-upstream-hashed
+
+This package republishes subtensor-hashed from RaoFoundation/subtensor v490 so that rtao
+(https://github.com/sam0x17/rtao) can be published on crates.io, which does not accept Git
+dependencies. It is not affiliated with or endorsed by the authors of
+subtensor-hashed. Report problems with this package to rtao.
+
+Source: https://github.com/RaoFoundation/subtensor.git
+Revision: d967d13588834f4f5aaa8ef4c8fc1a865d581462
+Path: primitives/hashed
+
+Every file except Cargo.toml, NOTICE and MODIFICATIONS is the file at
+that path and revision, byte for byte. LICENSE is the source repository's root LICENSE, which covers the package.
+MODIFICATIONS lists how Cargo.toml differs from the original manifest.

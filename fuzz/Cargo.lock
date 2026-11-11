@@ -656,39 +656,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
 
 [[package]]
-name = "bittensor-core"
-version = "0.1.0"
-source = "git+https://github.com/sam0x17/subtensor.git?rev=d7fd8762625a93b9837cde28d496b0819a976f0e#d7fd8762625a93b9837cde28d496b0819a976f0e"
-dependencies = [
- "ark-serialize 0.4.2",
- "base64",
- "bip39",
- "chacha20poly1305",
- "ed25519-zebra",
- "frame-metadata",
- "getrandom 0.2.17",
- "hex",
- "hkdf",
- "merkleized-metadata",
- "ml-kem",
- "parity-scale-codec",
- "rand_core 0.6.4",
- "scale-info",
- "schnorrkel",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sp-core",
- "subtensor-hashed",
- "subtensor-macros",
- "tle",
- "twox-hash 2.1.5",
- "w3f-bls",
- "web-time",
- "zeroize",
-]
-
-[[package]]
 name = "bitvec"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1489,17 +1456,6 @@ name = "find-msvc-tools"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484"
-
-[[package]]
-name = "fips204"
-version = "0.4.6"
-source = "git+https://github.com/RaoFoundation/subtensor.git?tag=v490#d967d13588834f4f5aaa8ef4c8fc1a865d581462"
-dependencies = [
- "rand_core 0.6.4",
- "sha2 0.10.9",
- "sha3",
- "zeroize",
-]
 
 [[package]]
 name = "fixed-hash"
@@ -3158,8 +3114,8 @@ dependencies = [
 name = "rtao-core"
 version = "0.1.0"
 dependencies = [
- "bittensor-core",
  "rtao-core-ext",
+ "rtao-upstream-core",
  "serde_json",
  "tokio",
  "toml_edit 0.23.10+spec-1.0.0",
@@ -3169,10 +3125,10 @@ dependencies = [
 name = "rtao-core-ext"
 version = "0.1.0"
 dependencies = [
- "bittensor-core",
  "frame-metadata",
  "hex",
  "parity-scale-codec",
+ "rtao-upstream-core",
  "scale-info",
  "serde",
  "serde_json",
@@ -3309,6 +3265,122 @@ dependencies = [
  "rtao-core",
  "rtao-primitives",
  "serde_json",
+]
+
+[[package]]
+name = "rtao-upstream-core"
+version = "0.490.0"
+dependencies = [
+ "ark-serialize 0.4.2",
+ "base64",
+ "bip39",
+ "chacha20poly1305",
+ "ed25519-zebra",
+ "frame-metadata",
+ "getrandom 0.2.17",
+ "hex",
+ "hkdf",
+ "merkleized-metadata",
+ "ml-kem",
+ "parity-scale-codec",
+ "rand_core 0.6.4",
+ "rtao-upstream-hashed",
+ "rtao-upstream-macros",
+ "rtao-upstream-tle",
+ "rtao-upstream-w3f-bls",
+ "scale-info",
+ "schnorrkel",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sp-core",
+ "twox-hash 2.1.5",
+ "web-time",
+ "zeroize",
+]
+
+[[package]]
+name = "rtao-upstream-fips204"
+version = "0.490.0"
+dependencies = [
+ "rand_core 0.6.4",
+ "sha2 0.10.9",
+ "sha3",
+ "zeroize",
+]
+
+[[package]]
+name = "rtao-upstream-hashed"
+version = "0.490.0"
+dependencies = [
+ "curve25519-dalek",
+ "fn-dsa-comm",
+ "fn-dsa-kgen",
+ "fn-dsa-sign",
+ "fn-dsa-vrfy",
+ "parity-scale-codec",
+ "rtao-upstream-fips204",
+ "scale-info",
+ "sha3",
+ "sp-core",
+ "zeroize",
+]
+
+[[package]]
+name = "rtao-upstream-macros"
+version = "0.490.0"
+dependencies = [
+ "ahash",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "rtao-upstream-tle"
+version = "0.490.0"
+dependencies = [
+ "aes-gcm",
+ "ark-bls12-377",
+ "ark-bls12-381 0.4.0",
+ "ark-ec 0.4.2",
+ "ark-ff 0.4.2",
+ "ark-poly 0.4.2",
+ "ark-serialize 0.4.2",
+ "ark-std 0.4.0",
+ "array-bytes 6.2.3",
+ "chacha20poly1305",
+ "generic-array",
+ "parity-scale-codec",
+ "rand_chacha",
+ "rand_core 0.6.4",
+ "rtao-upstream-w3f-bls",
+ "scale-info",
+ "serde",
+ "serde_cbor",
+ "serde_json",
+ "sha2 0.10.9",
+ "sha3",
+]
+
+[[package]]
+name = "rtao-upstream-w3f-bls"
+version = "0.490.0"
+dependencies = [
+ "ark-bls12-377",
+ "ark-bls12-381 0.4.0",
+ "ark-ec 0.4.2",
+ "ark-ff 0.4.2",
+ "ark-serialize 0.4.2",
+ "ark-serialize-derive 0.4.2",
+ "arrayref",
+ "digest 0.10.7",
+ "rand 0.8.8",
+ "rand_chacha",
+ "rand_core 0.6.4",
+ "sha2 0.10.9",
+ "sha3",
+ "zeroize",
 ]
 
 [[package]]
@@ -3934,7 +4006,8 @@ dependencies = [
 [[package]]
 name = "sp-core"
 version = "37.0.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e1a46a6b2323401e4489184846a7fb7d89091b42602a2391cd3ef652ede2850"
 dependencies = [
  "array-bytes 6.2.3",
  "bitflags 1.3.2",
@@ -3973,7 +4046,8 @@ dependencies = [
 [[package]]
 name = "sp-crypto-hashing"
 version = "0.1.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc9927a7f81334ed5b8a98a4a978c81324d12bd9713ec76b5c68fd410174c5eb"
 dependencies = [
  "blake2b_simd",
  "byteorder",
@@ -3986,7 +4060,8 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48d09fa0a5f7299fb81ee25ae3853d26200f7a348148aed6de76be905c007dbe"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3996,7 +4071,8 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.30.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30cbf059dce180a8bf8b6c8b08b6290fa3d1c7f069a60f1df038ab5dd5fc0ba6"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -4006,7 +4082,8 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "30.0.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fcd9c219da8c85d45d5ae1ce80e73863a872ac27424880322903c6ac893c06e"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -4025,7 +4102,8 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "19.0.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca35431af10a450787ebfdcb6d7a91c23fa91eafe73a3f9d37db05c9ab36154b"
 dependencies = [
  "Inflector",
  "expander",
@@ -4038,12 +4116,14 @@ dependencies = [
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12f8ee986414b0a9ad741776762f4083cd3a5128449b982a3919c4df36874834"
 
 [[package]]
 name = "sp-storage"
 version = "22.0.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee3b70ca340e41cde9d2e069d354508a6e37a6573d66f7cc38f11549002f64ec"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -4055,7 +4135,8 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "17.1.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6147a5b8c98b9ed4bf99dc033fab97a468b4645515460974c8784daeb7c35433"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -4065,7 +4146,8 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "22.0.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffdbc579c72fc03263894a0077383f543a093020d75741092511bb05a440ada6"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -4122,42 +4204,14 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 [[package]]
 name = "substrate-bip39"
 version = "0.6.0"
-source = "git+https://github.com/RaoFoundation/polkadot-sdk.git?rev=cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a#cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca58ffd742f693dc13d69bdbb2e642ae239e0053f6aab3b104252892f856700a"
 dependencies = [
  "hmac 0.12.1",
  "pbkdf2",
  "schnorrkel",
  "sha2 0.10.9",
  "zeroize",
-]
-
-[[package]]
-name = "subtensor-hashed"
-version = "0.1.0"
-source = "git+https://github.com/RaoFoundation/subtensor.git?tag=v490#d967d13588834f4f5aaa8ef4c8fc1a865d581462"
-dependencies = [
- "curve25519-dalek",
- "fips204",
- "fn-dsa-comm",
- "fn-dsa-kgen",
- "fn-dsa-sign",
- "fn-dsa-vrfy",
- "parity-scale-codec",
- "scale-info",
- "sha3",
- "sp-core",
- "zeroize",
-]
-
-[[package]]
-name = "subtensor-macros"
-version = "0.1.0"
-source = "git+https://github.com/RaoFoundation/subtensor.git?tag=v490#d967d13588834f4f5aaa8ef4c8fc1a865d581462"
-dependencies = [
- "ahash",
- "proc-macro2",
- "quote",
- "syn 2.0.119",
 ]
 
 [[package]]
@@ -4316,34 +4370,6 @@ name = "tinyvec"
 version = "1.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
-
-[[package]]
-name = "tle"
-version = "0.1.0"
-source = "git+https://github.com/ideal-lab5/timelock?rev=5416406cfd32799e31e1795393d4916894de4468#5416406cfd32799e31e1795393d4916894de4468"
-dependencies = [
- "aes-gcm",
- "ark-bls12-377",
- "ark-bls12-381 0.4.0",
- "ark-ec 0.4.2",
- "ark-ff 0.4.2",
- "ark-poly 0.4.2",
- "ark-serialize 0.4.2",
- "ark-std 0.4.0",
- "array-bytes 6.2.3",
- "chacha20poly1305",
- "generic-array",
- "parity-scale-codec",
- "rand_chacha",
- "rand_core 0.6.4",
- "scale-info",
- "serde",
- "serde_cbor",
- "serde_json",
- "sha2 0.10.9",
- "sha3",
- "w3f-bls",
-]
 
 [[package]]
 name = "tokio"
@@ -4665,27 +4691,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "w3f-bls"
-version = "0.1.3"
-source = "git+https://github.com/RaoFoundation/subtensor.git?tag=v490#d967d13588834f4f5aaa8ef4c8fc1a865d581462"
-dependencies = [
- "ark-bls12-377",
- "ark-bls12-381 0.4.0",
- "ark-ec 0.4.2",
- "ark-ff 0.4.2",
- "ark-serialize 0.4.2",
- "ark-serialize-derive 0.4.2",
- "arrayref",
- "digest 0.10.7",
- "rand 0.8.8",
- "rand_chacha",
- "rand_core 0.6.4",
- "sha2 0.10.9",
- "sha3",
- "zeroize",
-]
 
 [[package]]
 name = "walkdir"

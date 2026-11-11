@@ -99,6 +99,9 @@ fn transformed(
         "unsupported canary source"
     );
     let mut manifest = manifest.clone();
+    // The canary builds upstream's own packages from Git, not the
+    // republished ones under upstream/ (D-183).
+    crate::forks::as_git(&mut manifest, pins)?;
     let patch = manifest["patch"]
         .as_table_like_mut()
         .context("root patch table missing")?;
@@ -422,7 +425,7 @@ pub(crate) fn run(root: &Path, pins: &DocumentMut, branch: &str) -> Result<()> {
         &fingerprint,
     )?;
     atomic_write(&root.join("Cargo.toml"), manifest.to_string().as_bytes())?;
-    atomic_write(&root.join("upstream.toml"), pins.to_string().as_bytes())?;
+    crate::pin::write_pins(root, &pins)?;
     let status = Command::new("cargo")
         .current_dir(root)
         .args(["update", "--workspace"])

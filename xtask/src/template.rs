@@ -278,36 +278,13 @@ fn check_source(root: &Path) -> Result<()> {
     let template = root.join("templates/subnet");
     check_container_licenses(root)?;
     let manifest: DocumentMut = fs::read_to_string(template.join("Cargo.toml"))?.parse()?;
-    let pins: DocumentMut = fs::read_to_string(root.join("upstream.toml"))?.parse()?;
-    let bls = &manifest["patch"]["crates-io"]["w3f-bls"];
+    // Generated projects build the republished core graph through rtao's
+    // crates and need no [patch] (D-183).
     ensure!(
-        bls["git"].as_str() == pins["monorepo"]["url"].as_str(),
-        "template BLS repository differs from the core pin"
+        manifest.get("patch").is_none(),
+        "template must not carry a Cargo patch; rtao depends on the republished core"
     );
-    ensure!(
-        bls["tag"].as_str() == pins["core"]["tag"].as_str(),
-        "template BLS tag differs from the core pin"
-    );
-    // The BLS patch, plus exactly the root's core patch tables when the core
-    // is patched (D-146): generated projects build the reviewed core.
-    let core_tables = if pins["core"].get("patch").is_some() {
-        2
-    } else {
-        0
-    };
-    ensure!(
-        manifest["patch"]
-            .as_table()
-            .is_some_and(|table| table.len() == 1 + core_tables),
-        "template must carry only the crates.io and core patch tables"
-    );
-    ensure!(
-        manifest["patch"]["crates-io"]
-            .as_table()
-            .is_some_and(|table| table.len() == 1),
-        "template must carry only the BLS crates.io patch"
-    );
-    crate::core_patch::verify_template_tables(&manifest, &pins)?;
+    crate::core_patch::verify_template_tables(&manifest)?;
     for (role, profile) in [
         ("validator", "validator"),
         ("miner", "miner"),

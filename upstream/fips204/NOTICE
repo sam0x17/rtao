@@ -1,0 +1,14 @@
+rtao-upstream-fips204
+
+This package republishes fips204 from RaoFoundation/subtensor v490 (vendored from integritychain/fips204) so that rtao
+(https://github.com/sam0x17/rtao) can be published on crates.io, which does not accept Git
+dependencies. It is not affiliated with or endorsed by the authors of
+fips204. Report problems with this package to rtao.
+
+Source: https://github.com/RaoFoundation/subtensor.git
+Revision: d967d13588834f4f5aaa8ef4c8fc1a865d581462
+Path: vendor/fips204
+
+Every file except Cargo.toml, NOTICE and MODIFICATIONS is the file at
+that path and revision, byte for byte. The licence files are the package's own.
+MODIFICATIONS lists how Cargo.toml differs from the original manifest.

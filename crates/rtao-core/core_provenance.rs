@@ -227,3 +227,22 @@ pub(crate) fn effective(pins: &DocumentMut) -> Result<CorePin<'_>, &'static str>
         patch_source: String::new(),
     })
 }
+
+/// The recorded versions of the republished core and BLS packages (D-183).
+#[allow(dead_code)]
+pub(crate) fn republished(pins: &DocumentMut) -> Result<(&str, &str), &'static str> {
+    let version = |key: &str| {
+        pins.get("publish")
+            .and_then(|publish| publish.get(key))
+            .and_then(|entry| entry.get("version"))
+            .and_then(Item::as_str)
+            .filter(|version| {
+                version.split('.').count() == 3
+                    && version.split('.').all(|part| {
+                        !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit())
+                    })
+            })
+            .ok_or("upstream.toml [publish] must record the core and w3f-bls versions")
+    };
+    Ok((version("core")?, version("w3f-bls")?))
+}

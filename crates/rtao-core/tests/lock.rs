@@ -5,35 +5,34 @@ use std::{error::Error, fs, path::Path, process::Command};
 use rtao_core::dependency_policy::{LockedPackage, validate_bls_lock, validate_bls_tree};
 use rtao_core::{
     BITTENSOR_CORE_BRANCH, BITTENSOR_CORE_COMMIT, BITTENSOR_CORE_PATCH_COMMIT,
-    BITTENSOR_CORE_PATCH_SOURCE, BITTENSOR_CORE_TAG,
+    BITTENSOR_CORE_PATCH_SOURCE, BITTENSOR_CORE_TAG, UPSTREAM_BLS_VERSION, UPSTREAM_CORE_VERSION,
 };
 use toml_edit::{DocumentMut, Item};
 
 #[path = "../core_provenance.rs"]
 mod core_provenance;
 
+/// The republished core graph (D-183): the core and every package it took from
+/// Git resolve from the workspace's upstream/ directory (no source), the
+/// monorepo contributes only xtask's linting crate at the base identity, and
+/// nothing resolves from the core-patch fork.
 fn verify_core_lock_sources(
     lock: &DocumentMut,
     repo: &str,
     pin: &core_provenance::CorePin<'_>,
+    core_version: &str,
 ) -> Result<(), Box<dyn Error>> {
     let base = format!(
         "git+{repo}?{}={}#{}",
         pin.selector, pin.reference, pin.commit
     );
-    let core = if pin.patch_source.is_empty() {
-        &base
-    } else {
-        &pin.patch_source
-    };
     let packages = lock
         .get("package")
         .and_then(Item::as_array_of_tables)
         .ok_or("locked packages missing")?;
-    for (name, expected) in [
-        ("bittensor-core", core),
-        ("subtensor-macros", &base),
-        ("subtensor-linting", &base),
+    for (name, expected, version) in [
+        ("rtao-upstream-core", None, Some(core_version)),
+        ("subtensor-linting", Some(base.as_str()), None),
     ] {
         let matching = packages
             .iter()
@@ -44,9 +43,16 @@ fn verify_core_lock_sources(
                 .first()
                 .and_then(|package| package.get("source"))
                 .and_then(Item::as_str)
-                != Some(expected.as_str())
+                != expected
+            || version.is_some_and(|version| {
+                matching
+                    .first()
+                    .and_then(|package| package.get("version"))
+                    .and_then(Item::as_str)
+                    != Some(version)
+            })
         {
-            return Err(format!("lock must contain exactly one {name} from {expected}").into());
+            return Err(format!("lock must contain exactly one {name} from {expected:?}").into());
         }
     }
     for package in packages {
@@ -57,6 +63,18 @@ fn verify_core_lock_sources(
         let Some(source) = package.get("source").and_then(Item::as_str) else {
             continue;
         };
+        if [
+            "bittensor-core",
+            "subtensor-macros",
+            "subtensor-hashed",
+            "fips204",
+            "tle",
+        ]
+        .contains(&name)
+            && source.starts_with("git+")
+        {
+            return Err(format!("the core graph resolves {name} from Git: {source}").into());
+        }
         if source.starts_with(&format!("git+{repo}")) && source != base {
             return Err(
                 format!("monorepo source differs from base identity: {name} {source}").into(),
@@ -65,7 +83,6 @@ fn verify_core_lock_sources(
         if source
             .to_ascii_lowercase()
             .contains("github.com/sam0x17/subtensor")
-            && (name != "bittensor-core" || pin.patch_source.is_empty() || source != core)
         {
             return Err(format!("unexpected core-patch fork identity: {name} {source}").into());
         }
@@ -76,7 +93,14 @@ fn verify_core_lock_sources(
 #[test]
 fn single_bls_source_matches_core_pin() -> Result<(), Box<dyn Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let pins = fs::read_to_string(root.join("upstream.toml"))?.parse::<DocumentMut>()?;
+    // The crate's own copy, from which the constants are built, equals the
+    // workspace's record (D-183).
+    let pins_text = fs::read_to_string(root.join("upstream.toml"))?;
+    assert_eq!(
+        pins_text,
+        fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("upstream.toml"))?
+    );
+    let pins = pins_text.parse::<DocumentMut>()?;
     let pin = core_provenance::effective(&pins)?;
     if !pin.branch.is_empty() {
         core_provenance::require_disposable(&root)?;
@@ -91,13 +115,17 @@ fn single_bls_source_matches_core_pin() -> Result<(), Box<dyn Error>> {
     assert_eq!(BITTENSOR_CORE_COMMIT, pin.commit);
     assert_eq!(BITTENSOR_CORE_PATCH_COMMIT, pin.patch_commit);
     assert_eq!(BITTENSOR_CORE_PATCH_SOURCE, pin.patch_source);
-    let expected = format!(
-        "git+{repo}?{}={}#{}",
-        pin.selector, pin.reference, pin.commit
-    );
+    let (core_version, bls_version) = core_provenance::republished(&pins)?;
+    assert_eq!(UPSTREAM_CORE_VERSION, core_version);
+    assert_eq!(UPSTREAM_BLS_VERSION, bls_version);
+    if !pin.branch.is_empty() {
+        // A disposable canary builds upstream's packages from Git; its graph
+        // is checked by `cargo xtask pin --check` in that checkout.
+        return Ok(());
+    }
 
     let lock = fs::read_to_string(root.join("Cargo.lock"))?.parse::<DocumentMut>()?;
-    verify_core_lock_sources(&lock, repo, &pin)?;
+    verify_core_lock_sources(&lock, repo, &pin, core_version)?;
     let packages = lock
         .get("package")
         .and_then(Item::as_array_of_tables)
@@ -119,7 +147,7 @@ fn single_bls_source_matches_core_pin() -> Result<(), Box<dyn Error>> {
             })
         })
         .collect::<Result<_, _>>()?;
-    validate_bls_lock(&identities, &expected)?;
+    validate_bls_lock(&identities, bls_version)?;
     let tree = Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
         .current_dir(&root)
         .args([
@@ -144,33 +172,11 @@ fn single_bls_source_matches_core_pin() -> Result<(), Box<dyn Error>> {
         "BLS built graph inspection failed: {}",
         String::from_utf8_lossy(&tree.stderr)
     );
-    validate_bls_tree(&String::from_utf8(tree.stdout)?, &expected)?;
+    validate_bls_tree(&String::from_utf8(tree.stdout)?, bls_version)?;
 
+    // The published graph builds without any [patch].
     let manifest = fs::read_to_string(root.join("Cargo.toml"))?.parse::<DocumentMut>()?;
-    let patch = manifest
-        .get("patch")
-        .and_then(|patch| patch.get("crates-io"))
-        .and_then(|patch| patch.get("w3f-bls"))
-        .ok_or("missing downstream BLS patch")?;
-    assert_eq!(patch.get("git").and_then(Item::as_str), Some(repo));
-    assert_eq!(
-        patch.get(pin.selector).and_then(Item::as_str),
-        Some(pin.reference)
-    );
-    if !pin.branch.is_empty() {
-        assert!(manifest["patch"].get(repo).is_none());
-        assert!(
-            manifest["patch"]
-                .get("https://github.com/sam0x17/subtensor.git")
-                .is_none()
-        );
-        for selector in ["tag", "branch", "path"] {
-            assert!(
-                patch.get(selector).is_none(),
-                "BLS canary patch must use only rev"
-            );
-        }
-    }
+    assert!(manifest.get("patch").is_none(), "the root manifest patches");
     Ok(())
 }
 
@@ -289,34 +295,31 @@ fn patch_provenance_rejects_alternate_sources_and_incomplete_identities()
 }
 
 #[test]
-fn patched_core_lock_source_is_separate_from_upstream_bls_and_macros() -> Result<(), Box<dyn Error>>
-{
+fn republished_core_lock_excludes_git_core_graph_and_the_fork() -> Result<(), Box<dyn Error>> {
     let repo = "https://github.com/RaoFoundation/subtensor.git";
     let pins = patched_fixture()?;
     let pin = core_provenance::effective(&pins)?;
     let base = format!("git+{repo}?tag=v478#{}", pin.commit);
     let lock = format!(
-        "[[package]]\nname='bittensor-core'\nsource='{}'\n[[package]]\nname='subtensor-macros'\nsource='{base}'\n[[package]]\nname='subtensor-linting'\nsource='{base}'\n",
-        pin.patch_source
+        "[[package]]\nname='rtao-upstream-core'\nversion='0.478.0'\n[[package]]\nname='subtensor-linting'\nsource='{base}'\n"
     );
-    verify_core_lock_sources(&lock.parse()?, repo, &pin)?;
+    verify_core_lock_sources(&lock.parse()?, repo, &pin, "0.478.0")?;
+    assert!(verify_core_lock_sources(&lock.parse()?, repo, &pin, "0.478.1").is_err());
     for changed in [
-        lock.replace(&pin.patch_source, &base),
-        lock.replace(&base, &pin.patch_source),
+        lock.replace("0.478.0", "0.477.0"),
+        format!("{lock}\n[[package]]\nname='rtao-upstream-core'\nversion='0.478.0'\n"),
         format!(
             "{lock}\n[[package]]\nname='bittensor-core'\nsource='{}'\n",
             pin.patch_source
         ),
-        format!(
-            "{lock}\n[[package]]\nname='unexpected'\nsource='{}'\n",
-            pin.patch_source
-        ),
+        format!("{lock}\n[[package]]\nname='subtensor-macros'\nsource='{base}'\n"),
         format!(
             "{lock}\n[[package]]\nname='unexpected'\nsource='{}'\n",
             pin.patch_source.replace("sam0x17", "Sam0x17")
         ),
+        lock.replace(&base, &base.replace("v478", "v477")),
     ] {
-        assert!(verify_core_lock_sources(&changed.parse()?, repo, &pin).is_err());
+        assert!(verify_core_lock_sources(&changed.parse()?, repo, &pin, "0.478.0").is_err());
     }
     Ok(())
 }

@@ -1,0 +1,14 @@
+Modified files
+
+As required by section 4(b) of the Apache License 2.0: Cargo.toml is a
+modified version of tle/Cargo.toml at https://github.com/ideal-lab5/timelock 5416406cfd32799e31e1795393d4916894de4468,
+changed by rtao (cargo xtask forks) as follows.
+
+- [package]: renamed from tle to rtao-upstream-tle, version 0.490.0, with a new description, repository, homepage and documentation; `publish = false` removed
+- [lib]: library name kept as upstream's; library tests, benchmarks and doctests disabled, since upstream's test fixtures and dev-dependencies are not republished
+- [[bench]]: benchmarks removed
+- [dependencies]: w3f-bls is rtao-upstream-w3f-bls (the republished w3f-bls), by exact version; the dependency name is unchanged
+- [dev-dependencies]: removed (ark-ed-on-bls12-381, criterion, hex, simulacrum)
+- [lints]: added, allowing upstream's existing warnings (deprecated, unused, unexpected_cfgs, Clippy's default set, rustdoc's lints), so rtao's warning-denying gates check rtao's own code
+
+No other file is modified. NOTICE and this file are added by rtao.

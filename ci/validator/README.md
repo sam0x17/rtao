@@ -7,7 +7,7 @@ docker buildx build --load --platform linux/amd64 \
   --file ci/validator/Dockerfile --tag rtao-validator:check .
 ```
 
-The builder is `rust:1.89-slim-bookworm`, pinned to its linux/amd64 manifest.
+The builder is `rust:1.90-slim-bookworm`, pinned to its linux/amd64 manifest.
 It builds `-p rtao-neuron --bin rtao-validator` with default features off and
 `validator,prometheus` enabled. BuildKit caches Cargo git sources, registry
 sources and artifacts. The recipe installs no build packages and rejects the

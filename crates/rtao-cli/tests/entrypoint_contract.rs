@@ -295,7 +295,7 @@ fn doctor_verifies_the_canonical_workspace_through_the_binary()
     assert_eq!(
         String::from_utf8(output.stdout)?,
         format!(
-            "Core pin and downstream BLS patch verified for {}\n",
+            "Republished core and BLS lock verified for {}\n",
             manifest.display()
         )
     );
@@ -305,19 +305,18 @@ fn doctor_verifies_the_canonical_workspace_through_the_binary()
 }
 
 #[test]
-fn doctor_missing_patch_fails_with_the_exact_required_patch_through_the_binary()
+fn doctor_without_the_republished_core_fails_through_the_binary()
 -> Result<(), Box<dyn std::error::Error>> {
     let root = Root::new()?;
-    let tag = rtao::core::BITTENSOR_CORE_TAG;
-    let repository = "https://github.com/RaoFoundation/subtensor.git";
     let manifest = root.0.join("Cargo.toml");
     std::fs::write(
         &manifest,
-        format!(
-            "[workspace]\nmembers = [\"consumer\"]\nresolver = \"3\"\n\
-             [workspace.dependencies]\n\
-             bittensor-core = {{ git = {repository:?}, tag = {tag:?}, default-features = false }}\n"
-        ),
+        "[workspace]\nmembers = [\"consumer\"]\nresolver = \"3\"\n",
+    )?;
+    // The workspace's own record names the republished core it must lock.
+    std::fs::write(
+        root.0.join("upstream.toml"),
+        "[publish.core]\npackage = \"rtao-upstream-core\"\nversion = \"0.490.0\"\n[publish.w3f-bls]\npackage = \"rtao-upstream-w3f-bls\"\nversion = \"0.490.0\"\n",
     )?;
     std::fs::create_dir_all(root.0.join("consumer/src"))?;
     std::fs::write(
@@ -329,9 +328,6 @@ fn doctor_missing_patch_fails_with_the_exact_required_patch_through_the_binary()
         root.0.join("Cargo.lock"),
         "version = 4\n[[package]]\nname = \"doctor-consumer\"\nversion = \"0.0.0\"\n",
     )?;
-
-    // The unused declaration supplies the pin without fetching upstream code.
-    // Doctor must reject the root patch before inspecting the consumer graph.
     let output = root
         .command()
         .current_dir(&root.0)
@@ -342,12 +338,9 @@ fn doctor_missing_patch_fails_with_the_exact_required_patch_through_the_binary()
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
     let diagnostic = String::from_utf8(output.stderr)?;
-    let expected_patch =
-        format!("[patch.crates-io]\nw3f-bls = {{ git = {repository:?}, tag = {tag:?} }}");
-    assert!(diagnostic.contains("the final workspace needs this exact core-matching patch"));
-    // Line breaks are kept so the patch can be pasted; controls within a line
-    // stay escaped.
-    assert!(diagnostic.contains(&expected_patch), "{diagnostic}");
-    assert!(diagnostic.contains("root Cargo.toml"));
+    assert!(
+        diagnostic.contains("Cargo.lock must contain exactly one rtao-upstream-core"),
+        "{diagnostic}"
+    );
     Ok(())
 }

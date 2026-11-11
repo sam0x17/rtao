@@ -1,0 +1,14 @@
+rtao-upstream-core
+
+This package republishes bittensor-core from RaoFoundation/subtensor v490 with rtao's reviewed core patch (the Ed25519 erasure repair and the injectable Ledger transport) so that rtao
+(https://github.com/sam0x17/rtao) can be published on crates.io, which does not accept Git
+dependencies. It is not affiliated with or endorsed by the authors of
+bittensor-core. Report problems with this package to rtao.
+
+Source: https://github.com/sam0x17/subtensor.git
+Revision: d7fd8762625a93b9837cde28d496b0819a976f0e
+Path: sdk/bittensor-core
+
+Every file except Cargo.toml, NOTICE and MODIFICATIONS is the file at
+that path and revision, byte for byte. LICENSE is the source repository's root LICENSE, which covers the package.
+MODIFICATIONS lists how Cargo.toml differs from the original manifest.

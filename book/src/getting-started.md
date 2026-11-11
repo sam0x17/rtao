@@ -9,34 +9,27 @@ patch release does not. Start with the read features:
 rtao = { version = "0.1", default-features = false, features = ["client", "reads"] }
 ```
 
-To use an unreleased revision, depend on a reviewed source revision and its
-matching core pin, and check the hosted CI results for the exact commit you
-use. For an application beside a checked-out `rtao` directory:
+Rust 1.90 is the minimum supported version. To use an unreleased revision,
+depend on a reviewed source revision and check the hosted CI results for the
+exact commit you use. For an application beside a checked-out `rtao`
+directory:
 
 ```toml
 [dependencies]
 rtao = { path = "../rtao/crates/rtao", default-features = false, features = ["client", "reads"] }
-
-[patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
 ```
 
 Adjust the path to your checkout. For a git dependency, pin `rev` to the full
-reviewed commit instead. Cargo applies `[patch.crates-io]` from your application's
-workspace root. Its Git reference kind and value must match the core pin in
-that revision's `upstream.toml`; the example above matches the current `v490`
-pin. The CLI checks this without connecting to a node:
+reviewed commit instead. No `[patch]` is needed either way: rtao depends on the
+core through its republished `rtao-upstream-*` packages, which carry the
+reviewed core changes (the Ed25519 erasure repair among them). The
+[workspace README](https://github.com/sam0x17/rtao#the-republished-core)
+describes them. The CLI checks that a workspace locks and builds them without
+connecting to a node:
 
 ```sh
 rtao doctor --manifest-path Cargo.toml
 ```
-
-That line is the only `[patch]` a source dependency needs to build. rtao's own
-workspace also patches `bittensor-core` to a fork revision that wipes Ed25519
-secret keys from memory, which applications should copy too, and `ruint`
-lowered to Rust 1.89 for the `evm` feature. The
-[workspace README](https://github.com/sam0x17/rtao#downstream-bls-patch)
-lists each one and when to copy it.
 
 ## Connect and read one block
 

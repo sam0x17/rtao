@@ -1,4 +1,10 @@
 //! Offline checks for final workspaces consuming the SDK.
+//!
+//! rtao depends on the core through its republished `rtao-upstream-*`
+//! packages (D-183), so a consumer needs no `[patch]`. The doctor checks that
+//! the consumer's lock resolves the republished core and BLS fork at the
+//! versions its `rtao-core` records, with the recorded crates.io checksums,
+//! and that the build graph compiles exactly one BLS implementation.
 
 use std::{
     collections::BTreeSet,
@@ -10,120 +16,9 @@ use std::{
 use serde_json::Value as Json;
 use toml_edit::{DocumentMut, Item};
 
-use rtao::core::dependency_policy::{LockedPackage, validate_bls_lock, validate_bls_tree};
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct GitPin {
-    repository: String,
-    reference: Option<(String, String)>,
-}
-
-impl GitPin {
-    fn from_dependency(dependency: &Item) -> Result<Self, String> {
-        let repository = dependency
-            .get("git")
-            .and_then(Item::as_str)
-            .ok_or("bittensor-core must declare a git repository")?
-            .to_owned();
-        let references = ["tag", "rev", "branch"]
-            .iter()
-            .filter_map(|kind| dependency.get(kind).map(|value| (*kind, value)))
-            .map(|(kind, value)| {
-                value
-                    .as_str()
-                    .map(|value| (kind.to_owned(), value.to_owned()))
-                    .ok_or_else(|| format!("git dependency {kind} must be a string"))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        if references.len() > 1 || dependency.get("path").is_some() {
-            return Err("git dependency must use one reference kind and no path".into());
-        }
-        Ok(Self {
-            repository,
-            reference: references.into_iter().next(),
-        })
-    }
-
-    fn from_source(source: &str) -> Result<Self, String> {
-        let source = source
-            .strip_prefix("git+")
-            .ok_or("bittensor-core must use a git source")?;
-        let source = source.split('#').next().ok_or("empty git source")?;
-        let (repository, reference) = match source.rsplit_once('?') {
-            Some((repository, query)) => {
-                let (kind, value) = query
-                    .split_once('=')
-                    .ok_or("git source has no reference value")?;
-                if !["tag", "rev", "branch"].contains(&kind) || value.contains('&') {
-                    return Err(format!("unsupported git source reference {query:?}"));
-                }
-                (
-                    repository,
-                    Some((kind.to_owned(), decode_reference(value)?)),
-                )
-            }
-            None => (source, None),
-        };
-        Ok(Self {
-            repository: repository.to_owned(),
-            reference,
-        })
-    }
-
-    fn patch_line(&self) -> String {
-        let reference = self
-            .reference
-            .as_ref()
-            .map(|(kind, value)| format!(", {kind} = {}", toml_edit::Value::from(value.as_str())))
-            .unwrap_or_default();
-        format!(
-            "[patch.crates-io]\nw3f-bls = {{ git = {}{reference} }}",
-            toml_edit::Value::from(self.repository.as_str())
-        )
-    }
-
-    fn warning(&self) -> Option<String> {
-        let binary_tag = rtao::core::BITTENSOR_CORE_TAG;
-        if self
-            .reference
-            .as_ref()
-            .is_some_and(|(kind, value)| kind == "tag" && value == binary_tag)
-        {
-            None
-        } else {
-            let reference = self
-                .reference
-                .as_ref()
-                .map(|(kind, value)| format!("{kind} = {}", toml_edit::Value::from(value.as_str())))
-                .unwrap_or_else(|| "default git branch".into());
-            Some(format!(
-                "workspace bittensor-core {reference} differs from this rtao binary's tag {binary_tag}; the workspace's own pin was verified"
-            ))
-        }
-    }
-}
-
-fn decode_reference(value: &str) -> Result<String, String> {
-    let mut decoded = Vec::with_capacity(value.len());
-    let mut bytes = value.bytes();
-    while let Some(byte) = bytes.next() {
-        if byte == b'%' {
-            let high = bytes
-                .next()
-                .and_then(|digit| char::from(digit).to_digit(16));
-            let low = bytes
-                .next()
-                .and_then(|digit| char::from(digit).to_digit(16));
-            match (high, low) {
-                (Some(high), Some(low)) => decoded.push((high * 16 + low) as u8),
-                _ => return Err("git reference contains invalid percent encoding".into()),
-            }
-        } else {
-            decoded.push(byte);
-        }
-    }
-    String::from_utf8(decoded).map_err(|error| format!("git reference is not UTF-8: {error}"))
-}
+use rtao::core::dependency_policy::{
+    BLS_PACKAGE, CORE_PACKAGE, CRATES_IO, LockedPackage, validate_bls_lock, validate_bls_tree,
+};
 
 fn document(path: &Path) -> Result<DocumentMut, String> {
     fs::read_to_string(path)
@@ -175,7 +70,7 @@ fn workspace_manifest(manifest: &Path) -> Result<PathBuf, String> {
     Ok(PathBuf::from(output.trim()))
 }
 
-fn metadata(manifest: &Path, no_deps: bool) -> Result<Json, String> {
+fn metadata(manifest: &Path) -> Result<Json, String> {
     let mut command = Command::new("cargo");
     command.current_dir(
         manifest
@@ -192,181 +87,21 @@ fn metadata(manifest: &Path, no_deps: bool) -> Result<Json, String> {
             "--manifest-path",
         ])
         .arg(manifest);
-    if no_deps {
-        command.arg("--no-deps");
-    }
     serde_json::from_str(&cargo_output(&mut command)?)
         .map_err(|error| format!("parse Cargo workspace metadata: {error}"))
 }
 
-fn metadata_pins(metadata: &Json) -> Result<BTreeSet<GitPin>, String> {
-    let packages = metadata
-        .get("packages")
-        .and_then(Json::as_array)
-        .ok_or("Cargo metadata has no packages")?;
-    let mut pins = BTreeSet::new();
-    for package in packages {
-        let dependencies = package
-            .get("dependencies")
-            .and_then(Json::as_array)
-            .ok_or("Cargo package metadata has no dependencies")?;
-        for dependency in dependencies {
-            if dependency.get("name").and_then(Json::as_str) == Some("bittensor-core") {
-                let source = dependency
-                    .get("source")
-                    .and_then(Json::as_str)
-                    .ok_or("bittensor-core declaration must use a git source")?;
-                pins.insert(GitPin::from_source(source)?);
-            }
-        }
-    }
-    Ok(pins)
-}
-
-fn expected_pin(manifest_path: &Path, manifest: &DocumentMut) -> Result<GitPin, String> {
-    let mut pins = metadata_pins(&metadata(manifest_path, true)?)?;
-    if let Some(dependencies) = manifest
-        .get("workspace")
-        .and_then(|workspace| workspace.get("dependencies"))
-        .and_then(Item::as_table_like)
-    {
-        for (name, dependency) in dependencies.iter() {
-            if dependency
-                .get("package")
-                .and_then(Item::as_str)
-                .unwrap_or(name)
-                == "bittensor-core"
-            {
-                pins.insert(GitPin::from_dependency(dependency)?);
-            }
-        }
-    }
-    if pins.is_empty() {
-        // A subnet may depend only on the facade. Full metadata finds the
-        // declaration in rtao-core without compiling the downstream program.
-        pins = metadata_pins(&metadata(manifest_path, false).map_err(|error| format!("no workspace bittensor-core declaration was found; inspecting the transitive declaration requires dependencies cached for offline Cargo metadata:\n{error}"))?)?;
-    }
-    if pins.len() != 1 {
-        return Err(format!(
-            "workspace must declare exactly one bittensor-core git pin; found {} distinct pins",
-            pins.len()
-        ));
-    }
-    pins.into_iter()
-        .next()
-        .ok_or("workspace has no bittensor-core declaration".into())
-}
-
-fn verify_manifest(manifest: &DocumentMut, expected: &GitPin) -> Result<(), String> {
-    let patch = manifest
-        .get("patch")
-        .and_then(|item| item.get("crates-io"))
-        .and_then(|item| item.get("w3f-bls"));
-    let right_patch = patch.is_some_and(|patch| {
-        GitPin::from_dependency(patch).is_ok_and(|pin| pin == *expected)
-            && patch
-                .get("package")
-                .and_then(Item::as_str)
-                .is_none_or(|name| name == "w3f-bls")
-    });
-    if !right_patch {
-        return Err(format!(
-            "the final workspace needs this exact core-matching patch:\n\n{}\n\nCargo applies patches only from the final workspace's root Cargo.toml.",
-            expected.patch_line()
-        ));
-    }
-    Ok(())
-}
-
-struct CorePatch {
-    core: GitPin,
-    bls_source: String,
-}
-
-fn core_replacement<'a>(manifest: &'a DocumentMut, expected: &GitPin) -> Option<&'a Item> {
-    manifest
-        .get("patch")
-        .and_then(|patch| patch.get(expected.repository.as_str()))
-        .and_then(|patch| patch.get("bittensor-core"))
-}
-
-fn recorded_core_patch(
-    manifest: &DocumentMut,
-    expected: &GitPin,
-    record: &DocumentMut,
-) -> Result<CorePatch, String> {
-    let core = record
-        .get("core")
-        .ok_or("core patch record has no core pin")?;
-    let tag = core
-        .get("tag")
-        .and_then(Item::as_str)
-        .ok_or("core patch record has no upstream tag")?;
-    let base = core
-        .get("commit")
-        .and_then(Item::as_str)
-        .ok_or("core patch record has no upstream commit")?;
-    let repository = record
-        .get("monorepo")
-        .and_then(|monorepo| monorepo.get("url"))
-        .and_then(Item::as_str)
-        .ok_or("core patch record has no upstream repository")?;
-    let original = GitPin {
-        repository: repository.to_owned(),
-        reference: Some(("tag".into(), tag.to_owned())),
-    };
-    if original != *expected {
-        return Err("core patch record differs from the workspace's upstream declaration".into());
-    }
-    let patch = core
-        .get("patch")
-        .ok_or("core patch record has no replacement")?;
-    let revision = patch
-        .get("rev")
-        .and_then(Item::as_str)
-        .ok_or("core patch record has no replacement revision")?;
-    if patch.get("base").and_then(Item::as_str) != Some(base)
-        || !full_commit(base)
-        || !full_commit(revision)
-    {
-        return Err(
-            "core patch record requires matching full upstream and replacement commits".into(),
-        );
-    }
-    let recorded = GitPin {
-        repository: patch
-            .get("repo")
-            .and_then(Item::as_str)
-            .ok_or("core patch record has no replacement repository")?
-            .to_owned(),
-        reference: Some(("rev".into(), revision.to_owned())),
-    };
-    let replacement = GitPin::from_dependency(
-        core_replacement(manifest, expected).ok_or("workspace core replacement is absent")?,
-    )?;
-    if replacement != recorded {
-        return Err("workspace core replacement differs from its recorded immutable pin".into());
-    }
-    // Only core is replaced. BLS must retain the original upstream identity,
-    // even when Cargo resolves core to the recorded Ledger transport fork.
-    Ok(CorePatch {
-        core: recorded,
-        bls_source: format!("git+{repository}?tag={tag}#{base}"),
-    })
-}
-
-/// The core patch record a replacement is checked against: the workspace's
-/// own `upstream.toml` (rtao's checkout), else the one beside the `rtao-core`
-/// the workspace resolves, which that crate's provenance is built from. A
-/// project generated from the template carries rtao's core patch (D-146) and
-/// has no record of its own.
+/// The record the workspace's republished packages are checked against: the
+/// workspace's own `upstream.toml` (rtao's checkout), else the copy inside
+/// the `rtao-core` the workspace resolves, which that crate's provenance
+/// constants are built from.
 fn core_record(root: &Path, manifest_path: &Path) -> Result<DocumentMut, String> {
     let local = root.join("upstream.toml");
     if local.is_file() {
         return document(&local);
     }
-    let metadata = metadata(manifest_path, false).map_err(|error| {
-        format!("the core replacement's record is the resolved rtao-core's upstream.toml; inspecting it requires dependencies cached for offline Cargo metadata:\n{error}")
+    let metadata = metadata(manifest_path).map_err(|error| {
+        format!("the expected core versions are recorded in the resolved rtao-core's upstream.toml; inspecting it requires dependencies cached for offline Cargo metadata:\n{error}")
     })?;
     let records = metadata
         .get("packages")
@@ -380,84 +115,161 @@ fn core_record(root: &Path, manifest_path: &Path) -> Result<DocumentMut, String>
                 .and_then(Json::as_str)
                 .map(Path::new)
                 .and_then(Path::parent)
-                .and_then(Path::parent)
-                .and_then(Path::parent)
-                .map(|workspace| workspace.join("upstream.toml"))
+                .map(|crate_root| crate_root.join("upstream.toml"))
                 .ok_or("rtao-core metadata has no manifest path")
         })
         .collect::<Result<BTreeSet<_>, _>>()?;
     let mut records = records.into_iter();
     match (records.next(), records.next()) {
         (Some(record), None) => document(&record),
-        (None, _) => Err("workspace replaces bittensor-core without an upstream.toml record and resolves no rtao-core to take it from".into()),
-        (Some(_), Some(_)) => Err("workspace resolves more than one rtao-core; its core replacement has no single record".into()),
+        (None, _) => Err("the workspace resolves no rtao-core, so it has no record of the core versions to check".into()),
+        (Some(_), Some(_)) => Err("workspace resolves more than one rtao-core; the core versions have no single record".into()),
     }
 }
 
-fn full_commit(commit: &str) -> bool {
-    commit.len() == 40 && commit.bytes().all(|byte| byte.is_ascii_hexdigit())
+/// One republished package's recorded identity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Republished {
+    package: String,
+    version: String,
+    checksum: Option<String>,
 }
 
-fn verify_lock(lock: &DocumentMut, expected: &GitPin) -> Result<String, String> {
-    verify_resolved_lock(lock, expected, None, &expected.patch_line())
+fn republished(record: &DocumentMut, key: &str) -> Result<Republished, String> {
+    let entry = record
+        .get("publish")
+        .and_then(|publish| publish.get(key))
+        .ok_or_else(|| format!("upstream.toml has no [publish.{key}]; the resolved rtao-core predates the republished core (D-183)"))?;
+    let text = |field: &str| {
+        entry
+            .get(field)
+            .and_then(Item::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| format!("upstream.toml [publish.{key}] has no {field}"))
+    };
+    Ok(Republished {
+        package: text("package")?,
+        version: text("version")?,
+        checksum: entry
+            .get("checksum")
+            .and_then(Item::as_str)
+            .map(str::to_owned),
+    })
 }
 
-fn verify_resolved_lock(
-    lock: &DocumentMut,
-    expected: &GitPin,
-    bls_source: Option<&str>,
-    required_patch: &str,
-) -> Result<String, String> {
-    let packages = lock
-        .get("package")
-        .and_then(Item::as_array_of_tables)
-        .ok_or("Cargo.lock has no package array")?;
-    let core: Vec<_> = packages
+/// Every republished package the record names.
+fn recorded(record: &DocumentMut) -> Result<Vec<Republished>, String> {
+    let keys = record
+        .get("publish")
+        .and_then(Item::as_table_like)
+        .ok_or("upstream.toml has no [publish]; the resolved rtao-core predates the republished core (D-183)")?
         .iter()
-        .filter(|package| package.get("name").and_then(Item::as_str) == Some("bittensor-core"))
-        .collect();
-    if core.len() != 1 {
-        return Err(format!(
-            "Cargo.lock must contain exactly one bittensor-core; found {}.\n\n{}",
-            core.len(),
-            required_patch
-        ));
+        .filter(|(_, item)| item.get("package").is_some())
+        .map(|(key, _)| key.to_owned())
+        .collect::<Vec<_>>();
+    keys.iter().map(|key| republished(record, key)).collect()
+}
+
+/// Patches an earlier rtao revision asked for, which no longer apply.
+fn obsolete_patches(manifest: &DocumentMut) -> Vec<String> {
+    let Some(patch) = manifest.get("patch").and_then(Item::as_table_like) else {
+        return Vec::new();
+    };
+    let mut found = Vec::new();
+    for (source, table) in patch.iter() {
+        let Some(table) = table.as_table_like() else {
+            continue;
+        };
+        for (name, _) in table.iter() {
+            if [
+                "w3f-bls",
+                "bittensor-core",
+                "subtensor-hashed",
+                "subtensor-macros",
+                "fips204",
+                "ruint",
+            ]
+            .contains(&name)
+            {
+                found.push(format!("[patch.{source:?}] {name}"));
+            }
+        }
     }
-    let core_source = core[0]
-        .get("source")
-        .and_then(Item::as_str)
-        .ok_or("Cargo.lock bittensor-core has no git source")?;
-    let matches_pin = GitPin::from_source(core_source).is_ok_and(|pin| pin == *expected);
-    let has_commit = core_source.rsplit_once('#').is_some_and(|(_, commit)| {
-        full_commit(commit)
-            && expected.reference.as_ref().is_none_or(|(kind, revision)| {
-                kind != "rev" || !full_commit(revision) || revision == commit
-            })
-    });
-    if !matches_pin || !has_commit {
-        return Err(format!(
-            "Cargo.lock bittensor-core source differs from the workspace declaration or resolved commit.\n\n{}",
-            required_patch
-        ));
-    }
-    let bls = packages
+    found
+}
+
+fn locked(lock: &DocumentMut) -> Result<Vec<LockedPackage<'_>>, String> {
+    let Some(packages) = lock.get("package") else {
+        return Ok(Vec::new());
+    };
+    packages
+        .as_array_of_tables()
+        .ok_or("Cargo.lock package entries are not an array of tables")?
         .iter()
-        .filter(|package| package.get("name").and_then(Item::as_str) == Some("w3f-bls"))
         .map(|package| {
             Ok(LockedPackage {
-                name: "w3f-bls",
+                name: package
+                    .get("name")
+                    .and_then(Item::as_str)
+                    .ok_or("Cargo.lock package has no name")?,
                 version: package
                     .get("version")
                     .and_then(Item::as_str)
-                    .ok_or("Cargo.lock w3f-bls has no version")?,
+                    .ok_or("Cargo.lock package has no version")?,
                 source: package.get("source").and_then(Item::as_str),
                 checksum: package.get("checksum").and_then(Item::as_str),
             })
         })
-        .collect::<Result<Vec<_>, String>>()?;
-    let bls_source = bls_source.unwrap_or(core_source);
-    validate_bls_lock(&bls, bls_source).map_err(|error| format!("{error}\n\n{required_patch}"))?;
-    Ok(bls_source.to_owned())
+        .collect()
+}
+
+/// The lock resolves each recorded republished package once, at its version,
+/// and a crates.io copy has the recorded checksum. Returns the BLS version.
+fn verify_lock(lock: &DocumentMut, record: &DocumentMut) -> Result<String, String> {
+    let packages = locked(lock)?;
+    let expected = recorded(record)?;
+    for package in &expected {
+        let matching: Vec<_> = packages
+            .iter()
+            .filter(|locked| locked.name == package.package)
+            .collect();
+        if matching.len() != 1 {
+            return Err(format!(
+                "Cargo.lock must contain exactly one {}; found {}. Run `cargo update -p {}` after changing the rtao version.",
+                package.package,
+                matching.len(),
+                package.package
+            ));
+        }
+        let locked = matching[0];
+        if locked.version != package.version {
+            return Err(format!(
+                "Cargo.lock {} is {}, but the resolved rtao-core records {}",
+                package.package, locked.version, package.version
+            ));
+        }
+        if locked.source == Some(CRATES_IO)
+            && let Some(checksum) = &package.checksum
+            && locked.checksum != Some(checksum.as_str())
+        {
+            return Err(format!(
+                "Cargo.lock {} {} has checksum {:?}, but rtao recorded {checksum} for the published package",
+                package.package, package.version, locked.checksum
+            ));
+        }
+    }
+    if !expected
+        .iter()
+        .any(|package| package.package == CORE_PACKAGE)
+    {
+        return Err("upstream.toml [publish] does not record the core".into());
+    }
+    let bls = expected
+        .iter()
+        .find(|package| package.package == BLS_PACKAGE)
+        .ok_or("upstream.toml [publish] does not record the BLS fork")?;
+    validate_bls_lock(&packages, &bls.version)?;
+    Ok(bls.version.clone())
 }
 
 fn built_tree_command(manifest: &Path) -> Command {
@@ -491,41 +303,62 @@ fn built_tree_command(manifest: &Path) -> Command {
     command
 }
 
-fn verify_built(manifest: &Path, core_source: &str) -> Result<(), String> {
+fn verify_built(manifest: &Path, bls_version: &str) -> Result<(), String> {
     let tree = cargo_output(&mut built_tree_command(manifest))?;
-    validate_bls_tree(&tree, core_source)
+    validate_bls_tree(&tree, bls_version)
 }
 
-/// The verified workspace and any difference from the inspecting binary's pin.
+/// The verified workspace and any notes that do not fail the check.
 pub(super) struct Check {
     pub(super) manifest: PathBuf,
     pub(super) warning: Option<String>,
 }
 
+fn warnings(manifest: &DocumentMut, lock: &DocumentMut, record: &DocumentMut) -> Option<String> {
+    let mut notes = Vec::new();
+    let obsolete = obsolete_patches(manifest);
+    if !obsolete.is_empty() {
+        notes.push(format!(
+            "remove {} from the root Cargo.toml: rtao depends on the republished core and needs no [patch] (D-183)",
+            obsolete.join(", ")
+        ));
+    }
+    if locked(lock).is_ok_and(|packages| {
+        packages
+            .iter()
+            .any(|package| package.name == "bittensor-core")
+    }) {
+        notes.push(
+            "the workspace also resolves bittensor-core itself; rtao uses rtao-upstream-core, and the two are separate copies".into(),
+        );
+    }
+    if republished(record, "core")
+        .is_ok_and(|core| core.version != rtao::core::UPSTREAM_CORE_VERSION)
+    {
+        notes.push(format!(
+            "the workspace's rtao records {CORE_PACKAGE} {}, this rtao binary {}; the workspace's own record was verified",
+            republished(record, "core")
+                .map(|core| core.version)
+                .unwrap_or_default(),
+            rtao::core::UPSTREAM_CORE_VERSION
+        ));
+    }
+    (!notes.is_empty()).then(|| notes.join("; "))
+}
+
 pub(super) fn check(manifest_path: &Path) -> Result<Check, String> {
     let manifest_path = workspace_manifest(manifest_path)?;
     let manifest = document(&manifest_path)?;
-    let expected = expected_pin(&manifest_path, &manifest)?;
-    verify_manifest(&manifest, &expected)?;
     let root = manifest_path
         .parent()
         .ok_or("Cargo.toml has no parent directory")?;
     let lock = document(&root.join("Cargo.lock"))?;
-    let bls_source = if core_replacement(&manifest, &expected).is_some() {
-        let patch = recorded_core_patch(&manifest, &expected, &core_record(root, &manifest_path)?)?;
-        verify_resolved_lock(
-            &lock,
-            &patch.core,
-            Some(&patch.bls_source),
-            &expected.patch_line(),
-        )?
-    } else {
-        verify_lock(&lock, &expected)?
-    };
-    verify_built(&manifest_path, &bls_source)?;
+    let record = core_record(root, &manifest_path)?;
+    let bls_version = verify_lock(&lock, &record)?;
+    verify_built(&manifest_path, &bls_version)?;
     Ok(Check {
+        warning: warnings(&manifest, &lock, &record),
         manifest: manifest_path,
-        warning: expected.warning(),
     })
 }
 
@@ -534,15 +367,10 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    const MONOREPO: &str = "https://github.com/RaoFoundation/subtensor.git";
-    const COMMIT: &str = "850f2755bb05a3851f948489f0ab27b0645cebce";
+    use rtao::core::dependency_policy::DORMANT_BLS_CHECKSUM;
 
-    fn pin(kind: &str, value: &str) -> GitPin {
-        GitPin {
-            repository: MONOREPO.into(),
-            reference: Some((kind.into(), value.into())),
-        }
-    }
+    const VERSION: &str = "0.490.0";
+    const SUM: &str = "1111111111111111111111111111111111111111111111111111111111111111";
 
     fn parse(value: &str) -> Result<DocumentMut, String> {
         value
@@ -550,200 +378,121 @@ mod tests {
             .map_err(|error: toml_edit::TomlError| error.to_string())
     }
 
-    fn lock(core_source: &str, bls_source: &str) -> Result<DocumentMut, String> {
-        parse(&format!(
-            "version = 4\n[[package]]\nname = \"bittensor-core\"\nversion = \"0.1.0\"\nsource = {core_source:?}\n[[package]]\nname = \"w3f-bls\"\nversion = \"0.1.3\"\nsource = {bls_source:?}\n"
-        ))
-    }
-
-    #[test]
-    fn patch_uses_workspace_declaration_and_reference_kind() -> Result<(), String> {
-        let expected = pin("tag", "v477");
-        verify_manifest(&parse(&expected.patch_line())?, &expected)?;
-        for wrong in [
-            pin("tag", "v478"),
-            pin("rev", "v477"),
-            pin("branch", "v477"),
-        ] {
-            let error = verify_manifest(&parse(&wrong.patch_line())?, &expected)
-                .err()
-                .ok_or("wrong patch accepted")?;
-            assert!(error.contains(&expected.patch_line()));
+    fn record(checksum: bool) -> Result<DocumentMut, String> {
+        let mut text = String::from("[publish]\n");
+        for key in ["core", "w3f-bls"] {
+            text.push_str(&format!(
+                "[publish.{key}]\npackage = \"rtao-upstream-{key}\"\nversion = {VERSION:?}\n"
+            ));
+            if checksum {
+                text.push_str(&format!("checksum = {SUM:?}\n"));
+            }
         }
-        let error = verify_manifest(&parse("[workspace]\n")?, &expected)
-            .err()
-            .ok_or("missing patch accepted")?;
-        assert!(error.contains(&expected.patch_line()));
-        Ok(())
+        parse(&text)
+    }
+
+    fn lock(source: Option<&str>, checksum: Option<&str>) -> Result<DocumentMut, String> {
+        let mut text = String::from("version = 4\n");
+        for name in [CORE_PACKAGE, BLS_PACKAGE] {
+            text.push_str(&format!(
+                "[[package]]\nname = {name:?}\nversion = {VERSION:?}\n"
+            ));
+            if let Some(source) = source {
+                text.push_str(&format!("source = {source:?}\n"));
+            }
+            if let Some(checksum) = checksum {
+                text.push_str(&format!("checksum = {checksum:?}\n"));
+            }
+        }
+        parse(&text)
     }
 
     #[test]
-    fn stale_lock_does_not_override_declared_reference() -> Result<(), String> {
-        let source = format!("git+{MONOREPO}?tag=v478#{COMMIT}");
-        assert!(verify_lock(&lock(&source, &source)?, &pin("tag", "v477")).is_err());
-        let previous_tag = format!("git+{MONOREPO}?tag=v477#{COMMIT}");
-        assert!(verify_lock(&lock(&previous_tag, &source)?, &pin("tag", "v477")).is_err());
-        let rev = format!("git+{MONOREPO}?rev={COMMIT}#{COMMIT}");
-        assert!(verify_lock(&lock(&source, &rev)?, &pin("tag", "v478")).is_err());
-        let other_commit = source.replace(COMMIT, "0000000000000000000000000000000000000000");
-        assert!(verify_lock(&lock(&source, &other_commit)?, &pin("tag", "v478")).is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn recorded_core_replacement_keeps_bls_at_its_upstream_base() -> Result<(), String> {
-        const FORK: &str = "https://github.com/sam0x17/subtensor.git";
-        const REVISION: &str = "5f2477f5290f5f4cb467524754cc025626b52974";
-        let expected = pin("tag", "v478");
-        let required_patch = expected.patch_line();
-        let manifest = parse(&format!(
-            "{required_patch}\n[patch.{MONOREPO:?}]\nbittensor-core = {{ git = {FORK:?}, rev = {REVISION:?} }}\n"
-        ))?;
-        let record = parse(&format!(
-            "[monorepo]\nurl = {MONOREPO:?}\n[core]\ntag = \"v478\"\ncommit = {COMMIT:?}\n[core.patch]\nrepo = {FORK:?}\nrev = {REVISION:?}\nbase = {COMMIT:?}\n"
-        ))?;
-        verify_manifest(&manifest, &expected)?;
-        let patch = recorded_core_patch(&manifest, &expected, &record)?;
-        let upstream = format!("git+{MONOREPO}?tag=v478#{COMMIT}");
-        let replaced = format!("git+{FORK}?rev={REVISION}#{REVISION}");
-        assert_eq!(patch.bls_source, upstream);
+    fn republished_packages_resolve_once_at_the_recorded_version() -> Result<(), String> {
+        assert_eq!(verify_lock(&lock(None, None)?, &record(true)?)?, VERSION);
         assert_eq!(
-            verify_resolved_lock(
-                &lock(&replaced, &upstream)?,
-                &patch.core,
-                Some(&patch.bls_source),
-                &required_patch,
-            )?,
-            upstream
+            verify_lock(&lock(Some(CRATES_IO), Some(SUM))?, &record(true)?)?,
+            VERSION
         );
-        // The normal downstream path still rejects an undeclared replacement.
-        assert!(verify_lock(&lock(&replaced, &upstream)?, &expected).is_err());
-        for (core_source, bls_source) in [
-            (upstream.clone(), upstream.clone()),
-            (replaced.clone(), replaced.clone()),
+        // Without a recorded checksum a crates.io copy is accepted by version.
+        verify_lock(&lock(Some(CRATES_IO), Some("other"))?, &record(false)?)?;
+        for (changed, expected) in [
+            (lock(Some(CRATES_IO), Some("other"))?, "checksum"),
             (
-                replaced.replace(&format!("#{REVISION}"), &format!("#{COMMIT}")),
-                upstream.clone(),
+                parse(&lock(None, None)?.to_string().replace(VERSION, "0.490.1"))?,
+                "records",
             ),
-            (replaced.clone(), upstream.replace(COMMIT, REVISION)),
-            (replaced.replace(FORK, MONOREPO), upstream.clone()),
+            (
+                parse(&format!(
+                    "{}[[package]]\nname = {CORE_PACKAGE:?}\nversion = \"0.489.0\"\n",
+                    lock(None, None)?
+                ))?,
+                "exactly one",
+            ),
+            (parse("version = 4\n")?, "exactly one"),
         ] {
-            let error = verify_resolved_lock(
-                &lock(&core_source, &bls_source)?,
-                &patch.core,
-                Some(&patch.bls_source),
-                &required_patch,
+            let error = verify_lock(&changed, &record(true)?)
+                .err()
+                .ok_or("changed lock accepted")?;
+            assert!(error.contains(expected), "{error}");
+        }
+        assert!(verify_lock(&lock(None, None)?, &parse("[core]\n")?).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn only_the_recorded_dormant_bls_may_join_the_republished_one() -> Result<(), String> {
+        let base = lock(None, None)?.to_string();
+        let dormant = |checksum: &str| {
+            format!(
+                "[[package]]\nname = \"w3f-bls\"\nversion = \"0.1.9\"\nsource = {CRATES_IO:?}\nchecksum = {checksum:?}\n"
             )
-            .err()
-            .ok_or("changed core or BLS identity accepted")?;
-            assert!(error.contains(&required_patch));
-        }
-        for changed in [
-            record
-                .to_string()
-                .replace("tag = \"v478\"", "tag = \"v477\""),
-            record.to_string().replace(
-                &format!("base = {COMMIT:?}"),
-                &format!("base = {REVISION:?}"),
-            ),
-            record.to_string().replace(REVISION, COMMIT),
-            record.to_string().replace(FORK, MONOREPO),
-            "[core]\n".to_owned(),
-        ] {
-            assert!(recorded_core_patch(&manifest, &expected, &parse(&changed)?).is_err());
-        }
-        for changed in [
-            manifest.to_string().replace(REVISION, COMMIT),
-            manifest.to_string().replace(FORK, MONOREPO),
-        ] {
-            assert!(recorded_core_patch(&parse(&changed)?, &expected, &record).is_err());
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn valid_other_pin_warns_without_failing() -> Result<(), String> {
-        let expected = pin("tag", "v477");
-        let source = format!("git+{MONOREPO}?tag=v477#{COMMIT}");
-        verify_manifest(&parse(&expected.patch_line())?, &expected)?;
-        verify_lock(&lock(&source, &source)?, &expected)?;
-        assert!(expected.warning().is_some());
-        assert!(
-            pin("tag", rtao::core::BITTENSOR_CORE_TAG)
-                .warning()
-                .is_none()
-        );
-        assert!(pin("rev", COMMIT).warning().is_some());
-        Ok(())
-    }
-
-    #[test]
-    fn unrecorded_duplicate_bls_is_rejected() -> Result<(), String> {
-        let expected = pin("tag", "v478");
-        let source = format!("git+{MONOREPO}?tag=v478#{COMMIT}");
-        verify_lock(&lock(&source, &source)?, &expected)?;
-        let duplicate = parse(&format!(
-            "{}\n[[package]]\nname = \"w3f-bls\"\nversion = \"0.1.9\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
-            lock(&source, &source)?
-        ))?;
-        assert!(verify_lock(&duplicate, &expected).is_err());
-        Ok(())
-    }
-
-    fn with_dormant(lock: &DocumentMut, checksum: Option<&str>) -> Result<DocumentMut, String> {
-        let checksum = checksum
-            .map(|value| format!("checksum = {value:?}\n"))
-            .unwrap_or_default();
-        parse(&format!(
-            "{lock}\n[[package]]\nname = \"w3f-bls\"\nversion = \"0.1.9\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n{checksum}"
-        ))
-    }
-
-    #[test]
-    fn recorded_dormant_lock_requires_exact_checksum_and_primary_pin() -> Result<(), String> {
-        use rtao::core::dependency_policy::DORMANT_BLS_CHECKSUM;
-
-        let expected = pin("tag", "v478");
-        let source = format!("git+{MONOREPO}?tag=v478#{COMMIT}");
-        let primary = lock(&source, &source)?;
-        let approved = with_dormant(&primary, Some(DORMANT_BLS_CHECKSUM))?;
-        assert_eq!(verify_lock(&approved, &expected)?, source);
-        for checksum in [None, Some("tampered")] {
-            assert!(verify_lock(&with_dormant(&primary, checksum)?, &expected).is_err());
-        }
-        let duplicate = with_dormant(&approved, Some(DORMANT_BLS_CHECKSUM))?;
-        assert!(verify_lock(&duplicate, &expected).is_err());
-        for changed in [
-            approved
-                .to_string()
-                .replace("version = \"0.1.9\"", "version = \"0.1.10\""),
-            approved
-                .to_string()
-                .replace("crates.io-index", "different-index"),
-            approved
-                .to_string()
-                .replace("version = \"0.1.3\"", "version = \"0.1.4\""),
-        ] {
-            assert!(verify_lock(&parse(&changed)?, &expected).is_err());
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn dormant_activation_fails_even_with_an_approved_lock() -> Result<(), String> {
-        use rtao::core::dependency_policy::DORMANT_BLS_CHECKSUM;
-
-        let expected = pin("tag", "v478");
-        let source = format!("git+{MONOREPO}?tag=v478#{COMMIT}");
-        let source = verify_lock(
-            &with_dormant(&lock(&source, &source)?, Some(DORMANT_BLS_CHECKSUM))?,
-            &expected,
+        };
+        verify_lock(
+            &parse(&format!("{base}{}", dormant(DORMANT_BLS_CHECKSUM)))?,
+            &record(false)?,
         )?;
-        let built = format!("w3f-bls v0.1.3 ({MONOREPO}?tag=v478#{})\n", &COMMIT[..8]);
-        validate_bls_tree(&built, &source)?;
-        assert!(validate_bls_tree(&format!("{built}w3f-bls v0.1.9\n"), &source).is_err());
-        assert!(validate_bls_tree("w3f-bls v0.1.9\n", &source).is_err());
-        assert!(validate_bls_tree(&built.replace(&COMMIT[..8], "00000000"), &source).is_err());
+        for changed in [
+            format!("{base}{}", dormant("tampered")),
+            format!(
+                "{base}{}{}",
+                dormant(DORMANT_BLS_CHECKSUM),
+                dormant(DORMANT_BLS_CHECKSUM)
+            ),
+            format!(
+                "{base}[[package]]\nname = \"w3f-bls\"\nversion = \"0.1.3\"\nsource = \"git+https://github.com/RaoFoundation/subtensor.git?tag=v490#d967d13588834f4f5aaa8ef4c8fc1a865d581462\"\n"
+            ),
+        ] {
+            assert!(verify_lock(&parse(&changed)?, &record(false)?).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn obsolete_patches_and_a_second_core_are_warnings() -> Result<(), String> {
+        let manifest = parse(
+            "[patch.crates-io]\nw3f-bls = { git = \"https://github.com/RaoFoundation/subtensor.git\", tag = \"v490\" }\nserde = { path = \"serde\" }\n",
+        )?;
+        assert_eq!(
+            obsolete_patches(&manifest),
+            ["[patch.\"crates-io\"] w3f-bls"]
+        );
+        assert!(obsolete_patches(&parse("[workspace]\n")?).is_empty());
+        let mut core_record = record(false)?;
+        core_record["publish"]["core"]["version"] =
+            toml_edit::value(rtao::core::UPSTREAM_CORE_VERSION);
+        assert!(warnings(&parse("[workspace]\n")?, &lock(None, None)?, &core_record).is_none());
+        let warning = warnings(&manifest, &lock(None, None)?, &core_record)
+            .ok_or("obsolete patch not reported")?;
+        assert!(warning.contains("needs no [patch]"));
+        let with_core = parse(&format!(
+            "{}[[package]]\nname = \"bittensor-core\"\nversion = \"0.1.0\"\n",
+            lock(None, None)?
+        ))?;
+        assert!(
+            warnings(&parse("[workspace]\n")?, &with_core, &core_record)
+                .is_some_and(|warning| warning.contains("separate copies"))
+        );
         Ok(())
     }
 
@@ -778,21 +527,6 @@ mod tests {
                 "--manifest-path",
                 "/consumer/workspace/Cargo.toml"
             ]
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn percent_encoded_branch_and_renamed_dependencies_are_preserved() -> Result<(), String> {
-        assert_eq!(
-            GitPin::from_source(&format!("git+{MONOREPO}?branch=feature%2Fdoctor"))?,
-            pin("branch", "feature/doctor")
-        );
-        assert!(GitPin::from_source(&format!("git+{MONOREPO}?branch=bad%GG")).is_err());
-        let metadata = serde_json::json!({"packages": [{"dependencies": [{"name": "bittensor-core", "rename": "core", "source": format!("git+{MONOREPO}?rev={COMMIT}")}]}]});
-        assert_eq!(
-            metadata_pins(&metadata)?,
-            BTreeSet::from([pin("rev", COMMIT)])
         );
         Ok(())
     }
@@ -844,26 +578,6 @@ mod tests {
     }
 
     #[test]
-    fn member_manifest_patch_is_ignored_and_diagnostic_names_root_pin() -> Result<(), String> {
-        let fixture = Fixture::new()?;
-        fixture.write("Cargo.toml", &format!("[workspace]\nmembers = [\"member\"]\n[workspace.dependencies]\nbittensor-core = {{ git = {MONOREPO:?}, tag = \"v477\" }}\n"))?;
-        fixture.package(
-            "member",
-            "doctor-member",
-            "",
-            &pin("tag", "v477").patch_line(),
-        )?;
-        let member = fixture.0.join("member/Cargo.toml");
-        assert_eq!(workspace_manifest(&member)?, fixture.0.join("Cargo.toml"));
-        let error = check(&member)
-            .err()
-            .ok_or("member patch unexpectedly accepted")?;
-        assert!(error.contains(&pin("tag", "v477").patch_line()));
-        assert!(error.contains("root Cargo.toml"));
-        Ok(())
-    }
-
-    #[test]
     fn actual_consumer_tree_exposes_optional_and_cross_target_build_bls() -> Result<(), String> {
         let fixture = Fixture::new()?;
         fixture.write(
@@ -890,8 +604,7 @@ mod tests {
                 fs::read(fixture.0.join("Cargo.lock")).map_err(|error| error.to_string())?;
             let tree = cargo_output(&mut built_tree_command(&manifest))?;
             assert!(tree.lines().any(|line| line.starts_with("w3f-bls ")));
-            let expected = format!("git+{MONOREPO}?tag=v478#{COMMIT}");
-            assert!(validate_bls_tree(&tree, &expected).is_err());
+            assert!(validate_bls_tree(&tree, VERSION).is_err());
             assert_eq!(
                 before,
                 fs::read(fixture.0.join("Cargo.lock")).map_err(|error| error.to_string())?
@@ -901,13 +614,11 @@ mod tests {
     }
 
     #[test]
-    fn replacement_record_comes_from_the_resolved_rtao_core() -> Result<(), String> {
+    fn record_comes_from_the_resolved_rtao_core() -> Result<(), String> {
         let fixture = Fixture::new()?;
-        let record = format!(
-            "[monorepo]\nurl = {MONOREPO:?}\n[core]\ntag = \"v478\"\ncommit = {COMMIT:?}\n"
-        );
-        fixture.write("sdk/upstream.toml", &record)?;
+        let record = format!("[publish.core]\npackage = {CORE_PACKAGE:?}\nversion = {VERSION:?}\n");
         fixture.package("sdk/crates/rtao-core", "rtao-core", "[workspace]\n", "")?;
+        fixture.write("sdk/crates/rtao-core/upstream.toml", &record)?;
         fixture.package(
             "app",
             "doctor-app",
@@ -931,7 +642,7 @@ mod tests {
             core_record(&app, &app.join("Cargo.toml"))?.to_string(),
             "[core]\n"
         );
-        // Without either, the replacement has no record.
+        // Without either, there is nothing to check against.
         fixture.package("bare", "doctor-bare", "[workspace]\n", "")?;
         let bare = fixture.0.join("bare");
         lock(&bare)?;

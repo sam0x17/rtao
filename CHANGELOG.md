@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### The core graph republished on crates.io (D-183)
+
+- Changed: rtao depends on `rtao-upstream-core`, `-hashed`, `-macros`, `-fips204`, `-w3f-bls` and `-tle` 0.490.0, unmodified republishes of the reviewed `bittensor-core` revision and the packages it took from Git, generated under `upstream/` by `cargo xtask forks`. Consumers need no `[patch]`: delete the `w3f-bls`, core-fork and `ruint` patches an earlier revision asked for.
+- Changed: the minimum supported Rust is 1.90; `rtao-evm` requires crates.io `ruint` 1.20.1 or newer (RUSTSEC-2026-0220) and `patches/ruint` is gone.
+- Changed: `rtao doctor` checks that a workspace locks the republished core and BLS fork at the versions (and crates.io checksums) its rtao-core records, and builds no other BLS implementation; `rtao_core::dependency_policy` checks `rtao-upstream-w3f-bls` and gains `BLS_PACKAGE`, `CORE_PACKAGE` and `CRATES_IO`; `rtao_core::UPSTREAM_CORE_VERSION` and `UPSTREAM_BLS_VERSION` name the versions.
+- Added: `cargo xtask forks check|write|refresh|verify-published|order` and `cargo xtask crate-inputs [--check]`. Crates that read workspace files at build time carry copies, so every crate packages and verifies on its own.
+
 ### Transport crate renamed `rtao-jsonrpc` (D-182)
 
 - Breaking: the JSON-RPC transport crate is `rtao-jsonrpc` (`use rtao_jsonrpc::...`); `rtao-rpc` is not published. Its metric names (`rtao_rpc_*`) are unchanged.

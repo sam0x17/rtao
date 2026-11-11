@@ -29,6 +29,52 @@ base = "61d2902f5bc8d7e1d97a59a22594cd9651e6b832"
 rev = "d7fd8762625a93b9837cde28d496b0819a976f0e"
 diff_sha256 = "1d71ea78bc18f20bd27c6221edb95e93747297b6a89c7cfeb47f78f1cf25fb14"
 
+[publish]
+polkadot_sdk_rev = "cacb4310f20c7cac83eb3ccd8ed5a5ad4212608a"
+polkadot_sdk = { sp-core = "37.0.0", sp-crypto-hashing = "0.1.0", sp-debug-derive = "14.0.0", sp-externalities = "0.30.0", sp-io = "41.0.1", sp-keystore = "0.43.0", sp-panic-handler = "13.0.2", sp-runtime-interface = "30.0.0", sp-runtime-interface-proc-macro = "19.0.0", sp-state-machine = "0.46.0", sp-std = "14.0.0", sp-storage = "22.0.0", sp-tracing = "17.1.0", sp-trie = "40.0.0", sp-wasm-interface = "22.0.0", substrate-bip39 = "0.6.0", substrate-prometheus-endpoint = "0.17.6" }
+
+[publish.macros]
+package = "rtao-upstream-macros"
+version = "0.490.0"
+repo = "https://github.com/RaoFoundation/subtensor.git"
+rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
+path = "support/macros"
+
+[publish.fips204]
+package = "rtao-upstream-fips204"
+version = "0.490.0"
+repo = "https://github.com/RaoFoundation/subtensor.git"
+rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
+path = "vendor/fips204"
+
+[publish.w3f-bls]
+package = "rtao-upstream-w3f-bls"
+version = "0.490.0"
+repo = "https://github.com/RaoFoundation/subtensor.git"
+rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
+path = "vendor/w3f-bls"
+
+[publish.hashed]
+package = "rtao-upstream-hashed"
+version = "0.490.0"
+repo = "https://github.com/RaoFoundation/subtensor.git"
+rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
+path = "primitives/hashed"
+
+[publish.tle]
+package = "rtao-upstream-tle"
+version = "0.490.0"
+repo = "https://github.com/ideal-lab5/timelock"
+rev = "5416406cfd32799e31e1795393d4916894de4468"
+path = "tle"
+
+[publish.core]
+package = "rtao-upstream-core"
+version = "0.490.0"
+repo = "https://github.com/sam0x17/subtensor.git"
+rev = "d7fd8762625a93b9837cde28d496b0819a976f0e"
+path = "sdk/bittensor-core"
+
 [parity]
 tag = "v490"
 commit = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
