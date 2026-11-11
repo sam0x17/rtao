@@ -31,6 +31,18 @@ this runner does not build the supported macOS CLI targets.
    must already match the repository's exact tool pin (the task-local gate path
    `$RTAO_TEMP_ROOT/ci/tools/bin` takes precedence); the Mac builder does not
    install it.
+
+   Set `RTAO_TEMP_ROOT` to a short directory under the clone's `.local/`
+   (for example `.local/mac` in a clone with a short path), with
+   `CARGO_TARGET_DIR` and `TMPDIR` beneath it. macOS limits Unix socket paths
+   to 104 bytes, and tests bind sockets under these directories, so a long
+   root makes them fail. Tests write their scratch only under the task root
+   or the target directory. The script exports `RTAO_TEST_TMPDIR` as
+   `$RTAO_TEMP_ROOT/tmp` unless it is already set, and runs `cargo fetch
+   --locked` before the checks: `rtao doctor` reads the workspace with
+   offline Cargo metadata, which needs every locked package (for every
+   platform) in the registry cache. The `ci` profile's hosted-only xtask
+   fixture checks only that its hosted gate refuses off hosted Linux.
 3. Authenticate the exact `macos-build.json` with the approved Ed25519 local
    release key. `ci/release/allowed-signers` is deliberately absent until the
    user approves the key/trust design. Verification fails closed without that

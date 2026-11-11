@@ -733,6 +733,7 @@ mod null_pruning {
     }
 
     #[derive(Clone, Copy)]
+    #[cfg_attr(not(feature = "extension"), allow(dead_code))]
     enum Step {
         Batch,
         MissingProgress,
@@ -1214,6 +1215,10 @@ mod null_pruning {
         .await
     }
 
+    // The fixture signs through the "extension" backend, which the CLI only
+    // accepts when built with that feature; these tests run under
+    // --all-features (and --features extension).
+    #[cfg(feature = "extension")]
     #[tokio::test]
     async fn cli_null_pruning_uses_finalized_bounded_batches_and_exact_proxy_owner_journals()
     -> TestResult {
@@ -1490,6 +1495,7 @@ mod null_pruning {
         Ok(())
     }
 
+    #[cfg(feature = "extension")]
     #[tokio::test]
     async fn cli_null_ambiguous_delivery_and_missing_progress_keep_recovery_and_block_restart()
     -> TestResult {
@@ -1526,6 +1532,7 @@ mod null_pruning {
         Ok(())
     }
 
+    #[cfg(feature = "extension")]
     #[tokio::test]
     async fn cli_null_external_close_failure_keeps_known_progress_and_resumes_from_finalized_state()
     -> TestResult {
@@ -1674,6 +1681,7 @@ mod null_pruning {
         Ok(())
     }
 
+    #[cfg(feature = "extension")]
     #[tokio::test]
     async fn cli_null_yuma_switch_is_opt_in_and_confirmed_in_finalized_storage() -> TestResult {
         let mut f = fixture(128, vec![Step::Switch], false, false, true).await?;

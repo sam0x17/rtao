@@ -817,10 +817,14 @@ fn applied_review_tree(repo: &Path, base: &str, diffs: &[(&str, &str)]) -> Resul
     result
 }
 
+fn hosted_linux() -> bool {
+    std::env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
+        && std::env::var("RUNNER_OS").as_deref() == Ok("Linux")
+}
+
 fn hosted_root() -> Result<PathBuf> {
     ensure!(
-        std::env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
-            && std::env::var("RUNNER_OS").as_deref() == Ok("Linux"),
+        hosted_linux(),
         "core-patch builds and rebases run only in bounded hosted Linux CI (PLAN Q30)"
     );
     let root =
@@ -1808,6 +1812,17 @@ mod tests {
 
     #[test]
     fn hosted_git_fixture_proves_exact_trees_path_modes_and_append_only_history() -> Result<()> {
+        // The fixture runs only in hosted Linux CI, like every core-patch
+        // operation (PLAN Q30). Elsewhere (local and release-lane runs) it
+        // checks that the hosted gate refuses, so the ci profile passes
+        // off hosted Linux while hosted runs still execute the fixture.
+        if !hosted_linux() {
+            ensure!(
+                hosted_root().is_err(),
+                "the hosted gate must refuse off hosted Linux"
+            );
+            return Ok(());
+        }
         let root = hosted_root()?.join("core-patch/source-fixture");
         ensure!(!root.exists(), "hosted source fixture already exists");
         fs::create_dir_all(&root)?;

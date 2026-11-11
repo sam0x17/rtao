@@ -27,7 +27,7 @@ use rtao_runtime::{CallBytes, RuntimeHandle};
 use rtao_testkit::{FakeChain, FakeState, SubmitScript, rpc::RpcClient};
 use serde_json::{Value, json};
 use std::{
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{
         Arc, Mutex,
         atomic::{AtomicUsize, Ordering},
@@ -47,8 +47,11 @@ static NEXT: AtomicUsize = AtomicUsize::new(0);
 struct Root(PathBuf);
 impl Root {
     fn new() -> std::io::Result<Self> {
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../proof/direct-multisig-followup")
+        // Scratch stays under the recorded task root, or Cargo's target
+        // temporary directory, never outside the checkout.
+        let root = std::env::var_os("RTAO_TEMP_ROOT")
+            .map_or_else(|| PathBuf::from(env!("CARGO_TARGET_TMPDIR")), PathBuf::from)
+            .join("direct-multisig-followup")
             .join(format!(
                 "{}-{}",
                 std::process::id(),

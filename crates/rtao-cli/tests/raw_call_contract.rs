@@ -1900,8 +1900,11 @@ static NEXT_TEMP: AtomicUsize = AtomicUsize::new(0);
 struct Temp(PathBuf);
 impl Temp {
     fn new() -> std::io::Result<Self> {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../proof/raw-call-fixtures")
+        // Scratch stays under the recorded task root, or Cargo's target
+        // temporary directory, never outside the checkout.
+        let root = std::env::var_os("RTAO_TEMP_ROOT")
+            .map_or_else(|| PathBuf::from(env!("CARGO_TARGET_TMPDIR")), PathBuf::from)
+            .join("raw-call-fixtures")
             .join(format!(
                 "{}-{}",
                 std::process::id(),

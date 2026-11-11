@@ -25,7 +25,8 @@ else
 fi
 arch -x86_64 /usr/bin/true
 dist="$RTAO_TEMP_ROOT/dist"
-mkdir -p "$dist" "$CARGO_TARGET_DIR" "$TMPDIR"
+export RTAO_TEST_TMPDIR=${RTAO_TEST_TMPDIR:-$RTAO_TEMP_ROOT/tmp}
+mkdir -p "$dist" "$CARGO_TARGET_DIR" "$TMPDIR" "$RTAO_TEST_TMPDIR"
 rtao_copy_release_licenses "$dist"
 test ! -e "$dist/macos-build.json"
 # Use the repository gate's already-provisioned runner. Never install a tool
@@ -36,6 +37,10 @@ test -n "$nextest_version"
 case "$(cargo nextest --version)" in "cargo-nextest $nextest_version"|"cargo-nextest $nextest_version "*) ;; *)
   echo 'the repository-pinned nextest runner must already be available' >&2; exit 1 ;;
 esac
+# rtao doctor inspects the workspace with offline Cargo metadata, which needs
+# every locked package for every platform in the registry cache, not only the
+# ones the macOS builds download. Fetch them all before any check.
+cargo fetch --locked
 check() {
   local name=$1
   shift

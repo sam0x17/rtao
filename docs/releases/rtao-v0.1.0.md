@@ -92,12 +92,12 @@ widely pinned revision:
 - D-179: the core's strict verifier and password codec replace rtao's staged
   copies; ECDSA key helpers.
 - D-180: external ECDSA signatures, verified before attachment.
-- D-181 to D-185: crates.io publication. Packaging prep; the transport crate
+- D-181 to D-186: crates.io publication. Packaging prep; the transport crate
   renamed `rtao-jsonrpc`; the core graph republished as `rtao-upstream-*`
   packages, crates.io `ruint` (RUSTSEC-2026-0220 fixed) and Rust 1.90; build
   inputs copied into the crates that read them; release notes that fit GitHub's
   limit; the republished core's `MODIFICATIONS` lists the files the core patch
-  changes.
+  changes; a macOS release lane that passes with default-feature CLI tests.
 
 ## Journal compatibility
 

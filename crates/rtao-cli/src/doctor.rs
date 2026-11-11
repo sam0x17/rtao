@@ -3,7 +3,8 @@
 //! rtao depends on the core through its republished `rtao-upstream-*`
 //! packages (D-183), so a consumer needs no `[patch]`. The doctor checks that
 //! the consumer's lock resolves the republished core and BLS fork at the
-//! versions its `rtao-core` records, with the recorded crates.io checksums,
+//! versions its `rtao-core` records, with the crates.io checksums when it
+//! records them (0.1.0 records none: they are known only after publication),
 //! and that the build graph compiles exactly one BLS implementation.
 
 use std::{

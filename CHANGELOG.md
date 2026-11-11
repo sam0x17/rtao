@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### macOS release lane (D-186, repository maintenance)
+
+- `cargo test -p rtao-cli` passes with default features: the four null-pruning tests that sign through the extension backend need the `extension` feature and run under `--all-features`. The hosted-only core-patch Git fixture in the `ci` nextest profile runs only on hosted Linux and elsewhere checks that its gate refuses. Two CLI tests write their scratch under `RTAO_TEMP_ROOT` or Cargo's target temporary directory rather than beside the checkout. The macOS and Linux release lanes run `cargo fetch --locked` before their checks, since `rtao doctor` reads offline Cargo metadata, and the macOS lane sets `RTAO_TEST_TMPDIR` under the task root. The lock moves from the yanked `async-executor` 1.14.0 to 1.14.1. `docs/releases/crates-io.md` says that `rtao doctor` checks the republished packages' versions only in 0.1.0, which records no checksums.
+
 ### Republished package notices (D-185, repository maintenance)
 
 - `rtao-upstream-core`'s `MODIFICATIONS` lists the five files rtao's reviewed core patch changes from the monorepo commit; generated manifests keep the original manifest's leading comment (the vendored `w3f-bls` notice) and `MODIFICATIONS` notes dropped comments and metadata and the upstream directories left out. The README and D-183 now say which crates.io polkadot-sdk releases differ from the monorepo's revision (`sp-externalities`, `sp-storage`, `sp-tracing`: `no_std` gating and derives only).

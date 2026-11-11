@@ -180,6 +180,11 @@ crate it depends on is not published yet.
   printed for the tagged commit), commit it and run
   `cargo xtask forks verify-published`, which downloads every published
   package and compares it with the recorded revision.
+- `rtao doctor` compares a consumer's lock with the checksums only when the
+  resolved `rtao-core` records them. The checksums are known only after the
+  republished packages are published, so the published `rtao-core` 0.1.0
+  records none and its doctor checks the republished packages' versions only.
+  The first release after the record carries the checksums.
 - A second owner for every crate is the maintainer's decision; none is added
   by default.
 - Install the CLI from crates.io in an empty `CARGO_HOME` and

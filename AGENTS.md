@@ -14,8 +14,9 @@ builds and tests are for development feedback.
 - Run local tests with `umask 022`, `RTAO_TEMP_ROOT` set to a directory under
   `.local/`, and `RTAO_TEST_TMPDIR` set to a directory beneath it. The
   signer's state-permission checks correctly refuse a group-writable umask
-  such as `002`. The e2e localnet tests and the hosted-only xtask fixture
-  test fail locally by design.
+  such as `002`. The e2e localnet tests fail locally by design; the
+  hosted-only xtask core-patch fixture runs only in hosted Linux CI and
+  elsewhere checks only that its hosted gate refuses.
 - Do not run long soaks, fuzz campaigns or benchmarks unless a plan step
   requires them.
 - Preserve wallets, recovery journals, datasets and unrelated work.

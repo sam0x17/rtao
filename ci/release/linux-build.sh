@@ -31,6 +31,8 @@ export CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
 export PKG_CONFIG_ALLOW_CROSS=1
 export PKG_CONFIG_LIBDIR_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
 started=$(date +%s)
+# rtao doctor's offline Cargo metadata needs every locked package cached.
+cargo fetch --locked
 cargo build --locked --release -p rtao-cli --target "$target"
 cargo test --locked -p rtao-cli --target "$target"
 cargo check --locked -p rtao --all-features --target "$target"
