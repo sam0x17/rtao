@@ -157,3 +157,72 @@ async fn watch_only_companions_restore_from_receiving_addresses_only() {
             .contains("complete receiving address")
     );
 }
+
+/// Python `sign_message(..., hashed_generation=)` and `verify_message` (D-173):
+/// hashed keys sign at a generation of at least one, post-quantum keys are
+/// refused, and a bare SS58 address never verifies without a trusted scheme.
+#[tokio::test]
+async fn message_signing_follows_the_scheme_rules() {
+    let temp = TempRoot::new();
+    let hashed = Wallet::new("hashed-msg", "default", temp.path()).unwrap();
+    hashed
+        .create_new_coldkey_as(
+            None,
+            KeyScheme::Authority(AuthorityType::HashedSr25519),
+            plain(WriteOptions::coldkey()),
+        )
+        .await
+        .unwrap();
+    let error = hashed
+        .sign_message("hello", SignerRole::Coldkey)
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("generation zero"), "{error}");
+    let signed = hashed
+        .sign_message_at("hello", SignerRole::Coldkey, Some(2))
+        .await
+        .unwrap();
+    let descriptor = hashed.authority_descriptor(SignerRole::Coldkey).unwrap();
+    let receiving = rtao_core::keys::encode_hashed_receiving_address(&descriptor).unwrap();
+    assert!(rtao_wallet::verify_message_as("hello", &signed.signature, &receiving, None).unwrap());
+    assert!(
+        !rtao_wallet::verify_message_as("hello!", &signed.signature, &receiving, None).unwrap()
+    );
+
+    let pq = Wallet::new("pq-msg", "default", temp.path()).unwrap();
+    pq.create_new_coldkey_as(
+        None,
+        KeyScheme::Authority(AuthorityType::MlDsa65Fixed),
+        plain(WriteOptions::coldkey()),
+    )
+    .await
+    .unwrap();
+    let error = pq
+        .sign_message_at("hello", SignerRole::Coldkey, Some(1))
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("post-quantum"), "{error}");
+
+    let classical = Wallet::new("classical-msg", "default", temp.path()).unwrap();
+    classical
+        .create_new_coldkey_as(
+            None,
+            KeyScheme::Classical(CryptoType::Sr25519),
+            plain(WriteOptions::coldkey()),
+        )
+        .await
+        .unwrap();
+    let signed = classical
+        .sign_message("hello", SignerRole::Coldkey)
+        .await
+        .unwrap();
+    assert!(
+        rtao_wallet::verify_message_as("hello", &signed.signature, &signed.ss58, Some(1)).unwrap()
+    );
+    assert!(
+        rtao_wallet::verify_message_as("hello", &signed.signature, &signed.ss58, None).is_err()
+    );
+    #[allow(deprecated)]
+    let assumed = rtao_wallet::verify_message("hello", &signed.signature, &signed.ss58);
+    assert!(!assumed);
+}

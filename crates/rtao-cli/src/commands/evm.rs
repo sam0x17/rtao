@@ -745,9 +745,16 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
     let (title, human, payload) = match name {
         "pubkey" => {
             let ss58 = required(leaf, "ss58")?;
-            let pubkey = evm::ss58_to_pubkey(ss58).map_err(|error| {
-                CliError::input(format!("invalid ss58 address {ss58:?}: {error}"))
-            })?;
+            // Python's `identity_address`: an SS58 or complete receiving
+            // address names its account.
+            let pubkey = crate::books::account_of(ss58)
+                .map_err(|error| error.to_string())
+                .and_then(|account| {
+                    evm::ss58_to_pubkey(&account.to_string()).map_err(|error| error.to_string())
+                })
+                .map_err(|error| {
+                    CliError::input(format!("invalid ss58 address {ss58:?}: {error}"))
+                })?;
             let payload = json!({"ss58":ss58,"pubkey":pubkey});
             (
                 None,

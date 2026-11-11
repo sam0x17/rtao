@@ -829,11 +829,14 @@ async fn run_local(
     } else {
         vec![(SignerRole::Coldkey, scheme)]
     };
+    // A new hotkey's registration defaults to its wallet's existing coldkey
+    // (Python's `use_existing_coldkey`).
     let prepared_registration = prepare_hashed_creation(
         ctx,
         &creating_roles,
         text(matches, "registration_payer"),
         true,
+        hot && !both,
     )
     .await?;
     let requested = matches.get_one::<usize>("n_words").copied();
@@ -944,16 +947,32 @@ fn role_name(role: SignerRole) -> &'static str {
     }
 }
 
+/// The registration payer prompt takes a wallet name.
+struct PayerResolver;
+impl crate::prompt::PromptResolver for PayerResolver {
+    fn parse(
+        &mut self,
+        _spec: &crate::prompt::PromptSpec,
+        raw: &str,
+    ) -> Result<serde_json::Value, crate::prompt::PromptValidation> {
+        Ok(serde_json::Value::from(crate::prompt::python_strip(raw)))
+    }
+}
+
 /// Python `_prepare_hashed_creation`: approve the live registration reserve
 /// and unlock the payer before any key material is generated or replaced.
 ///
 /// `--yes` never approves the deposit; JSON, quiet or piped sessions and
-/// `--dry-run` refuse.
+/// `--dry-run` refuse. Without `--registration-payer`, a new hotkey or an
+/// existing wallet's registration is paid by the wallet's own coldkey
+/// (`use_existing_coldkey`), and a new coldkey prompts for the payer, as
+/// Python does (D-175).
 async fn prepare_hashed_creation(
     ctx: &AppContext,
     schemes: &[(SignerRole, KeyScheme)],
     payer_name: Option<&str>,
     creating: bool,
+    use_existing_coldkey: bool,
 ) -> Result<Option<PreparedRegistration>, CliError> {
     let kinds: Vec<(SignerRole, rtao::primitives::AuthorityType)> = schemes
         .iter()
@@ -986,11 +1005,34 @@ async fn prepare_hashed_creation(
     }
     let payer_name = match payer_name {
         Some(name) if !name.trim().is_empty() => name.trim().to_owned(),
-        _ if !creating => ctx.globals.wallet_name.clone(),
+        _ if use_existing_coldkey || !creating => ctx.globals.wallet_name.clone(),
         _ => {
-            return Err(input(
-                "hashed account creation requires --registration-payer: an existing funded wallet whose coldkey pays the deposit and fees",
-            ));
+            let mut spec =
+                crate::prompt::PromptSpec::new("registration_payer", "--registration-payer");
+            spec.help =
+                Some("Existing funded wallet whose coldkey pays the deposit and fees.".into());
+            let mut answers = serde_json::Map::new();
+            let mut terminal = ctx.terminal.clone();
+            crate::prompt::fill_missing(
+                &ctx.prompt_context(),
+                &mut terminal,
+                &[spec],
+                &mut answers,
+                &mut PayerResolver,
+                &mut crate::prompt::PromptHistory::default(),
+            )
+            .map_err(|error| CliError {
+                code: error.exit_code(),
+                ..failure(error.to_string())
+            })?;
+            answers
+                .get("registration_payer")
+                .and_then(serde_json::Value::as_str)
+                .map(|name| name.trim().to_owned())
+                .filter(|name| !name.is_empty())
+                .ok_or_else(|| {
+                    input("hashed account creation requires --registration-payer: an existing funded wallet whose coldkey pays the deposit and fees")
+                })?
         }
     };
     let payer_wallet =
@@ -1205,8 +1247,14 @@ async fn register(ctx: &mut AppContext, matches: &ArgMatches) -> Result<(), CliE
         let info = wallet.public_info(*role).map_err(failure)?;
         schemes.push((*role, info_scheme(&info)));
     }
-    let Some(prepared) =
-        prepare_hashed_creation(ctx, &schemes, text(matches, "registration_payer"), false).await?
+    let Some(prepared) = prepare_hashed_creation(
+        ctx,
+        &schemes,
+        text(matches, "registration_payer"),
+        false,
+        true,
+    )
+    .await?
     else {
         return ctx
             .output

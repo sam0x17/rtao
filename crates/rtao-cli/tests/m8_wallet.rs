@@ -397,11 +397,16 @@ async fn sign_verify_uses_exact_utf8_bare_hex_and_false_exit_contract() -> TestR
         .map(std::str::from_utf8)
         .collect::<Result<Vec<_>, _>>()?
         .join(" \t");
-    assert!(rtao::wallet::verify_message(
+    assert!(rtao::wallet::verify_message_as(
         "π\nhello",
         &spaced,
-        &account.to_string()
-    ));
+        &account.to_string(),
+        Some(1)
+    )?);
+    // Without a trusted scheme a bare SS58 address never verifies (D-173).
+    #[allow(deprecated)]
+    let assumed = rtao::wallet::verify_message("π\nhello", &spaced, &account.to_string());
+    assert!(!assumed);
     for (signature, message, expected) in [
         (signature, "π\nhello", true),
         (signature, "π\nhello!", false),

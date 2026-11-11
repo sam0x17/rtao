@@ -1380,3 +1380,74 @@ async fn falcon_cli_recovery_restores_the_authority_in_every_profile() -> TestRe
     }
     Ok(())
 }
+
+// D-175 (Python `_prepare_hashed_creation`): without --registration-payer a new
+// hashed hotkey is paid by its wallet's own coldkey, and a new hashed coldkey
+// prompts for the payer, before any key is written.
+#[tokio::test]
+async fn hashed_creation_payer_defaults_follow_btcli() -> TestResult {
+    let root = Root::new()?;
+    let path = root.0.to_string_lossy().into_owned();
+    let (matches, mut ctx, _, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "new-hotkey",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "owner",
+            "--wallet-hotkey",
+            "hot",
+            "--type",
+            "hashed",
+        ],
+        false,
+        true,
+        &[],
+    )?;
+    let error = run(&mut ctx, &matches, &mut PromptHistory::default())
+        .await
+        .err()
+        .ok_or("the wallet has no coldkey to pay")?;
+    // The wallet's own coldkey was selected as the payer; it has none here.
+    assert!(
+        error
+            .message
+            .contains("registration payer has no local signing key"),
+        "{}",
+        error.message
+    );
+    assert!(!root.0.join("owner").join("hotkeys").join("hot").exists());
+    let (matches, mut ctx, _, _) = fixture(
+        &root,
+        &[
+            "rtao",
+            "wallet",
+            "new-coldkey",
+            "--wallet-path",
+            &path,
+            "--wallet",
+            "fresh",
+            "--type",
+            "hashed",
+            "--no-password",
+        ],
+        false,
+        true,
+        &[],
+    )?;
+    let error = run(&mut ctx, &matches, &mut PromptHistory::default())
+        .await
+        .err()
+        .ok_or("the payer prompt cannot be answered here")?;
+    // The payer is prompted for (this terminal cannot answer), not required.
+    assert!(
+        !error.message.contains("requires --registration-payer"),
+        "{}",
+        error.message
+    );
+    assert!(!root.0.join("fresh").join("coldkey").exists());
+    Ok(())
+}

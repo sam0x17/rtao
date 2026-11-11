@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### Post-quantum and hashed accounts first class, with btcli's defaults (D-170 to D-172)
+### Post-quantum and hashed accounts first class, with btcli's defaults (D-170 to D-175)
 
 - **Behaviour change:** `Executor::new` routes account registration through MEV Shield by default when the network offers it (Python's `shielded=None`, D-170), superseding the opt-in `with_auto_shield(true)` of D-140. This covers `HashedAccounts.register`, `register_derived` and `register_derived_sponsored`, `Proxy.create_protected_pure` and `Utility.as_protected_derivative`, also inside wrappers and batches. Without an active Shield key the registration is planned unshielded with Python's warning. `with_auto_shield(false)` opts out (Python's `shielded=False`) and is now also on the facade's `rtao::Executor`. The blocking facade and `Multisig::approve` follow. The CLI still decides the route at review.
 - New keys keep btcli's defaults: sr25519, standard mode (D-170).
@@ -13,6 +13,11 @@
   - An unhashed hotkey is taken to be Sr25519.
   - A post-quantum hotkey, or any sender outside the metagraph, is refused.
   - Migration for Ed25519 classical validators: admit them with `with_trusted_senders(TrustedSchemes::new([(ss58, 0)])?)`, or restore the old policy with `with_sender_schemes(Arc::new(DeclaredClassical))`.
+- **Behaviour change:** `rtao_wallet::verify_message` is deprecated and no longer assumes Sr25519 for a bare SS58 address. Such an address now returns false; Python v488 and later raise. A receiving address verifies under its descriptor's scheme. Use `verify_message_as` with the sender's trusted crypto type (D-173).
+- `Wallet::sign_message_at(message, role, hashed_generation)` signs with a hashed SR/ED key at a finalized generation of at least one (Python `sign_message(..., hashed_generation=)`). `sign_message` refuses a hashed key with Python's message (D-173).
+- Post-quantum HTTP authentication, post-quantum message signing and external signers for hashed or post-quantum keys stay refused with Python's text. Upstream defines none of them (D-174).
+- **Behaviour change (CLI):** `wallet new-hotkey` for a key that registers defaults its registration payer to the wallet's own coldkey. `wallet create` and `new-coldkey` prompt for the payer instead of requiring `--registration-payer` (D-175).
+- `rtao evm pubkey` accepts a complete receiving address (D-175).
 
 ### Core bumped from v488 to v490 (D-127, D-136)
 

@@ -1483,6 +1483,48 @@ async fn required_evm_pubkey_position_uses_public_picker_and_actual_offline_hand
     Ok(())
 }
 
+// D-175: Python's `identity_address` takes a complete receiving address.
+#[cfg(feature = "evm")]
+#[tokio::test]
+async fn evm_pubkey_accepts_a_receiving_address() -> TestResult {
+    let root = Root::new()?;
+    let key = rtao::core::keys::Keypair::from_seed(&[5; 32], rtao::core::keys::CRYPTO_HASHED)?;
+    let descriptor = key.authorization_descriptor()?;
+    let account = rtao::primitives::receiving::descriptor_account(&descriptor)?;
+    let address = rtao::core::keys::encode_hashed_receiving_address(&descriptor)?;
+    let command = rtao_cli::commands::command_tree()?;
+    let argv = original(&["rtao", "evm", "pubkey", address.as_str()]);
+    let (input, _trace) = terminal(&[], true, true);
+    let matches = command.clone().try_get_matches_from(&argv)?;
+    let mut app = public_context(&root, &matches, input, picker_books(), "configured", None)?;
+    let mut invocation =
+        application::parse_with_context(command, argv.clone(), &mut app, PromptHistory::default())?;
+    let sink = MemorySink::default();
+    app.output = Output::new(
+        OutputOptions {
+            json_mode: true,
+            ..Default::default()
+        },
+        Arc::new(sink.clone()),
+    );
+    let group = invocation.matches.subcommand().ok_or("evm group")?.1;
+    rtao_cli::commands::evm::run(
+        &mut app,
+        None,
+        group,
+        Default::default(),
+        None,
+        &mut invocation.history,
+    )
+    .await?;
+    let payload: Value = serde_json::from_str(&sink.text(rtao_cli::output::Stream::Stdout)?)?;
+    assert_eq!(
+        payload,
+        json!({"ss58":address,"pubkey":format!("0x{}",hex::encode(account.0))})
+    );
+    Ok(())
+}
+
 #[test]
 fn generic_required_typed_inputs_show_shape_retry_and_preserve_exact_public_replay() -> TestResult {
     let command = application::command_tree([clap::Command::new("typed")

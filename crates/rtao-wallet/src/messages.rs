@@ -25,16 +25,20 @@ pub struct EncryptedMessage {
     pub recipient: String,
 }
 
-/// Verify Python's default sr25519 message-signature contract.
+/// [`verify_message_as`] without a trusted scheme (D-173).
 ///
-/// Malformed hex or SS58 addresses return false. The upstream verifier accepts
-/// exact UTF-8 bytes and its historical `<Bytes>` wrapper. SS58 carries no
-/// scheme discriminator; this follows Python's public-only Keypair default.
+/// Python v488 and later never assume a scheme: a receiving address verifies
+/// under the scheme its descriptor names, and a bare SS58 address, which
+/// carries no scheme, is refused, so it returns false here (Python raises).
+/// Before D-173 this assumed Sr25519 for a bare SS58 address. Malformed hex
+/// or addresses return false.
+#[deprecated(
+    since = "0.1.0",
+    note = "a bare SS58 address never verifies without a trusted scheme; use verify_message_as with the sender's crypto type"
+)]
 #[doc(alias = "bittensor.wallets.verify_message")]
 pub fn verify_message(message: &str, signature: &str, ss58_address: &str) -> bool {
-    python_hex(signature.strip_prefix("0x").unwrap_or(signature)).is_some_and(|signature| {
-        rtao_core::keys::verify(message.as_bytes(), &signature, ss58_address, 1).unwrap_or(false)
-    })
+    verify_message_as(message, signature, ss58_address, None).unwrap_or(false)
 }
 
 /// Python v488 `verify_message(message, signature, address, crypto_type)`:
@@ -131,18 +135,57 @@ pub async fn encrypt_message(
 
 impl Wallet {
     /// Sign exact UTF-8 message bytes with the selected local wallet key.
+    ///
+    /// A hashed key needs its finalized generation:
+    /// [`Self::sign_message_at`]. A post-quantum key is refused, as upstream.
     #[doc(alias = "bittensor.wallets.sign_message")]
     pub async fn sign_message(
         &self,
         message: &str,
         role: SignerRole,
     ) -> Result<SignedMessage, WalletError> {
+        self.sign_message_at(message, role, None).await
+    }
+
+    /// Python `sign_message(..., hashed_generation=)` (D-173): sign with the
+    /// selected local wallet key; a hashed SR/ED key signs at
+    /// `hashed_generation`, which the caller read from the account's
+    /// finalized `HashedAccounts` record after checking its descriptor, and
+    /// must be at least one (generation zero's signatures would reveal the
+    /// original identity key). A classical key ignores the generation; a
+    /// post-quantum key is refused (upstream defines no post-quantum message
+    /// signature).
+    #[doc(alias = "bittensor.wallets.sign_message_key")]
+    pub async fn sign_message_at(
+        &self,
+        message: &str,
+        role: SignerRole,
+        hashed_generation: Option<u64>,
+    ) -> Result<SignedMessage, WalletError> {
+        let crypto =
+            |message: &str| WalletError::Core(rtao_core::CoreError::Crypto(message.into()));
         let signer = self.state(role).unlock().await?;
-        let signature = signer.sign_raw(message.as_bytes()).await.map_err(|_| {
-            WalletError::Core(rtao_core::CoreError::Crypto(
-                "message signing failed".into(),
-            ))
-        })?;
+        let signature = match signer.authority() {
+            Some(authority) if authority.authority_type().is_post_quantum() => {
+                return Err(crypto(
+                    "post-quantum arbitrary message signing is not supported",
+                ));
+            }
+            Some(authority) => {
+                let generation = hashed_generation.filter(|generation| *generation >= 1).ok_or_else(|| {
+                    crypto("hashed message signing requires a finalized transaction retiring generation zero first")
+                })?;
+                authority
+                    .sign_message(generation, message.as_bytes())
+                    .await
+                    .map_err(|_| crypto("message signing failed"))?
+            }
+            None => signer
+                .sign_raw(message.as_bytes())
+                .await
+                .map_err(|_| crypto("message signing failed"))?
+                .to_vec(),
+        };
         Ok(SignedMessage {
             ss58: signer.account().to_string(),
             signature: hex::encode(signature),
