@@ -3,16 +3,16 @@
 url = "https://github.com/RaoFoundation/subtensor.git"
 
 [core]
-tag = "v488"
-commit = "b6a81d144078eac18bd25c3af7cb31579bb670f3"
+tag = "v490"
+commit = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 toolchain = "1.89"
-fingerprint = "b3:3936452e140b597df13a0ab4cc6a7d08b5ac605fe8ccfaf858ee017db97dd730"
+fingerprint = "b3:c272a5b95e518b396708eecd865a660470682638280e85f7823c496fb5f3be3b"
 
 [core.patch]
 repo = "https://github.com/sam0x17/subtensor.git"
-branch = "rtao-core-patch/v488"
-rev = "cd1a2e6ae41bf558eef8e21d00348c5a65e77d33"
-base = "b6a81d144078eac18bd25c3af7cb31579bb670f3"
+branch = "rtao-core-patch/v490"
+rev = "d7fd8762625a93b9837cde28d496b0819a976f0e"
+base = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 upstream_pr = "https://github.com/RaoFoundation/subtensor/pull/3242"
 upstream_pr_rev = "09f40dc4cf0af6668398adf1565358e77e910772"
 security_issue = "https://github.com/RaoFoundation/subtensor/issues/3251"
@@ -22,12 +22,6 @@ review_diff_sha256 = "8cf8ff28467ef20a8e47add1a600f60703941dbf3d9af6c2406b9f613e
 paths = ["sdk/bittensor-core/src/signers/mod.rs", "sdk/bittensor-core/src/signers/ledger.rs", "sdk/bittensor-core/src/signers/hid.rs", "sdk/bittensor-core/Cargo.toml", "sdk/bittensor-core/src/keys/mod.rs", "sdk/bittensor-core/src/keys/encrypted_json.rs", "sdk/bittensor-core/src/keys/hashed.rs"]
 probe = ["bittensor_core::signers::ApduTransport", "bittensor_core::signers::ledger::LedgerDevice::with_transport"]
 shared = ["fips204", "subtensor-hashed", "subtensor-macros", "w3f-bls"]
-
-[[core.patch.adaptation]]
-tag = "v488"
-base = "f06ee33f12973ae890ed473255092e151d95a86e"
-rev = "cd1a2e6ae41bf558eef8e21d00348c5a65e77d33"
-diff_sha256 = "7dee4055f6ca8f29427912161fa51f279b9dfe91c412f80283dda3d0171a7f2b"
 
 [[core.patch.adaptation]]
 tag = "v490"
@@ -40,7 +34,6 @@ tag = "v490"
 commit = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 spec_version = 490
 python_package_version = "11.3.3.dev0"
-core_fingerprint = "b3:c272a5b95e518b396708eecd865a660470682638280e85f7823c496fb5f3be3b"
 
 [localnet]
 image = "ghcr.io/raofoundation/subtensor-localnet"

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Core bumped from v488 to v490 (D-127, D-136)
+
+- `bittensor-core` and its companions move from v488 to v490, the parity pin's core (`b3:c272a5b95e518b396708eecd865a660470682638280e85f7823c496fb5f3be3b`); `[parity] core_fingerprint` is gone. The reviewed core patch is carried onto v490 (fork revision `d7fd8762625a93b9837cde28d496b0819a976f0e`), and every downstream `[patch]` line names v490: applications that copy rtao's patch set must update theirs.
+- The parity pin (v490) and the runtime are unchanged. 20 hand port(s) remain listed in `parity/port_due.toml`.
+- Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/42930134628)): pin provenance and live evidence for the pinned runtime, the core patch's review identity, Ed25519 erasure check and patched/unpatched API probes, the lock, imports, the core surface, extraction, regeneration, compatibility, parity, formatting, a workspace build, the core, runtime, reads, intents, client, signer and wallet tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution.
+
 ### Finney runtime 490 adopted automatically
 
 - The parity pin moves from spec 488 to v490 (`d967d13588834f4f5aaa8ef4c8fc1a865d581462`, pinned as `v490`), the runtime Finney finalized at block 9478866 with `:code` `0x32a16fe6163e49ae26ade2413e80b14d641c56ab4d3246d4d39013b688369d54`.

@@ -13,7 +13,7 @@ features:
 rtao = { path = "../rtao/crates/rtao", default-features = false, features = ["client", "reads"] }
 
 [patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
 ```
 
 Adjust the path to your checkout. For a git dependency, pin `rev` to the full

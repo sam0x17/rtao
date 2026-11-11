@@ -42,10 +42,10 @@ rtao-btauth = { path = "crates/rtao-btauth", default-features = false }
 rtao-neuron = { path = "crates/rtao-neuron", default-features = false }
 rtao-cli = { path = "crates/rtao-cli", default-features = false }
 rtao-testkit = { path = "crates/rtao-testkit", default-features = false }
-bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488", default-features = false }
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488", default-features = false, features = ["std"] }
-subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
-subtensor-linting = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+bittensor-core = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490", default-features = false }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490", default-features = false, features = ["std"] }
+subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
+subtensor-linting = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 serde_json = { version = "1.0.132", features = ["arbitrary_precision"] }
 tokio = { version = "1.53", features = ["rt-multi-thread", "macros", "sync", "time", "signal", "net", "io-util"] }
@@ -129,14 +129,14 @@ rtao-compat-epistula = { path = "crates/rtao-compat-epistula", default-features 
 rtao-transport-quic = { path = "crates/rtao-transport-quic", default-features = false }
 
 [patch.crates-io]
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
 ruint = { path = "patches/ruint" }
 
 [patch."https://github.com/RaoFoundation/subtensor.git"]
-bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "cd1a2e6ae41bf558eef8e21d00348c5a65e77d33" }
+bittensor-core = { git = "https://github.com/sam0x17/subtensor.git", rev = "d7fd8762625a93b9837cde28d496b0819a976f0e" }
 
 [patch."https://github.com/sam0x17/subtensor.git"]
-fips204 = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
-subtensor-hashed = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
-subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
-w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v488" }
+fips204 = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
+subtensor-hashed = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
+subtensor-macros = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }
+w3f-bls = { git = "https://github.com/RaoFoundation/subtensor.git", tag = "v490" }

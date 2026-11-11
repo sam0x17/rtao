@@ -340,6 +340,13 @@ porting report lists 41 changed watched sources: 0 auto-blessed,
 13 re-derived and checked. 20 hand port(s) remain due and are listed in `parity/port_due.toml` (`eco-tests/src/mock.rs`, `pallets/admin-utils/src/lib.rs`, `sdk/bittensor-core-py/pyproject.toml`, `sdk/bittensor-core-py/src/keys.rs`, `sdk/bittensor-core/Cargo.toml`, `sdk/bittensor-core/src/keyfiles/mod.rs`, `sdk/bittensor-core/src/keys/mod.rs`, `sdk/bittensor-core/src/lib.rs`, `sdk/python/bittensor/_substrate.py`, `sdk/python/bittensor/_transport/extrinsics.py`, `sdk/python/bittensor/_transport/interface.py`, `sdk/python/bittensor/cli/commands/subnet_emission.py`, `sdk/python/bittensor/emission_weights.py`, `sdk/python/bittensor/intents/emission_weights.py`, `sdk/python/bittensor/intents/gamma.py`, `sdk/python/bittensor/reads/subnets.py`, `sdk/python/bittensor/sp_core.py`, `sdk/python/tests/unit/test_emission_weights.py`, `sdk/python/tests/unit/test_sp_core_keypair.py`, `sdk/python/tests/unit/test_sp_core_parity.py`); strict parity names them until they are ported and blessed. The core's inputs differ at v490; the core stays at v488 and its bump is due (`[parity] core_fingerprint`, D-127). The validated range
 is unchanged. Workflow run: <https://github.com/sam0x17/rtao/actions/runs/42916062960>.
 
+## 2026-11-11: core bumped from v488 to v490
+
+A dispatched runtime-adopt run moved the held core from v488 to v490, the core
+of the parity pin `v490` (D-127, D-136), carrying the reviewed core patch to
+fork revision `d7fd8762625a93b9837cde28d496b0819a976f0e`. The parity pin and the runtime are unchanged.
+Workflow run: <https://github.com/sam0x17/rtao/actions/runs/42930134628>.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney
