@@ -8,6 +8,11 @@
 pub use rtao_core as core;
 pub use rtao_primitives as primitives;
 
+// `prometheus` depends on rtao-jsonrpc only to turn on its `metrics` feature;
+// this tells Cargo's unused-dependency lint that the dependency is intended.
+#[cfg(feature = "prometheus")]
+use rtao_jsonrpc as _;
+
 /// Blocking clients backed by a lazy private runtime thread.
 #[cfg(feature = "blocking")]
 #[cfg_attr(docsrs, doc(cfg(feature = "blocking")))]

@@ -53,6 +53,4 @@ unicode-normalization.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-rcgen.workspace = true
-tokio-rustls.workspace = true
 

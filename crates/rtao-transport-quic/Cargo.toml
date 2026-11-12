@@ -24,7 +24,7 @@ workspace = true
 [features]
 default = ["client", "server"]
 client = []
-server = ["dep:rcgen", "dep:rtao-btauth", "dep:num-bigint"]
+server = ["dep:rcgen", "dep:rtao-btauth", "dep:num-bigint", "dep:tokio-util"]
 
 [dependencies]
 rtao-signer = { workspace = true }
@@ -37,7 +37,7 @@ quinn = { version = "0.11.12", default-features = false, features = ["runtime-to
 rustls = { workspace = true }
 rustls-pki-types = { workspace = true }
 tokio = { workspace = true }
-tokio-util = { workspace = true }
+tokio-util = { workspace = true, optional = true }
 rmp-serde = "1.3.1"
 rmpv = { version = "1.3.1", features = ["with-serde"] }
 serde = { workspace = true }

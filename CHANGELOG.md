@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Rust 1.100 toolchain; dependencies only the features that use them pull in (D-191)
+
+- The development toolchain is Rust 1.100.0. The MSRV stays 1.90 and the subnet template keeps 1.90.0. The macOS release lane needs Rust 1.100.0 installed; the checksum-pinned Intel standard library follows it.
+- Changed: `rtao-neuron` depends on `rtao-intents`, `rtao-tx` and `rtao-signer` only with `validator`, `miner` or `owner`, and on `rtao-btauth` only with `validator` or `miner`. Built without a role, it no longer compiles them. No public item changes.
+- Changed: `rtao-intents` depends on `rtao-reads` only with `emission_weights` or `gamma`, the two features that use it.
+- Changed: `rtao-transport-quic` depends on `tokio-util` only with `server`.
+- Changed: the `rtao` facade depends on `rtao-jsonrpc` only with `prometheus`, which turns on its metrics. A build with neither `prometheus` nor a client feature no longer compiles the transport.
+- Changed: `rtao-cli` depends on `rpassword` only off Unix. Unix builds read hidden input with their own terminal code and never called it.
+- Removed: `rtao-signer`'s optional `tokio-util` (feature `vault`), which nothing used, and the unused test dependencies `http-body-util` and `tower` (`rtao-signer`) and `rcgen` and `tokio-rustls` (`rtao-evm`).
+
 ## 0.1.1 - 2026-11-12
 
 ### `cargo install rtao` installs the CLI (D-190)

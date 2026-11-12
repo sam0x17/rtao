@@ -22,20 +22,20 @@ workspace = true
 
 [features]
 default = ["prometheus"]
-validator = ["rtao-intents/weights", "rtao-intents/serving"]
-miner = ["rtao-intents/serving", "rtao-btauth/server", "rtao-btauth/metagraph-policy", "dep:axum", "dep:reqwest", "dep:rustls", "dep:rustls-native-certs"]
-owner = ["rtao-intents/hyperparameters", "rtao-intents/registration", "rtao-intents/governance", "rtao-intents/identity"]
+validator = ["dep:rtao-intents", "dep:rtao-btauth", "dep:rtao-tx", "dep:rtao-signer", "rtao-intents/weights", "rtao-intents/serving"]
+miner = ["dep:rtao-intents", "dep:rtao-btauth", "dep:rtao-tx", "dep:rtao-signer", "rtao-intents/serving", "rtao-btauth/server", "rtao-btauth/metagraph-policy", "dep:axum", "dep:reqwest", "dep:rustls", "dep:rustls-native-certs"]
+owner = ["dep:rtao-intents", "dep:rtao-tx", "dep:rtao-signer", "rtao-intents/hyperparameters", "rtao-intents/registration", "rtao-intents/governance", "rtao-intents/identity"]
 prometheus = ["dep:metrics", "rtao-jsonrpc/metrics"]
 
 [dependencies]
-rtao-intents = { workspace = true }
+rtao-intents = { workspace = true, optional = true }
 rtao-metagraph = { workspace = true }
-rtao-btauth = { workspace = true, features = ["client"] }
+rtao-btauth = { workspace = true, features = ["client"], optional = true }
 rtao-wallet = { workspace = true }
 rtao-client.workspace = true
-rtao-tx.workspace = true
+rtao-tx = { workspace = true, optional = true }
 rtao-primitives = { workspace = true, features = ["serde"] }
-rtao-signer.workspace = true
+rtao-signer = { workspace = true, optional = true }
 rtao-core.workspace = true
 rtao-runtime.workspace = true
 rtao-core-ext.workspace = true

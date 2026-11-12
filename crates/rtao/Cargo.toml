@@ -53,7 +53,7 @@ extension = ["rtao-signer/extension","rtao-cli?/extension"]
 keychain = ["rtao-wallet/keychain"]
 evm = ["dep:rtao-evm","rtao-cli?/evm"]
 blocking = ["intents-all","metagraph","wallet","rtao-client/blocking","dep:rtao-runtime","dep:rtao-catalog","dep:bytes","dep:futures","dep:serde_json","dep:tokio"]
-prometheus = ["rtao-neuron?/prometheus","rtao-jsonrpc/metrics"]
+prometheus = ["rtao-neuron?/prometheus","dep:rtao-jsonrpc","rtao-jsonrpc/metrics"]
 subxt = ["rtao-client/subxt"]
 compat-synapse = ["dep:rtao-compat-synapse","rtao-compat-synapse/axon","rtao-compat-synapse/dendrite","rtao-compat-synapse/tensor"]
 compat-epistula = ["dep:rtao-compat-epistula","rtao-compat-epistula/server","rtao-compat-epistula/client"]
@@ -65,7 +65,7 @@ full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-cli
 [dependencies]
 rtao-core.workspace = true
 rtao-primitives.workspace = true
-rtao-jsonrpc.workspace = true
+rtao-jsonrpc = { workspace = true, optional = true }
 rtao-client = { workspace = true, optional = true }
 rtao-reads = { workspace = true, optional = true }
 rtao-tx = { workspace = true, optional = true }

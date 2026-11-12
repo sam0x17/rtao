@@ -27,7 +27,7 @@ children = []
 coldkey = []
 commitments = []
 crowdloan = []
-emission_weights = []
+emission_weights = ["dep:rtao-reads"]
 evm = []
 leasing = []
 lock = []
@@ -46,13 +46,13 @@ collateral = ["dep:tokio"]
 pow = ["rtao-core/host", "dep:tokio", "dep:tokio-util"]
 pow-gpu = ["pow"]
 # Runtime 487/488 catalog categories; their intents are pending ports (D-128).
-gamma = []
+gamma = ["dep:rtao-reads"]
 limit_orders = []
 all = ["association", "batch", "children", "coldkey", "commitments", "collateral", "crowdloan", "emission_weights", "evm", "gamma", "governance", "hyperparameters", "identity", "leasing", "limit_orders", "lock", "multisig", "proxy", "registration", "root", "serving", "staking", "transfer", "weights"]
 
 [dependencies]
 rtao-tx = { workspace = true }
-rtao-reads = { workspace = true }
+rtao-reads = { workspace = true, optional = true }
 rtao-core.workspace = true
 rtao-primitives.workspace = true
 rtao-catalog.workspace = true
@@ -73,6 +73,7 @@ futures = { workspace = true, optional = true }
 criterion = "0.7"
 tokio.workspace = true
 rtao-testkit = { path = "../rtao-testkit", default-features = false }
+rtao-reads = { path = "../rtao-reads", default-features = false }
 anyhow.workspace = true
 
 [[bench]]

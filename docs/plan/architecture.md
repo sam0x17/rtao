@@ -1013,7 +1013,7 @@ example, and its line in the `features` job, lands with its profile: `validator`
   `xtask pin` raises it when the monorepo does. The MSRV covers the facade, its dependency closure and `rtao-cli`; CI
   checks them with `cargo +1.89` (the `rust-toolchain.toml` pin outranks `rustup default`, so a plain `cargo` would
   build on stable). `xtask` (using the RustPython parser fallback; see PLAN.md M0-12) and
-  `rtao-testkit` build only with `rust-toolchain.toml`. Development uses current stable (1.99).
+  `rtao-testkit` build only with `rust-toolchain.toml`. Development uses current stable (1.100).
 - **Async traits** use return-position `impl Future + Send` (stable since 1.75) on generic paths. Object-safe twins
   (`DynView`, `DynIntent`, `DynKeySource`, `Signer`, `NonceStore`) box their futures. Those are
   heterogeneous-runtime-choice seams, called at most a few times per request or block. Every trait used behind
