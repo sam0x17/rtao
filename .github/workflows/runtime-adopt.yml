@@ -207,8 +207,17 @@ jobs:
         id: push
         env:
           RTAO_ADOPT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != '') && '1' || '' }}
+          # The decide job's output, which no later job can rewrite: the
+          # action picks the commit guard, so it is not taken from an
+          # artifact alone (a job that builds code can replace artifacts).
+          DECIDED_ACTION: ${{ needs.decide.outputs.action }}
         run: |
           set -o pipefail
+          action=$(jq -r .action "$RUNNER_TEMP/decision/decision.json")
+          if [ "$action" != "$DECIDED_ACTION" ]; then
+            echo "the decision artifact's action $action is not the decide job's $DECIDED_ACTION; nothing pushed" >&2
+            exit 1
+          fi
           ci/runtime-adopt.sh push "$RUNNER_TEMP/decision/decision.json" "$RUNNER_TEMP/evidence/adopt.bundle" | tee "$RUNNER_TEMP/push.txt"
           if grep -q '^superseded:' "$RUNNER_TEMP/push.txt"; then
             echo "superseded=true" >> "$GITHUB_OUTPUT"
@@ -392,6 +401,13 @@ jobs:
         id: push
         run: |
           set -o pipefail
+          # Only the checksum record's guard applies here, whatever the
+          # artifact (written by a job that builds code) names.
+          action=$(jq -r .action "$RUNNER_TEMP/forks-record/forks-decision.json")
+          if [ "$action" != publish-forks ]; then
+            echo "the record's decision names action $action, not publish-forks; nothing pushed" >&2
+            exit 1
+          fi
           ci/runtime-adopt.sh push "$RUNNER_TEMP/forks-record/forks-decision.json" "$RUNNER_TEMP/forks-record/forks.bundle" |
             tee "$RUNNER_TEMP/forks-push.txt"
           if grep -q '^superseded:' "$RUNNER_TEMP/forks-push.txt"; then
