@@ -12,6 +12,17 @@ pub use rtao_primitives as primitives;
 // this tells Cargo's unused-dependency lint that the dependency is intended.
 #[cfg(feature = "prometheus")]
 use rtao_jsonrpc as _;
+// These features only turn on a feature of a dependency the facade re-exports
+// under another feature (`tx`, `wallet`, `btauth`, `client`); built on their
+// own, the dependency is intended though the facade names none of its items.
+#[cfg(feature = "redis")]
+use rtao_btauth as _;
+#[cfg(feature = "subxt")]
+use rtao_client as _;
+#[cfg(any(feature = "ledger", feature = "vault", feature = "extension"))]
+use rtao_signer as _;
+#[cfg(feature = "keychain")]
+use rtao_wallet as _;
 
 /// Blocking clients backed by a lazy private runtime thread.
 #[cfg(feature = "blocking")]

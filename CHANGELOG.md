@@ -12,6 +12,11 @@
 - Changed: `rtao-cli` depends on `rpassword` only off Unix. Unix builds read hidden input with their own terminal code and never called it.
 - Removed: `rtao-signer`'s optional `tokio-util` (feature `vault`), which nothing used, and the unused test dependencies `http-body-util` and `tower` (`rtao-signer`) and `rcgen` and `tokio-rustls` (`rtao-evm`).
 
+### Single-feature builds and Cargo's unused-dependency lint (D-192)
+
+- Fixed: `rtao-intents` built with only `gamma` or only `limit_orders` failed to compile (their generated intents call a helper whose feature list left them out). Each feature of `rtao` and `rtao-intents` now builds on its own, as the CI features job checks.
+- The `rtao` features `ledger`, `vault`, `extension`, `keychain`, `redis` and `subxt` only turn on a feature of a dependency; built without the feature that re-exports it, Cargo 1.100 reported that dependency unused. The facade now marks it as intended. Dependencies and resolved features are unchanged.
+
 ## 0.1.1 - 2026-11-12
 
 ### `cargo install rtao` installs the CLI (D-190)
