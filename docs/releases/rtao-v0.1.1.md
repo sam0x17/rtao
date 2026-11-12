@@ -27,9 +27,8 @@ version.
     the features they use. The README, the book and the subnet template
     already do. With the defaults on, a build also compiles the CLI's
     dependencies, including the vendored OpenSSL, libsodium and secp256k1 C
-    builds, and turns on `serde_json/preserve_order`. The library itself never
-    links the CLI. `full` does not include `cli`, and docs.rs builds without
-    it.
+    builds. The library itself never links the CLI. `full` does not include
+    `cli`, and docs.rs builds without it.
   - If you installed `rtao-cli` 0.1.0, run `cargo uninstall rtao-cli` before
     `cargo install rtao`; otherwise cargo refuses to overwrite the `rtao`
     binary. `rtao-cli` 0.1.0 is the last version that installs a binary.

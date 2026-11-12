@@ -11,8 +11,8 @@ packages (D-183); the transport crate is `rtao-jsonrpc` (D-182).
 ## 1. Packaging already in place (D-181)
 
 - Every `rtao-*` entry in `[workspace.dependencies]` carries the version that
-  `cargo publish` writes into dependants: `0.1.0`, and `0.2.0` for
-  `rtao-arena`. Bump them with `[workspace.package] version`.
+  `cargo publish` writes into dependants: the workspace version (`0.1.1`),
+  and `0.2.0` for `rtao-arena`. Bump them with `[workspace.package] version`.
 - Dev-dependencies on workspace crates are path-only (no `workspace = true`),
   so `cargo publish` strips them. `rtao-testkit` depends on `rtao-client`,
   which tests with `rtao-testkit`, and `rtao-tx` and `rtao-intents` test each
@@ -171,6 +171,14 @@ at the first version that already exists:
 cargo publish --workspace --exclude xtask --exclude rtao-arena \
   --exclude 'rtao-upstream-*' --locked
 ```
+
+The excludes also decide the checksums in each archive's `Cargo.lock`: an
+excluded package is locked at crates.io's SHA256, a packaged one at the local
+archive's. A local `rtao-upstream-*` archive names the packaging commit in
+`.cargo_vcs_info.json`, so it differs from the published one, and
+`cargo install --locked rtao` from an archive packaged with them fails
+("checksum ... changed between lock files"). Inspect or install-test archives
+packaged with the same excludes as the publish.
 
 `cargo publish --workspace` uploads in the order of section 3 and waits for
 each crate to appear in the index before publishing the crates that depend on
