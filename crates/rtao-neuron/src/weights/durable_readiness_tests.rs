@@ -248,8 +248,12 @@ async fn exhausted_shield_recovery_stays_reconcile_without_renewing_budget() -> 
         ..Default::default()
     }
     .execution(0.001);
-    // One deadline covers every reseal; this fixture spends it on wall time.
-    options.deadline = Some(std::time::Duration::from_secs(300));
+    // The persisted pair budget, not wall time, must end this invocation.
+    // Both bounds cover every reseal (rtao-tx's durable_shield tests check
+    // that on a paused clock), and the admission window is the smaller: the
+    // default 30 s cut the fourteen debug-build reseals short on slower hosts.
+    options.deadline = None;
+    options.submit_deadline = None;
     // Dropped-inner and lost-nonce reseals share one persisted pair budget.
     let maximum =
         rtao_client::SHIELD_DROPPED_INNER_RETRIES + rtao_client::SHIELD_NONCE_CONFLICT_RETRIES + 1;

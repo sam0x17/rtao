@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Pair-budget test independent of wall time (D-187, repository maintenance)
+
+- The rtao-neuron test that exhausts a shielded weight submission's pair budget no longer depends on host speed. It sets neither execution deadline, as rtao-tx's durable shield tests do. Before, it kept the default 30 s admission window, which covers all fourteen reseals, and failed on slower hosts (x86_64 under Rosetta). The SDK is unchanged.
+
 ### macOS release lane (D-186, repository maintenance)
 
 - `cargo test -p rtao-cli` passes with default features: the four null-pruning tests that sign through the extension backend need the `extension` feature and run under `--all-features`. The hosted-only core-patch Git fixture in the `ci` nextest profile runs only on hosted Linux and elsewhere checks that its gate refuses. Two CLI tests write their scratch under `RTAO_TEMP_ROOT` or Cargo's target temporary directory rather than beside the checkout. The macOS and Linux release lanes run `cargo fetch --locked` before their checks, since `rtao doctor` reads offline Cargo metadata, and the macOS lane sets `RTAO_TEST_TMPDIR` under the task root and refuses an `RTAO_TEMP_ROOT` over 40 bytes (macOS Unix socket paths). The lock moves from the yanked `async-executor` 1.14.0 to 1.14.1. `docs/releases/crates-io.md` says that `rtao doctor` checks the republished packages' versions only in 0.1.0, which records no checksums.
