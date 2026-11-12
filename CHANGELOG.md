@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Republished packages published automatically; template on crates.io (D-188, repository maintenance)
+
+- The hourly runtime-adopt workflow publishes new `rtao-upstream-*` versions (after a core bump or a new core adaptation revision) in dependency order, records their checksums in `upstream.toml` `[publish]` after `cargo xtask forks verify-published`, and opens an issue proposing the next rtao release. Verification builds run without the crates.io token; the publishing job builds nothing and uploads only archives with the verified SHA256. It never publishes rtao crates. A failure commits nothing, opens an issue and alerts.
+- A core bump now moves every republished package to the new core release, including one whose source did not change, and its commit guard admits the regenerated packages and the new exact versions.
+- The subnet template depends on `rtao`, `rtao-testkit` and `rtao-runtime` `0.1` from crates.io; `ci/patch-source.sh` builds against an rtao checkout through `[patch.crates-io]`. Generated projects use Rust 1.90, which the published crates require.
+
 ## 0.1.0 - 2026-11-12
 
 ### Pair-budget test independent of wall time (D-187, repository maintenance)

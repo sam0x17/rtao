@@ -40,10 +40,16 @@ jobs:
             cargo generate-lockfile
           fi
           cargo fetch --locked
-      - name: Install the SDK doctor from the resolved SDK checkout
+      - name: Install the SDK doctor of the resolved SDK release or checkout
         run: |
-          sdk=$(bash ci/source.sh | sed -n 's/^RTAO_SOURCE=//p')
-          cargo install --locked --path "$sdk/crates/rtao-cli" --root "$RTAO_TEMP_ROOT/tools"
+          source=$(bash ci/source.sh)
+          sdk=$(sed -n 's/^RTAO_SOURCE=//p' <<<"$source")
+          version=$(sed -n 's/^RTAO_VERSION=//p' <<<"$source")
+          if [ -n "$sdk" ]; then
+            cargo install --locked --path "$sdk/crates/rtao-cli" --root "$RTAO_TEMP_ROOT/tools"
+          else
+            cargo install --locked rtao-cli --version "=$version" --root "$RTAO_TEMP_ROOT/tools"
+          fi
           echo "RTAO_DOCTOR=$RTAO_TEMP_ROOT/tools/bin/rtao" >> "$GITHUB_ENV"
       - name: Check generated client source and owner-tool without live services
         if: github.event_name != 'workflow_dispatch' || !inputs.localnet

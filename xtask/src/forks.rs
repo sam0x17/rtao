@@ -170,11 +170,6 @@ fn release(pins: &DocumentMut) -> Result<u64> {
         .with_context(|| format!("core tag {tag} is not vN"))
 }
 
-/// The version a package gets for the current core: `0.<N>.<revision>`.
-pub(crate) fn default_version(pins: &DocumentMut) -> Result<String> {
-    Ok(format!("0.{}.0", release(pins)?))
-}
-
 /// The recorded `[publish.<key>]` entry.
 fn entry<'a>(pins: &'a DocumentMut, fork: &Fork) -> Result<&'a Item> {
     pins.get("publish")
@@ -1402,19 +1397,11 @@ pub(crate) fn refresh(root: &Path, pins: &mut DocumentMut) -> Result<bool> {
             .and_then(|entry| entry.get("version"))
             .and_then(Item::as_str)
             .map(str::to_owned);
-        let version = match (&previous, &previous_version) {
-            (Some(previous), Some(version)) if *previous == source => version.clone(),
-            (Some(_), Some(version))
-                if semver::Version::parse(version)
-                    .is_ok_and(|version| version.minor == release(pins).unwrap_or_default()) =>
-            {
-                // Same core release, new reviewed source: the next revision.
-                let mut next = semver::Version::parse(version)?;
-                next.patch += 1;
-                next.to_string()
-            }
-            _ => default_version(pins)?,
-        };
+        let version = next_version(
+            previous.as_ref().zip(previous_version.as_deref()),
+            &source,
+            release(pins)?,
+        );
         if previous.as_ref() == Some(&source)
             && previous_version.as_deref() == Some(version.as_str())
         {
@@ -1430,6 +1417,31 @@ pub(crate) fn refresh(root: &Path, pins: &mut DocumentMut) -> Result<bool> {
         changed = true;
     }
     Ok(changed)
+}
+
+/// The version a package gets for its source under the core release: the
+/// recorded version while the source and the release are unchanged, the next
+/// revision for a new source of the same release, and `0.<N>.0` otherwise. A
+/// package whose source survives a core bump (tle, whose revision the
+/// monorepo rarely moves) still moves to the new release's minor, which
+/// [`version`] requires of every package.
+fn next_version(previous: Option<(&Source, &str)>, source: &Source, release: u64) -> String {
+    match previous.and_then(|(previous, version)| {
+        semver::Version::parse(version)
+            .ok()
+            .filter(|version| version.major == 0 && version.minor == release)
+            .map(|version| (previous, version))
+    }) {
+        Some((previous, version)) if previous == source => version.to_string(),
+        Some((_, mut version)) => {
+            // Same core release, new reviewed source: the next revision.
+            version.patch += 1;
+            version.pre = semver::Prerelease::EMPTY;
+            version.build = semver::BuildMetadata::EMPTY;
+            version.to_string()
+        }
+        None => format!("0.{release}.0"),
+    }
 }
 
 /// Replace the republished packages with their original Git sources at the
@@ -1899,6 +1911,29 @@ mod tests {
             seen.insert(fork.package());
         }
         Ok(())
+    }
+
+    #[test]
+    fn versions_follow_the_source_and_the_core_release() {
+        let source = |rev: &str| Source {
+            repo: TIMELOCK.into(),
+            rev: rev.into(),
+        };
+        let (old, new) = (source(&"1".repeat(40)), source(&"2".repeat(40)));
+        // Unchanged source and release: the recorded version stays.
+        assert_eq!(next_version(Some((&old, "0.490.0")), &old, 490), "0.490.0");
+        assert_eq!(next_version(Some((&old, "0.490.2")), &old, 490), "0.490.2");
+        // A new adaptation revision of the same release: the next revision.
+        assert_eq!(next_version(Some((&old, "0.490.0")), &new, 490), "0.490.1");
+        // A core bump moves every package to the new release, including one
+        // whose source did not change (tle at the same timelock revision).
+        assert_eq!(next_version(Some((&old, "0.490.3")), &old, 491), "0.491.0");
+        assert_eq!(next_version(Some((&old, "0.490.3")), &new, 491), "0.491.0");
+        assert_eq!(next_version(None, &new, 491), "0.491.0");
+        assert_eq!(
+            next_version(Some((&old, "not semver")), &old, 491),
+            "0.491.0"
+        );
     }
 
     #[test]

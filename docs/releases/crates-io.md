@@ -200,9 +200,12 @@ crate it depends on is not published yet.
   `[package.metadata.docs.rs] features` or publish a patch version.
 - Set the repository homepage to `https://docs.rs/rtao` and its topics
   (`bittensor`, `rust`, `sdk`, `substrate`, `blockchain`, `cli`).
-- Switch `templates/subnet/Cargo.toml` from Git `branch = "main"` to
-  `version = "X.Y"` and update `cargo xtask template` to match. The template
-  carries no `[patch]`.
+- Done for 0.1 (D-188): `templates/subnet/Cargo.toml` requires `rtao`,
+  `rtao-testkit` and `rtao-runtime` at `version = "0.1"` from crates.io and
+  carries no `[patch]`. The hosted template check builds the generated
+  project against the checkout through `ci/patch-source.sh`, which adds a
+  `[patch.crates-io]` section, and `cargo xtask template` refuses a Git or
+  path source or a requirement outside the workspace's release series.
 
 ## 5. Later releases
 
@@ -211,12 +214,30 @@ crate it depends on is not published yet.
   own number.
 - Run the preflight, the D-121 steps and the publish as above. Unchanged crates
   still get the new version: all workspace crates share one version.
+- A release that moves the minor version (0.x) moves the template's
+  requirement with it (`version = "0.<minor>"` in
+  `templates/subnet/Cargo.toml`); `cargo xtask template` and its unit test
+  fail until it does.
 - A core bump (`pin --core-bump`, `core-patch rebase`) refreshes `[publish]`,
-  regenerates `upstream/` at `0.<new tag>.0` and moves the exact requirements in
-  the root manifest. Publish the new `rtao-upstream-*` versions (U levels)
-  before the rtao crates that need them; the maintainer's standing approval
-  covers publishing new fork versions. A new adaptation revision of the same
-  tag raises the patch number (`0.490.1`).
+  regenerates `upstream/` at `0.<new tag>.0` (every package, also one whose
+  source did not move) and moves the exact requirements in the root
+  manifest. A new adaptation revision of the same tag raises the patch number
+  (`0.490.1`). Either leaves the new versions without a `checksum`.
+- The hourly `runtime-adopt` workflow publishes them (D-188), under the
+  maintainer's standing approval for new fork versions: a read-only job runs
+  `forks check`, packages the six packages and `forks verify-packaged`; a job
+  that holds `CRATES_IO_TOKEN` and builds nothing uploads the packages
+  without a checksum in the order of section 3 (`cargo publish --locked
+  --no-verify -p`, only when the archive it packages has the verified
+  SHA256; a version crates.io already holds is skipped when its index
+  checksum is that SHA256 and stops the run otherwise; a 429 waits and
+  retries); a read-only job records the checksums in `upstream.toml` and its
+  crate copies, runs `forks verify-published` and commits as the bot, and a
+  job that builds nothing pushes the record. Any failure commits nothing,
+  opens one issue and alerts. Success opens or refreshes an issue proposing
+  the next rtao release (a minor bump before 1.0 when the core release
+  moved, a patch bump for adaptation revisions alone). The workflow never
+  publishes rtao crates or tags a release.
 
 ## 6. Mistakes
 

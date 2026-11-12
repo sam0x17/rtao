@@ -215,7 +215,10 @@ expect_pins core-bump-unreleased-source "$unreleased_root" "$(bump "$current")" 
 # The commit guard: a core bump may change manifests and locks, and in a
 # manifest only the core's references; everything else stays refused.
 sed -n -e '/^die() {/,/^}/p' -e '/^tooling_paths=/p' -e '/^core_bump_paths=/p' -e '/^core_reference=/p' \
-  -e '/^vendored_sources=/p' -e '/^check_paths() {/,/^}/p' "$script" >"$work/paths.sh"
+  -e '/^vendored_sources=/p' -e '/^generated_packages=/p' -e '/^republished_dependency=/p' \
+  -e '/^publish_record_files=/p' -e '/^publish_checksum=/p' -e '/^without_publish_checksums() {/,/^}/p' \
+  -e '/^check_publish_record() {/,/^}/p' -e '/^record_checksums() {/,/^}/p' \
+  -e '/^check_paths() {/,/^}/p' "$script" >"$work/paths.sh"
 # shellcheck disable=SC1091
 source "$work/paths.sh"
 guard=$work/guard
@@ -230,7 +233,38 @@ serde = "1"
 
 [patch."$upstream_url"]
 bittensor-core = { git = "$fork_url", rev = "$(printf '%040d' 1)" }
+
+[workspace.dependencies.republished]
+bittensor-core = { package = "rtao-upstream-core", path = "upstream/core", version = "=0.490.0", default-features = false }
+w3f-bls = { package = "rtao-upstream-w3f-bls", path = "upstream/w3f-bls", version = "=0.490.0", default-features = false, features = ["std"] }
+tle = { package = "rtao-upstream-tle", path = "upstream/tle", version = "=0.490.0", default-features = false }
 TOML
+mkdir -p "$guard/upstream/core" "$guard/crates/rtao-core" "$guard/crates/rtao-testkit"
+printf '[package]\nname = "rtao-upstream-core"\nversion = "0.490.0"\n' >"$guard/upstream/core/Cargo.toml"
+printf 'fn main() {}\n' >"$guard/upstream/core/build.rs"
+cat >"$guard/upstream.toml" <<TOML
+[core]
+tag = "v490"
+
+[publish.macros]
+package = "rtao-upstream-macros"
+version = "0.490.0"
+path = "support/macros"
+checksum = "$(printf 'a%.0s' {1..64})"
+
+[publish.core]
+package = "rtao-upstream-core"
+version = "0.490.1"
+path = "sdk/bittensor-core"
+
+[parity]
+tag = "v490"
+TOML
+cp "$guard/upstream.toml" "$guard/crates/rtao-core/upstream.toml"
+cp "$guard/upstream.toml" "$guard/crates/rtao-testkit/upstream.toml"
+printf '[{"key": "core", "package": "rtao-upstream-core", "version": "0.490.1", "sha256": "%s", "status": "published"}]\n' \
+  "$(printf 'b%.0s' {1..64})" >"$work/published-core.json"
+printf '# guard\n' >"$guard/README.md"
 printf 'w3f-bls = { git = "%s", tag = "v478" }\n' "$upstream_url" >"$guard/ci/probe/Cargo.toml"
 printf 'lock v478\n' >"$guard/Cargo.lock"
 printf 'fn main() {}\n' >"$guard/xtask/main.rs"
@@ -262,6 +296,35 @@ guard_case core-bump-refuses-tooling refuse core-bump "$moved && echo '// x' >>x
 guard_case adoption-accepts-vendored-upstream-manifest pass adopt-finney "echo 'version = \"1\"' >>vendor/upstream/src/sdk/bittensor-core/Cargo.toml"
 guard_case adoption-refuses-manifest-outside-vendored-sources refuse adopt-finney "echo '# x' >>vendor/upstream/Cargo.toml"
 guard_case core-bump-refuses-another-repository refuse core-bump "sed -i 's|$fork_url|https://github.com/attacker/subtensor.git|' Cargo.toml"
+# A core bump moves the republished packages (D-188): their generated sources
+# and, in the root manifest, only the version of each exact requirement.
+republished="sed -i 's/version = \"=0.490.0\"/version = \"=0.491.0\"/' Cargo.toml && sed -i 's/0.490.0/0.491.0/' upstream/core/Cargo.toml && echo '// moved' >>upstream/core/build.rs"
+guard_case core-bump-moves-republished-packages pass core-bump "$moved && $republished"
+guard_case core-bump-refuses-a-republished-path-change refuse core-bump "$republished && sed -i 's|path = \"upstream/tle\"|path = \"elsewhere/tle\"|' Cargo.toml"
+guard_case core-bump-refuses-a-republished-feature-change refuse core-bump "$republished && sed -i '/^tle = /s/default-features = false/default-features = true/' Cargo.toml"
+guard_case core-bump-refuses-an-unpaired-republished-line refuse core-bump "sed -i '/^tle = /d' Cargo.toml"
+guard_case adoption-refuses-generated-packages refuse adopt-finney "$republished"
+# The [publish] record (D-188): checksum lines added to [publish.<key>] tables
+# of upstream.toml and its byte-identical crate copies, nothing else.
+copies="cp upstream.toml crates/rtao-core/upstream.toml && cp upstream.toml crates/rtao-testkit/upstream.toml"
+record="record_checksums $work/published-core.json upstream.toml && $copies"
+guard_case publish-record-passes pass publish-forks "$record"
+guard_case publish-record-refuses-another-line refuse publish-forks "$record && sed -i 's/^tag = \"v490\"/tag = \"v491\"/' upstream.toml && $copies"
+guard_case publish-record-refuses-a-diverging-copy refuse publish-forks "record_checksums $work/published-core.json upstream.toml && cp upstream.toml crates/rtao-core/upstream.toml"
+guard_case publish-record-refuses-a-checksum-outside-publish refuse publish-forks "sed -i '/^\[parity\]/a checksum = \"$(printf 'c%.0s' {1..64})\"' upstream.toml && $copies"
+guard_case publish-record-refuses-a-replaced-checksum refuse publish-forks "sed -i 's/^checksum = \"a*\"/checksum = \"$(printf 'd%.0s' {1..64})\"/' upstream.toml && $copies"
+guard_case publish-record-refuses-another-file refuse publish-forks "$record && echo more >>README.md"
+guard_case publish-record-refuses-a-manifest refuse publish-forks "$record && $republished"
+guard_case publish-record-refuses-an-unrecorded-change refuse publish-forks "echo more >>README.md"
+guarded show "$base_commit:upstream.toml" >"$work/record-twice.toml"
+if (cd "$work" && record_checksums "$work/published-core.json" record-twice.toml) >/dev/null 2>&1 &&
+  grep -q "^checksum = \"$(printf 'b%.0s' {1..64})\"$" "$work/record-twice.toml" &&
+  (cd "$work" && record_checksums "$work/published-core.json" record-twice.toml) >/dev/null 2>&1; then
+  echo "FAIL guard record-checksums-refuses-a-second-checksum"
+  failures=$((failures + 1))
+else
+  echo "ok   guard record-checksums-refuses-a-second-checksum"
+fi
 
 # ── live-evidence verdict ─────────────────────────────────────────────
 v15=$(toml_get "$root/upstream.toml" networks.finney.metadata v15_sha256)
@@ -544,6 +607,204 @@ staled commit -q -am adopted
 stale_check adopted-meanwhile "$(stale_current | cut -d: -f1)" superseded
 stale_check other-actions-stand "$(RTAO_ADOPT_CHECKOUT=$stale/checkout bash "$script" current "$work/core-none.json" "$stale/observed.json" refs/heads/main)" current
 stale_check unreadable-ref "$(RTAO_ADOPT_CHECKOUT=$stale/checkout bash "$script" current "$stale/decision.json" "$stale/observed.json" refs/heads/absent 2>/dev/null)" current
+
+# ── republished packages (D-188) ──────────────────────────────────────
+sed -n -e '/^fork_order=/p' -e '/^forks_marker=/p' -e '/^release_marker=/p' -e '/^crates_index=/p' \
+  -e '/^publish_entries() {/,/^}/p' -e '/^forks_pending() {/,/^}/p' -e '/^forks_plan() {/,/^}/p' \
+  -e '/^release_bump() {/,/^}/p' "$script" >"$work/forks.sh"
+# shellcheck disable=SC1091
+source "$work/forks.sh"
+# forks_case <name> <expected: pass|refuse> <command> [jq predicate on its output]
+forks_case() {
+  local output got=refuse
+  if output=$(eval "$3" 2>/dev/null) && jq -e "${4:-true}" <<<"$output" >/dev/null 2>&1; then got=pass; fi
+  if [[ "$got" == "$2" ]]; then
+    echo "ok   forks $1: $got"
+  else
+    echo "FAIL forks $1: expected $2, got $got (${output:-no output})"
+    failures=$((failures + 1))
+  fi
+}
+# pins_with <key> <version>: the committed pins, one package at a new version
+# without a checksum (what forks refresh writes for a new revision).
+pins_with() {
+  awk -v key="$1" -v version="$2" '
+    /^\[/ { inside = ($0 == "[publish." key "]") }
+    inside && $1 == "checksum" { next }
+    inside && $1 == "version" { $0 = "version = \"" version "\"" }
+    { print }
+  ' "$3"
+}
+pins=$root/upstream.toml
+pins_core=$work/pins-core.toml
+pins_core_bump=$work/pins-core-bump.toml
+pins_with core 0.490.1 "$pins" >"$pins_core"
+cp "$pins" "$pins_core_bump"
+for key in "${fork_order[@]}"; do
+  pins_with "$key" 0.491.0 "$pins_core_bump" >"$work/pins.next" && mv "$work/pins.next" "$pins_core_bump"
+done
+forks_case nothing-pending-on-main pass 'forks_pending "$pins"' '. == []'
+forks_case adaptation-revision-pending pass 'forks_pending "$pins_core"' \
+  '. == [{key: "core", package: "rtao-upstream-core", version: "0.490.1"}]'
+forks_case core-bump-pending-in-order pass 'forks_pending "$pins_core_bump"' \
+  'map(.package) == ["rtao-upstream-macros", "rtao-upstream-fips204", "rtao-upstream-w3f-bls", "rtao-upstream-hashed", "rtao-upstream-tle", "rtao-upstream-core"] and all(.version == "0.491.0")'
+sed 's/^package = "rtao-upstream-core"/package = "rtao"/' "$pins_core" >"$work/pins-foreign.toml"
+grep -v '^package = "rtao-upstream-tle"' "$pins_core" >"$work/pins-incomplete.toml"
+forks_case refuses-a-foreign-package refuse 'forks_pending "$work/pins-foreign.toml"'
+forks_case refuses-an-incomplete-record refuse 'forks_pending "$work/pins-incomplete.toml"'
+forks_case release-refuses-an-incomplete-record refuse 'release_bump rtao-v0.1.0 "$work/pins-incomplete.toml" "$pins_core"'
+printf 'rtao-upstream-%s\n' "${fork_order[@]}" >"$work/order.txt"
+core_sha=$(printf 'core archive' | sha256sum | cut -c1-64)
+printf 'rtao-upstream-macros 0.490.0: packaged archive verified, sha256 %s\nrtao-upstream-core 0.490.1: packaged archive verified, sha256 %s\n' \
+  "$(printf 'a%.0s' {1..64})" "$core_sha" >"$work/verified.txt"
+commit40=$(printf '%040d' 4)
+forks_case plan-names-the-verified-archive pass 'forks_plan "$pins_core" "$work/order.txt" "$work/verified.txt" "$commit40" "$work/plan.json" >/dev/null && cat "$work/plan.json"' \
+  ".commit == \"$commit40\" and .entries == [{key: \"core\", package: \"rtao-upstream-core\", version: \"0.490.1\", sha256: \"$core_sha\"}]"
+forks_case plan-refuses-an-unverified-package refuse 'forks_plan "$pins_core_bump" "$work/order.txt" "$work/verified.txt" "$commit40" "$work/plan-bump.json"'
+forks_case plan-refuses-another-order refuse 'forks_plan "$pins_core" <(tac "$work/order.txt") "$work/verified.txt" "$commit40" "$work/plan-order.json"'
+# The proposed release: a moved core release is a minor bump before 1.0.
+forks_case release-after-a-core-bump pass 'release_bump rtao-v0.1.0 "$pins" "$pins_core_bump"' \
+  '.version == "0.2.0" and .bump == "minor" and (.changed | length) == 6 and all(.changed[]; .release)'
+forks_case release-after-an-adaptation-revision pass 'release_bump rtao-v0.1.0 "$pins" "$pins_core"' \
+  '.version == "0.1.1" and .bump == "patch" and .changed == [{package: "rtao-upstream-core", from: "0.490.0", to: "0.490.1", release: false}]'
+forks_case release-after-1.0 pass 'release_bump rtao-v1.2.3 "$pins" "$pins_core_bump"' '.version == "2.0.0" and .bump == "major"'
+forks_case no-release-without-new-packages pass 'release_bump rtao-v0.1.0 "$pins" "$pins"' '.version == null and .changed == []'
+
+# Publication against stand-ins for cargo (archives and uploads) and curl
+# (crates.io's sparse index kept as files): uploads in order, skips a version
+# crates.io holds with the verified checksum, waits out rate limits and
+# refuses anything that does not match the plan.
+pub=$work/publish
+mkdir -p "$pub/bin" "$pub/checkout"
+cp "$pins_core" "$pub/checkout/upstream.toml"
+git -C "$pub/checkout" init -q -b main
+git -C "$pub/checkout" -c user.name=t -c user.email=t@invalid add -A
+git -C "$pub/checkout" -c user.name=t -c user.email=t@invalid commit -q -m pending
+pub_commit=$(git -C "$pub/checkout" rev-parse HEAD)
+cat >"$pub/bin/cargo" <<'CARGO'
+#!/usr/bin/env bash
+set -euo pipefail
+d=$FAKE_CARGO
+echo "$1" >>"$d/calls"
+package="" previous=""
+for argument in "$@"; do
+  [[ "$previous" != -p ]] || package=$argument
+  previous=$argument
+done
+case "$1" in
+  package)
+    mkdir -p "$CARGO_TARGET_DIR/package"
+    cp "$d/crate" "$CARGO_TARGET_DIR/package/$package-$(cat "$d/version").crate"
+    ;;
+  publish)
+    response=$(head -1 "$d/responses" 2>/dev/null || true)
+    sed -i 1d "$d/responses" 2>/dev/null || true
+    if [[ "$response" == stale ]]; then
+      # An earlier upload the index page did not show yet.
+      printf '{"name":"%s","vers":"%s","cksum":"%s"}\n' "$package" "$(cat "$d/version")" \
+        "$(sha256sum "$d/crate" | cut -c1-64)" >>"$d/index-$package"
+      echo "error: crate version \`$(cat "$d/version")\` is already uploaded" >&2
+      exit 101
+    fi
+    if [[ -z "$response" || "$response" == ok ]]; then
+      printf '{"name":"%s","vers":"%s","cksum":"%s"}\n' "$package" "$(cat "$d/version")" \
+        "$(sha256sum "$d/crate" | cut -c1-64)" >>"$d/index-$package"
+      exit 0
+    fi
+    echo "error: failed to publish to registry at https://crates.io: $response" >&2
+    exit 101
+    ;;
+esac
+CARGO
+cat >"$pub/bin/curl" <<'CURL'
+#!/usr/bin/env bash
+out="" url=""
+while (($#)); do
+  case "$1" in
+    -o) out=$2; shift 2 ;;
+    -w | -H | --max-time | --retry | --retry-delay) shift 2 ;;
+    -*) shift ;;
+    *) url=$1; shift ;;
+  esac
+done
+name=${url##*/}
+if [[ -f "$FAKE_CARGO/index-$name" ]]; then cp "$FAKE_CARGO/index-$name" "$out"; printf 200; else : >"$out"; printf 404; fi
+CURL
+chmod +x "$pub/bin/cargo" "$pub/bin/curl"
+# publish_case <name> <expected: pass|refuse> <responses> <index line or ""> <crate bytes> <jq predicate on published.json> [plan edit]
+publish_case() {
+  local d=$pub/$1 got=refuse
+  mkdir -p "$d/state"
+  printf '%s' "$5" >"$d/state/crate"
+  echo 0.490.1 >"$d/state/version"
+  printf '%s' "$3" | tr ',' '\n' >"$d/state/responses"
+  [[ -z "$4" ]] || printf '%s\n' "$4" >"$d/state/index-rtao-upstream-core"
+  jq -n --arg commit "$pub_commit" --arg sha "$core_sha" \
+    '{commit: $commit, entries: [{key: "core", package: "rtao-upstream-core", version: "0.490.1", sha256: $sha}]}' |
+    jq "${7:-.}" >"$d/plan.json"
+  if FAKE_CARGO=$d/state PATH=$pub/bin:$PATH CARGO_REGISTRY_TOKEN=x RTAO_ADOPT_CHECKOUT=$pub/checkout \
+    CARGO_TARGET_DIR=$d/target RTAO_PUBLISH_PAUSE=0 RTAO_INDEX_PAUSE=0 RTAO_PUBLISH_ATTEMPTS=${PUBLISH_ATTEMPTS:-8} \
+    bash "$script" forks-publish "$d/plan.json" "$d/published.json" >"$d/log" 2>&1 &&
+    jq -e "$6" "$d/published.json" >/dev/null 2>&1; then
+    got=pass
+  fi
+  # Checks on what was called, whatever the outcome.
+  if [[ "$got" == "$2" ]] && jq -e -n --rawfile calls <(cat "$d/state/calls" 2>/dev/null) "${8:-true}" >/dev/null; then
+    echo "ok   publish $1: $got ($(tr '\n' ' ' <"$d/state/calls" 2>/dev/null))"
+  else
+    echo "FAIL publish $1: expected $2, got $got; $(tail -3 "$d/log" | tr '\n' ' ')"
+    failures=$((failures + 1))
+  fi
+}
+uploads='[$calls | splits("\n") | select(. == "publish")] | length'
+publish_case fresh pass ok "" 'core archive' '.[0].status == "published" and .[0].sha256 == "'"$core_sha"'"' . "$uploads == 1"
+publish_case rate-limited pass '429 Too Many Requests,429 Too Many Requests,ok' "" 'core archive' '.[0].status == "published"' . "$uploads == 3"
+publish_case uploaded-by-an-earlier-attempt pass stale "" 'core archive' '.[0].status == "published"' . "$uploads == 1"
+publish_case already-published pass "" "{\"name\":\"rtao-upstream-core\",\"vers\":\"0.490.1\",\"cksum\":\"$core_sha\"}" 'core archive' \
+  '.[0].status == "existing"' . '$calls == ""'
+publish_case foreign-checksum refuse "" "{\"name\":\"rtao-upstream-core\",\"vers\":\"0.490.1\",\"cksum\":\"$(printf 'e%.0s' {1..64})\"}" 'core archive' \
+  true . '$calls == ""'
+publish_case archive-differs refuse ok "" 'other archive' true . "$uploads == 0"
+publish_case other-error refuse '500 Internal Server Error,ok' "" 'core archive' true . "$uploads == 1"
+PUBLISH_ATTEMPTS=2 publish_case rate-limit-exhausted refuse '429 Too Many Requests,429 Too Many Requests,ok' "" 'core archive' true . "$uploads == 2"
+publish_case wrong-commit refuse ok "" 'core archive' true ".commit = \"$commit40\"" '$calls == ""'
+publish_case plan-not-pending refuse ok "" 'core archive' true \
+  '.entries[0] += {key: "macros", package: "rtao-upstream-macros", version: "0.490.0"}' '$calls == ""'
+publish_case empty-plan refuse ok "" 'core archive' true '.entries = []' '$calls == ""'
+
+# The publication's issue, alert and release proposal (stand-in gh and curl
+# from the issue loop above).
+forks_fake=$work/forks-fake
+mkdir -p "$forks_fake" "$work/forks-evidence"
+forks_pending "$pins_core_bump" >"$work/forks-evidence/pending.json"
+record_checksums_of() { awk '{ print } /^\[publish\./ { key = $0 } $1 == "path" && key != "" { print "checksum = \"" sprintf("%064d", 9) "\"" }' "$1"; }
+record_checksums_of "$pins_core_bump" >"$work/forks-evidence/upstream.toml"
+forks_loop() { FAKE_GH=$forks_fake PATH=$fake/bin:$PATH GITHUB_REPOSITORY=owner/repo GH_TOKEN=x \
+  RUNTIME_ALERT_URL=https://alerts.invalid RUNTIME_ALERT_TOKEN=x RTAO_RELEASE_TAG=rtao-v0.1.0 RTAO_RELEASE_TAGGED_PINS=$pins \
+  bash "$script" forks-notify "$@" "$work/forks-evidence" >/dev/null; }
+forks_alerts() { jq -s -c 'map(select(.id | startswith("forks-")) | .open)' "$forks_fake/alerts" 2>/dev/null || echo '[]'; }
+forks_check() {
+  if eval "$2"; then
+    echo "ok   forks-notify $1"
+  else
+    echo "FAIL forks-notify $1 (issues: $(ls "$forks_fake" | tr '\n' ' '), alerts: $(forks_alerts))"
+    failures=$((failures + 1))
+  fi
+}
+forks_loop failure publish
+forks_check failure-opens-one-issue-and-alerts '[[ -f $forks_fake/1.open && "$(forks_alerts)" == "[true]" ]] && grep -q "failed at stage publish" $forks_fake/log'
+forks_loop failure publish
+forks_check repeat-is-quiet '[[ "$(forks_alerts)" == "[true]" && "$(grep -c "^edit" $forks_fake/log || true)" == 0 ]]'
+forks_loop failure verify
+forks_check another-stage-alerts-again '[[ "$(forks_alerts)" == "[true,true]" ]] && grep -q "^edit 1 .*stage verify" $forks_fake/log'
+forks_loop success none
+forks_check success-closes-resolves-and-proposes '[[ -f $forks_fake/1.closed && "$(forks_alerts)" == "[true,true,false]" && -f $forks_fake/2.open ]] &&
+  grep -q "^create 2 Release proposal: rtao v0.2.0" $forks_fake/log && grep -q "rtao-upstream-core. 0.490.0 -> 0.491.0 (core release)" $forks_fake/2.open &&
+  ! grep -qi "cargo publish -p" $forks_fake/2.open'
+forks_loop success none
+forks_check a-later-publication-refreshes-the-proposal '[[ ! -f $forks_fake/3.open ]] && grep -q "^edit 2 Release proposal" $forks_fake/log'
+forks_loop none none
+forks_check nothing-pending-is-quiet '[[ "$(forks_alerts)" == "[true,true,false]" && "$(grep -c "^close" $forks_fake/log)" == 1 ]]'
 
 if ((failures)); then
   echo "$failures decision checks failed" >&2

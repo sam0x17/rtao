@@ -9,11 +9,11 @@ rust-version = "1.90"
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-# Use the first released rtao-v tag here at the first rtao release. Before release,
-# the generated project's lockfile records the exact main commit it resolved.
-rtao = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false }
-rtao-testkit = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false, features = ["docker"] }
-rtao-runtime = { git = "https://github.com/sam0x17/rtao", branch = "main", default-features = false }
+# The released SDK from crates.io; all three share one version. Cargo.lock
+# records the exact release and the republished core packages it resolved.
+rtao = { version = "0.1", default-features = false }
+rtao-testkit = { version = "0.1", default-features = false, features = ["docker"] }
+rtao-runtime = { version = "0.1", default-features = false }
 anyhow = "1.0"
 axum = "0.8"
 clap = { version = "4.5", features = ["derive", "env"] }

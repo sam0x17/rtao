@@ -12,13 +12,17 @@ flags. They use `NeuronConfig` flags, environment and btcli configuration, and p
 application state on SIGTERM. They require an already registered hotkey. The
 miner admits metagraph members with validator permits by default.
 
-Use Rust 1.90 or newer. The pre-release SDK dependencies use `main`; Cargo.lock
-records their exact commit. At the first rtao release, select the same release
-version for all three SDK dependencies. No `[patch]` is needed: the SDK depends
+Use Rust 1.90 or newer. The three SDK dependencies come from crates.io in one
+release series (`0.1`); keep them on the same version when you upgrade.
+Cargo.lock records the exact release. No `[patch]` is needed: the SDK depends
 on its republished core packages (`rtao-upstream-*`), which include the
 reviewed core changes that wipe Ed25519 and hashed-account signing keys from
 memory. `rtao doctor` checks that Cargo.lock resolves them at the versions the
-resolved rtao-core records. Commit Cargo.lock after generation.
+resolved rtao-core records. Commit Cargo.lock after generation. To build
+against an unreleased rtao checkout instead, run
+`bash ci/patch-source.sh <checkout>`, which adds a `[patch.crates-io]` section
+for its rtao crates; the image build (`ci/build-images.sh`) needs such a
+checkout.
 
 The generated workflow validates client source on free GitHub `ubuntu-latest`.
 It formats and lints the workspace, builds the validator, miner and owner tool,
@@ -33,7 +37,7 @@ mkdir -p "$RTAO_TEMP_ROOT/tmp"
 export TMPDIR="$RTAO_TEMP_ROOT/tmp" PYO3_NO_PYTHON=1
 cargo generate-lockfile
 cargo fetch --locked
-# Install rtao-cli from the SDK checkout selected by Cargo, as ci.yml does.
+# Install rtao-cli at the resolved SDK version (or from the patched checkout), as ci.yml does.
 bash ci/check.sh
 ```
 

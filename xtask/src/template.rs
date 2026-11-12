@@ -312,10 +312,44 @@ fn check_source(root: &Path) -> Result<()> {
             template.join(role).join("src/main.rs"),
         )?)?;
     }
+    check_registry_dependencies(root, &manifest)?;
+    // The hosted check builds the generated project against this checkout:
+    // ci/patch-source.sh replaces the crates.io release with it.
+    let patch = fs::read_to_string(template.join("ci/patch-source.sh"))?;
+    ensure!(
+        patch.contains("[patch.crates-io]") && !patch.contains(SDK_SOURCE),
+        "templates/subnet/ci/patch-source.sh must patch crates-io with the checkout's crates"
+    );
+    Ok(())
+}
+
+/// The template's SDK dependencies come from crates.io in the workspace's
+/// release series (`0.<minor>` before 1.0, `<major>` after), so a generated
+/// project resolves the published release and `ci/patch-source.sh` can stand
+/// the checkout in for it. A workspace version bump that leaves the series
+/// fails here until the template follows (docs/releases/crates-io.md).
+fn check_registry_dependencies(root: &Path, template: &DocumentMut) -> Result<()> {
+    let workspace: DocumentMut = fs::read_to_string(root.join("Cargo.toml"))?.parse()?;
+    let version = workspace["workspace"]["package"]["version"]
+        .as_str()
+        .context("workspace version missing")?;
+    let version = semver::Version::parse(version)?;
+    let series = if version.major == 0 {
+        format!("0.{}", version.minor)
+    } else {
+        version.major.to_string()
+    };
     for package in ["rtao", "rtao-testkit", "rtao-runtime"] {
+        let dependency = &template["workspace"]["dependencies"][package];
         ensure!(
-            manifest["workspace"]["dependencies"][package]["git"].as_str() == Some(SDK_SOURCE),
-            "template {package} git source differs"
+            ["git", "branch", "tag", "rev", "path", "registry"]
+                .iter()
+                .all(|key| dependency.get(key).is_none()),
+            "template {package} must come from crates.io, not a Git or path source"
+        );
+        ensure!(
+            dependency.get("version").and_then(toml_edit::Item::as_str) == Some(series.as_str()),
+            "template {package} must require version \"{series}\", the SDK's release series"
         );
     }
     Ok(())
@@ -524,6 +558,49 @@ fn cleanup(root: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn committed_template_passes_the_source_checks() -> Result<()> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root missing")?;
+        check_source(root)
+    }
+
+    #[test]
+    fn template_sdk_dependencies_follow_the_release_series() -> Result<()> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .context("workspace root missing")?;
+        let template: DocumentMut =
+            fs::read_to_string(root.join("templates/subnet/Cargo.toml"))?.parse()?;
+        check_registry_dependencies(root, &template)?;
+        let replace = |from: &str, to: &str| -> Result<DocumentMut> {
+            Ok(template.to_string().replacen(from, to, 1).parse()?)
+        };
+        let series = template["workspace"]["dependencies"]["rtao"]["version"]
+            .as_str()
+            .context("template rtao version missing")?
+            .to_owned();
+        for edited in [
+            replace(
+                &format!("rtao = {{ version = \"{series}\""),
+                "rtao = { version = \"9.9\"",
+            )?,
+            replace(
+                &format!("rtao-runtime = {{ version = \"{series}\""),
+                &format!("rtao-runtime = {{ git = \"{SDK_SOURCE}\", version = \"{series}\""),
+            )?,
+            replace(
+                &format!("rtao-testkit = {{ version = \"{series}\""),
+                "rtao-testkit = { path = \"../rtao/crates/rtao-testkit\"",
+            )?,
+        ] {
+            assert_ne!(edited.to_string(), template.to_string());
+            assert!(check_registry_dependencies(root, &edited).is_err());
+        }
+        Ok(())
+    }
 
     #[test]
     fn live_integration_requires_an_explicit_option() -> Result<()> {

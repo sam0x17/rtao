@@ -12,6 +12,13 @@
 #   ci/runtime-adopt.sh evidence <decision.json> <evidence-dir>
 #   ci/runtime-adopt.sh verdict <live.json>
 #   ci/runtime-adopt.sh state <decision.json> <outcome> <stage> [<previous-state.json>]
+#   ci/runtime-adopt.sh forks-pending <upstream.toml>
+#   ci/runtime-adopt.sh forks-package <out-dir>
+#   ci/runtime-adopt.sh forks-plan <upstream.toml> <order.txt> <verified.txt> <commit> <plan.json>
+#   ci/runtime-adopt.sh forks-publish <plan.json> <published.json>
+#   ci/runtime-adopt.sh forks-record <plan.json> <published.json> <candidate> <evidence-dir>
+#   ci/runtime-adopt.sh forks-notify <outcome> <stage> [<evidence-dir>]
+#   ci/runtime-adopt.sh release-bump <tag> <tagged-upstream.toml> <upstream.toml>
 #
 # observe reads public chain RPC and the public upstream repository, re-reads
 # the finalized runtime from independent witness endpoints, and records the
@@ -55,6 +62,19 @@
 # A red stage leaves main untouched and reports like blocked. Upstream
 # branches that declare a newer spec than any network runs are listed as
 # upcoming (an informational issue, no alert) so they can be pre-staged.
+#
+# Republished core packages (D-188): every run also looks at main's
+# upstream.toml [publish]. A core bump or a new core adaptation revision
+# gives rtao-upstream-* packages new versions without a recorded checksum.
+# Those are packaged and verified against their revisions (byte identity and
+# the Ed25519 erasure check) in a read-only job, uploaded in dependency order
+# by a job that holds the crates.io token and builds nothing (an upload
+# happens only when the archive packaged there has the verified SHA256, and
+# a version crates.io already holds is skipped when its checksum is that
+# SHA256), checked again with forks verify-published, and their checksums are
+# committed by the bot. Success opens an issue proposing an rtao release;
+# rtao's own crates are never published here. Any failure commits nothing,
+# opens an issue and alerts.
 #
 # A Finney adoption approves itself on evidence: the pinned runtime's :code
 # (hashed here with BLAKE2b-256), its V15/V16 metadata digests and spec read
@@ -1117,13 +1137,54 @@ vendored_sources='^vendor/upstream/src/'
 # locks; every changed manifest line must be one of those references.
 core_bump_paths='(^|/)Cargo\.(toml|lock)$'
 core_reference='^[-+]([A-Za-z0-9_-]+ = \{ git = "https://github\.com/(RaoFoundation|sam0x17)/subtensor\.git", (tag = "v[0-9]+"|rev = "[0-9a-f]{40}")(, [^{}]*)? \}|\[patch\."https://github\.com/(RaoFoundation|sam0x17)/subtensor\.git"\]|)$'
+# A core bump also moves the generated republished packages (D-183), which
+# the checks stage regenerates from the recorded revisions and requires equal
+# (pin --check), and the root manifest's exact requirements on them; each such
+# line may change only its version (D-188).
+generated_packages='^upstream/(macros|fips204|w3f-bls|hashed|tle|core)/'
+republished_dependency='^[-+](bittensor-core|w3f-bls|tle) = \{ package = "rtao-upstream-(core|w3f-bls|tle)", path = "upstream/(core|w3f-bls|tle)", version = "=0\.[0-9]+\.[0-9]+", default-features = false(, features = \["std"\])? \}$'
+# The record of published packages (D-188) adds one checksum line to
+# [publish.<key>] tables of upstream.toml and of its two crate copies, which
+# stay byte-identical; nothing else.
+publish_record_files='^(upstream\.toml|crates/rtao-core/upstream\.toml|crates/rtao-testkit/upstream\.toml)$'
+publish_checksum='^\+checksum = "[0-9a-f]{64}"$'
+# upstream.toml without the checksum lines of its [publish.<key>] tables.
+without_publish_checksums() {
+  awk '/^\[/ { publish = ($0 ~ /^\[publish\.[A-Za-z0-9_-]+\]$/) } !(publish && $1 == "checksum") { print }'
+}
+check_publish_record() {
+  local changed stray path blob
+  changed=$(git diff --name-only "$1" "$2")
+  stray=$(grep -Ev "$publish_record_files" <<<"$changed" || true)
+  [[ -z "$stray" ]] || die "the [publish] record changes files other than upstream.toml and its crate copies: $(tr '\n' ' ' <<<"$stray")"
+  grep -qx 'upstream.toml' <<<"$changed" || die "the [publish] record does not change upstream.toml"
+  blob=$(git rev-parse -q --verify "$2:upstream.toml") || die "the [publish] record removes upstream.toml"
+  for path in crates/rtao-core/upstream.toml crates/rtao-testkit/upstream.toml; do
+    [[ "$(git rev-parse -q --verify "$2:$path" || true)" == "$blob" ]] || die "the [publish] record leaves $path different from upstream.toml"
+  done
+  stray=$(git diff --no-color --no-ext-diff -U0 "$1" "$2" -- upstream.toml |
+    grep -E '^[-+]' | grep -Ev '^(\+\+\+|---) ' | grep -Ev "$publish_checksum" || true)
+  [[ -z "$stray" ]] || die "the [publish] record changes upstream.toml beyond added checksum lines: $stray"
+  cmp -s <(git show "$1:upstream.toml" | without_publish_checksums) <(git show "$2:upstream.toml" | without_publish_checksums) ||
+    die "the [publish] record adds checksum lines outside the [publish.<key>] tables"
+}
 check_paths() {
   local touched manifest stray
+  if [[ "${3:-}" == publish-forks ]]; then
+    check_publish_record "$1" "$2"
+    return
+  fi
   touched=$(git diff --name-only "$1" "$2" | grep -Ev "$vendored_sources" | grep -E "$tooling_paths" || true)
   if [[ "${3:-}" == core-bump ]]; then
+    touched=$(grep -Ev "$generated_packages" <<<"$touched" || true)
     for manifest in $(grep -E '(^|/)Cargo\.toml$' <<<"$touched" || true); do
       stray=$(git diff --no-color --no-ext-diff -U0 "$1" "$2" -- "$manifest" |
         grep -E '^[-+]' | grep -Ev '^(\+\+\+|---) ' | grep -Ev "$core_reference" || true)
+      if [[ "$manifest" == Cargo.toml && -n "$stray" ]] && ! grep -Evq "$republished_dependency" <<<"$stray" &&
+        [[ "$(grep '^-' <<<"$stray" | cut -c2- | sed 's/version = "=[^"]*"/version/' | sort)" == \
+          "$(grep '^+' <<<"$stray" | cut -c2- | sed 's/version = "=[^"]*"/version/' | sort)" ]]; then
+        stray=""
+      fi
       [[ -z "$stray" ]] || die "the core bump changes $manifest beyond the core references: $stray"
     done
     touched=$(grep -Ev "$core_bump_paths" <<<"$touched" || true)
@@ -1179,7 +1240,7 @@ push() {
   action=$(jq -r .action "$decision")
   spec=$(jq -r .spec "$decision")
   network=$(jq -r .network "$decision")
-  case "$action" in adopt-finney | record-testnet | core-bump) ;; *) die "nothing to push for action $action" ;; esac
+  case "$action" in adopt-finney | record-testnet | core-bump | publish-forks) ;; *) die "nothing to push for action $action" ;; esac
   git bundle verify -q "$bundle" >/dev/null 2>&1 || die "the bundle does not apply to this checkout"
   git fetch -q "$bundle" HEAD
   commit=$(git rev-parse FETCH_HEAD)
@@ -1220,8 +1281,466 @@ push() {
       return 0
     fi
     git push -q origin "$commit:refs/heads/main"
-    echo "pushed $commit ($network runtime $spec)"
+    if [[ "$action" == publish-forks ]]; then
+      echo "pushed $commit (the republished packages' checksums)"
+    else
+      echo "pushed $commit ($network runtime $spec)"
+    fi
   fi
+}
+
+# ── republished core packages (crates.io, D-188) ──────────────────────
+
+# The republished packages in dependency order (`cargo xtask forks order`,
+# which forks-package checks this list against).
+fork_order=(macros fips204 w3f-bls hashed tle core)
+forks_marker='<!-- rtao-forks-publish -->'
+release_marker='<!-- rtao-release-proposal -->'
+crates_index=${RTAO_CRATES_INDEX:-https://index.crates.io}
+
+# The [publish.<key>] entries of an upstream.toml in dependency order, one
+# per line: key, package, version and checksum ("-" when none is recorded).
+publish_entries() {
+  local pins=$1 key
+  for key in "${fork_order[@]}"; do
+    awk -v key="$key" '
+      /^\[/ { inside = ($0 == "[publish." key "]"); next }
+      inside && $2 == "=" && ($1 == "package" || $1 == "version" || $1 == "checksum") {
+        value = $0; sub(/^[^=]*=[ \t]*/, "", value); gsub(/^"|"$/, "", value); field[$1] = value
+      }
+      END {
+        if (field["package"] == "" || field["version"] == "") exit 1
+        printf "%s\t%s\t%s\t%s\n", key, field["package"], field["version"], (field["checksum"] == "" ? "-" : field["checksum"])
+      }
+    ' "$pins" || die "$pins has no complete [publish.$key]"
+  done
+}
+
+# The republished packages main records without a checksum, in dependency
+# order, as [{key, package, version}]: new versions of a core bump or of a new
+# core adaptation revision (forks refresh drops the checksum with the version),
+# or versions an earlier run published without recording them.
+forks_pending() {
+  local pins=${1:?forks-pending <upstream.toml>} key package version checksum rows='[]' entries
+  # Command substitutions run without errexit: check each one.
+  entries=$(publish_entries "$pins") || die "$pins has no complete [publish] record"
+  while IFS=$'\t' read -r key package version checksum; do
+    [[ "$package" == "rtao-upstream-$key" ]] || die "[publish.$key] names $package, not rtao-upstream-$key"
+    [[ "$version" =~ ^0\.[0-9]+\.[0-9]+$ ]] || die "[publish.$key] version $version is not 0.<release>.<revision>"
+    if [[ "$checksum" == - ]]; then
+      rows=$(jq -c --arg key "$key" --arg package "$package" --arg version "$version" \
+        '. + [{key: $key, package: $package, version: $version}]' <<<"$rows")
+    else
+      [[ "$checksum" =~ ^[0-9a-f]{64}$ ]] || die "[publish.$key] checksum is not a lowercase SHA256"
+    fi
+  done <<<"$entries"
+  printf '%s\n' "$rows"
+}
+
+# The publication plan, a pure function of the pins, `forks order` and
+# `forks verify-packaged`'s output: {commit, entries: [{key, package,
+# version, sha256}]} for the pending packages, each with the SHA256 of the
+# archive verified against its revision. Fails closed when the order differs
+# from this script's or a pending package was not verified.
+forks_plan() {
+  local pins=${1:?forks-plan <upstream.toml> <order.txt> <verified.txt> <commit> <plan.json>}
+  local order=${2:?} verified=${3:?} commit=${4:?} out=${5:?}
+  local expected key package version sha entries='[]' pending
+  expected=$(printf 'rtao-upstream-%s\n' "${fork_order[@]}")
+  [[ "$(cat "$order")" == "$expected" ]] || die "cargo xtask forks order differs from ci/runtime-adopt.sh's publication order"
+  [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || die "the plan needs a full commit, not $commit"
+  pending=$(forks_pending "$pins" | jq -r '.[] | [.key, .package, .version] | @tsv') || die "no plan without a complete [publish] record"
+  while IFS=$'\t' read -r key package version; do
+    [[ -n "$key" ]] || continue
+    sha=$(awk -v prefix="$package $version: packaged archive verified, sha256 " \
+      'index($0, prefix) == 1 { print substr($0, length(prefix) + 1); exit }' "$verified")
+    [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || die "$package $version was not verified by forks verify-packaged"
+    entries=$(jq -c --arg key "$key" --arg package "$package" --arg version "$version" --arg sha "$sha" \
+      '. + [{key: $key, package: $package, version: $version, sha256: $sha}]' <<<"$entries")
+  done <<<"$pending"
+  jq -n --arg commit "$commit" --argjson entries "$entries" '{commit: $commit, entries: $entries}' >"$out"
+  jq -c '{commit, entries: (.entries | map("\(.package) \(.version)"))}' "$out"
+}
+
+# Read-only job: list what awaits publication; when anything does, check the
+# generated packages against the revisions, package all six (the verifying
+# build, against a local overlay of the unpublished ones), verify each archive
+# against its revision and write the plan.
+forks_package() {
+  local out=${1:?forks-package <out-dir>} checkout=${RTAO_ADOPT_CHECKOUT:-$root} key args=()
+  : "${RTAO_TEMP_ROOT:?task-scoped scratch}"
+  mkdir -p "$out"
+  cd "$checkout"
+  forks_pending upstream.toml >"$out/pending.json"
+  if [[ "$(jq length "$out/pending.json")" == 0 ]]; then
+    echo "every republished package has a recorded checksum; nothing to publish"
+    return 0
+  fi
+  echo "awaiting publication: $(jq -r 'map("\(.package) \(.version)") | join(", ")' "$out/pending.json")"
+  xtask forks check
+  xtask forks order >"$out/order.txt"
+  for key in "${fork_order[@]}"; do args+=(-p "rtao-upstream-$key"); done
+  # forks verify-packaged reads the archives under the workspace target/.
+  CARGO_TARGET_DIR=$checkout/target cargo package --locked "${args[@]}"
+  xtask forks verify-packaged | tee "$out/verified.txt"
+  forks_plan upstream.toml "$out/order.txt" "$out/verified.txt" "$(git rev-parse HEAD)" "$out/plan.json"
+}
+
+# The index path of a crate name (crates.io's sparse index layout).
+index_path() {
+  local name=${1,,}
+  case ${#name} in
+    1) echo "1/$name" ;;
+    2) echo "2/$name" ;;
+    3) echo "3/${name:0:1}/$name" ;;
+    *) echo "${name:0:2}/${name:2:2}/$name" ;;
+  esac
+}
+
+# The checksum crates.io's index records for one version: printed when the
+# version is published, nothing when the crate or version is absent, and a
+# failure when the index cannot be read.
+index_checksum() {
+  local name=$1 version=$2 body status
+  body=$(mktemp)
+  if ! status=$(curl -sS --max-time 30 --retry 3 --retry-delay 5 -H 'Cache-Control: no-cache' \
+    -o "$body" -w '%{http_code}' "$crates_index/$(index_path "$name")"); then
+    rm -f "$body"
+    return 1
+  fi
+  case "$status" in
+    200)
+      if ! jq -r --arg version "$version" 'select(.vers == $version) | .cksum' "$body" | head -1; then
+        rm -f "$body"
+        return 1
+      fi
+      ;;
+    404) ;;
+    *)
+      rm -f "$body"
+      return 1
+      ;;
+  esac
+  rm -f "$body"
+}
+
+# Upload one package unless crates.io already holds it; prints "published" or
+# "existing". The archive is packaged here without building (the read-only
+# job built and verified it) and uploaded only when its SHA256 is the
+# verified one; a held version must carry that SHA256 too. A rate limit (429)
+# waits and retries, doubling from RTAO_PUBLISH_PAUSE seconds (60: crates.io
+# allows a burst of 30 new versions, then one a minute) up to ten minutes.
+publish_one() {
+  local checkout=$1 package=$2 version=$3 sha=$4
+  local found actual log attempt=1 pause=${RTAO_PUBLISH_PAUSE:-60} attempts=${RTAO_PUBLISH_ATTEMPTS:-8}
+  local archive=${CARGO_TARGET_DIR:-$checkout/target}/package/$package-$version.crate
+  found=$(index_checksum "$package" "$version") || die "crates.io's index could not be read for $package"
+  if [[ -n "$found" ]]; then
+    [[ "$found" == "$sha" ]] || die "crates.io already holds $package $version with SHA256 $found, not the verified $sha"
+    echo "$package $version: already on crates.io with the verified SHA256; not uploaded again" >&2
+    echo existing
+    return 0
+  fi
+  rm -f "$archive"
+  (cd "$checkout" && cargo package --locked --no-verify -q -p "$package") >&2 ||
+    die "cargo package $package failed; nothing uploaded"
+  [[ -f "$archive" ]] || die "cargo package wrote no $archive; nothing uploaded"
+  actual=$(sha256sum "$archive" | cut -c1-64)
+  [[ "$actual" == "$sha" ]] || die "$package $version packages to SHA256 $actual here, not the verified $sha; nothing uploaded"
+  log=$(mktemp)
+  while :; do
+    if (cd "$checkout" && cargo publish --locked --no-verify -p "$package") >"$log" 2>&1; then
+      cat "$log" >&2
+      break
+    fi
+    cat "$log" >&2
+    # Uploaded despite the error (an index wait that timed out, or a
+    # version an earlier attempt uploaded that a cached index page did not
+    # show yet): the checksum is compared below.
+    found=$(index_checksum "$package" "$version" || true)
+    [[ -z "$found" ]] || break
+    if grep -Eqi 'already (exists|uploaded)' "$log"; then
+      break
+    fi
+    if grep -Eqi '429|too many requests|rate limit|try again after' "$log" && ((attempt < attempts)); then
+      echo "$package $version: rate limited by crates.io; retrying in $pause s (attempt $attempt of $attempts)" >&2
+      sleep "$pause"
+      pause=$((pause * 2 > 600 ? 600 : pause * 2))
+      attempt=$((attempt + 1))
+      continue
+    fi
+    rm -f "$log"
+    die "cargo publish $package $version failed (attempt $attempt)"
+  done
+  rm -f "$log"
+  for attempt in $(seq 1 "${RTAO_INDEX_ATTEMPTS:-30}"); do
+    found=$(index_checksum "$package" "$version" || true)
+    [[ -z "$found" ]] || break
+    sleep "${RTAO_INDEX_PAUSE:-10}"
+  done
+  [[ "$found" == "$sha" ]] ||
+    die "after publishing, crates.io's index records $package $version with SHA256 ${found:-nothing}, not the verified $sha"
+  echo published
+}
+
+# Token job: publish the plan's packages in order from the plan's commit.
+# Builds nothing; refuses a plan that is not exactly the checkout's pending
+# packages, and anything but rtao-upstream-* packages.
+forks_publish() {
+  local plan=${1:?forks-publish <plan.json> <published.json>}
+  local out=${2:?forks-publish <plan.json> <published.json>}
+  local checkout=${RTAO_ADOPT_CHECKOUT:-$root} key package version sha status results='[]'
+  : "${CARGO_REGISTRY_TOKEN:?forks-publish needs CARGO_REGISTRY_TOKEN (the CRATES_IO_TOKEN secret)}"
+  [[ "$(git -C "$checkout" rev-parse HEAD)" == "$(jq -r .commit "$plan")" ]] ||
+    die "the checkout is not the plan's commit $(jq -r .commit "$plan")"
+  [[ -z "$(git -C "$checkout" status --porcelain --untracked-files=no)" ]] || die "the checkout has local changes"
+  [[ "$(jq -c '[.entries[] | {key, package, version}]' "$plan")" == "$(forks_pending "$checkout/upstream.toml" | jq -c .)" ]] ||
+    die "the plan is not the checkout's packages awaiting publication"
+  [[ "$(jq '.entries | length' "$plan")" -gt 0 ]] || die "the plan publishes nothing"
+  printf '%s\n' "$results" >"$out"
+  while IFS=$'\t' read -r key package version sha; do
+    [[ "$package" == "rtao-upstream-$key" && " ${fork_order[*]} " == *" $key "* ]] ||
+      die "refusing to publish $package: only the republished rtao-upstream-* packages are published here"
+    [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || die "the plan gives $package no verified SHA256"
+    status=$(publish_one "$checkout" "$package" "$version" "$sha")
+    results=$(jq -c --arg key "$key" --arg package "$package" --arg version "$version" --arg sha "$sha" --arg status "$status" \
+      '. + [{key: $key, package: $package, version: $version, sha256: $sha, status: $status}]' <<<"$results")
+    printf '%s\n' "$results" >"$out"
+    echo "$package $version: $status"
+  done < <(jq -r '.entries[] | [.key, .package, .version, .sha256] | @tsv' "$plan")
+}
+
+# Add each published package's checksum to its [publish.<key>] table, after
+# its path line; the version must be the published one and no checksum
+# recorded yet.
+record_checksums() {
+  local published=$1 pins=$2 key version sha
+  while IFS=$'\t' read -r key version sha; do
+    awk -v key="$key" -v version="$version" -v sha="$sha" '
+      /^\[/ { inside = ($0 == "[publish." key "]") }
+      inside && $1 == "version" && $2 == "=" { seen = ($3 == "\"" version "\"") }
+      inside && $1 == "checksum" { bad = 1 }
+      { print }
+      inside && $1 == "path" && $2 == "=" && seen && !bad { print "checksum = \"" sha "\""; done = 1 }
+      END { exit !(done && !bad) }
+    ' "$pins" >"$pins.new" || die "[publish.$key] is not version $version without a checksum"
+    mv "$pins.new" "$pins"
+  done < <(jq -r '.[] | [.key, .version, .sha256] | @tsv' "$published")
+}
+
+# Read-only job: record the checksums in a candidate, check every published
+# archive against its revision with forks verify-published, commit as the bot
+# and write the bundle and its decision for the push job.
+forks_record() {
+  local plan=${1:?forks-record <plan.json> <published.json> <candidate> <evidence-dir>}
+  local published=${2:?} candidate=${3:?} evidence=${4:?} checkout=${RTAO_ADOPT_CHECKOUT:-$root} list
+  : "${RTAO_TEMP_ROOT:?task-scoped scratch}"
+  mkdir -p "$evidence"
+  [[ "$(git -C "$checkout" rev-parse HEAD)" == "$(jq -r .commit "$plan")" ]] ||
+    die "the checkout is not the plan's commit $(jq -r .commit "$plan")"
+  [[ "$(jq -c '[.entries[] | {key, package, version, sha256}]' "$plan")" == "$(jq -c '[.[] | {key, package, version, sha256}]' "$published")" ]] ||
+    die "the published packages are not the plan's"
+  git -C "$checkout" worktree add --detach "$candidate" HEAD >/dev/null
+  cd "$candidate"
+  record_checksums "$published" upstream.toml
+  cp upstream.toml crates/rtao-core/upstream.toml
+  cp upstream.toml crates/rtao-testkit/upstream.toml
+  [[ "$(forks_pending upstream.toml | jq length)" == 0 ]] || die "packages still lack a recorded checksum"
+  xtask crate-inputs --check
+  xtask forks verify-published | tee "$evidence/verify-published.txt"
+  cp upstream.toml "$evidence/upstream.toml"
+  list=$(jq -r 'map("\(.package) \(.version)") | join(", ")' "$published")
+  git add -A
+  bot commit -q -m "Record the republished packages' crates.io checksums automatically (D-188) [skip ci]" \
+    -m "Published by the runtime-adopt workflow from $(jq -r .commit "$plan"): $list. Each archive's
+SHA256 equals forks verify-packaged's value for that commit, and cargo xtask
+forks verify-published passes."
+  check_paths HEAD~1 HEAD publish-forks
+  git bundle create -q "$evidence/forks.bundle" HEAD~1..HEAD
+  jq -n --argjson published "$(jq -c . "$published")" \
+    '{action: "publish-forks", network: "crates.io", spec: null, code: null,
+      id: "forks", packages: ($published | map("\(.package)@\(.version)"))}' >"$evidence/forks-decision.json"
+  git rev-parse HEAD
+}
+
+# The release a newer set of republished packages calls for, as JSON, from
+# the last release tag and its upstream.toml: a core release that moved (the
+# minor of a package version) is a minor bump before 1.0 (major after),
+# since rtao-core's public API carries the core's types; adaptation
+# revisions alone are a patch bump. Before 1.0 a minor release may break
+# public APIs and a patch release may not (docs/releases/README.md).
+release_bump() {
+  local tag=${1:?release-bump <tag> <tagged-upstream.toml> <upstream.toml>}
+  local old=${2:?} new=${3:?} changed='[]' key package before after kind checksum entries previous
+  [[ "$tag" =~ ^rtao-v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || die "$tag is not an rtao-vX.Y.Z tag"
+  local major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]} patch=${BASH_REMATCH[3]}
+  entries=$(publish_entries "$new") || die "$new has no complete [publish] record"
+  previous=$(publish_entries "$old") || die "$old has no complete [publish] record"
+  while IFS=$'\t' read -r key package after checksum; do
+    before=$(awk -F'\t' -v key="$key" '$1 == key { print $3 }' <<<"$previous")
+    [[ "$before" == "$after" ]] && continue
+    changed=$(jq -c --arg package "$package" --arg before "$before" --arg after "$after" \
+      '. + [{package: $package, from: $before, to: $after,
+             release: (($before | split(".")[1]) != ($after | split(".")[1]))}]' <<<"$changed")
+  done <<<"$entries"
+  kind=$(jq -r 'if length == 0 then "none" elif any(.release) then "breaking" else "patch" end' <<<"$changed")
+  local version
+  case "$kind:$major" in
+    none:*) version="" ;;
+    breaking:0) version=0.$((minor + 1)).0 ;;
+    breaking:*) version=$((major + 1)).0.0 ;;
+    patch:*) version=$major.$minor.$((patch + 1)) ;;
+  esac
+  jq -n --arg tag "$tag" --arg version "$version" --arg kind "$kind" --argjson changed "$changed" \
+    '{tag: $tag, from: ($tag | ltrimstr("rtao-v")), version: (if $version == "" then null else $version end),
+      bump: (if $kind == "none" then null elif $kind == "patch" then "patch"
+             elif ($tag | ltrimstr("rtao-v") | startswith("0.")) then "minor" else "major" end),
+      changed: $changed}'
+}
+
+# Open or refresh the issue proposing an rtao release for the republished
+# packages now on crates.io. Never tags or publishes: that is the
+# maintainer's decision (crates-io.md section 5).
+propose_release() {
+  local evidence=$1 run=$2 tag tagged proposal number title body
+  # RTAO_RELEASE_TAG and RTAO_RELEASE_TAGGED_PINS stand in for the remote's
+  # last release tag and its upstream.toml (ci/runtime-adopt-test.sh).
+  tag=${RTAO_RELEASE_TAG:-$(git -C "$root" ls-remote --tags --refs origin 'refs/tags/rtao-v*' 2>/dev/null |
+    sed 's|.*refs/tags/||' | grep -E '^rtao-v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)}
+  if [[ -z "$tag" ]]; then
+    echo "no rtao-v release tag; no release to propose"
+    return 0
+  fi
+  [[ -f "$evidence/upstream.toml" ]] || die "the record's upstream.toml is missing from the evidence"
+  tagged=$(mktemp)
+  if [[ -n "${RTAO_RELEASE_TAGGED_PINS:-}" ]]; then
+    cp "$RTAO_RELEASE_TAGGED_PINS" "$tagged"
+  else
+    git -C "$root" fetch -q --depth=1 origin "refs/tags/$tag:refs/tags/$tag" 2>/dev/null || true
+    git -C "$root" show "$tag:upstream.toml" >"$tagged" || { rm -f "$tagged"; die "could not read upstream.toml at $tag"; }
+  fi
+  proposal=$(release_bump "$tag" "$tagged" "$evidence/upstream.toml")
+  rm -f "$tagged"
+  if [[ "$(jq -r .version <<<"$proposal")" == null ]]; then
+    echo "the republished packages equal $tag's; no release to propose"
+    return 0
+  fi
+  title="Release proposal: rtao v$(jq -r .version <<<"$proposal") for the republished core packages"
+  body="$release_marker
+<!-- rtao-release-proposal version=$(jq -r .version <<<"$proposal") -->
+New republished core packages are on crates.io, verified against their
+revisions (\`cargo xtask forks verify-published\`) and recorded in
+\`upstream.toml\` \`[publish]\` ([run]($run)). Since $tag:
+
+$(jq -r '.changed | map("- `\(.package)` \(.from) -> \(.to)" + (if .release then " (core release)" else " (adaptation revision)" end)) | join("\n")' <<<"$proposal")
+
+rtao's published crates still require the versions $tag recorded
+(\`rtao-core\` pins each exactly), so applications get these packages only
+through an rtao release. Proposed: **rtao v$(jq -r .version <<<"$proposal")**, a $(jq -r .bump <<<"$proposal") bump.
+$(jq -r 'if .bump == "patch" then "Only adaptation revisions of the same core release changed; a patch release must not break public APIs (docs/releases/README.md)." else "The core release changed, and rtao-core'"'"'s public API carries the core'"'"'s types; before 1.0 a minor release may break public APIs (docs/releases/README.md). If `cargo semver-checks` finds the public API unchanged, a patch release is enough." end' <<<"$proposal")
+
+This workflow never tags or publishes rtao crates: the release is the
+maintainer's decision. Follow docs/releases/README.md and
+docs/releases/crates-io.md section 5 (version bump of
+\`[workspace.package]\` and every \`rtao-*\` entry of
+\`[workspace.dependencies]\`, curated notes, CHANGELOG, the D-121 steps,
+then \`cargo publish\`). Refreshed by the runtime-adopt workflow after each
+publication; close it when the release is out or declined."
+  number=$(open_issue "$release_marker")
+  if [[ -z "$number" ]]; then
+    gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
+  else
+    gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
+  fi
+  echo "proposed rtao v$(jq -r .version <<<"$proposal")"
+}
+
+# Report the publication: a failure opens or refreshes one issue and alerts
+# once per (packages, stage) through the existing alert endpoint; success
+# closes that issue, resolves its alert and proposes a release; none (nothing
+# awaits publication) closes an issue a maintainer resolved by hand;
+# superseded (main moved before the record was pushed) reports nothing, and
+# the next run records what this one published.
+forks_notify() {
+  local outcome=${1:?forks-notify <outcome> <stage> [<evidence-dir>]}
+  local stage=${2:?forks-notify <outcome> <stage> [<evidence-dir>]} evidence=${3:-}
+  : "${GITHUB_REPOSITORY:?forks-notify needs GITHUB_REPOSITORY and GH_TOKEN}"
+  local run number open_body open_id open_stage packages id
+  run=${GITHUB_SERVER_URL:-https://github.com}/$GITHUB_REPOSITORY/actions/runs/${GITHUB_RUN_ID:-}
+  number=$(open_issue "$forks_marker")
+  open_id="" open_stage=""
+  if [[ -n "$number" ]]; then
+    open_body=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body)
+    open_id=$(sed -n 's/^<!-- rtao-forks-publish id=\([A-Za-z0-9._@,-]*\) stage=\([a-z-]*\) -->$/\1/p' <<<"$open_body" | head -1)
+    open_stage=$(sed -n 's/^<!-- rtao-forks-publish id=\([A-Za-z0-9._@,-]*\) stage=\([a-z-]*\) -->$/\2/p' <<<"$open_body" | head -1)
+  fi
+  packages=""
+  if [[ -n "$evidence" && -f "$evidence/pending.json" ]]; then
+    packages=$(jq -r 'map("\(.package)@\(.version)") | join(",")' "$evidence/pending.json")
+  fi
+  id=forks-$(printf '%s' "${packages:-unknown}" | sha256sum | cut -c1-10)
+  case "$outcome" in
+    failure)
+      local title body tail_text=""
+      if [[ -n "$evidence" ]]; then
+        tail_text=$(cat "$evidence/package.log" "$evidence/publish.log" "$evidence/record.log" 2>/dev/null | tail -n 60 || true)
+      fi
+      title="Republished core packages: publication failed at stage $stage"
+      body="$forks_marker
+<!-- rtao-forks-publish id=$id stage=$stage -->
+The runtime-adopt workflow could not publish and record the republished
+core packages awaiting publication on main: ${packages:-(unknown; the package stage failed before listing them)}.
+
+| | |
+|---|---|
+| Stage | \`$stage\` (package: verify and package in the read-only job; publish: upload; verify: forks verify-published and the record; push: the record commit) |
+| Run | $run |
+
+Nothing was committed. A version already on crates.io stays (crates.io
+versions are immutable; yank and publish a new revision if one is wrong). The
+next scheduled run retries: a version crates.io holds with the verified
+SHA256 is not uploaded again, and one with another checksum stops the run.
+
+<details><summary>Log tail</summary>
+
+\`\`\`text
+$tail_text
+\`\`\`
+</details>"
+      if [[ -z "$number" ]]; then
+        gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
+      elif [[ "$open_id" != "$id" || "$open_stage" != "$stage" ]]; then
+        gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
+      fi
+      if [[ -n "$open_id" && "$open_id" != "$id" ]]; then
+        alert "$open_id" false "republished packages: superseded by another publication" "$run"
+      fi
+      if [[ "$open_id" != "$id" || "$open_stage" != "$stage" ]]; then
+        alert "$id" true "$title" "packages: ${packages:-unknown}; $run"
+      else
+        echo "same publication failure as the open issue records; no new alert"
+      fi
+      ;;
+    success)
+      if [[ -n "$number" ]]; then
+        gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
+          --comment "Published and recorded: $packages ([run]($run))." >/dev/null
+        [[ -z "$open_id" ]] || alert "$open_id" false "republished packages published and recorded" "$run"
+      fi
+      propose_release "$evidence" "$run"
+      ;;
+    none)
+      if [[ -n "$number" ]]; then
+        gh issue close "$number" --repo "$GITHUB_REPOSITORY" \
+          --comment "Every republished package on main has a recorded checksum ([run]($run))." >/dev/null
+        [[ -z "$open_id" ]] || alert "$open_id" false "republished packages recorded" "$run"
+      fi
+      ;;
+    superseded)
+      echo "main moved before the record was pushed; the next run records the published packages"
+      ;;
+    *) die "unknown outcome $outcome" ;;
+  esac
 }
 
 # ── notify ────────────────────────────────────────────────────────────
@@ -1547,8 +2066,15 @@ case "$command" in
     ;;
   verdict) verdict "$@" ;;
   state) next_state "$@" ;;
+  forks-pending) forks_pending "$@" ;;
+  forks-package) forks_package "$@" ;;
+  forks-plan) forks_plan "$@" ;;
+  forks-publish) forks_publish "$@" ;;
+  forks-record) forks_record "$@" ;;
+  forks-notify) forks_notify "$@" ;;
+  release-bump) release_bump "$@" ;;
   *)
-    sed -n '2,30p' "$0" >&2
+    sed -n '2,22p' "$0" >&2
     exit 2
     ;;
 esac

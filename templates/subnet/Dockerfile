@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Supply the resolved SDK checkout as the named context `rtao` (ci/build-images.sh).
-FROM rust:1.89-slim-bookworm@sha256:c9ac3fa8945b61dede1e4500d25028aa8fd8a8fe46365fcf9c0422f8d999b9b0 AS build
+FROM rust:1.90-slim-bookworm@sha256:64232e656c058f4468e8d024e990acff04f0fd5a5c0a88a574dc37773d7325c9 AS build
 WORKDIR /workspace
 COPY --from=rtao / /rtao-src
 COPY . .

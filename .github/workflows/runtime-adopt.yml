@@ -23,6 +23,16 @@ name: runtime-adopt
 # A dispatch with core_bump also moves a core held behind the parity pin
 # (D-127) to the parity pin's core, through the same adopt and push jobs and
 # checks (D-136); scheduled runs never bump the core.
+# Republished core packages (D-188): after the push, main's upstream.toml
+# [publish] entries without a checksum (a core bump's or a new adaptation
+# revision's rtao-upstream-* versions) are packaged and verified against
+# their revisions in a read-only job, published in dependency order by a job
+# that holds CRATES_IO_TOKEN and builds nothing, checked again with forks
+# verify-published in a read-only job that commits the checksums as a bundle,
+# and pushed by a job that builds nothing. Success opens an issue proposing an
+# rtao release; rtao's own crates are never published here. A failure
+# commits nothing, opens an issue and alerts. Dry runs and runs off main
+# publish nothing.
 on:
   schedule:
     - cron: '41 * * * *'
@@ -204,8 +214,188 @@ jobs:
             echo "superseded=true" >> "$GITHUB_OUTPUT"
           fi
 
+  forks-plan:
+    needs: [decide, push]
+    if: always() && needs.decide.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # Read-only: this job compiles (the verifying package build and xtask).
+    permissions:
+      contents: read
+    outputs:
+      pending: ${{ steps.pending.outputs.pending }}
+      commit: ${{ steps.pending.outputs.commit }}
+    steps:
+      - name: Paths under the runner's temp directory
+        run: |
+          {
+            echo "RTAO_TEMP_ROOT=$RUNNER_TEMP/forks"
+            echo "FORKS=$RUNNER_TEMP/forks-plan"
+          } >> "$GITHUB_ENV"
+      # main as it is now, including what this run's push job landed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: main
+      - name: List the republished packages without a recorded checksum
+        id: pending
+        run: |
+          set -o pipefail
+          mkdir -p "$FORKS"
+          ci/runtime-adopt.sh forks-pending upstream.toml | tee "$FORKS/pending.json"
+          echo "pending=$(jq 'length > 0' "$FORKS/pending.json")" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - if: steps.pending.outputs.pending == 'true'
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - if: steps.pending.outputs.pending == 'true'
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-on-failure: true
+      - name: Check, package and verify the republished packages
+        if: steps.pending.outputs.pending == 'true'
+        run: |
+          umask 022
+          mkdir -p "$RTAO_TEMP_ROOT"
+          set -o pipefail
+          ci/runtime-adopt.sh forks-package "$FORKS" 2>&1 | tee "$FORKS/package.log"
+      - if: always() && steps.pending.outputs.pending == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runtime-adopt-forks-plan
+          path: ${{ runner.temp }}/forks-plan
+          if-no-files-found: warn
+          retention-days: 30
+
+  forks-publish:
+    needs: forks-plan
+    if: >-
+      needs.forks-plan.result == 'success' && needs.forks-plan.outputs.pending == 'true'
+      && github.ref == 'refs/heads/main'
+      && !(github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # Holds the crates.io token and builds nothing: archives are packaged
+    # without building and uploaded only when their SHA256 is the verified one.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.forks-plan.outputs.commit }}
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: runtime-adopt-forks-plan
+          path: ${{ runner.temp }}/forks-plan
+      - name: Publish the changed rtao-upstream-* packages in dependency order
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/forks-published"
+          set -o pipefail
+          ci/runtime-adopt.sh forks-publish "$RUNNER_TEMP/forks-plan/plan.json" "$RUNNER_TEMP/forks-published/published.json" 2>&1 |
+            tee "$RUNNER_TEMP/forks-published/publish.log"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runtime-adopt-forks-published
+          path: ${{ runner.temp }}/forks-published
+          if-no-files-found: warn
+          retention-days: 30
+
+  forks-record:
+    needs: [forks-plan, forks-publish]
+    if: needs.forks-publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Read-only: builds xtask for forks verify-published; the record leaves
+    # as a bundle that the push job checks and pushes.
+    permissions:
+      contents: read
+    env:
+      # The record candidate is a worktree under the runner's temp directory;
+      # its xtask builds share the checkout's cached target directory.
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - name: Paths under the runner's temp directory
+        run: |
+          {
+            echo "RTAO_TEMP_ROOT=$RUNNER_TEMP/forks"
+            echo "EVIDENCE=$RUNNER_TEMP/forks-record"
+          } >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.forks-plan.outputs.commit }}
+          fetch-depth: 0
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+          build-warnings: ""
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          cache-on-failure: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: runtime-adopt-forks-plan
+          path: ${{ runner.temp }}/forks-plan
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: runtime-adopt-forks-published
+          path: ${{ runner.temp }}/forks-published
+      - name: Verify the published archives and commit their checksums as a bundle
+        run: |
+          umask 022
+          mkdir -p "$RTAO_TEMP_ROOT" "$EVIDENCE"
+          set -o pipefail
+          ci/runtime-adopt.sh forks-record "$RUNNER_TEMP/forks-plan/plan.json" "$RUNNER_TEMP/forks-published/published.json" \
+            "$RTAO_TEMP_ROOT/record" "$EVIDENCE" 2>&1 | tee "$EVIDENCE/record.log"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runtime-adopt-forks-record
+          path: ${{ runner.temp }}/forks-record
+          if-no-files-found: warn
+          retention-days: 30
+
+  forks-push:
+    needs: forks-record
+    if: needs.forks-record.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      superseded: ${{ steps.push.outputs.superseded }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The push step pushes main with this token.
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: runtime-adopt-forks-record
+          path: ${{ runner.temp }}/forks-record
+      - name: Push the checksum record to main
+        id: push
+        run: |
+          set -o pipefail
+          ci/runtime-adopt.sh push "$RUNNER_TEMP/forks-record/forks-decision.json" "$RUNNER_TEMP/forks-record/forks.bundle" |
+            tee "$RUNNER_TEMP/forks-push.txt"
+          if grep -q '^superseded:' "$RUNNER_TEMP/forks-push.txt"; then
+            echo "superseded=true" >> "$GITHUB_OUTPUT"
+          fi
+
   notify:
-    needs: [decide, adopt, push]
+    needs: [decide, adopt, push, forks-plan, forks-publish, forks-record, forks-push]
     if: always() && !(github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -266,3 +456,35 @@ jobs:
             esac
           fi
           ci/runtime-adopt.sh notify "$decision" "$outcome" "$RUNNER_TEMP/evidence"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: always() && needs.forks-plan.outputs.pending == 'true'
+        continue-on-error: true
+        with:
+          pattern: runtime-adopt-forks-*
+          path: ${{ runner.temp }}/forks
+          merge-multiple: true
+      - name: Republished packages - issue, alert and release proposal
+        if: always() && needs.forks-plan.result != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNTIME_ALERT_URL: ${{ secrets.RUNTIME_ALERT_URL }}
+          RUNTIME_ALERT_TOKEN: ${{ secrets.RUNTIME_ALERT_TOKEN }}
+          PLANNED: ${{ needs.forks-plan.result }}
+          PENDING: ${{ needs.forks-plan.outputs.pending }}
+          PUBLISHED: ${{ needs.forks-publish.result }}
+          RECORDED: ${{ needs.forks-record.result }}
+          RECORD_PUSHED: ${{ needs.forks-push.result }}
+          RECORD_SUPERSEDED: ${{ needs.forks-push.outputs.superseded }}
+        run: |
+          stage=none
+          case "$PLANNED:$PENDING:$PUBLISHED:$RECORDED:$RECORD_PUSHED" in
+            success:false:*) outcome=none ;;
+            success:true:skipped:*) echo "publication skipped (not main)"; exit 0 ;;
+            success:true:success:success:success) outcome=success ;;
+            success:true:success:success:*) outcome=failure stage=push ;;
+            success:true:success:*) outcome=failure stage=verify ;;
+            success:true:*) outcome=failure stage=publish ;;
+            *) outcome=failure stage=package ;;
+          esac
+          if [ "$RECORD_SUPERSEDED" = true ]; then outcome=superseded; fi
+          ci/runtime-adopt.sh forks-notify "$outcome" "$stage" "$RUNNER_TEMP/forks"
