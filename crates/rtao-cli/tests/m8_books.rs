@@ -2,14 +2,6 @@
 //! These use public fixture JSON and fake RPC only; no account unlocks or devices.
 
 use clap::ArgMatches;
-use rtao::{
-    client::{
-        Client, ClientConfig, Network,
-        config::{ConfigFile, Paths},
-    },
-    primitives::AccountId,
-    signer::BoxFuture,
-};
 use rtao_cli::{
     application::command_tree,
     books::{AddressBook, Books, ProxyBook},
@@ -23,6 +15,12 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
 };
+use rtao_client::{
+    Client, ClientConfig, Network,
+    config::{ConfigFile, Paths},
+};
+use rtao_primitives::AccountId;
+use rtao_signer::BoxFuture;
 use rtao_testkit::{FakeChain, FakeState, Reply, rpc::RpcClient};
 use serde_json::{Map, Value, json};
 use std::{
@@ -80,7 +78,7 @@ impl Files {
         Ok(())
     }
     fn value(&self, file: ConfigFile) -> Result<Value, Box<dyn std::error::Error>> {
-        Ok(rtao::primitives::json::from_slice(&fs::read(
+        Ok(rtao_primitives::json::from_slice(&fs::read(
             self.paths.path(file),
         )?)?)
     }
@@ -110,7 +108,7 @@ impl Terminal for Prompt {
         self.reads.fetch_add(1, Ordering::SeqCst);
         self.replies.pop_front().ok_or(PromptError::Aborted)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -166,7 +164,7 @@ fn context(
     Ok((ctx, group.clone(), sink, reads))
 }
 fn stdout(sink: &MemorySink) -> Result<Value, Box<dyn std::error::Error>> {
-    Ok(rtao::primitives::json::from_str(
+    Ok(rtao_primitives::json::from_str(
         &sink.text(Stream::Stdout)?,
     )?)
 }
@@ -257,12 +255,12 @@ async fn address_writers_share_paths_preserve_rows_reorder_replacement_and_exact
         (json!(7), json!(7.0), true),
         (json!([{"nested":1}]), json!([{"nested":true}]), true),
         (
-            rtao::primitives::json::from_str("9007199254740993")?,
+            rtao_primitives::json::from_str("9007199254740993")?,
             json!(9007199254740992.0),
             false,
         ),
         (
-            rtao::primitives::json::from_str("1208925819614629174706176")?,
+            rtao_primitives::json::from_str("1208925819614629174706176")?,
             json!(2_f64.powi(80)),
             true,
         ),

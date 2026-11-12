@@ -1,5 +1,14 @@
 # Command line use
 
+Install the `rtao` binary from the `rtao` crate, whose default features build
+it:
+
+```sh
+cargo install --locked rtao
+# with optional backends:
+cargo install --locked rtao --features ledger,vault,extension,evm
+```
+
 Run `rtao --help` for the groups available in your build. Each command has its
 own `--help`. Optional EVM, Ledger, Vault and extension support appears only
 when the corresponding Cargo feature is enabled.

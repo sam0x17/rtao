@@ -2,17 +2,17 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::*;
-use rtao::{
-    client::{ClientConfig, Network, View},
-    core::runtime::TypeSpec,
-    primitives::{Balance, IntoCoreValue, Tao},
-    signer::{Coldkey, DynKeySource, Hotkey, KeypairSigner, Role, Signer, SignerError, SignerRole},
-    tx::{
-        ExecuteOptions, FactsTitle, Intent, IntentInterface, OriginMarker, PlanOptions, Policy,
-        Root, Signed, SystemClock,
-    },
+use rtao_client::{ClientConfig, Network, View};
+use rtao_core::runtime::TypeSpec;
+use rtao_primitives::{Balance, IntoCoreValue, Tao};
+use rtao_signer::{
+    Coldkey, DynKeySource, Hotkey, KeypairSigner, Role, Signer, SignerError, SignerRole,
 };
 use rtao_testkit::{FakeChain, FakeState, Reply, rpc::RpcClient};
+use rtao_tx::{
+    ExecuteOptions, FactsTitle, Intent, IntentInterface, OriginMarker, PlanOptions, Policy, Root,
+    Signed, SystemClock,
+};
 use std::{
     collections::BTreeSet,
     marker::PhantomData,
@@ -58,13 +58,13 @@ trait ProbeKind: Send + Sync + 'static {
 }
 struct Cold;
 impl ProbeKind for Cold {
-    const SPEC: &'static IntentSpec = <rtao::intents::Transfer as IntentInterface>::SPEC;
+    const SPEC: &'static IntentSpec = <rtao_intents::Transfer as IntentInterface>::SPEC;
     type Role = Coldkey;
     type Origin = Signed;
 }
 struct Hot;
 impl ProbeKind for Hot {
-    const SPEC: &'static IntentSpec = <rtao::intents::ServeAxon as IntentInterface>::SPEC;
+    const SPEC: &'static IntentSpec = <rtao_intents::ServeAxon as IntentInterface>::SPEC;
     type Role = Hotkey;
     type Origin = Signed;
 }
@@ -172,7 +172,7 @@ impl<M: ProbeKind> Intent for Probe<M> {
     }
 }
 
-async fn fixture(free: u64) -> (rtao::Executor, FakeChain, Keys) {
+async fn fixture(free: u64) -> (rtao_tx::Executor, FakeChain, Keys) {
     let keys = Keys {
         signer: KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap(),
         unlocks: Arc::new(AtomicUsize::new(0)),
@@ -197,10 +197,10 @@ async fn fixture(free: u64) -> (rtao::Executor, FakeChain, Keys) {
     let client = Client::from_rpc(RpcClient::new(fake.clone()), config)
         .await
         .unwrap();
-    (rtao::Executor::new(client), fake, keys)
+    (rtao_intents::executor(client), fake, keys)
 }
 
-async fn group(executor: &rtao::Executor, keys: &Keys, threshold: u16) -> Multisig {
+async fn group(executor: &rtao_tx::Executor, keys: &Keys, threshold: u16) -> Multisig {
     executor
         .multisig(&[AccountId([9; 32]), keys.signer.account()], threshold)
         .await
@@ -223,7 +223,7 @@ fn reviewed_fixture(
 }
 
 fn decode(runtime: &RuntimeHandle, call: &CallBytes) -> Value {
-    rtao::core::DynValue::new(
+    rtao_core::DynValue::new(
         runtime
             .core()
             .decode_spec(&TypeSpec::Call, call.as_bytes(), true)
@@ -621,9 +621,9 @@ async fn hotkey_batch_continuation_uses_the_dynamic_role_and_preserves_reviewed_
     for threshold in [1, 2] {
         let (executor, fake, keys) = fixture(1_000_000_000).await;
         let semantic =
-            rtao::intents::Batch::new(vec![json!({"op":"reset_axon","netuid":7})]).unwrap();
+            rtao_intents::Batch::new(vec![json!({"op":"reset_axon","netuid":7})]).unwrap();
         assert_eq!(
-            <rtao::intents::Batch as IntentInterface>::SPEC.signer,
+            <rtao_intents::Batch as IntentInterface>::SPEC.signer,
             "coldkey"
         );
         assert_eq!(Intent::signer_role(&semantic).unwrap(), SignerRole::Hotkey);
@@ -673,7 +673,7 @@ async fn hotkey_batch_continuation_uses_the_dynamic_role_and_preserves_reviewed_
 async fn continuation_proof_cannot_relabel_transfer_all_as_bounded_or_change_its_destination() {
     for threshold in [1, 2] {
         let (executor, fake, keys) = fixture(1_000_000_000).await;
-        let semantic = rtao::intents::TransferAll {
+        let semantic = rtao_intents::TransferAll {
             hashed_descriptor: None,
             dest_ss58: AccountId([5; 32]).into(),
             keep_alive: true,
@@ -694,13 +694,13 @@ async fn continuation_proof_cannot_relabel_transfer_all_as_bounded_or_change_its
             .await
             .unwrap();
         let proof = first.reviewed_call().unwrap().unwrap();
-        let bounded = rtao::intents::Transfer {
+        let bounded = rtao_intents::Transfer {
             hashed_descriptor: None,
             dest_ss58: semantic.dest_ss58.clone(),
             amount_tao: Balance::<Tao>::from_rao(0).into(),
             keep_alive: true,
         };
-        let changed_destination = rtao::intents::TransferAll {
+        let changed_destination = rtao_intents::TransferAll {
             dest_ss58: AccountId([6; 32]).into(),
             ..semantic.clone()
         };
@@ -852,7 +852,7 @@ async fn actual_runtime_cap_refuses_a_previously_valid_group_before_fee_or_funds
             .seed_constant("Multisig", "MaxSignatories", json!(2))
             .unwrap();
         let upgraded =
-            rtao::core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42).unwrap();
+            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42).unwrap();
         state.runtime = Arc::new(upgraded);
         state.advance(2);
     });
@@ -953,7 +953,7 @@ async fn wrapping_rechecks_a_cap_reduced_after_adapter_construction() {
             .seed_constant("Multisig", "MaxSignatories", json!(2))
             .unwrap();
         let upgraded =
-            rtao::core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42).unwrap();
+            rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 1, 42).unwrap();
         state.runtime = Arc::new(upgraded);
         state.advance(2);
     });
@@ -1172,7 +1172,7 @@ fn submitted_multisig_call(runtime: &RuntimeHandle, fake: &FakeChain) -> Value {
             .core()
             .decode_spec(&TypeSpec::Call, &extrinsic[offset..], true)
         {
-            let call = rtao::core::DynValue::new(value).to_json();
+            let call = rtao_core::DynValue::new(value).to_json();
             if call["call_module"] == "Multisig" {
                 return call;
             }

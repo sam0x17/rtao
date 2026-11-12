@@ -2,14 +2,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! `subnets emission` views and checked writes against the encoded fake chain.
 
-use rtao::{
-    client::{Client, ClientConfig, Network, View},
-    primitives::{
-        AccountId, AlphaBalance, CryptoType, DefaultAccount, NetUid, TaoBalance,
-        emission_weights::{self as ew, DEFAULT_OWNER, ONE},
-    },
-    signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -20,7 +12,15 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network, View};
+use rtao_primitives::{
+    AccountId, AlphaBalance, CryptoType, DefaultAccount, NetUid, TaoBalance,
+    emission_weights::{self as ew, DEFAULT_OWNER, ONE},
+};
 use rtao_runtime::storage::{subtensor_module as st, swap};
+use rtao_signer::{
+    BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
+};
 use rtao_testkit::{
     FakeChain, FakeState, Reply, SubmitScript,
     fixtures::catalog_samples::{
@@ -53,7 +53,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -191,8 +191,8 @@ async fn run_setup(
     );
     if let Some(saved) = &setup.saved {
         // Saved-call caching stays inside this fixture's root.
-        ctx.config_store = Some(rtao::client::config::Store::new(
-            rtao::client::config::Paths::new(saved.store.path(), |_| None),
+        ctx.config_store = Some(rtao_client::config::Store::new(
+            rtao_client::config::Paths::new(saved.store.path(), |_| None),
         ));
     }
     let sink = MemorySink::default();
@@ -390,7 +390,9 @@ async fn show_reports_a_capped_root_share_and_a_closed_window() -> TestResult {
     )?;
     state.seed(
         &st::LAST_RATE_LIMITED_BLOCK,
-        (rtao::reads::reads::subnets::emission_weights_rate_limit_key(SUBNET),),
+        (rtao_reads::reads::subnets::emission_weights_rate_limit_key(
+            SUBNET,
+        ),),
         90u64,
     )?;
     let (client, _) = client(state).await?;
@@ -955,7 +957,9 @@ async fn rate_limited_owner_dry_run_is_blocked_with_exit_1() -> TestResult {
     let mut state = state()?;
     state.seed(
         &st::LAST_RATE_LIMITED_BLOCK,
-        (rtao::reads::reads::subnets::emission_weights_rate_limit_key(SUBNET),),
+        (rtao_reads::reads::subnets::emission_weights_rate_limit_key(
+            SUBNET,
+        ),),
         90u64,
     )?;
     let (client, chain) = client(state).await?;
@@ -1217,8 +1221,7 @@ async fn finalized_write_reads_the_stored_vector_back_at_the_inclusion_block() -
     assert_eq!(submissions.len(), 1);
     let runtime = View::runtime(&client).await?;
     let decoded =
-        rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
-            .to_json();
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?).to_json();
     assert_eq!(
         decoded["call"]["call_function"],
         json!("sudo_set_subnet_emission_weights"),
@@ -1560,7 +1563,7 @@ async fn saved_multisig_reads_back_only_once_the_change_executes() -> TestResult
     for threshold in [1u16, 2] {
         let members = [signer.account(), other];
         let (probe, _) = client(owned_state(signer.account())?).await?;
-        let group = rtao::Executor::new(probe.clone())
+        let group = rtao_intents::executor(probe.clone())
             .multisig(&members, threshold)
             .await?;
         probe.close().await;

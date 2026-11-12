@@ -330,8 +330,9 @@ fn layer(name: &str) -> Option<u8> {
         | "rtao-compat-epistula"
         | "rtao-transport-quic"
         | "rtao-remote-signer" => 8,
-        "rtao" => 9,
-        "rtao-cli" => 10,
+        // rtao-cli is the CLI library; the facade's `rtao` binary sits on it (D-190).
+        "rtao-cli" => 9,
+        "rtao" => 10,
         "rtao-testkit" | "xtask" => 11,
         _ => return None,
     })

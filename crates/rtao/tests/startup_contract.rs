@@ -1,8 +1,9 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/main.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Legacy startup compatibility through actual parsing and the offline binary.
 
-use rtao::{client::config::ConfigFile, primitives::AccountId};
 use rtao_cli::application::{normalize_legacy_address_argv, warn_legacy_config};
+use rtao_client::config::ConfigFile;
+use rtao_primitives::AccountId;
 use serde_json::{Value, json};
 use std::{
     ffi::OsString,

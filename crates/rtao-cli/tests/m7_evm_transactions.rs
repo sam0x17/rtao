@@ -2,7 +2,6 @@
 
 #![cfg(feature = "evm")]
 
-use rtao::evm::{Address, EvmKeyInfo, EvmTxPreview, U256};
 use rtao_cli::{
     application,
     books::Books,
@@ -13,6 +12,7 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
 };
+use rtao_evm::{Address, EvmKeyInfo, EvmTxPreview, U256};
 use secrecy::SecretString;
 use serde_json::{Map, Value, json};
 use std::{

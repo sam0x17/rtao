@@ -2,10 +2,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/metagraph_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Registration routing and metagraph output preserve real SDK semantics.
 
-use rtao::{
-    client::{Client, ClientConfig, HeadProvider, Network},
-    primitives::{AccountId, NetUid},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -15,7 +11,9 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, HeadProvider, Network};
 use rtao_intents::pow::registration_prefix;
+use rtao_primitives::{AccountId, NetUid};
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::{Value, json};
 use std::{
@@ -44,7 +42,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -260,8 +258,8 @@ async fn public_pow_preparation_binds_the_explicit_hotkey_and_proxy_owner_withou
     let key = state.runtime.storage_key(
         uids,
         &[
-            rtao::core::codec::Value::Int(2),
-            rtao::core::codec::Value::Bytes(hotkey.0.to_vec()),
+            rtao_core::codec::Value::Int(2),
+            rtao_core::codec::Value::Bytes(hotkey.0.to_vec()),
         ],
     )?;
     state.seed_encoded(key, None);
@@ -284,7 +282,7 @@ async fn public_pow_preparation_binds_the_explicit_hotkey_and_proxy_owner_withou
         .await?
         .ok_or("challenge hash")?;
     let prefix = registration_prefix(NetUid(2), hash, hotkey, owner)?;
-    let seal = rtao::core::pow::seal(&prefix, nonce)?;
+    let seal = rtao_core::pow::seal(&prefix, nonce)?;
     assert_eq!(
         prepared.args["work_hex"],
         json!(format!("0x{}", hex::encode(seal)))
@@ -893,7 +891,7 @@ async fn inspection_cost_and_price_use_real_reads_without_author_calls() -> Test
         ),
         (
             vec!["rtao", "subnets", "price", "--netuid", "7", "--json"],
-            json!({"netuid":7,"price_rao":9_007_199_254_740_993u64,"tao_per_alpha":rtao::primitives::pyfmt::rao_to_f64(9_007_199_254_740_993)}),
+            json!({"netuid":7,"price_rao":9_007_199_254_740_993u64,"tao_per_alpha":rtao_primitives::pyfmt::rao_to_f64(9_007_199_254_740_993)}),
         ),
     ] {
         let parsed = parse(&args)?;
@@ -929,8 +927,8 @@ async fn inspection_cost_and_price_use_real_reads_without_author_calls() -> Test
 
 #[test]
 fn conviction_json_keeps_dust_and_uses_per_hotkey_gate_records() -> TestResult {
-    use rtao::primitives::DynBalance;
-    use rtao::reads::reads::m6_locks::{ConvictionEntry, SubnetConvictions};
+    use rtao_primitives::DynBalance;
+    use rtao_reads::reads::m6_locks::{ConvictionEntry, SubnetConvictions};
     let netuid = NetUid(7);
     let balance = |rao| DynBalance::from_rao(rao, netuid);
     let key = AccountId([21; 32]);
@@ -1198,7 +1196,7 @@ fn metagraph_balances_use_the_queried_symbol_instead_of_cached_symbols() -> Test
         );
         output.update_token_symbols([(
             netuid.get(),
-            rtao::primitives::Symbol::new("STALE".to_owned()),
+            rtao_primitives::Symbol::new("STALE".to_owned()),
         )])?;
         let mut graph = graph();
         graph["symbol"] = json!(symbol);
@@ -1208,11 +1206,11 @@ fn metagraph_balances_use_the_queried_symbol_instead_of_cached_symbols() -> Test
         subnets::render_metagraph(&output, netuid, &graph, &BTreeMap::new())?;
         let text = sink.text(Stream::Stdout)?;
         assert!(!text.contains("STALE"));
-        let mut balance = rtao::primitives::DynBalance::from_rao(2_000_000_000, netuid);
+        let mut balance = rtao_primitives::DynBalance::from_rao(2_000_000_000, netuid);
         balance.symbol = symbol
             .filter(|_| netuid != NetUid::ROOT)
             .filter(|s| !s.is_empty())
-            .map(|s| rtao::primitives::Symbol::new(s.to_owned()));
+            .map(|s| rtao_primitives::Symbol::new(s.to_owned()));
         for rao in [2_000_000_000, 3_000_000_000, 4_000_000_000] {
             balance.rao = rao;
             assert!(text.contains(&balance.to_python_string()), "{text}");

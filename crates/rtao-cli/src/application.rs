@@ -1139,7 +1139,7 @@ mod parsing_tests {
             self.read += 1;
             self.replies.pop_front().ok_or(PromptError::Aborted)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, text: &str) -> Result<(), PromptError> {
@@ -1351,7 +1351,7 @@ mod parsing_tests {
         }
         let mut terminal = input(&[]);
         let context = PromptContext {
-            policy: rtao::wallet::PromptPolicy::Never,
+            policy: rtao_wallet::PromptPolicy::Never,
             ..Default::default()
         };
         let error = parse_with_prompts(

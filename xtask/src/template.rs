@@ -171,7 +171,7 @@ fn check_project(
     let mut build_doctor = Command::new("cargo");
     build_doctor
         .current_dir(source)
-        .args(["build", "--locked", "-p", "rtao-cli"]);
+        .args(["build", "--locked", "-p", "rtao", "--bin", "rtao"]);
     step(build_doctor, evidence, "build-doctor", deadline)?;
     check.env("RTAO_DOCTOR", target.join("debug/rtao"));
     if localnet {

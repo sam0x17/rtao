@@ -5,14 +5,14 @@
 
 use std::sync::Arc;
 
-use rtao::client::Inclusion;
-use rtao::primitives::{Balance, DynBalance, NetUid, Symbol, Tao};
-use rtao::tx::{ChainError, ExtrinsicResult};
 use rtao_cli::output::{
     DiagnosticContext, HumanView, MemorySink, Output, OutputOptions, OutputSink, PythonBalance,
     PythonBytes, PythonString, ReviewSection, StepState, Stream, TableSpec, diagnostic,
     terminal_text,
 };
+use rtao_client::Inclusion;
+use rtao_primitives::{Balance, DynBalance, NetUid, Symbol, Tao};
+use rtao_tx::{ChainError, ExtrinsicResult};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -661,7 +661,7 @@ fn cloned_outputs_share_display_updates_without_rewriting_machine_records() -> T
     clone.name_address("5a", "ordered")?;
     output.name_address("5old", "older")?;
     clone.name_address("5new", "5old")?;
-    let address = rtao::primitives::AccountId([31; 32]).to_string();
+    let address = rtao_primitives::AccountId([31; 32]).to_string();
     output.name_address(&address, "\x1b[31mEve\n")?;
     output.name_address("ignored", "")?;
     let summary = format!("pay 5raw and {address} on netuid 4");
@@ -796,7 +796,7 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
     // Native unknown-fate identity is deliberately absent from canonical JSON.
     // Both classified and unclassified receipt paths must disclose it separately,
     // including in quiet mode, without inviting another submission.
-    let hash = rtao::primitives::H256([73; 32]);
+    let hash = rtao_primitives::H256([73; 32]);
     let identity = format!("0x{}", hex::encode(hash.0));
     for classified in [false, true] {
         for (json_mode, quiet) in [(false, false), (false, true), (true, false), (true, true)] {
@@ -853,7 +853,7 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
                 result.data.insert("shielded".into(), json!(true));
             }
             if unknown {
-                result.fate_unknown = Some(rtao::primitives::H256([81; 32]));
+                result.fate_unknown = Some(rtao_primitives::H256([81; 32]));
             }
             let canonical = result.to_json();
             assert!(!output.result_with_shield_context(
@@ -893,7 +893,7 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
             }
         }
     }
-    let address = rtao::primitives::AccountId([32; 32]).to_string();
+    let address = rtao_primitives::AccountId([32; 32]).to_string();
     let name = hostile("receipt-name");
     let subnet_name = hostile("receipt-subnet");
     let message = format!("Transfer 5new and {address} on subnet 4.");
@@ -927,7 +927,7 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
         assert!(output.result(&result, &message)?);
         let stdout = sink.text(Stream::Stdout)?;
         if json_mode {
-            rtao::primitives::json::compare(&original, &serde_json::from_str::<Value>(&stdout)?)?;
+            rtao_primitives::json::compare(&original, &serde_json::from_str::<Value>(&stdout)?)?;
         } else {
             assert!(stdout.starts_with(&format!("✓ {expected_message}\n")));
             assert!(stdout.contains(&expected_message));
@@ -966,7 +966,7 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
         assert!(!output.result(&failed, "unused success")?);
         let stdout = sink.bytes(Stream::Stdout)?;
         if json_mode {
-            rtao::primitives::json::compare(
+            rtao_primitives::json::compare(
                 &failed.to_json(),
                 &serde_json::from_slice::<Value>(&stdout[start..])?,
             )?;
@@ -1077,7 +1077,7 @@ fn receipts_emit_canonical_domain_shape_including_failures_on_stdout() -> TestRe
 fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> TestResult {
     let result = outcome(false);
     let mut error = result.error.ok_or("missing fixture error")?;
-    let address = rtao::primitives::AccountId([33; 32]).to_string();
+    let address = rtao_primitives::AccountId([33; 32]).to_string();
     let name = hostile("chain-name");
     let subnet_name = hostile("chain-subnet");
     error.message = format!("The account 5new and {address} on netuid 4 is not registered.");
@@ -1113,8 +1113,8 @@ fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> 
     let mut classified = error.clone();
     classified.code = rtao_catalog::ErrorCode::Expired;
     for cause in [
-        rtao::tx::TxError::Chain(classified.clone()),
-        rtao::tx::TxError::Intent(rtao::tx::IntentError::Chain(classified.clone())),
+        rtao_tx::TxError::Chain(classified.clone()),
+        rtao_tx::TxError::Intent(rtao_tx::IntentError::Chain(classified.clone())),
     ] {
         let mut cli = rtao_cli::error::CliError::from(cause);
         cli.message = format!("operation context: {}", cli.message);
@@ -1152,7 +1152,7 @@ fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> 
     }
     for quiet in [false, true] {
         let policy =
-            rtao_cli::error::CliError::from(rtao::tx::TxError::Policy(rtao::tx::PolicyError {
+            rtao_cli::error::CliError::from(rtao_tx::TxError::Policy(rtao_tx::PolicyError {
                 violations: vec!["policy fixture".into()],
             }));
         let docs = format!("{}/errors/policy-violation", rtao_catalog::py::DOCS_URL);
@@ -1176,7 +1176,7 @@ fn standalone_chain_error_retains_classification_and_optional_explorer_url() -> 
         assert!(text.contains(&docs));
 
         let hash = rtao_jsonrpc::H256::from([37; 32]);
-        let unknown = rtao_cli::error::CliError::from(rtao::tx::TxError::Rpc(
+        let unknown = rtao_cli::error::CliError::from(rtao_tx::TxError::Rpc(
             rtao_jsonrpc::RpcError::FateUnknown { hash },
         ));
         assert!(unknown.diagnostic.is_none());

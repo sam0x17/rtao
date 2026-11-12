@@ -43,3 +43,8 @@ pub mod call;
 pub mod commands;
 /// Shell completion scripts from the active command tree.
 pub mod completions;
+/// The `rtao` binary's entry point.
+pub mod entry;
+
+// The offline `rtao doctor` check, reached through [`entry::main`].
+mod doctor;

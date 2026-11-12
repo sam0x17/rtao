@@ -8,10 +8,8 @@ use crate::{
     prompt::{PromptError, PromptHistory, PromptSpec, PromptValidation, Terminal, ask_with},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::config::{MAX_JSON_FILE_BYTES, read_bounded_json_file},
-    tx::timelock::{self, DrandClient, OpenOptions, Reveal, TimelockError, Timelocked},
-};
+use rtao_client::config::{MAX_JSON_FILE_BYTES, read_bounded_json_file};
+use rtao_tx::timelock::{self, DrandClient, OpenOptions, Reveal, TimelockError, Timelocked};
 use serde_json::{Value, json};
 use std::{
     future::Future,
@@ -254,7 +252,7 @@ async fn prompt_missing(
             })
             .map_err(prompt_error)?;
             if !encrypt && raw.len() > INLINE_DECODE_BYTES && !Path::new(&raw).is_file() {
-                let (raw, parsed) = rtao::core::offload(move || {
+                let (raw, parsed) = rtao_core::offload(move || {
                     let parsed = Timelocked::parse(raw.as_str());
                     (raw, parsed)
                 })
@@ -301,7 +299,7 @@ async fn payload(data: Option<&str>, file: Option<&str>) -> Result<Zeroizing<Vec
     match file {
         Some(path) => {
             let path = PathBuf::from(path);
-            let bytes = rtao::core::offload(move || rtao::wallet::read_keyfile_data(&path))
+            let bytes = rtao_core::offload(move || rtao_wallet::read_keyfile_data(&path))
                 .await
                 .map_err(failure)?
                 .map_err(failure)?;
@@ -331,7 +329,7 @@ async fn ciphertext(data: Option<&str>, file: Option<&str>) -> Result<Timelocked
     let file = file.or_else(|| data.filter(|data| Path::new(data).is_file()));
     if let Some(path) = file {
         let path = PathBuf::from(path);
-        rtao::core::offload(move || {
+        rtao_core::offload(move || {
             let raw = read_bounded_json_file(&path).map_err(failure)?;
             if raw.is_ascii() {
                 let compact: String = raw
@@ -356,7 +354,7 @@ async fn ciphertext(data: Option<&str>, file: Option<&str>) -> Result<Timelocked
             return Timelocked::parse(data).map_err(failure);
         }
         let data = data.to_owned();
-        rtao::core::offload(move || Timelocked::parse(data.as_str()).map_err(failure))
+        rtao_core::offload(move || Timelocked::parse(data.as_str()).map_err(failure))
             .await
             .map_err(failure)?
     }
@@ -401,7 +399,7 @@ async fn envelope_hex(sealed: &Timelocked) -> Result<String, CliError> {
         return Ok(sealed.hex());
     }
     let bytes = sealed.ciphertext().to_vec();
-    rtao::core::offload(move || hex::encode(bytes))
+    rtao_core::offload(move || hex::encode(bytes))
         .await
         .map_err(failure)
 }
@@ -473,7 +471,7 @@ pub async fn run_with_backend(
             if let Some(path) = text(leaf, "out").filter(|path| !path.is_empty()) {
                 let bytes = sealed.ciphertext().to_vec();
                 let path_owned = PathBuf::from(path);
-                rtao::core::offload(move || std::fs::write(path_owned, bytes))
+                rtao_core::offload(move || std::fs::write(path_owned, bytes))
                     .await
                     .map_err(failure)?
                     .map_err(failure)?;
@@ -544,7 +542,7 @@ pub async fn run_with_backend(
                 timeout: text(leaf, "timeout")
                     .map(|raw| {
                         let seconds =
-                            rtao::primitives::pyfmt::parse_float(raw).ok_or_else(|| {
+                            rtao_primitives::pyfmt::parse_float(raw).ok_or_else(|| {
                                 CliError::input("timeout must be finite and non-negative")
                             })?;
                         Duration::try_from_secs_f64(seconds)
@@ -574,7 +572,7 @@ pub async fn run_with_backend(
             let plaintext_len = plaintext.len();
             if let Some(path) = text(leaf, "out").filter(|path| !path.is_empty()) {
                 let path_owned = PathBuf::from(path);
-                rtao::core::offload(move || std::fs::write(path_owned, plaintext.as_slice()))
+                rtao_core::offload(move || std::fs::write(path_owned, plaintext.as_slice()))
                     .await
                     .map_err(failure)?
                     .map_err(failure)?;
@@ -587,7 +585,7 @@ pub async fn run_with_backend(
                 }
             } else {
                 let (decoded_text, encoded) = if plaintext.len() > INLINE_DECODE_BYTES {
-                    rtao::core::offload(move || plaintext_display(plaintext))
+                    rtao_core::offload(move || plaintext_display(plaintext))
                         .await
                         .map_err(failure)?
                 } else {

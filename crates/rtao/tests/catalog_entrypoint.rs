@@ -1,7 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/config.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Config and catalog routes through the real binary with isolated file paths.
 
-use rtao::client::config::ConfigFile;
+use rtao_client::config::ConfigFile;
 use serde_json::{Value, json};
 use std::{
     error::Error,
@@ -170,11 +170,11 @@ fn tools_binary_emits_complete_json_with_unavailable_commands_unadvertised() -> 
     );
     assert_eq!(
         transfer["rust"]["role"],
-        std::any::type_name::<<rtao_intents::Transfer as rtao::tx::IntentInterface>::Role>()
+        std::any::type_name::<<rtao_intents::Transfer as rtao_tx::IntentInterface>::Role>()
     );
     assert_eq!(
         transfer["rust"]["output"],
-        std::any::type_name::<<rtao_intents::Transfer as rtao::tx::IntentInterface>::Output>()
+        std::any::type_name::<<rtao_intents::Transfer as rtao_tx::IntentInterface>::Output>()
     );
     assert!(std::fs::read_dir(&root.0)?.next().is_none());
     Ok(())

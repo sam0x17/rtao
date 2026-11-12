@@ -3,7 +3,7 @@
 
 use std::io::{self, Write};
 
-use rtao::primitives::pyfmt::float_repr;
+use rtao_primitives::pyfmt::float_repr;
 use serde::Serialize;
 use serde_json::ser::{Formatter, PrettyFormatter};
 

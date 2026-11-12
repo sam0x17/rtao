@@ -10,7 +10,7 @@ const MAX_BYTES: usize = 16 * 1024 * 1024;
 const MAX_PAGES: usize = 128;
 
 trait Transport: Send + Sync {
-    fn get<'a>(&'a self, url: &'a Url) -> rtao::signer::BoxFuture<'a, Result<Vec<u8>, CliError>>;
+    fn get<'a>(&'a self, url: &'a Url) -> rtao_signer::BoxFuture<'a, Result<Vec<u8>, CliError>>;
 }
 
 struct Http(reqwest::Client);
@@ -42,7 +42,7 @@ impl Http {
     }
 }
 impl Transport for Http {
-    fn get<'a>(&'a self, url: &'a Url) -> rtao::signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
+    fn get<'a>(&'a self, url: &'a Url) -> rtao_signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
         Box::pin(async move {
             let mut response = self
                 .0
@@ -197,7 +197,7 @@ async fn run_with_transport(
     history: &mut PromptHistory,
     transport: Option<&dyn Transport>,
 ) -> Result<(), CliError> {
-    let network = rtao::client::Network::resolve(&ctx.globals.network).map_err(failure)?;
+    let network = rtao_client::Network::resolve(&ctx.globals.network).map_err(failure)?;
     if !matches!(network.label(), "finney" | "archive") {
         return Err(failure(format!(
             "transfer history is not indexed for network {:?}",
@@ -264,7 +264,7 @@ mod tests {
         fn get<'a>(
             &'a self,
             url: &'a Url,
-        ) -> rtao::signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
+        ) -> rtao_signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
             Box::pin(async move {
                 self.urls.lock().map_err(failure)?.push(url.clone());
                 let page = self
@@ -346,7 +346,7 @@ mod tests {
             fn get<'a>(
                 &'a self,
                 _: &'a Url,
-            ) -> rtao::signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
+            ) -> rtao_signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
                 Box::pin(async { Ok(vec![b' '; MAX_BYTES + 1]) })
             }
         }
@@ -373,7 +373,7 @@ mod renderer_command_tests {
 
     struct Page(Value);
     impl Transport for Page {
-        fn get<'a>(&'a self, _: &'a Url) -> rtao::signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
+        fn get<'a>(&'a self, _: &'a Url) -> rtao_signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
             Box::pin(async move { serde_json::to_vec(&self.0).map_err(failure) })
         }
     }
@@ -390,8 +390,8 @@ mod renderer_command_tests {
         if wallets.try_exists()? {
             return Err("fixture wallet path must be absent".into());
         }
-        let owner = rtao::primitives::AccountId([7; 32]).to_string();
-        let peer = rtao::primitives::AccountId([8; 32]).to_string();
+        let owner = rtao_primitives::AccountId([7; 32]).to_string();
+        let peer = rtao_primitives::AccountId([8; 32]).to_string();
         let parsed = application::command_tree([super::super::super::command()])
             .try_get_matches_from([
                 "rtao",

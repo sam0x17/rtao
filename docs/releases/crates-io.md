@@ -100,8 +100,11 @@ and do not count. Crates on the same level are independent.
 | 6 | `rtao-intents`, `rtao-metagraph` |
 | 7 | `rtao-btauth` |
 | 8 | `rtao-compat-epistula`, `rtao-compat-synapse`, `rtao-neuron`, `rtao-remote-signer`, `rtao-transport-quic` |
-| 9 | `rtao` |
-| 10 | `rtao-cli` |
+| 9 | `rtao-cli` |
+| 10 | `rtao` |
+
+`rtao` depends on `rtao-cli` (optional, behind its default `cli` feature) for
+the `rtao` binary, so `rtao-cli` goes first (D-190).
 
 `cargo xtask forks order` prints the U levels in order. The republished
 packages go first: every rtao crate that reaches the core needs them.
@@ -159,6 +162,16 @@ git switch --detach rtao-vX.Y.Z
 cargo publish --workspace --exclude xtask --locked
 ```
 
+A later release excludes the packages whose version is already on crates.io:
+`rtao-arena` unless its own number moved, and the `rtao-upstream-*` packages
+(runtime-adopt publishes those, section 5). `cargo publish --workspace` stops
+at the first version that already exists:
+
+```sh
+cargo publish --workspace --exclude xtask --exclude rtao-arena \
+  --exclude 'rtao-upstream-*' --locked
+```
+
 `cargo publish --workspace` uploads in the order of section 3 and waits for
 each crate to appear in the index before publishing the crates that depend on
 it. If the rate limit stops it, publish the remaining crates one at a time, in
@@ -189,7 +202,9 @@ crate it depends on is not published yet.
   by default.
 - Install the CLI from crates.io in an empty `CARGO_HOME` and
   `CARGO_TARGET_DIR` under the task root, then check it:
-  `cargo install --locked rtao-cli`, `rtao --version`.
+  `cargo install --locked rtao`, `rtao --version`. From 0.1.1 the binary is
+  in the `rtao` crate (D-190); `rtao-cli` 0.1.0 is the last version that
+  installs one, and 0.1.1 and later have no binary.
 - Build a scratch project that depends on `rtao = "X.Y"` with the read features
   and no `[patch]`.
 - Check the first docs.rs build of each crate. The `host` and `ledger`

@@ -9,7 +9,8 @@ use crate::{
     prompt::{PromptError, python_strip},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{client::config::Paths, signer::BoxFuture};
+use rtao_client::config::Paths;
+use rtao_signer::BoxFuture;
 use serde_json::{Value, json};
 
 fn failure(error: impl std::fmt::Display) -> CliError {
@@ -69,7 +70,7 @@ impl ContactSource for NativeContacts {
             match kind {
                 #[cfg(feature = "vault")]
                 ContactImport::Vault => {
-                    use rtao::signer::vault::{
+                    use rtao_signer::vault::{
                         VaultScanOptions, VaultServerOptions, scan_vault_address,
                     };
                     let output = ctx.output.clone();
@@ -114,7 +115,7 @@ fn visible_terminal(ctx: &AppContext) -> Result<bool, CliError> {
 
 #[cfg(feature = "extension")]
 async fn extension_contact(ctx: &AppContext) -> Result<ImportedContact, CliError> {
-    use rtao::signer::extension::{
+    use rtao_signer::extension::{
         BridgeClient, EnsureBridgeOptions, account_crypto_type, ensure_bridge,
     };
     let mut options = EnsureBridgeOptions::from_environment().map_err(failure)?;
@@ -177,7 +178,7 @@ async fn extension_contact(ctx: &AppContext) -> Result<ImportedContact, CliError
                 let index = if answer.is_empty() {
                     Some(0)
                 } else {
-                    rtao::primitives::pyfmt::parse_integer(answer)
+                    rtao_primitives::pyfmt::parse_integer(answer)
                         .and_then(|value| value.to_string().parse::<usize>().ok())
                         .and_then(|value| value.checked_sub(1))
                 };
@@ -363,7 +364,7 @@ pub async fn run_with_source(
                 .ok_or_else(|| {
                     failure(format!(
                         "address {} not found",
-                        rtao::primitives::pyfmt::string_repr(contact)
+                        rtao_primitives::pyfmt::string_repr(contact)
                     ))
                 })?;
             detail(ctx, contact, entry)
@@ -473,8 +474,8 @@ pub async fn run_with_source(
             };
             // Python v488: a receiving address is saved complete, with its
             // descriptor, after the core's strict decoder accepts it.
-            if rtao::primitives::receiving::is_receiving_address(&address) {
-                rtao::primitives::receiving::parse_recipient(&address)
+            if rtao_primitives::receiving::is_receiving_address(&address) {
+                rtao_primitives::receiving::parse_recipient(&address)
                     .map_err(|error| failure(error.to_string()))?;
                 if signer.is_some() {
                     return Err(failure(
@@ -484,7 +485,7 @@ pub async fn run_with_source(
             } else if !is_bittensor_address(&address) {
                 return Err(failure(format!(
                     "invalid ss58 address {}",
-                    rtao::primitives::pyfmt::string_repr(&address)
+                    rtao_primitives::pyfmt::string_repr(&address)
                 )));
             }
             let entry = book
@@ -515,8 +516,8 @@ fn prompt_address(ctx: &AppContext) -> Result<String, CliError> {
             .map_err(prompt_error)?;
         let address = python_strip(&address);
         if is_bittensor_address(address)
-            || (rtao::primitives::receiving::is_receiving_address(address)
-                && rtao::primitives::receiving::parse_recipient(address).is_ok())
+            || (rtao_primitives::receiving::is_receiving_address(address)
+                && rtao_primitives::receiving::parse_recipient(address).is_ok())
         {
             return Ok(address.to_owned());
         }

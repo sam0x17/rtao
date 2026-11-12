@@ -55,10 +55,10 @@ async fn run_with_backend(
         .transpose()?
         .unwrap_or_default();
     let path_owned = path.to_owned();
-    let data = rtao::core::offload(move || {
-        let artifact = rtao::evm::load_artifact(path_owned)
+    let data = rtao_core::offload(move || {
+        let artifact = rtao_evm::load_artifact(path_owned)
             .map_err(|error| CliError::input(error.to_string()))?;
-        let encoded = rtao::evm::encode_deploy(&artifact, &args)
+        let encoded = rtao_evm::encode_deploy(&artifact, &args)
             .map_err(|error| CliError::input(error.to_string()))?;
         hex::decode(encoded.strip_prefix("0x").unwrap_or(&encoded)).map_err(failure)
     })
@@ -85,7 +85,7 @@ async fn run_with_backend(
         .and_then(|value| value.get("contract_address"))
         .and_then(serde_json::Value::as_str)
     {
-        let mirror = rtao::evm::h160_to_ss58(address).map_err(failure)?;
+        let mirror = rtao_evm::h160_to_ss58(address).map_err(failure)?;
         ctx.output.message(&format!(
             "contract mirror: {mirror} — this ss58 account is the contract's identity for native TAO and precompile calls"
         )).map_err(failure)?;
@@ -105,7 +105,7 @@ mod tests {
         output::{MemorySink, Output, OutputOptions, Stream},
         prompt::{PromptError, Terminal},
     };
-    use rtao::evm::{Address, EvmKeyInfo, EvmTxPreview, U256};
+    use rtao_evm::{Address, EvmKeyInfo, EvmTxPreview, U256};
     use secrecy::SecretString;
     use serde_json::{Value, json};
     use std::{

@@ -1,6 +1,5 @@
 //! The actual wallet list retains members and per-entry public metadata.
 
-use rtao::primitives::AccountId;
 use rtao_cli::{
     application,
     books::{Books, FsAccountLookup, NameResolver},
@@ -10,6 +9,7 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_primitives::AccountId;
 use serde_json::{Value, json};
 use std::{
     path::PathBuf,
@@ -28,7 +28,7 @@ impl Terminal for NoInput {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -66,7 +66,7 @@ async fn actual_wallet_list_keeps_multisig_members_and_later_optional_fields_in_
             {"name":"safe-partial","threshold":"2","signatories":["member-a","member-b","missing"],"note":"partial member set"},
         ]),
     );
-    let (expected_account, _) = rtao::core::extrinsic::multisig_account_id(&[[7; 32], [8; 32]], 2)?;
+    let (expected_account, _) = rtao_core::extrinsic::multisig_account_id(&[[7; 32], [8; 32]], 2)?;
     let expected_address = AccountId(expected_account).to_string();
     let lookup = FsAccountLookup::new(absent.clone())?;
     let resolver = NameResolver::new(&books, &lookup, "default", "default");

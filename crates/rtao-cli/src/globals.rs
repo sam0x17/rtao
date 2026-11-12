@@ -47,7 +47,7 @@ pub struct Globals {
     pub dry_run: bool,
     /// Explicit allowance for automatic recipient registration deposits
     /// (D-148); `--yes` never authorizes one.
-    pub max_registration_deposit: Option<rtao::primitives::Balance<rtao::primitives::Tao>>,
+    pub max_registration_deposit: Option<rtao_primitives::Balance<rtao_primitives::Tao>>,
     /// Explicit tri-state shield override; config stays a separate fallback.
     pub mev_shield: Option<bool>,
     /// Proxy reference; `self` bypasses configured dispatch.
@@ -353,7 +353,7 @@ pub(crate) fn normalize_signer_backend(value: &str) -> String {
 
 /// Python's `str` conversion for config defaults, preserving plain strings.
 pub(crate) fn config_string(value: &Value) -> String {
-    use rtao::primitives::pyfmt;
+    use rtao_primitives::pyfmt;
     let repr = |value: &Value| match value {
         Value::String(value) => pyfmt::string_repr(value),
         value => config_string(value),
@@ -407,7 +407,7 @@ fn truthy(value: &Value) -> bool {
 /// non-negative native-token budget, never rounding consent.
 pub fn parse_registration_deposit(
     value: &str,
-) -> Result<rtao::primitives::Balance<rtao::primitives::Tao>, String> {
+) -> Result<rtao_primitives::Balance<rtao_primitives::Tao>, String> {
     let invalid = || {
         "Invalid value for '--max-registration-deposit': use a non-negative TAO amount with at most nine decimal places".to_owned()
     };
@@ -432,7 +432,7 @@ pub fn parse_registration_deposit(
         .and_then(|rao| rao.checked_add(fraction))
         .and_then(|rao| u64::try_from(rao).ok())
         .ok_or_else(invalid)?;
-    Ok(rtao::primitives::Balance::from_rao(rao))
+    Ok(rtao_primitives::Balance::from_rao(rao))
 }
 
 impl Globals {
@@ -456,7 +456,7 @@ impl Globals {
                 Some("BT_NETWORK"),
                 Some(rtao_catalog::py::DEFAULT_NETWORK.into()),
             )
-            .map(|network| rtao::client::canonical_network_name(&network).to_owned())
+            .map(|network| rtao_client::canonical_network_name(&network).to_owned())
             .ok_or("network is missing")?,
             wallet_name: resolve("wallet", Some("BT_WALLET"), Some("default".into()))
                 .ok_or("wallet is missing")?,
@@ -582,7 +582,7 @@ impl Globals {
         };
         let enabled = |id: &str| !reserved.contains(&id) && yes(command, id);
         if let Some(v) = value("network") {
-            self.network = rtao::client::canonical_network_name(&v).to_owned();
+            self.network = rtao_client::canonical_network_name(&v).to_owned();
         }
         if let Some(v) = value("wallet") {
             self.wallet_name = v;

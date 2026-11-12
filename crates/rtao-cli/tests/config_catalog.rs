@@ -2,13 +2,13 @@
 //! Command-boundary fixtures for persistent defaults and catalog discovery.
 
 use clap::ArgMatches;
-use rtao::client::config::{ConfigFile, Paths, Store};
 use rtao_cli::{
     application,
     commands::{catalog, config},
     error::CliError,
     output::{DiagnosticContext, MemorySink, Output, OutputOptions, Stream},
 };
+use rtao_client::config::{ConfigFile, Paths, Store};
 use serde_json::{Value, json};
 use std::{
     error::Error,
@@ -457,7 +457,7 @@ fn explain_every_dispatch_variant_retains_docs_remediation_and_semantic_url() ->
         assert_eq!(row["docs"], docs);
         assert_eq!(
             row["help"],
-            rtao::tx::ChainError::new("", Some((*name).into())).remediation()
+            rtao_tx::ChainError::new("", Some((*name).into())).remediation()
         );
         assert_eq!(row["code"], code.as_str());
         assert_eq!(

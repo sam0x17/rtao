@@ -2,12 +2,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/axon.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Operator command inputs and real semantic submission over in-process RPC.
 
-use rtao::{
-    client::{BlockRef, Client, ClientConfig, DynView, Network, View},
-    primitives::{AccountId, CryptoType, MechId, NetUid, NetUidStorageIndex},
-    signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
-    tx::{BuildCx, Clock, OriginView},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -17,7 +11,13 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions},
     prompt::{PromptError, Terminal},
 };
+use rtao_client::{BlockRef, Client, ClientConfig, DynView, Network, View};
+use rtao_primitives::{AccountId, CryptoType, MechId, NetUid, NetUidStorageIndex};
+use rtao_signer::{
+    BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
+};
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_tx::{BuildCx, Clock, OriginView};
 use serde_json::{Value, json};
 use std::{
     path::Path,
@@ -342,7 +342,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -572,7 +572,7 @@ async fn operator_commands_submit_semantic_bytes_with_hotkey_and_requested_era()
         assert_eq!(submissions.len(), 1);
         let runtime = View::runtime(&client).await?;
         let decoded =
-            rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
+            rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
                 .to_json();
         assert_eq!(decoded["era"][0], json!(64));
         assert_eq!(decoded["call"]["call_module"], json!("SubtensorModule"));
@@ -826,8 +826,8 @@ async fn raw_null_keeps_exact_integer_weights_and_registration_and_rate_checks_c
             let key = state.runtime.storage_key(
                 entry,
                 &[
-                    rtao::core::codec::Value::Int(i128::from(NETUID.0)),
-                    rtao::core::codec::Value::Bytes(keys.key.account().0.to_vec()),
+                    rtao_core::codec::Value::Int(i128::from(NETUID.0)),
+                    rtao_core::codec::Value::Bytes(keys.key.account().0.to_vec()),
                 ],
             )?;
             state.seed_encoded(key, None);

@@ -11,12 +11,6 @@ use std::{
     },
 };
 
-use rtao::{
-    client::{Client, ClientConfig, Inclusion, Network, View},
-    primitives::{AccountId, CryptoType},
-    signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
-    tx::{ApproveOptions, Multisig},
-};
 use rtao_cli::{
     application::command_tree,
     books::{AccountKind, Books},
@@ -30,7 +24,13 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Inclusion, Network, View};
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{
+    BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
+};
 use rtao_testkit::{FakeChain, FakeState, SubmitScript, rpc::RpcClient};
+use rtao_tx::{ApproveOptions, Multisig};
 use serde_json::{Value, json};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -46,7 +46,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -85,7 +85,7 @@ impl Terminal for ReviewRefusal {
             });
         Ok("n".into())
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -623,7 +623,7 @@ fn multisig_replay_uses_rtao_and_preserves_btcli_inside_user_arguments() -> Test
     let alice = AccountId([7; 32]);
     let bob = AccountId([8; 32]);
     let group = RawMultisig {
-        account_mode: rtao::primitives::AccountMode::Legacy,
+        account_mode: rtao_primitives::AccountMode::Legacy,
         threshold: 2,
         signatories: vec![alice, bob],
         preset: Some("btcli team".into()),
@@ -732,11 +732,11 @@ async fn composition_uses_live_core_bytes_sudo_then_proxy_and_runtime_stamps() -
     raw.sudo = true;
     raw.proxy_for = Some(AccountId([9; 32]));
     let composed = call::compose(&runtime, &raw)?;
-    let expected = rtao::client::compose::proxy(
+    let expected = rtao_client::compose::proxy(
         &runtime,
         AccountId([9; 32]),
         None,
-        rtao::client::compose::sudo(&runtime, plain)?,
+        rtao_client::compose::sudo(&runtime, plain)?,
     )?;
     assert_eq!(composed, expected);
     let decoded = client
@@ -880,7 +880,7 @@ async fn raw_round_review_lists_member_backends_before_confirmation_without_priv
             })));
             let mut raw = request();
             raw.multisig = Some(RawMultisig {
-                account_mode: rtao::primitives::AccountMode::Legacy,
+                account_mode: rtao_primitives::AccountMode::Legacy,
                 threshold: 2,
                 signatories: vec![alice.key.account(), bob.key.account()],
                 preset: Some("team".into()),
@@ -1161,7 +1161,7 @@ async fn opening_timepoint_is_authenticated_from_included_matching_receipt_event
             events: approval_events(keys[0].key.account(), &group, call.hash(), None),
         })
     });
-    let executor = rtao::Executor::new(client.clone());
+    let executor = rtao_intents::executor(client.clone());
     let receipt = group
         .approve(
             &executor,
@@ -1232,7 +1232,7 @@ async fn opening_timepoint_is_authenticated_from_included_matching_receipt_event
 fn chained_request(keys: &[Keys]) -> RawCallRequest {
     let mut raw = request();
     raw.multisig = Some(RawMultisig {
-        account_mode: rtao::primitives::AccountMode::Legacy,
+        account_mode: rtao_primitives::AccountMode::Legacy,
         threshold: 2,
         signatories: keys.iter().map(|key| key.key.account()).collect(),
         preset: Some("team".into()),
@@ -1453,8 +1453,7 @@ async fn chained_approval_encodes_the_authenticated_opening_in_the_actual_second
         .clone();
     assert_eq!(submissions.len(), 2);
     let decoded =
-        rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[1], true)?)
-            .to_json();
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[1], true)?).to_json();
     let args = decoded["call"]["call_args"]
         .as_array()
         .ok_or("as_multi args")?;
@@ -1557,7 +1556,7 @@ async fn executed_first_approval_stops_later_members_and_caches_exact_inner_call
     raw.sudo = true;
     raw.proxy_for = Some(AccountId([42; 32]));
     raw.multisig = Some(RawMultisig {
-        account_mode: rtao::primitives::AccountMode::Legacy,
+        account_mode: rtao_primitives::AccountMode::Legacy,
         threshold: 3,
         signatories: keys.iter().map(|keys| keys.key.account()).collect(),
         preset: Some("team".into()),
@@ -1728,7 +1727,7 @@ async fn pending_followup_retains_timepoint_approvals_and_copyable_commands() ->
     let runtime = View::runtime(&client).await?;
     let mut raw = request();
     raw.multisig = Some(RawMultisig {
-        account_mode: rtao::primitives::AccountMode::Legacy,
+        account_mode: rtao_primitives::AccountMode::Legacy,
         threshold: 2,
         signatories: keys.iter().map(|keys| keys.key.account()).collect(),
         preset: None,
@@ -1934,13 +1933,13 @@ async fn args_file_and_shared_cache_preserve_other_entries_and_cleanup_replaceme
         call::load_params(Some(""), Some(&args))?,
         call::load_params(None, Some(&args))?
     );
-    let paths = rtao::client::config::Paths::new(&temp.0, |name| {
+    let paths = rtao_client::config::Paths::new(&temp.0, |name| {
         (name == "BTCLI_MULTISIG_CACHE").then(|| temp.0.join("cache.json").into_os_string())
     });
-    let path = paths.path(rtao::client::config::ConfigFile::MultisigCache);
+    let path = paths.path(rtao_client::config::ConfigFile::MultisigCache);
     std::fs::write(path, "{\"0xold\":{\"target\":\"System.remark\"}}")?;
     let cache = FsRawCallCache::new(&paths);
-    let hash = hex::encode(rtao::core::codec::storage::hash_param(
+    let hash = hex::encode(rtao_core::codec::storage::hash_param(
         "Blake2_256",
         &[1, 2],
     )?);
@@ -2071,7 +2070,7 @@ impl Terminal for ScriptedTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         self.answers.pop_front().ok_or(PromptError::Aborted)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, text: &str) -> Result<(), PromptError> {
@@ -2105,14 +2104,14 @@ fn unknown_external_backend_reasks_and_preserves_both_contact_tags_across_rounds
         json!([]),
         json!([]),
     );
-    let paths = rtao::client::config::Paths::new(&temp.0, |name| {
+    let paths = rtao_client::config::Paths::new(&temp.0, |name| {
         (name == "BTCLI_ADDRESSES_PATH").then(|| temp.0.join("addresses.json").into_os_string())
     });
     let address_path = paths
-        .path(rtao::client::config::ConfigFile::Addresses)
+        .path(rtao_client::config::ConfigFile::Addresses)
         .to_owned();
     std::fs::write(&address_path, serde_json::to_vec(&ctx.books.addresses)?)?;
-    ctx.config_store = Some(rtao::client::config::Store::new(paths));
+    ctx.config_store = Some(rtao_client::config::Store::new(paths));
     let messages = Arc::new(Mutex::new(Vec::new()));
     ctx.terminal = Arc::new(Mutex::new(Box::new(ScriptedTerminal {
         answers: ["wrong".into(), "ledger".into(), "extension".into()].into(),
@@ -2238,7 +2237,7 @@ fn multisig_alias_labels_and_rounds_use_public_natural_wallet_order() -> TestRes
         ctx.globals.wallet_path = wallet_root;
         ctx.globals.wallet_name = "team".into();
         let group = RawMultisig {
-            account_mode: rtao::primitives::AccountMode::Legacy,
+            account_mode: rtao_primitives::AccountMode::Legacy,
             threshold: 2,
             signatories: vec![bob, alice],
             preset: None,
@@ -2354,7 +2353,7 @@ fn automatic_multisig_aliases_use_last_admission_and_display_but_first_wallet_so
                 ctx.globals.wallet_path = wallet_root;
                 ctx.globals.wallet_name = "team".into();
                 let group = RawMultisig {
-                    account_mode: rtao::primitives::AccountMode::Legacy,
+                    account_mode: rtao_primitives::AccountMode::Legacy,
                     threshold: 2,
                     signatories: vec![alice, bob],
                     preset: None,
@@ -2441,7 +2440,7 @@ fn interactive_multisig_alias_selection_keeps_chosen_wallet_source() -> TestResu
                 messages: Arc::new(Mutex::new(Vec::new())),
             })));
             let group = RawMultisig {
-                account_mode: rtao::primitives::AccountMode::Legacy,
+                account_mode: rtao_primitives::AccountMode::Legacy,
                 threshold: 1,
                 signatories: vec![alice, bob],
                 preset: None,
@@ -2472,7 +2471,7 @@ fn interactive_multisig_alias_selection_keeps_chosen_wallet_source() -> TestResu
 fn chained_multisig_references_use_only_member_contacts_and_local_names() -> TestResult {
     let alice = AccountId([7; 32]);
     let bob = AccountId([8; 32]);
-    let (saved_account, _) = rtao::core::extrinsic::multisig_account_id(&[alice.0, bob.0], 1)?;
+    let (saved_account, _) = rtao_core::extrinsic::multisig_account_id(&[alice.0, bob.0], 1)?;
     let saved_account = AccountId(saved_account);
     for mode in [
         "contact-member",
@@ -2525,7 +2524,7 @@ fn chained_multisig_references_use_only_member_contacts_and_local_names() -> Tes
             vec![alice, bob]
         };
         let group = RawMultisig {
-            account_mode: rtao::primitives::AccountMode::Legacy,
+            account_mode: rtao_primitives::AccountMode::Legacy,
             threshold: 2,
             refs: signatories.iter().map(ToString::to_string).collect(),
             signatories,

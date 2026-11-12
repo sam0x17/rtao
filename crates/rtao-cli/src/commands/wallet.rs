@@ -14,12 +14,10 @@ use crate::{
     prompt::{PromptHistory, WalletConfirmation},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::Client,
-    primitives::AccountId,
-    signer::SignerRole,
-    wallet::{KeyScheme, Overwrite, RegenerateFrom, Wallet, WalletRef, WriteOptions},
-};
+use rtao_client::Client;
+use rtao_primitives::AccountId;
+use rtao_signer::SignerRole;
+use rtao_wallet::{KeyScheme, Overwrite, RegenerateFrom, Wallet, WalletRef, WriteOptions};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::{Value, json};
 use std::{cmp::Ordering, fs, path::Path, sync::Arc};
@@ -389,7 +387,7 @@ pub(crate) fn scheme(value: &str, account_type: Option<&str>) -> Result<KeySchem
             unicode_general_category::get_general_category(ch)
                 == unicode_general_category::GeneralCategory::DecimalNumber
         }))
-    .then(|| rtao::primitives::pyfmt::parse_integer(&normalized))
+    .then(|| rtao_primitives::pyfmt::parse_integer(&normalized))
     .flatten()
     .and_then(|integer| integer.to_string().parse::<u8>().ok());
     let alias = match normalized.as_str() {
@@ -410,7 +408,7 @@ pub(crate) fn scheme(value: &str, account_type: Option<&str>) -> Result<KeySchem
         .ok_or_else(|| {
             failure(format!(
                 "unknown crypto type {}; expected one of: {}",
-                rtao::primitives::pyfmt::string_repr(value),
+                rtao_primitives::pyfmt::string_repr(value),
                 CRYPTO_TYPE_NAMES
                     .iter()
                     .map(|(_, name)| *name)
@@ -443,7 +441,7 @@ fn scheme_name(value: KeyScheme) -> &'static str {
         .find(|(known, _)| *known == code)
         .map_or("unknown", |(_, name)| *name)
 }
-fn info_scheme(info: &rtao::wallet::PublicKeyInfo) -> KeyScheme {
+fn info_scheme(info: &rtao_wallet::PublicKeyInfo) -> KeyScheme {
     info.authority
         .map_or(KeyScheme::Classical(info.crypto_type), KeyScheme::Authority)
 }
@@ -495,7 +493,7 @@ fn recovery_secret(
     }
     if let Some(path) = text(matches, "json_path").filter(|path| !path.is_empty()) {
         let path = expand_path(path)?;
-        let bytes = rtao::wallet::read_keyfile_data(&path).map_err(|_| {
+        let bytes = rtao_wallet::read_keyfile_data(&path).map_err(|_| {
             input("JSON keystore must be a readable regular file no larger than 16 MiB")
         })?;
         let json =
@@ -709,7 +707,7 @@ async fn run_local(
         // Python `_public_recovery_type`: a receiving address carries its
         // descriptor and scheme; a bare account restores only a classical key.
         let mut scheme = scheme;
-        if rtao::primitives::receiving::is_receiving_address(ss58) {
+        if rtao_primitives::receiving::is_receiving_address(ss58) {
             let account = if hot {
                 wallet
                     .regenerate_hotkeypub_receiving(ss58, overwrite(matches))
@@ -937,7 +935,7 @@ struct PreparedRegistration {
     payer: crate::context::CliWalletKeys,
     payer_name: String,
     roles: Vec<SignerRole>,
-    deposit: rtao::primitives::Balance<rtao::primitives::Tao>,
+    deposit: rtao_primitives::Balance<rtao_primitives::Tao>,
 }
 
 fn role_name(role: SignerRole) -> &'static str {
@@ -974,7 +972,7 @@ async fn prepare_hashed_creation(
     creating: bool,
     use_existing_coldkey: bool,
 ) -> Result<Option<PreparedRegistration>, CliError> {
-    let kinds: Vec<(SignerRole, rtao::primitives::AuthorityType)> = schemes
+    let kinds: Vec<(SignerRole, rtao_primitives::AuthorityType)> = schemes
         .iter()
         .filter_map(|(role, scheme)| match scheme {
             KeyScheme::Authority(kind) if kind.requires_registration() => Some((*role, *kind)),
@@ -1069,8 +1067,8 @@ async fn prepare_hashed_creation(
     let kind_list: Vec<_> = kinds.iter().map(|(_, kind)| *kind).collect();
     let deposit = ctx
         .run(|client| async move {
-            rtao::tx::wallet_registration::registration_deposit_for(
-                &rtao::Executor::new(client),
+            rtao_tx::wallet_registration::registration_deposit_for(
+                &rtao_intents::executor(client),
                 &kind_list,
             )
             .await
@@ -1097,7 +1095,7 @@ async fn prepare_hashed_creation(
             } else {
                 "authorize up to"
             },
-            rtao::primitives::pyfmt::string_repr(&payer_name),
+            rtao_primitives::pyfmt::string_repr(&payer_name),
         ))
         .map_err(failure)?;
     if !creating {
@@ -1135,7 +1133,7 @@ async fn prepare_hashed_creation(
     }
     // Unlock only after explicit deposit consent, and before writing keys.
     let payer = crate::context::CliWalletKeys::new(payer_wallet, ctx.output.clone());
-    rtao::signer::DynKeySource::signer_for(&payer, SignerRole::Coldkey)
+    rtao_signer::DynKeySource::signer_for(&payer, SignerRole::Coldkey)
         .await
         .map_err(|error| failure(error.to_string()))?;
     Ok(Some(PreparedRegistration {
@@ -1152,9 +1150,9 @@ async fn finish_hashed_creation(
     ctx: &AppContext,
     wallet: &Wallet,
     prepared: &PreparedRegistration,
-) -> Result<rtao::tx::wallet_registration::WalletRegistrationResult, CliError> {
+) -> Result<rtao_tx::wallet_registration::WalletRegistrationResult, CliError> {
     let keys = crate::context::CliWalletKeys::new(wallet.clone(), ctx.output.clone());
-    let options = rtao::tx::wallet_registration::WalletRegistrationOptions {
+    let options = rtao_tx::wallet_registration::WalletRegistrationOptions {
         roles: prepared.roles.clone(),
         max_registration_deposit: Some(prepared.deposit),
         on_registration_sponsorship: None,
@@ -1165,7 +1163,7 @@ async fn finish_hashed_creation(
     let payer = &prepared.payer;
     let result = ctx
         .run(|client| async move {
-            rtao::Executor::new(client)
+            rtao_intents::executor(client)
                 .register_wallet(&keys, payer, &options)
                 .await
                 .map_err(|error| failure(error.to_string()))
@@ -1195,7 +1193,7 @@ async fn finish_hashed_creation(
 fn registered_detail(
     ctx: &AppContext,
     wallet: &Wallet,
-    result: &rtao::tx::wallet_registration::WalletRegistrationResult,
+    result: &rtao_tx::wallet_registration::WalletRegistrationResult,
 ) -> Result<(), CliError> {
     let mut fields = vec![("wallet".to_owned(), json!(ctx.globals.wallet_name))];
     for (role, account) in &result.roles {
@@ -1306,7 +1304,7 @@ pub async fn run_keychain_with<R: crate::process::ProcessRunner>(
                     &format!("Save {wallet} coldkey password"),
                     &format!(
                         "Enter the password for wallet {}. It will be stored in your macOS Keychain.",
-                        rtao::primitives::pyfmt::string_repr(wallet),
+                        rtao_primitives::pyfmt::string_repr(wallet),
                     ),
                 )
                 .await
@@ -1358,7 +1356,7 @@ pub async fn run_keychain_with<R: crate::process::ProcessRunner>(
 
 async fn save_password_env(ctx: &AppContext) -> Result<(), CliError> {
     let wallet = ctx.wallet()?;
-    let name = rtao::wallet::env_var_name(wallet.coldkey_file().path());
+    let name = rtao_wallet::env_var_name(wallet.coldkey_file().path());
     if !name
         .bytes()
         .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
@@ -1366,13 +1364,13 @@ async fn save_password_env(ctx: &AppContext) -> Result<(), CliError> {
         return Err(input("wallet path does not produce a valid shell variable name")
             .with_help("choose a wallet path whose encoded environment name contains only ASCII letters, digits and underscores"));
     }
-    let password = rtao::wallet::resolve_wallet_password(&wallet, &ctx.passwords)
+    let password = rtao_wallet::resolve_wallet_password(&wallet, &ctx.passwords)
         .await
         .map_err(failure)?
         .filter(|password| !password.expose_secret().is_empty())
         .ok_or_else(|| input("a coldkey password is required"))?;
     let encoded = Zeroizing::new(
-        rtao::core::keyfile_env::encode_password_for_environment(&name, password.expose_secret())
+        rtao_core::keyfile_env::encode_password_for_environment(&name, password.expose_secret())
             .map_err(failure)?,
     );
     let command_length = "export "
@@ -1476,7 +1474,7 @@ async fn show(
     if cold.is_err() && hot.is_err() {
         return Err(failure(format!(
             "wallet {} has no readable keys",
-            rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+            rtao_primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
         )));
     }
     let mut records = ["coldkey", "hotkey"]
@@ -1577,21 +1575,21 @@ async fn check_registration(
         return results;
     }
     let lookup = ctx.run(move |client| async move {
-        use rtao::client::ViewExt;
+        use rtao_client::ViewExt;
         let finalized = client
-            .at(rtao::client::BlockRef::Finalized)
+            .at(rtao_client::BlockRef::Finalized)
             .await
             .map_err(CliError::from)?;
         let hash = format!("0x{}", hex::encode(finalized.block().hash.0));
         let mut statuses = Vec::new();
         for (address, ss58) in identities {
             let status = async {
-                let recipient = rtao::primitives::receiving::parse_recipient(&address).ok()?;
+                let recipient = rtao_primitives::receiving::parse_recipient(&address).ok()?;
                 let descriptor = recipient.descriptor?;
                 if recipient.account.to_string() != ss58 {
                     return None;
                 }
-                let storage = rtao::primitives::receiving::descriptor_storage(&descriptor).ok()?;
+                let storage = rtao_primitives::receiving::descriptor_storage(&descriptor).ok()?;
                 let record = if storage == "MlDsaAccounts" {
                     finalized
                         .storage(
@@ -1612,7 +1610,7 @@ async fn check_registration(
                     None => "unregistered",
                     Some(record) => {
                         let stored = record.to_json().get("descriptor").and_then(|stored| {
-                            rtao::primitives::receiving::descriptor_bytes(stored).ok()
+                            rtao_primitives::receiving::descriptor_bytes(stored).ok()
                         })?;
                         if stored == descriptor {
                             "registered"
@@ -1687,8 +1685,8 @@ pub fn natural_cmp(left: &str, right: &str) -> Ordering {
     let right = chunks(right);
     for ((ld, left), (rd, right)) in left.iter().zip(&right) {
         let order = match (*ld, *rd) {
-            (true, true) => rtao::primitives::pyfmt::parse_integer(left)
-                .cmp(&rtao::primitives::pyfmt::parse_integer(right)),
+            (true, true) => rtao_primitives::pyfmt::parse_integer(left)
+                .cmp(&rtao_primitives::pyfmt::parse_integer(right)),
             (false, false) => casefold(left).cmp(&casefold(right)),
             (true, false) => Ordering::Less,
             (false, true) => Ordering::Greater,
@@ -1814,7 +1812,7 @@ impl<'de> serde::Deserialize<'de> for PublicFile {
 }
 fn public_fields(path: &Path) -> PublicFile {
     let result = (|| {
-        let bytes = rtao::wallet::read_keyfile_data(path).ok()?;
+        let bytes = rtao_wallet::read_keyfile_data(path).ok()?;
         serde_json::from_slice::<PublicFile>(&bytes).ok()
     })();
     result.unwrap_or_default()
@@ -1833,20 +1831,20 @@ fn stored_crypto(value: Option<i128>) -> String {
 /// primary address (`registration` is `not_checked`).
 fn address_fields(
     public_path: &Path,
-    info: &rtao::wallet::PublicKeyInfo,
+    info: &rtao_wallet::PublicKeyInfo,
     role: &str,
     network: &str,
 ) -> Vec<(String, Value)> {
     if !info
         .authority
-        .is_some_and(rtao::primitives::AuthorityType::requires_registration)
+        .is_some_and(rtao_primitives::AuthorityType::requires_registration)
     {
         return Vec::new();
     }
-    let address = rtao::wallet::public_descriptor(public_path)
+    let address = rtao_wallet::public_descriptor(public_path)
         .ok()
         .flatten()
-        .and_then(|descriptor| rtao::core::keys::encode_hashed_receiving_address(&descriptor).ok());
+        .and_then(|descriptor| rtao_core::keys::encode_hashed_receiving_address(&descriptor).ok());
     let Some(address) = address else {
         return Vec::new();
     };
@@ -1869,7 +1867,7 @@ pub async fn list_records(path: &Path) -> Result<Vec<Value>, CliError> {
         .map_err(failure)?
         .path()
         .to_owned();
-    rtao::core::offload(move|| {
+    rtao_core::offload(move|| {
         let Ok(entries)=fs::read_dir(&root) else{return Ok(Vec::new());};
         let mut wallets=entries.filter_map(Result::ok).filter(|entry|entry.path().is_dir()).collect::<Vec<_>>();
         wallets.sort_by(|left,right|natural_cmp(&left.file_name().to_string_lossy(),&right.file_name().to_string_lossy()));
@@ -1911,10 +1909,10 @@ fn listed_address_fields(record: &mut Value, public_path: &Path, crypto: Option<
     if !matches!(scheme, KeyScheme::Authority(kind) if kind.requires_registration()) {
         return;
     }
-    let Some(address) = rtao::wallet::public_descriptor(public_path)
+    let Some(address) = rtao_wallet::public_descriptor(public_path)
         .ok()
         .flatten()
-        .and_then(|descriptor| rtao::core::keys::encode_hashed_receiving_address(&descriptor).ok())
+        .and_then(|descriptor| rtao_core::keys::encode_hashed_receiving_address(&descriptor).ok())
     else {
         return;
     };
@@ -2042,14 +2040,14 @@ async fn list(ctx: &AppContext, offline: bool) -> Result<(), CliError> {
                 keys.push(*account);
             }
         }
-        let address = match account_mode.parse::<rtao::primitives::AccountMode>() {
+        let address = match account_mode.parse::<rtao_primitives::AccountMode>() {
             Ok(mode)
                 if members.iter().all(Option::is_some)
                     && !keys.is_empty()
                     && threshold >= 1
                     && usize::from(threshold) <= keys.len() =>
             {
-                rtao::primitives::multisig_account_id(&keys, threshold, mode)
+                rtao_primitives::multisig_account_id(&keys, threshold, mode)
                     .ok()
                     .map(|(account, _)| account.to_string())
             }
@@ -2202,12 +2200,10 @@ fn saved_accounts(ctx: &AppContext) -> Result<Vec<(String, AccountId)>, CliError
 mod chain {
     use super::*;
     use crate::{books::is_bittensor_address, output::PythonBalance};
-    use rtao::{
-        client::{BlockRef, Snapshot, View, ViewExt},
-        core::codec::Value as CoreValue,
-        primitives::{DynBalance, NetUid, pyfmt, ratio},
-        reads::reads::owner::{self, StakeValuation},
-    };
+    use rtao_client::{BlockRef, Snapshot, View, ViewExt};
+    use rtao_core::codec::Value as CoreValue;
+    use rtao_primitives::{DynBalance, NetUid, pyfmt, ratio};
+    use rtao_reads::reads::owner::{self, StakeValuation};
     use std::collections::{BTreeMap, BTreeSet};
 
     include!("wallet_m8/views.rs");
@@ -2859,7 +2855,7 @@ mod chain {
                     .token_symbols()
                     .await
                     .into_iter()
-                    .map(|(netuid, symbol)| (netuid.get(), rtao::primitives::Symbol::new(symbol))),
+                    .map(|(netuid, symbol)| (netuid.get(), rtao_primitives::Symbol::new(symbol))),
             )
             .map_err(failure)?;
         ctx.output

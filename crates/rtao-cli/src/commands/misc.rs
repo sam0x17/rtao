@@ -9,11 +9,9 @@ use crate::{
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use futures::future::join_all;
-use rtao::{
-    client::{BlockHeader, ClientConfig, Network},
-    primitives::{DynBalance, NetUid, pyfmt},
-    signer::BoxFuture,
-};
+use rtao_client::{BlockHeader, ClientConfig, Network};
+use rtao_primitives::{DynBalance, NetUid, pyfmt};
+use rtao_signer::BoxFuture;
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 

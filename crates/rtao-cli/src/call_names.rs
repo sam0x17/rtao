@@ -3,7 +3,7 @@
 
 use std::fmt;
 
-use rtao::primitives::pyfmt;
+use rtao_primitives::pyfmt;
 use serde_json::{Map, Value};
 
 use crate::books::{
@@ -407,7 +407,7 @@ fn resolve_account(
     if is_bittensor_address(value) {
         return Ok(value.to_owned());
     }
-    let receiving_value = rtao::primitives::receiving::is_receiving_address(value);
+    let receiving_value = rtao_primitives::receiving::is_receiving_address(value);
     let receiving = || {
         CallNameError {
         param_hint: hint.to_owned(),
@@ -418,7 +418,7 @@ fn resolve_account(
         // Python v488: a raw call cannot carry a recipient guard.
         Ok(resolved)
             if !allow_receiving
-                && rtao::primitives::receiving::is_receiving_address(&resolved.address) =>
+                && rtao_primitives::receiving::is_receiving_address(&resolved.address) =>
         {
             Err(receiving())
         }

@@ -10,10 +10,6 @@ use std::{
 };
 
 use clap::{ArgMatches, Command, error::ErrorKind};
-use rtao::{
-    primitives::{AccountId, CryptoType},
-    signer::{BoxFuture, MultiSignature, Signer, SignerError, SignerRole, SigningRequest},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -26,6 +22,8 @@ use rtao_cli::{
     prompt::{PromptContext, PromptError, Terminal},
     signer_backends::{BackendRequest, BackendSession, NativeSignerFactory, SigningBackend},
 };
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{BoxFuture, MultiSignature, Signer, SignerError, SignerRole, SigningRequest};
 use serde_json::{Map, json};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -42,7 +40,7 @@ impl Terminal for UnusedTerminal {
         self.0.fetch_add(1, Ordering::SeqCst);
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Err(PromptError::Unavailable)
     }

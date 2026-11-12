@@ -1,10 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/misc.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Source-authored misc helper fixtures; endpoint probes use fake transports.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    signer::BoxFuture,
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -15,6 +11,8 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_signer::BoxFuture;
 use rtao_testkit::{FakeChain, FakeState, fakes::Reply, rpc::RpcClient};
 use serde_json::{Value, json};
 use std::{
@@ -41,7 +39,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -190,7 +188,7 @@ async fn converts_offline_to_python_shaped_json_and_uses_context_symbols() -> Te
         let actual = fixture.payload()?;
         // Python emits 1e-09 while serde_json's float literal uses 1e-9.
         // The shared comparison keeps the shape and integer/float token kinds.
-        rtao::primitives::json::compare(&expected, &actual)?;
+        rtao_primitives::json::compare(&expected, &actual)?;
         assert!(fixture.sink.bytes(Stream::Stderr)?.is_empty());
     }
     assert!(backend.calls()?.is_empty());

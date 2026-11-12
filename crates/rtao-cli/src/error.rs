@@ -7,7 +7,7 @@ use std::fmt;
 #[derive(Debug)]
 pub enum CliDiagnostic {
     /// Preserve the chain taxonomy, description and documentation.
-    Chain(Box<rtao::tx::ChainError>),
+    Chain(Box<rtao_tx::ChainError>),
     /// An ordinary connection failure awaiting the selected network's context.
     Connection,
     /// Active execution policy refused the operation.
@@ -30,7 +30,7 @@ pub struct CliError {
     pub diagnostic: Option<CliDiagnostic>,
     /// Native observed receipt retained across post-submission failure.
     /// It is not added to canonical diagnostic or result JSON.
-    pub submitted_receipt: Option<Box<rtao::tx::ExtrinsicResult>>,
+    pub submitted_receipt: Option<Box<rtao_tx::ExtrinsicResult>>,
 }
 impl CliError {
     /// A runtime failure or declined mutation.
@@ -44,8 +44,8 @@ impl CliError {
         }
     }
     /// Preserve typed chain, signer, gateway and submission recovery help.
-    pub(crate) fn transaction(error: rtao::tx::TxError) -> Self {
-        use rtao::tx::{IntentError, TxError};
+    pub(crate) fn transaction(error: rtao_tx::TxError) -> Self {
+        use rtao_tx::{IntentError, TxError};
         match error {
             TxError::PostSubmission { receipt, cause } => {
                 let error = Self::transaction(*cause);
@@ -71,7 +71,7 @@ impl CliError {
                 }),
                 ..Self::failure(error.to_string())
             },
-            TxError::Rpc(error) => Self::from(rtao::client::ClientError::Rpc(error)),
+            TxError::Rpc(error) => Self::from(rtao_client::ClientError::Rpc(error)),
             TxError::Intent(IntentError::Client(error)) => Self::from(error),
             TxError::ConnectionNotReady => Self {
                 diagnostic: Some(CliDiagnostic::Connection),
@@ -157,20 +157,20 @@ pub(crate) fn unknown_fate_help(hash: &[u8; 32]) -> String {
     )
 }
 
-fn client_help(error: &rtao::client::ClientError) -> Option<String> {
+fn client_help(error: &rtao_client::ClientError) -> Option<String> {
     match error {
-        rtao::client::ClientError::Signing(error) => error.help().map(str::to_owned),
-        rtao::client::ClientError::Rpc(rtao_jsonrpc::RpcError::FateUnknown { hash }) => {
+        rtao_client::ClientError::Signing(error) => error.help().map(str::to_owned),
+        rtao_client::ClientError::Rpc(rtao_jsonrpc::RpcError::FateUnknown { hash }) => {
             Some(unknown_fate_help(&hash.0))
         }
         error => error.policy().map(rpc_policy_help),
     }
 }
 
-fn ordinary_connection(error: &rtao::client::ClientError) -> bool {
+fn ordinary_connection(error: &rtao_client::ClientError) -> bool {
     matches!(
         error,
-        rtao::client::ClientError::Rpc(
+        rtao_client::ClientError::Rpc(
             rtao_jsonrpc::RpcError::Transport(_)
                 | rtao_jsonrpc::RpcError::Timeout { .. }
                 | rtao_jsonrpc::RpcError::Handshake { .. }
@@ -180,14 +180,14 @@ fn ordinary_connection(error: &rtao::client::ClientError) -> bool {
     )
 }
 
-impl From<rtao::tx::TxError> for CliError {
-    fn from(error: rtao::tx::TxError) -> Self {
+impl From<rtao_tx::TxError> for CliError {
+    fn from(error: rtao_tx::TxError) -> Self {
         Self::transaction(error)
     }
 }
 
-impl From<rtao::signer::SignerError> for CliError {
-    fn from(error: rtao::signer::SignerError) -> Self {
+impl From<rtao_signer::SignerError> for CliError {
+    fn from(error: rtao_signer::SignerError) -> Self {
         let help = error.help().map(str::to_owned);
         Self {
             help,
@@ -196,8 +196,8 @@ impl From<rtao::signer::SignerError> for CliError {
     }
 }
 
-impl From<rtao::client::ClientError> for CliError {
-    fn from(error: rtao::client::ClientError) -> Self {
+impl From<rtao_client::ClientError> for CliError {
+    fn from(error: rtao_client::ClientError) -> Self {
         let help = client_help(&error);
         Self {
             help,
@@ -207,10 +207,10 @@ impl From<rtao::client::ClientError> for CliError {
     }
 }
 
-impl From<rtao::reads::ReadError> for CliError {
-    fn from(error: rtao::reads::ReadError) -> Self {
+impl From<rtao_reads::ReadError> for CliError {
+    fn from(error: rtao_reads::ReadError) -> Self {
         match error {
-            rtao::reads::ReadError::Client(error) => Self::from(error),
+            rtao_reads::ReadError::Client(error) => Self::from(error),
             error => Self::failure(error.to_string()),
         }
     }
@@ -220,8 +220,8 @@ impl From<rtao_intents::pow::PowError> for CliError {
     fn from(error: rtao_intents::pow::PowError) -> Self {
         match error {
             rtao_intents::pow::PowError::Client(error) => Self::from(error),
-            rtao_intents::pow::PowError::Head(rtao::client::HeadError::Rpc(error)) => {
-                Self::from(rtao::client::ClientError::from(error))
+            rtao_intents::pow::PowError::Head(rtao_client::HeadError::Rpc(error)) => {
+                Self::from(rtao_client::ClientError::from(error))
             }
             error => Self::failure(error.to_string()),
         }

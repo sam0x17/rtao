@@ -1,9 +1,5 @@
 //! Complete parser/command/finish boundaries for public prompt guidance.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    primitives::NetUid,
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -13,6 +9,8 @@ use rtao_cli::{
     output::{DiagnosticContext, MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptContext, PromptError, PromptHistory, Terminal, prompt_password},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_primitives::NetUid;
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::json;
 use std::{
@@ -26,7 +24,7 @@ type TestResult = Result<(), Box<dyn std::error::Error>>;
 #[derive(Default)]
 struct Input {
     lines: VecDeque<String>,
-    hidden: VecDeque<rtao::wallet::SecretString>,
+    hidden: VecDeque<rtao_wallet::SecretString>,
 }
 impl Input {
     fn lines(lines: &[&str]) -> Self {
@@ -46,7 +44,7 @@ impl Terminal for Input {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         self.lines.pop_front().ok_or(PromptError::Aborted)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         self.hidden.pop_front().ok_or(PromptError::Aborted)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -92,7 +90,7 @@ async fn successful_prompted_conversion_finishes_once_without_duplicate_or_hidde
 -> TestResult {
     let original = ["/usr/bin/rtao", "misc", "convert"].map(String::from);
     let mut input = Input::lines(&["1.25"]);
-    input.hidden.push_back(rtao::wallet::SecretString::new(
+    input.hidden.push_back(rtao_wallet::SecretString::new(
         "private-password-sentinel".into(),
     ));
     let mut invocation = application::parse_with_prompts(
@@ -292,7 +290,7 @@ async fn actual_prompted_price_caller_teaches_the_typed_native_read_without_auth
         )
     );
     // Exercise the exact API named in the teaching line on the same fake view.
-    let price = rtao::reads::generated::interfaces::alpha_price(&client, NetUid(7)).await?;
+    let price = rtao_reads::generated::interfaces::alpha_price(&client, NetUid(7)).await?;
     assert_eq!(
         serde_json::to_value(price)?["price_rao"],
         json!(1_500_000_000_u64)

@@ -1,10 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/crowd.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Pinned crowdloan CLI shapes over metadata-backed SCALE state and fake RPCs.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    primitives::AccountId,
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -14,6 +10,8 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_primitives::AccountId;
 use rtao_testkit::{FakeChain, FakeState, Reply, rpc::RpcClient};
 use serde_json::{Value, json};
 use std::{
@@ -37,7 +35,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {

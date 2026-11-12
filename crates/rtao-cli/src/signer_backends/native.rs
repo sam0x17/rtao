@@ -3,7 +3,8 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/extension/picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 use std::sync::Arc;
 
-use rtao::{primitives::AccountId, signer::BoxFuture};
+use rtao_primitives::AccountId;
+use rtao_signer::BoxFuture;
 
 use super::{BackendRequest, BackendSession, SigningBackend};
 use crate::{context::AppContext, error::CliError};
@@ -18,7 +19,7 @@ pub(super) struct NativeBackend {
     context: AppContext,
     /// The unlocked btauth client key, shared by discovery and acquisition.
     #[cfg(feature = "remote-signer")]
-    remote_client_key: tokio::sync::OnceCell<Arc<dyn rtao::signer::Signer>>,
+    remote_client_key: tokio::sync::OnceCell<Arc<dyn rtao_signer::Signer>>,
 }
 impl NativeBackend {
     pub(super) fn new(context: &AppContext) -> Self {
@@ -81,8 +82,8 @@ impl SigningBackend for NativeBackend {
             match Self::backend(request) {
                 #[cfg(feature = "ledger")]
                 "ledger" => {
-                    use rtao::signer::Signer;
-                    let signer = rtao::signer::LedgerSigner::open(ledger_options(request))
+                    use rtao_signer::Signer;
+                    let signer = rtao_signer::LedgerSigner::open(ledger_options(request))
                         .await
                         .map_err(failure)?;
                     let account = signer.account();
@@ -119,7 +120,7 @@ impl SigningBackend for NativeBackend {
             match Self::backend(request) {
                 #[cfg(feature = "ledger")]
                 "ledger" => {
-                    let signer = rtao::signer::LedgerSigner::open(ledger_options(request))
+                    let signer = rtao_signer::LedgerSigner::open(ledger_options(request))
                         .await
                         .map_err(failure)?;
                     Ok(Arc::new(NativeSession::Ledger(Arc::new(signer)))
@@ -135,12 +136,12 @@ impl SigningBackend for NativeBackend {
                     let crypto_type = selected
                         .external_signer_account()?
                         .filter(|(account, _)| *account == reviewed)
-                        .map_or(rtao::primitives::CryptoType::Sr25519, |(_, crypto)| crypto);
-                    let signer = rtao::signer::vault::VaultSigner::with_options(
+                        .map_or(rtao_primitives::CryptoType::Sr25519, |(_, crypto)| crypto);
+                    let signer = rtao_signer::vault::VaultSigner::with_options(
                         &reviewed.to_string(),
-                        rtao::signer::vault::VaultOptions {
+                        rtao_signer::vault::VaultOptions {
                             crypto_type,
-                            server: rtao::signer::vault::VaultServerOptions {
+                            server: rtao_signer::vault::VaultServerOptions {
                                 open_browser: request.open_browser,
                                 browser: self.browser(request),
                                 ..Default::default()
@@ -166,7 +167,7 @@ impl SigningBackend for NativeBackend {
                     let (url, token, selection) = self
                         .extension_selection(request, Some(reviewed), false)
                         .await?;
-                    let signer = rtao::signer::extension::open_extension_signer(
+                    let signer = rtao_signer::extension::open_extension_signer(
                         &url,
                         token.as_str(),
                         selection,
@@ -205,8 +206,8 @@ impl NativeBackend {
     }
 }
 #[cfg(feature = "ledger")]
-fn ledger_options(request: &BackendRequest) -> rtao::signer::LedgerOptions {
-    rtao::signer::LedgerOptions {
+fn ledger_options(request: &BackendRequest) -> rtao_signer::LedgerOptions {
+    rtao_signer::LedgerOptions {
         account: request.globals.ledger_account,
         index: request.globals.ledger_index,
         ..Default::default()
@@ -224,11 +225,11 @@ impl NativeBackend {
         (
             String,
             zeroize::Zeroizing<String>,
-            rtao::signer::extension::ExtensionAccountSelection,
+            rtao_signer::extension::ExtensionAccountSelection,
         ),
         CliError,
     > {
-        use rtao::signer::extension::{BridgeClient, EnsureBridgeOptions, ensure_bridge};
+        use rtao_signer::extension::{BridgeClient, EnsureBridgeOptions, ensure_bridge};
         let mut options = EnsureBridgeOptions::from_environment().map_err(failure)?;
         if let Some(url) = &request.globals.extension_bridge_url {
             options.url = url.clone();
@@ -270,7 +271,7 @@ impl NativeBackend {
 
 #[cfg(feature = "extension")]
 fn extension_account_hint<'a>(
-    accounts: impl IntoIterator<Item = &'a rtao::signer::extension::ExtensionAccount>,
+    accounts: impl IntoIterator<Item = &'a rtao_signer::extension::ExtensionAccount>,
 ) -> String {
     accounts
         .into_iter()
@@ -283,11 +284,11 @@ fn extension_account_hint<'a>(
 fn choose_extension_account(
     context: &AppContext,
     request: &BackendRequest,
-    accounts: &[rtao::signer::extension::ExtensionAccount],
+    accounts: &[rtao_signer::extension::ExtensionAccount],
     reviewed: Option<AccountId>,
-) -> Result<rtao::signer::extension::ExtensionAccountSelection, CliError> {
-    use rtao::signer::extension::{ExtensionAccountSelection, account_crypto_type};
-    let matches = |account: &rtao::signer::extension::ExtensionAccount, expected: AccountId| {
+) -> Result<rtao_signer::extension::ExtensionAccountSelection, CliError> {
+    use rtao_signer::extension::{ExtensionAccountSelection, account_crypto_type};
+    let matches = |account: &rtao_signer::extension::ExtensionAccount, expected: AccountId| {
         account
             .address
             .parse::<AccountId>()
@@ -384,7 +385,7 @@ fn choose_extension_account(
                         let index = if raw.is_empty() {
                             Some(default_index)
                         } else {
-                            rtao::primitives::pyfmt::parse_integer(raw)
+                            rtao_primitives::pyfmt::parse_integer(raw)
                                 .and_then(|index| index.to_string().parse::<usize>().ok())
                                 .and_then(|index| index.checked_sub(1))
                         };
@@ -464,7 +465,7 @@ impl NativeBackend {
     async fn remote_client_key(
         &self,
         request: &BackendRequest,
-    ) -> Result<Arc<dyn rtao::signer::Signer>, CliError> {
+    ) -> Result<Arc<dyn rtao_signer::Signer>, CliError> {
         let path = request
             .globals
             .remote_signer_client_key
@@ -472,7 +473,7 @@ impl NativeBackend {
             .ok_or_else(|| CliError::input("the remote signer needs --remote-signer-client-key"))?;
         self.remote_client_key
             .get_or_try_init(|| async {
-                rtao::wallet::ColdkeyFile::new(path)
+                rtao_wallet::ColdkeyFile::new(path)
                     .with_password_sources(self.context.passwords.clone())
                     .unlock()
                     .await
@@ -491,13 +492,13 @@ impl NativeBackend {
         &self,
         request: &BackendRequest,
         receiver: AccountId,
-        client_key: Arc<dyn rtao::signer::Signer>,
+        client_key: Arc<dyn rtao_signer::Signer>,
     ) -> Result<rtao_remote_signer::wire::AccountsResponse, CliError> {
         let (url, timeout, roots) = self.remote_options(request)?;
         rtao_remote_signer::RemoteSigner::discover(url, client_key, receiver, timeout, roots)
             .await
             .map_err(|error| {
-                let error = rtao::signer::SignerError::from(error);
+                let error = rtao_signer::SignerError::from(error);
                 let help = error.help().map(str::to_owned);
                 let cli = CliError::failure(error.to_string());
                 match help {
@@ -549,7 +550,7 @@ impl NativeBackend {
             .accounts
             .iter()
             .find(|entry| entry.account.0 == reviewed)
-            .map(|entry| rtao::primitives::CryptoType::from(entry.crypto))
+            .map(|entry| rtao_primitives::CryptoType::from(entry.crypto))
             .ok_or_else(|| {
                 CliError::input(format!(
                     "the remote signer does not serve the reviewed account {reviewed} for this client key; no transaction was signed"
@@ -574,11 +575,11 @@ impl NativeBackend {
 ))]
 enum NativeSession {
     #[cfg(feature = "ledger")]
-    Ledger(Arc<rtao::signer::LedgerSigner>),
+    Ledger(Arc<rtao_signer::LedgerSigner>),
     #[cfg(feature = "vault")]
-    Vault(Arc<rtao::signer::vault::VaultSigner>),
+    Vault(Arc<rtao_signer::vault::VaultSigner>),
     #[cfg(feature = "extension")]
-    Extension(Arc<rtao::signer::extension::ExtensionSigner>),
+    Extension(Arc<rtao_signer::extension::ExtensionSigner>),
     #[cfg(feature = "remote-signer")]
     Remote(Arc<rtao_remote_signer::RemoteSigner>),
 }
@@ -589,7 +590,7 @@ enum NativeSession {
     feature = "remote-signer"
 ))]
 impl BackendSession for NativeSession {
-    fn signer(&self) -> Arc<dyn rtao::signer::Signer> {
+    fn signer(&self) -> Arc<dyn rtao_signer::Signer> {
         match self {
             #[cfg(feature = "ledger")]
             Self::Ledger(signer) => signer.clone(),
@@ -662,7 +663,7 @@ mod tests {
         globals::{Globals, Tier, with_globals},
         prompt::{PromptError, Terminal},
     };
-    use rtao::signer::extension::ExtensionAccount;
+    use rtao_signer::extension::ExtensionAccount;
     use std::{
         collections::VecDeque,
         path::Path,
@@ -684,7 +685,7 @@ mod tests {
                 .push(prompt.to_owned());
             self.0.pop_front().ok_or(PromptError::Aborted)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, message: &str) -> Result<(), PromptError> {
@@ -1000,7 +1001,7 @@ mod remote_tests {
         fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
             Err(PromptError::Aborted)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -1082,19 +1083,19 @@ mod remote_tests {
     #[cfg(feature = "remote-signer")]
     #[tokio::test]
     async fn remote_backend_discovers_acquires_and_signs_through_a_loopback_server() {
-        use rtao::signer::{KeypairSigner, Signer};
         use rtao_remote_signer::server::{
             AuthorizedClient, PinnedRuntimeSource, RemoteSignerServer, ServedAccount, ServerConfig,
         };
+        use rtao_signer::{KeypairSigner, Signer};
         let golden = rtao_testkit::fixtures::Golden::from_slice(include_bytes!(
             "../../../../vendor/upstream/golden.json"
         ))
         .unwrap();
         let runtime = rtao_runtime::RuntimeHandle::new(golden.runtime().unwrap()).unwrap();
         let alice =
-            KeypairSigner::from_uri("//Alice", rtao::primitives::CryptoType::Sr25519).unwrap();
+            KeypairSigner::from_uri("//Alice", rtao_primitives::CryptoType::Sr25519).unwrap();
         let charlie =
-            KeypairSigner::from_uri("//Charlie", rtao::primitives::CryptoType::Sr25519).unwrap();
+            KeypairSigner::from_uri("//Charlie", rtao_primitives::CryptoType::Sr25519).unwrap();
         let body: rtao_remote_signer::wire::SignRequest = serde_json::from_str(include_str!(
             "../../../rtao-remote-signer/tests/fixtures/v1_sign_request.json"
         ))
@@ -1108,7 +1109,7 @@ mod remote_tests {
         let server = RemoteSignerServer::new(
             cfg,
             Arc::new(PinnedRuntimeSource::new(runtime.clone(), "node-subtensor")),
-            Arc::new(rtao::btauth::InMemoryNonceStore::new()),
+            Arc::new(rtao_btauth::InMemoryNonceStore::new()),
         )
         .unwrap();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -1117,14 +1118,14 @@ mod remote_tests {
 
         let dir = temp_dir("loopback");
         let keyfile = dir.join("client");
-        rtao::wallet::Keyfile::new(&keyfile)
+        rtao_wallet::Keyfile::new(&keyfile)
             .set_keypair(
-                rtao::core::keys::Keypair::from_uri("//Charlie", rtao::core::keys::CRYPTO_SR25519)
+                rtao_core::keys::Keypair::from_uri("//Charlie", rtao_core::keys::CRYPTO_SR25519)
                     .unwrap(),
-                rtao::wallet::WriteOptions {
+                rtao_wallet::WriteOptions {
                     encrypt: false,
                     password: None,
-                    overwrite: rtao::wallet::Overwrite::Yes,
+                    overwrite: rtao_wallet::Overwrite::Yes,
                 },
             )
             .await
@@ -1146,9 +1147,9 @@ mod remote_tests {
         let session = backend.acquire(&request, alice.account()).await.unwrap();
         let signer = session.signer();
         assert_eq!(signer.account(), alice.account());
-        let context = rtao::signer::SigningContext {
+        let context = rtao_signer::SigningContext {
             metadata_bytes: runtime.core().metadata_bytes.clone(),
-            chain_info: rtao::core::digest::ChainInfo {
+            chain_info: rtao_core::digest::ChainInfo {
                 spec_version: body.chain.spec_version,
                 spec_name: "node-subtensor".into(),
                 base58_prefix: 42,
@@ -1158,18 +1159,18 @@ mod remote_tests {
             transaction_version: body.chain.transaction_version,
             genesis_hash: body.chain.genesis_hash.0,
         };
-        let signing = rtao::signer::SigningRequest {
+        let signing = rtao_signer::SigningRequest {
             call: &body.call.0,
             included_in_extrinsic: &body.included_in_extrinsic.0,
             included_in_signed_data: &body.included_in_signed_data.0,
             payload: &body.payload.0,
             payload_json: &body.payload_json,
             context: &context,
-            purpose: rtao::signer::SignPurpose::Extrinsic,
+            purpose: rtao_signer::SignPurpose::Extrinsic,
         };
         let signature = signer.sign(&signing).await.unwrap();
         assert!(
-            rtao::core::keys::verify_strict(
+            rtao_core::keys::verify_strict(
                 &body.payload.0,
                 &signature.bytes,
                 &alice.account().to_string(),
@@ -1179,7 +1180,7 @@ mod remote_tests {
         );
         session.release(true).await.unwrap();
         // Bob is not served: acquisition refuses before any signing request.
-        let bob = KeypairSigner::from_uri("//Bob", rtao::primitives::CryptoType::Sr25519)
+        let bob = KeypairSigner::from_uri("//Bob", rtao_primitives::CryptoType::Sr25519)
             .unwrap()
             .account();
         let (context, request) = fixture(&[
@@ -1212,19 +1213,19 @@ mod remote_tests {
     #[cfg(feature = "remote-signer")]
     #[tokio::test]
     async fn encrypted_client_keys_use_the_cli_password_sources_once() {
-        use rtao::signer::{KeypairSigner, Signer};
         use rtao_remote_signer::server::{
             AuthorizedClient, PinnedRuntimeSource, RemoteSignerServer, ServedAccount, ServerConfig,
         };
+        use rtao_signer::{KeypairSigner, Signer};
         let golden = rtao_testkit::fixtures::Golden::from_slice(include_bytes!(
             "../../../../vendor/upstream/golden.json"
         ))
         .unwrap();
         let runtime = rtao_runtime::RuntimeHandle::new(golden.runtime().unwrap()).unwrap();
         let alice =
-            KeypairSigner::from_uri("//Alice", rtao::primitives::CryptoType::Sr25519).unwrap();
+            KeypairSigner::from_uri("//Alice", rtao_primitives::CryptoType::Sr25519).unwrap();
         let charlie =
-            KeypairSigner::from_uri("//Charlie", rtao::primitives::CryptoType::Sr25519).unwrap();
+            KeypairSigner::from_uri("//Charlie", rtao_primitives::CryptoType::Sr25519).unwrap();
         let fixture_body: rtao_remote_signer::wire::SignRequest = serde_json::from_str(
             include_str!("../../../rtao-remote-signer/tests/fixtures/v1_sign_request.json"),
         )
@@ -1238,7 +1239,7 @@ mod remote_tests {
         let server = RemoteSignerServer::new(
             cfg,
             Arc::new(PinnedRuntimeSource::new(runtime, "node-subtensor")),
-            Arc::new(rtao::btauth::InMemoryNonceStore::new()),
+            Arc::new(rtao_btauth::InMemoryNonceStore::new()),
         )
         .unwrap();
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -1247,16 +1248,14 @@ mod remote_tests {
 
         let dir = temp_dir("encrypted");
         let keyfile = dir.join("client");
-        rtao::wallet::Keyfile::new(&keyfile)
+        rtao_wallet::Keyfile::new(&keyfile)
             .set_keypair(
-                rtao::core::keys::Keypair::from_uri("//Charlie", rtao::core::keys::CRYPTO_SR25519)
+                rtao_core::keys::Keypair::from_uri("//Charlie", rtao_core::keys::CRYPTO_SR25519)
                     .unwrap(),
-                rtao::wallet::WriteOptions {
+                rtao_wallet::WriteOptions {
                     encrypt: true,
-                    password: Some(rtao::wallet::SecretString::new(
-                        "client-key-password".into(),
-                    )),
-                    overwrite: rtao::wallet::Overwrite::Yes,
+                    password: Some(rtao_wallet::SecretString::new("client-key-password".into())),
+                    overwrite: rtao_wallet::Overwrite::Yes,
                 },
             )
             .await

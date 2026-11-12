@@ -1,17 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Shared mutation context through a real Client, SCALE metadata and executor.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-use rtao::{
-    client::{Client, ClientConfig, HeadProvider, Network, View},
-    core::value_ext::ValueExt,
-    primitives::{AccountId, CryptoType},
-    signer::{
-        BoxFuture, Coldkey, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
-    },
-    tx::{
-        BuildCx, Built, Intent, IntentError, IntentInterface, IntentPreflight, PreflightCx, Signed,
-    },
-};
 use rtao_cli::{
     application::command_tree,
     books::Books,
@@ -20,7 +9,16 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, ReviewSection, Stream},
     prompt::{PromptError, Terminal},
 };
+use rtao_client::{Client, ClientConfig, HeadProvider, Network, View};
+use rtao_core::value_ext::ValueExt;
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{
+    BoxFuture, Coldkey, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
+};
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_tx::{
+    BuildCx, Built, Intent, IntentError, IntentInterface, IntentPreflight, PreflightCx, Signed,
+};
 use serde_json::{Value, json};
 use std::{
     collections::VecDeque,
@@ -49,7 +47,7 @@ impl Terminal for RegistrationConfirmation {
             .push(question.into());
         Ok("no".into())
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -321,7 +319,7 @@ async fn subnet_creation_review_quotes_exact_cost_and_all_queue_flows_before_unl
 #[tokio::test]
 async fn subnet_creation_success_keeps_compact_registration_fields_in_quiet_and_json() -> TestResult
 {
-    use rtao::primitives::{DefaultAccount, NetUid, TaoBalance};
+    use rtao_primitives::{DefaultAccount, NetUid, TaoBalance};
     use rtao_runtime::storage::subtensor_module as st;
 
     for (quiet, json_mode, fail_progress) in [
@@ -540,23 +538,23 @@ impl rtao_cli::output::OutputSink for RegistrationProgressSink {
 struct RegistrationProgressCompletion {
     progress_failed: Arc<tokio::sync::Notify>,
     finished: std::sync::atomic::AtomicBool,
-    receipt: Mutex<Option<rtao::tx::ExtrinsicResult>>,
+    receipt: Mutex<Option<rtao_tx::ExtrinsicResult>>,
 }
 impl rtao_cli::context::SubmissionExecution for RegistrationProgressCompletion {
     fn execute<'a>(
         &'a self,
         client: &'a Client,
-        intent: &'a dyn rtao::tx::DynIntent,
+        intent: &'a dyn rtao_tx::DynIntent,
         keys: &'a dyn DynKeySource,
-        options: &'a rtao::tx::ExecuteOptions,
-    ) -> BoxFuture<'a, Result<rtao::tx::ExtrinsicResult, rtao_cli::error::CliError>> {
+        options: &'a rtao_tx::ExecuteOptions,
+    ) -> BoxFuture<'a, Result<rtao_tx::ExtrinsicResult, rtao_cli::error::CliError>> {
         Box::pin(async move {
             if options.progress.is_none() {
                 return Err(rtao_cli::error::CliError::failure(
                     "registration progress missing",
                 ));
             }
-            let receipt = rtao::Executor::new(client.clone())
+            let receipt = rtao_intents::executor(client.clone())
                 .execute_dyn(intent, keys, options)
                 .await
                 .map_err(|error| rtao_cli::error::CliError::failure(error.to_string()))?;
@@ -574,7 +572,7 @@ impl rtao_cli::context::SubmissionHooks for RegistrationProgressCompletion {
     }
     fn on_result<'a>(
         &'a self,
-        receipt: &'a rtao::tx::ExtrinsicResult,
+        receipt: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             assert!(self.finished.load(Ordering::SeqCst));
@@ -599,7 +597,7 @@ impl rtao_cli::context::SubmissionHooks for StopRegistrationBeforeSigning {
     }
     fn on_result<'a>(
         &'a self,
-        _: &'a rtao::tx::ExtrinsicResult,
+        _: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async { Err(rtao_cli::error::CliError::failure("unexpected receipt")) })
     }
@@ -695,7 +693,7 @@ async fn subnet_creation_assume_yes_keeps_the_quote_and_skips_queue_disclosure_r
     let member_keys = members()?;
     let (client, chain, _) = fixture(u64::MAX).await?;
     let group = saved_group(&client, &member_keys).await?;
-    chain.mutate_state(|state| -> Result<(), rtao::core::CoreError> {
+    chain.mutate_state(|state| -> Result<(), rtao_core::CoreError> {
         state.seed_runtime(
             "SubnetRegistrationRuntimeApi",
             "get_network_registration_cost",
@@ -886,7 +884,7 @@ impl Terminal for TerminalFixture {
         self.reads.fetch_add(1, Ordering::SeqCst);
         self.lines.pop_front().ok_or(PromptError::Aborted)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -1118,7 +1116,7 @@ impl IntentInterface for ShieldFailurePreview {
     }
 }
 impl Intent for ShieldFailurePreview {
-    fn safety(&self) -> Result<rtao::tx::IntentSafety, IntentError> {
+    fn safety(&self) -> Result<rtao_tx::IntentSafety, IntentError> {
         let mut safety = Preview { blocked: false }.safety()?;
         safety.mev_shield_required = self.required;
         Ok(safety)
@@ -1330,7 +1328,7 @@ async fn real_execution_unlocks_once_and_renders_one_canonical_receipt() -> Test
             .clone();
         assert_eq!(submissions.len(), 1);
         assert_eq!(
-            rtao::core::ops::extrinsic_lookup::find(
+            rtao_core::ops::extrinsic_lookup::find(
                 &json!({"block":{"extrinsics":[format!("0x{}",hex::encode(&submissions[0]))]}}),
                 hash.0,
             )?,
@@ -1410,7 +1408,7 @@ impl Intent for SnapshotFacts {
             .lock()
             .map_err(|_| IntentError::validation("fixture lock poisoned"))? = Some(call.clone());
         Ok(IntentPreflight {
-            facts_title: rtao::tx::FactsTitle::Custom("Authenticated call facts".into()),
+            facts_title: rtao_tx::FactsTitle::Custom("Authenticated call facts".into()),
             facts: vec![("reviewed bytes".into(), call)],
             ..Default::default()
         })
@@ -1421,7 +1419,7 @@ impl Intent for SnapshotFacts {
 async fn review_facts_share_one_build_and_preflight_with_the_reviewed_call() -> TestResult {
     let (client, chain, keys) = fixture(1_000_000_000).await?;
     let intent = SnapshotFacts::default();
-    let (plan, preview) = rtao::Executor::new(client.clone())
+    let (plan, preview) = rtao_intents::executor(client.clone())
         .plan_and_preflight_dyn(&intent, &keys, &Default::default())
         .await?;
     assert_eq!(intent.builds.load(Ordering::SeqCst), 1);
@@ -1505,9 +1503,9 @@ impl DynKeySource for ExpiringProxyProofKeys {
 
 #[tokio::test]
 async fn late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock() -> TestResult {
-    use rtao::primitives::NetUid;
     use rtao_cli::{commands::generated, context::SubmissionOptions};
     use rtao_intents::pow::registration_prefix;
+    use rtao_primitives::NetUid;
 
     fn arg<'a>(call: &'a Value, name: &str) -> Option<&'a Value> {
         call["call_args"]
@@ -1560,7 +1558,7 @@ async fn late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock
     let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
     let original_hash = client.rpc().block_hash(100).await?.ok_or("original hash")?;
     let prefix = registration_prefix(netuid, original_hash, hotkey, owner)?;
-    let work = rtao::core::pow::seal(&prefix, 0)?;
+    let work = rtao_core::pow::seal(&prefix, 0)?;
     let request = generated::TxRequest {
         op: "pow_register",
         args: serde_json::Map::from_iter([
@@ -1609,8 +1607,7 @@ async fn late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock
     assert_eq!(submissions.len(), 1);
     let runtime = client.refresh_runtime().await?;
     let decoded =
-        rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
-            .to_json();
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?).to_json();
     let proxy = &decoded["call"];
     assert_eq!(proxy["call_module"], json!("Proxy"));
     assert_eq!(proxy["call_function"], json!("proxy"));
@@ -1622,16 +1619,15 @@ async fn late_pow_refresh_preserves_proxy_owner_and_explicit_hotkey_after_unlock
     let nonce = arg(call, "nonce").and_then(Value::as_u64).ok_or("nonce")?;
     let hash = client.rpc().block_hash(105).await?.ok_or("fresh hash")?;
     let prefix = registration_prefix(netuid, hash, hotkey, owner)?;
-    let expected = rtao::core::pow::seal(&prefix, nonce)?;
+    let expected = rtao_core::pow::seal(&prefix, nonce)?;
     assert_eq!(
         arg(call, "work"),
         Some(
-            &rtao::core::DynValue::new(rtao::core::codec::Value::Bytes(expected.to_vec()))
-                .to_json()
+            &rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(expected.to_vec())).to_json()
         )
     );
     let wrong_prefix = registration_prefix(netuid, hash, hotkey, delegate)?;
-    assert_ne!(expected, rtao::core::pow::seal(&wrong_prefix, nonce)?);
+    assert_ne!(expected, rtao_core::pow::seal(&wrong_prefix, nonce)?);
     client.close().await;
     Ok(())
 }
@@ -1740,7 +1736,7 @@ impl rtao_cli::context::SubmissionHooks for Hooks {
     }
     fn on_result<'a>(
         &'a self,
-        result: &'a rtao::tx::ExtrinsicResult,
+        result: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             self.after.fetch_add(1, Ordering::SeqCst);
@@ -1830,7 +1826,7 @@ impl rtao_cli::context::ConnectionFactory for Connected {
         Box::pin(async move { Ok(self.0.clone()) })
     }
 }
-struct RefusedConnection(rtao::client::ClientError);
+struct RefusedConnection(rtao_client::ClientError);
 impl rtao_cli::context::ConnectionFactory for RefusedConnection {
     fn connect<'a>(
         &'a self,
@@ -2065,7 +2061,7 @@ impl Drop for CacheRoot {
     }
 }
 async fn cached_context(
-    store: &rtao::client::config::Store,
+    store: &rtao_client::config::Store,
 ) -> Result<AppContext, Box<dyn std::error::Error>> {
     let parsed = command_tree([with_globals(clap::Command::new("read"), Tier::Read)])
         .try_get_matches_from(["rtao", "--network", "local", "read"])?;
@@ -2087,11 +2083,11 @@ async fn cached_context(
 }
 #[tokio::test]
 async fn fresh_name_cache_skips_rpc_and_stale_names_refresh_and_persist() -> TestResult {
-    use rtao::primitives::NetUid;
+    use rtao_primitives::NetUid;
     use std::collections::BTreeMap;
     let root = CacheRoot::new()?;
-    let paths = rtao::client::config::Paths::new(&root.0, |_| None);
-    let store = rtao::client::config::Store::with_clock(paths.clone(), || 1000.0);
+    let paths = rtao_client::config::Paths::new(&root.0, |_| None);
+    let store = rtao_client::config::Store::with_clock(paths.clone(), || 1000.0);
     store
         .save_subnet_names(
             "local",
@@ -2118,7 +2114,7 @@ async fn fresh_name_cache_skips_rpc_and_stale_names_refresh_and_persist() -> Tes
             json!({"subnet_name":"fresh"}),
         )
     })?;
-    let stale = rtao::client::config::Store::with_clock(paths, || 200000.0);
+    let stale = rtao_client::config::Store::with_clock(paths, || 200000.0);
     let ctx = cached_context(&stale).await?;
     let clone = ctx.output.clone();
     ctx.run_with(&Connected(client.clone()), |_| async { Ok(()) })
@@ -2181,17 +2177,17 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
         ),
         (rtao_jsonrpc::RpcError::Closed, "RPC session closed"),
     ] {
-        let client_error = rtao::client::ClientError::from(cause.clone());
+        let client_error = rtao_client::ClientError::from(cause.clone());
         for converted in [
             rtao_cli::error::CliError::from(client_error.clone()),
-            rtao_cli::error::CliError::from(rtao::tx::TxError::Rpc(cause.clone())),
-            rtao_cli::error::CliError::from(rtao::tx::TxError::Intent(IntentError::Client(
+            rtao_cli::error::CliError::from(rtao_tx::TxError::Rpc(cause.clone())),
+            rtao_cli::error::CliError::from(rtao_tx::TxError::Intent(IntentError::Client(
                 client_error.clone(),
             ))),
-            rtao_cli::error::CliError::from(rtao::reads::ReadError::Client(client_error.clone())),
+            rtao_cli::error::CliError::from(rtao_reads::ReadError::Client(client_error.clone())),
             rtao_cli::error::CliError::from(rtao_intents::pow::PowError::Client(client_error)),
             rtao_cli::error::CliError::from(rtao_intents::pow::PowError::Head(
-                rtao::client::HeadError::Rpc(cause.clone()),
+                rtao_client::HeadError::Rpc(cause.clone()),
             )),
         ] {
             assert_eq!(converted.message, detail);
@@ -2315,7 +2311,7 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
             nested
                 .run_with(&Connected(client), |_| async {
                     Err::<(), _>(
-                        rtao_cli::error::CliError::from(rtao::client::ClientError::from(
+                        rtao_cli::error::CliError::from(rtao_client::ClientError::from(
                             rtao_jsonrpc::RpcError::Transport("offline".into()),
                         ))
                         .with_help("retain the primary guidance"),
@@ -2337,7 +2333,7 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
     assert!(client.is_closed());
 
     let (client, _, _) = fixture(1_000_000_000).await?;
-    let mut rendered = rtao_cli::error::CliError::from(rtao::client::ClientError::from(
+    let mut rendered = rtao_cli::error::CliError::from(rtao_client::ClientError::from(
         rtao_jsonrpc::RpcError::Transport("offline".into()),
     ));
     rendered.message.clear();
@@ -2369,7 +2365,7 @@ async fn cosmetic_name_rpc_failure_does_not_fail_work_and_connection_is_closed()
         rtao_jsonrpc::RpcError::SubscriptionLost,
     ] {
         let calls = AtomicUsize::new(0);
-        let message = rtao::client::ClientError::from(cause.clone()).to_string();
+        let message = rtao_client::ClientError::from(cause.clone()).to_string();
         let error = ctx
             .run_with(&RefusedConnection(cause.into()), |_| async {
                 calls.fetch_add(1, Ordering::SeqCst);
@@ -2513,7 +2509,7 @@ fn factory(keys: &[Keys]) -> MemberFactory {
         on_release: None,
     }
 }
-fn success_events(executed: Option<(AccountId, &rtao::tx::Multisig, [u8; 32])>) -> Value {
+fn success_events(executed: Option<(AccountId, &rtao_tx::Multisig, [u8; 32])>) -> Value {
     let mut events = vec![
         json!({"phase":"ApplyExtrinsic","extrinsic_idx":0,"module_id":"System","event_id":"ExtrinsicSuccess","attributes":{"dispatch_info":{"weight":{"ref_time":1000,"proof_size":0},"class":"Normal","pays_fee":"Yes"}},"topics":[]}),
     ];
@@ -2732,7 +2728,7 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
     let runtime = client.refresh_runtime().await?;
-    let group = rtao::tx::Multisig::new(
+    let group = rtao_tx::Multisig::new(
         &runtime,
         &keys
             .iter()
@@ -2820,7 +2816,7 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
                                 )),
                             ),
                         );
-                        Ok::<_, rtao::core::CoreError>(())
+                        Ok::<_, rtao_core::CoreError>(())
                     })
                     .map_err(|error| rtao_cli::error::CliError::failure(error.to_string()))
             }));
@@ -2892,7 +2888,7 @@ async fn saved_semantic_executed_first_round_stops_and_emits_one_receipt() -> Te
 fn publish_pending_after_release(
     factory: &mut MemberFactory,
     chain: FakeChain,
-    group: &rtao::tx::Multisig,
+    group: &rtao_tx::Multisig,
     member: AccountId,
     call: &rtao_runtime::CallBytes,
 ) {
@@ -3012,8 +3008,8 @@ async fn saved_semantic_missing_opening_identity_refuses_automatic_continuation(
 async fn saved_group(
     client: &Client,
     keys: &[Keys],
-) -> Result<rtao::tx::Multisig, Box<dyn std::error::Error>> {
-    Ok(rtao::Executor::new(client.clone())
+) -> Result<rtao_tx::Multisig, Box<dyn std::error::Error>> {
+    Ok(rtao_intents::executor(client.clone())
         .multisig(
             &keys
                 .iter()
@@ -3111,7 +3107,7 @@ async fn saved_semantic_two_rounds_reuse_first_submitted_bytes_and_keep_the_orig
     assert_eq!(submissions.len(), 2);
     for bytes in &submissions {
         let decoded =
-            rtao::core::DynValue::new(runtime.core().decode_extrinsic(bytes, true)?).to_json();
+            rtao_core::DynValue::new(runtime.core().decode_extrinsic(bytes, true)?).to_json();
         let args = decoded["call"]["call_args"]
             .as_array()
             .ok_or("as_multi args")?;
@@ -3121,8 +3117,8 @@ async fn saved_semantic_two_rounds_reuse_first_submitted_bytes_and_keep_the_orig
             .ok_or("inner call")?;
         assert_eq!(
             inner["value"],
-            rtao::core::DynValue::new(runtime.core().decode_spec(
-                &rtao::core::runtime::TypeSpec::Call,
+            rtao_core::DynValue::new(runtime.core().decode_spec(
+                &rtao_core::runtime::TypeSpec::Call,
                 call.as_bytes(),
                 true
             )?)
@@ -3466,7 +3462,7 @@ async fn shield_signing_notices_use_actual_backends_and_respect_machine_quiet_an
                 json!({"data":{"free":1_000_000_000u64}}),
             )?;
         }
-        Ok::<_, rtao::core::CoreError>(())
+        Ok::<_, rtao_core::CoreError>(())
     })?;
     let (mut ctx, sink) = saved_context(&keys, &["--yes", "--mev-shield"], 1)?;
     ctx.globals.signer_backend = Some("vault".into());
@@ -4252,7 +4248,7 @@ impl rtao_cli::context::SubmissionHooks for CallbackHooks {
     }
     fn on_result<'a>(
         &'a self,
-        result: &'a rtao::tx::ExtrinsicResult,
+        result: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             // Enforce hook before render against the actual output sink, in
@@ -4275,7 +4271,7 @@ impl rtao_cli::context::SubmissionHooks for CallbackHooks {
     }
     fn after_followup<'a>(
         &'a self,
-        result: &'a rtao::tx::ExtrinsicResult,
+        result: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             if let Some(status) = self.expected_followup {
@@ -4448,7 +4444,7 @@ async fn saved_callback_phases_persist_raw_before_release_then_enrich_before_ren
     let keys = members()?;
     let (client, chain, _) = fixture(1_000_000_000).await?;
     let runtime = client.refresh_runtime().await?;
-    let group = rtao::tx::Multisig::new(
+    let group = rtao_tx::Multisig::new(
         &runtime,
         &keys
             .iter()
@@ -4729,9 +4725,9 @@ struct DurablePlanHooks<'a> {
     unlocks: &'a AtomicUsize,
     source_acquisitions: Option<&'a AtomicUsize>,
     releases: &'a Mutex<Vec<bool>>,
-    plans: Mutex<Vec<rtao::tx::Plan>>,
-    raw: Mutex<Vec<rtao::tx::ExtrinsicResult>>,
-    enriched: Mutex<Vec<rtao::tx::ExtrinsicResult>>,
+    plans: Mutex<Vec<rtao_tx::Plan>>,
+    raw: Mutex<Vec<rtao_tx::ExtrinsicResult>>,
+    enriched: Mutex<Vec<rtao_tx::ExtrinsicResult>>,
     fail_result: bool,
 }
 impl rtao_cli::context::SubmissionHooks for DurablePlanHooks<'_> {
@@ -4744,7 +4740,7 @@ impl rtao_cli::context::SubmissionHooks for DurablePlanHooks<'_> {
     }
     fn before_submit_with_plan<'a>(
         &'a self,
-        plan: &'a rtao::tx::Plan,
+        plan: &'a rtao_tx::Plan,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             assert_eq!(self.unlocks.load(Ordering::SeqCst), 0);
@@ -4758,7 +4754,7 @@ impl rtao_cli::context::SubmissionHooks for DurablePlanHooks<'_> {
     }
     fn on_result<'a>(
         &'a self,
-        receipt: &'a rtao::tx::ExtrinsicResult,
+        receipt: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             assert_eq!(self.plans.lock().map_err(callback_lock)?.len(), 1);
@@ -4778,7 +4774,7 @@ impl rtao_cli::context::SubmissionHooks for DurablePlanHooks<'_> {
     }
     fn after_followup<'a>(
         &'a self,
-        receipt: &'a rtao::tx::ExtrinsicResult,
+        receipt: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             assert_eq!(self.raw.lock().map_err(callback_lock)?.len(), 1);
@@ -4865,7 +4861,7 @@ async fn durable_direct_plan_keeps_proxy_call_and_records_receipt_before_close_f
         let runtime = client.refresh_runtime().await?;
         let submitted = runtime.core().decode_extrinsic(&submissions[0], true)?;
         let reviewed = runtime.core().decode_spec(
-            &rtao::core::runtime::TypeSpec::Call,
+            &rtao_core::runtime::TypeSpec::Call,
             plans[0].call().as_bytes(),
             true,
         )?;
@@ -5073,9 +5069,9 @@ impl Intent for CommandFactsFixture {
             ],
             warnings: vec!["keep independent warning".into()],
             facts_title: if self.fee_facts {
-                rtao::tx::FactsTitle::Fees
+                rtao_tx::FactsTitle::Fees
             } else {
-                rtao::tx::FactsTitle::Quote
+                rtao_tx::FactsTitle::Quote
             },
             facts: if self.fee_facts {
                 vec![("inclusion".to_owned(), "τ0.000020000".to_owned())]
@@ -5086,7 +5082,7 @@ impl Intent for CommandFactsFixture {
         })
     }
 }
-fn command_review(intent: &dyn rtao::tx::DynIntent) -> CommandReview {
+fn command_review(intent: &dyn rtao_tx::DynIntent) -> CommandReview {
     CommandReview::new(
         intent,
         "allocate τ2 into Chosen Fund at 2.0000 τ/β for ~1.0000 β",
@@ -5507,7 +5503,7 @@ impl Terminal for ReviewAcceptTerminal {
             .push(question.into());
         Ok("yes".into())
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -5787,7 +5783,7 @@ async fn saved_automatic_alias_display_preserves_the_canonical_source_and_json_r
         let (client, chain, _) = fixture(1_000_000_000).await?;
         let runtime = client.refresh_runtime().await?;
         let group =
-            rtao::tx::Multisig::new(&runtime, &[keys[0].key.account(), keys[1].key.account()], 2)?;
+            rtao_tx::Multisig::new(&runtime, &[keys[0].key.account(), keys[1].key.account()], 2)?;
         let inner = rtao_runtime::calls::system::remark(vec![8, 9]).compose(&runtime)?;
         chain.mutate_state(|state| {
             state.queue_submit(rtao_testkit::SubmitScript::InBlockThenFinalized {
@@ -5988,7 +5984,7 @@ async fn external_carrier_shortfall_downgrades_default_refuses_forced_and_keeps_
             );
             let runtime = client.refresh_runtime().await?;
             let decoded =
-                rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submits[0], true)?)
+                rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submits[0], true)?)
                     .to_json();
             assert_eq!(decoded["call"]["call_module"], "SubtensorModule");
             assert_eq!(decoded["call"]["call_function"], "swap_stake");
@@ -6272,7 +6268,7 @@ impl RootYieldHooks {
             })
             .count()
     }
-    fn assert_original(&self, result: &rtao::tx::ExtrinsicResult) -> TestResult {
+    fn assert_original(&self, result: &rtao_tx::ExtrinsicResult) -> TestResult {
         assert_eq!(self.before.load(Ordering::SeqCst), 1);
         assert_eq!(self.after.load(Ordering::SeqCst), 1);
         assert_eq!(
@@ -6291,7 +6287,7 @@ impl rtao_cli::context::SubmissionHooks for RootYieldHooks {
     }
     fn on_result<'a>(
         &'a self,
-        result: &'a rtao::tx::ExtrinsicResult,
+        result: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, Result<(), rtao_cli::error::CliError>> {
         Box::pin(async move {
             self.after.fetch_add(1, Ordering::SeqCst);
@@ -6350,8 +6346,7 @@ fn assert_submitted_root_claim(
     runtime: &rtao_runtime::RuntimeHandle,
     hotkey: AccountId,
 ) -> TestResult {
-    let decoded =
-        rtao::core::DynValue::new(runtime.core().decode_extrinsic(bytes, true)?).to_json();
+    let decoded = rtao_core::DynValue::new(runtime.core().decode_extrinsic(bytes, true)?).to_json();
     assert_eq!(decoded["call"]["call_module"], "SubtensorModule");
     assert_eq!(decoded["call"]["call_function"], "claim_root_with_hotkey");
     let args = decoded["call"]["call_args"]
@@ -6449,7 +6444,7 @@ impl Terminal for RootYieldTerminal {
             .push(question.into());
         self.inner.read_line(question)
     }
-    fn read_secret(&mut self, prompt: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, prompt: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         self.inner.read_secret(prompt)
     }
     fn message(&mut self, message: &str) -> Result<(), PromptError> {
@@ -6673,7 +6668,7 @@ async fn external_root_claim_reacquires_after_release_and_uses_the_effective_pro
         }
         let runtime = client.refresh_runtime().await?;
         let decoded =
-            rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[1], true)?)
+            rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[1], true)?)
                 .to_json();
         let call = if proxy {
             assert_eq!(decoded["call"]["call_module"], "Proxy");
@@ -6821,7 +6816,7 @@ async fn post_root_yield_skips_empty_failed_nontrigger_and_saved_approval_outcom
 #[tokio::test]
 async fn registration_read_failure_persists_direct_and_saved_receipts_before_release() -> TestResult
 {
-    use rtao::primitives::{IntoCoreValue, NetUid};
+    use rtao_primitives::{IntoCoreValue, NetUid};
     for saved in [false, true] {
         for fail_result in [false, true] {
             for connection_closed in [false, true] {
@@ -6987,7 +6982,7 @@ async fn registration_read_failure_persists_direct_and_saved_receipts_before_rel
                     .clone();
                 assert_eq!(submitted.len(), 1);
                 assert_eq!(
-                    rtao::core::ops::extrinsic_lookup::find(
+                    rtao_core::ops::extrinsic_lookup::find(
                         &json!({"block":{"extrinsics":[format!("0x{}", hex::encode(&submitted[0]))]}}),
                         hash.0
                     )?,
@@ -7189,7 +7184,7 @@ async fn interrupted_watched_submission_retains_exact_hash_hooks_and_signer_rele
         1
     );
     assert_eq!(
-        rtao::core::ops::extrinsic_lookup::find(
+        rtao_core::ops::extrinsic_lookup::find(
             &json!({"block":{"extrinsics":[format!("0x{}", hex::encode(&bytes[0]))]}}),
             hash.0
         )?,

@@ -17,8 +17,8 @@ use std::sync::{Arc, Mutex};
 
 use comfy_table::{Cell, CellAlignment, Table, presets::UTF8_FULL};
 use parking_lot::RwLock;
-use rtao::primitives::{DynBalance, NetUid, Symbol};
-use rtao::tx::{ChainError, ExtrinsicResult, Plan};
+use rtao_primitives::{DynBalance, NetUid, Symbol};
+use rtao_tx::{ChainError, ExtrinsicResult, Plan};
 use serde::{Serialize, Serializer, ser::SerializeMap};
 use serde_json::{Map, Value, json};
 use zeroize::{Zeroize, Zeroizing};
@@ -629,7 +629,7 @@ impl Output {
                 continue;
             }
             let digits = &text[digits_start..end];
-            let Some(netuid) = rtao::primitives::pyfmt::parse_integer(digits)
+            let Some(netuid) = rtao_primitives::pyfmt::parse_integer(digits)
                 .and_then(|value| value.to_string().parse::<u16>().ok())
             else {
                 continue;

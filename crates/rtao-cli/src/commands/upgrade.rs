@@ -15,13 +15,11 @@ use crate::{
 };
 use artifacts::{BundleInputs, GithubFetch, ProposalBundle, ReleaseRef, UpgradeFetch};
 use clap::{Arg, ArgMatches, Command};
-use rtao::{
-    client::{BlockRef, Client, ViewExt},
-    core::value_ext::ValueExt,
-    primitives::{AccountId, CryptoType},
-    signer::{KeyView, SignerRole},
-    tx::{ExecuteOptions, Multisig},
-};
+use rtao_client::{BlockRef, Client, ViewExt};
+use rtao_core::value_ext::ValueExt;
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{KeyView, SignerRole};
+use rtao_tx::{ExecuteOptions, Multisig};
 use serde_json::{Map, Value, json};
 
 fn failure(error: impl std::fmt::Display) -> CliError {
@@ -198,7 +196,7 @@ impl crate::commands::multisig::UpgradeFetch for FetchAdapter<'_> {
         &'a self,
         url: &'a str,
         api: bool,
-    ) -> rtao::signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
+    ) -> rtao_signer::BoxFuture<'a, Result<Vec<u8>, CliError>> {
         self.0.bytes(url, api)
     }
 }
@@ -662,7 +660,7 @@ fn resolve_group(
             sudo.and_then(|sudo| sudo.get("account_mode")),
         ) {
             (Some(mode), _) => mode,
-            (None, None) => rtao::primitives::AccountMode::Legacy,
+            (None, None) => rtao_primitives::AccountMode::Legacy,
             (None, Some(Value::String(mode))) => mode.parse().map_err(failure)?,
             (None, Some(_)) => return Err(failure("account_mode must be 'legacy' or 'safe'")),
         };
@@ -823,7 +821,7 @@ async fn submit_verified(
     others.sort();
     others.dedup();
     let when = layer.as_ref().map(|layer| layer.when.clone());
-    use rtao::primitives::AccountMode;
+    use rtao_primitives::AccountMode;
     use rtao_runtime::calls::multisig as ms;
     let hash_only = layer
         .as_ref()
@@ -859,7 +857,7 @@ async fn submit_verified(
                 "signing source does not match the reviewed sudo signatory",
             ));
         }
-        rtao::Executor::new(client.clone())
+        rtao_intents::executor(client.clone())
             .submit_call_dyn(
                 call,
                 keys.as_ref(),

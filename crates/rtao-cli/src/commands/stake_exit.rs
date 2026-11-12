@@ -9,12 +9,10 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::Client,
-    primitives::AccountId,
-    reads::reads::{m6_staking, owner::StakePosition},
-    tx::ExtrinsicResult,
-};
+use rtao_client::Client;
+use rtao_primitives::AccountId;
+use rtao_reads::reads::{m6_staking, owner::StakePosition};
+use rtao_tx::ExtrinsicResult;
 use serde_json::{Map, json};
 use std::collections::BTreeSet;
 

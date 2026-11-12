@@ -8,15 +8,13 @@ use crate::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
 };
-use rtao::{
-    client::{ClientConfig, Network},
-    primitives::TaoBalance,
-    signer::{BoxFuture, DynKeySource, KeypairSigner, Signer, SignerError},
-};
+use rtao_client::{ClientConfig, Network};
+use rtao_primitives::TaoBalance;
 use rtao_runtime::{
     CallBytes, RuntimeHandle,
     models::{MultisigInfo, MultisigTimepoint},
 };
+use rtao_signer::{BoxFuture, DynKeySource, KeypairSigner, Signer, SignerError};
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use std::{
     collections::BTreeMap,
@@ -44,7 +42,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -514,7 +512,7 @@ async fn first_interior_and_final_submissions_use_correct_hash_or_full_call_and_
             .clone();
         assert_eq!(submissions.len(), 1);
         let decoded =
-            rtao::core::DynValue::new(runtime()?.core().decode_extrinsic(&submissions[0], true)?)
+            rtao_core::DynValue::new(runtime()?.core().decode_extrinsic(&submissions[0], true)?)
                 .to_json();
         let call = decoded.get("call").ok_or("extrinsic call")?;
         assert_eq!(
@@ -545,13 +543,13 @@ async fn first_interior_and_final_submissions_use_correct_hash_or_full_call_and_
             );
         } else {
             let expected = runtime()?.core().decode_spec(
-                &rtao::core::runtime::TypeSpec::Call,
+                &rtao_core::runtime::TypeSpec::Call,
                 finalizing.as_bytes(),
                 true,
             )?;
             assert_eq!(
                 call_argument(call, "call")?,
-                &rtao::core::DynValue::new(expected).to_json()
+                &rtao_core::DynValue::new(expected).to_json()
             );
         }
         assert_eq!(factory.sources.load(Ordering::SeqCst), 1);
@@ -585,7 +583,7 @@ async fn post_review_sudo_change_and_reopened_operation_refuse_before_source() -
         signatories: vec![signer, OTHER, THIRD],
         refs: vec![],
         preset: None,
-        account_mode: rtao::primitives::AccountMode::Legacy,
+        account_mode: rtao_primitives::AccountMode::Legacy,
     };
     let selection = SigningSelection {
         display_name: None,
@@ -816,7 +814,7 @@ async fn threshold_one_dispatches_full_finalizing_call_with_native_threshold_one
         .clone();
     assert_eq!(submissions.len(), 1);
     let decoded =
-        rtao::core::DynValue::new(runtime()?.core().decode_extrinsic(&submissions[0], true)?)
+        rtao_core::DynValue::new(runtime()?.core().decode_extrinsic(&submissions[0], true)?)
             .to_json();
     let call = decoded.get("call").ok_or("call")?;
     assert_eq!(
@@ -833,11 +831,11 @@ async fn threshold_one_dispatches_full_finalizing_call_with_native_threshold_one
         Some("as_multi")
     );
     let expected = runtime()?.core().decode_spec(
-        &rtao::core::runtime::TypeSpec::Call,
+        &rtao_core::runtime::TypeSpec::Call,
         finalizing.as_bytes(),
         true,
     )?;
-    assert_eq!(inner, &rtao::core::DynValue::new(expected).to_json());
+    assert_eq!(inner, &rtao_core::DynValue::new(expected).to_json());
     assert_eq!(factory.sources.load(Ordering::SeqCst), 1);
     assert_eq!(factory.releases.load(Ordering::SeqCst), 1);
     client.close().await;

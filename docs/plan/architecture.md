@@ -814,9 +814,9 @@ rtao/
 │  ├─ rtao-btauth/         # btauth/1 core (no I/O) + features: server (axum/tower), client (reqwest), redis, legacy-v10
 │  ├─ rtao-neuron/         # NeuronRuntime, Validator/Miner, WeightScheduler, AxonPublisher, OwnerOps, telemetry
 │  ├─ rtao-evm/            # v11 PY/evm parity: keystores, precompile ABIs, eth JSON-RPC, association proofs
-│  ├─ rtao-cli/            # binary `rtao` (btcli-equivalent); its [[bin]] sets doc = false (§12.8: it would overwrite the facade's docs)
+│  ├─ rtao-cli/            # the CLI library (btcli-equivalent) behind the facade's `rtao` binary (D-190)
 │  ├─ rtao-testkit/        # FakeNode (socket), FakeChain (RpcClientT), RecordingView, Localnet, Scenario, fixtures, oracle loaders, the Ledger emulator harness (§11.9)
-│  ├─ rtao/                # facade: re-exports + role profiles (the one dependency subnet code needs); rtao::blocking
+│  ├─ rtao/                # facade: re-exports + role profiles (the one dependency subnet code needs); rtao::blocking; binary `rtao` (default `cli` feature; its [[bin]] sets doc = false, §12.8)
 │  ├─ rtao-compat-synapse/ # M10 (post-parity): bittensor==10.5.0 Synapse/Axon/Dendrite wire compatibility (§7.5)
 │  ├─ rtao-compat-epistula/ # M10: Epistula v2 signed headers with upstream dialect presets (§7.5)
 │  ├─ rtao-transport-quic/ # M10: btlightning-compatible QUIC on quinn 0.11, ring only (§7.5)
@@ -863,7 +863,7 @@ rtao/
 | `rtao-compat-epistula` | Epistula v2, M10 (§7.5) | `Dialect` (`RTAO`, `SPEC`, `BITMIND`, `GOBT`, `APEX`), `sign_headers`, `SignOptions`, `EpistulaHeaders`, `Verifier`, `Authenticated`, `EpistulaCaller`, `ReplayPolicy`; `server::{EpistulaLayer, DualAuthLayer, VerifiedEpistula, StatusMap}`; `client::{sign_reqwest, sign_reqwest_with_digest, EpistulaClient}`; `secret::SecretSigFilter`; `apex::canonical_json` | `server`, `client`, `metagraph-policy`, `redis`, `secret-filter` (none default) | `rtao-btauth`, `rtao-signer`, `rtao-core`, `rtao-primitives` |
 | `rtao-transport-quic` | btlightning-compatible QUIC, M10 (§7.5) | `QuicClient`, `QuicClientConfig`, `QuicTarget`, `Reply`; `QuicServer`, `QuicServerConfig`, `QuicRouter`, `ServerStats`, `server::{HotkeyPolicy, SourcePolicy, Caller, HandlerError, ChunkSender}`; `wire`, `data::{to_data, from_data}`, `auth`, `tls` | `client`, `server` (both default) | `rtao-signer`, `rtao-core`, `rtao-primitives`; `rtao-btauth` (`server`, nonce store) |
 | `rtao-remote-signer` | `rtao-remote-signer/1`, M10 (§6.5, §7.5) | `wire` (`PROTOCOL`, `SIGN_PATH`, `ACCOUNTS_PATH`, request and response bodies); `RemoteSigner`, `RemoteSignerConfig`, `RemoteSignerError`; `server::{RemoteSignerServer, ServerConfig, RemotePolicy, ClientAllowlist, rebuild, RuntimeSource, PinnedRuntimeSource, ClientRuntimeSource}`; `daemon::{Daemon, DaemonConfig}`; binary `rtao-remote-signerd` | `client`, `server`, `server-online`, `server-bin`, `redis` (none default) | `rtao-btauth`, `rtao-signer`, `rtao-core`, `rtao-primitives`; `rtao-runtime`, `rtao-tx` (`server`), `rtao-client` (`server-online`), `rtao-wallet` (`server-bin`) |
-| `rtao-cli` | `rtao` binary (§10) | — | `ledger`, `vault`, `extension`, `evm` (all default on) | `rtao` (`full`) |
+| `rtao-cli` | the library behind the `rtao` binary (§10), which the facade's default `cli` feature builds (D-190) | `entry::main` and the command modules | `ledger`, `vault`, `extension`, `evm`, `pow-gpu`, `remote-signer` | the workspace crates it uses, not the facade |
 | `rtao-testkit` | test infrastructure (§11) | `FakeNode`, `FakeChain`, `FakeState`, `Fault`, `RecordingView`, `Localnet`, `LocalnetProfile`, `Scenario`, `PinProxy` (block-pinning JSON-RPC proxy for interop lane 9, §11.6), `fixtures::*`, `oracle::*`, `ledger_emu::*` (the Speculos harness, with the Speculos TCP and replay transports that `LedgerDevice::with_transport` takes from the core patch, §1.11, §11.9) | `docker`, `interop`, `core-oracle`, `ledger-emu` (each gates its own `[[test]]` target, §11.1) | `rtao-client`, `rtao-jsonrpc`, `rtao-tx`, `rtao-wallet` (plus `subxt-rpcs` for `FakeChain`), `rtao-signer` (feature `ledger-emu` enables its `test-util`, §2.3 rule 8) |
 | `rtao` | facade (§2.4) | `prelude` (contents per feature, §2.4), re-exports per feature, `blocking::{SyncClient, SyncSnapshot, Subtensor, set_weights, close_shared_clients}` (ports of `PY/sync.py` and `PY/_subtensor.py`, driven by `rtao_client::blocking::BlockingRuntime`; shared clients keyed by canonical endpoint, `PY/_subtensor.py:129-150`; `SyncClient` exposes all 14 namespaces, where Python's has 13, D-027) | §2.4 | all, optional per feature |
 
@@ -891,7 +891,8 @@ L5  rtao-tx → client, catalog, signer · rtao-reads → client, catalog, runti
 L6  rtao-intents → tx, reads · rtao-metagraph → reads, runtime · rtao-btauth → signer, core, primitives (+ metagraph, optional)
 L7  rtao-neuron → intents, metagraph, btauth, wallet · rtao-compat-synapse, rtao-compat-epistula, rtao-transport-quic → btauth, signer,
     core, primitives · rtao-remote-signer → btauth, signer, core, primitives (+ runtime, tx, client, wallet per feature)
-L8  rtao (facade, incl. rtao::blocking) · rtao-cli → rtao · rtao-testkit (dev) · xtask (tooling)
+L8  rtao-cli (CLI library) → neuron, intents, reads, tx, wallet, catalog, runtime, … · rtao-testkit (dev) · xtask (tooling)
+L9  rtao (facade, incl. rtao::blocking; its `rtao` binary, default feature `cli` → rtao-cli, D-190)
 ```
 
 `cargo xtask deps-check` runs in `pr-gates` over `cargo metadata` and `cargo tree`:
@@ -5721,7 +5722,7 @@ publish binaries, install upkeep bots or run local release/hardware rehearsals.
 A future distribution task can decide artifact targets, provenance and publishing. Linux x64 hosted tests do not
 establish native ARM, macOS, Keychain or Ledger HID coverage. Record those gaps, retain relevant APIs and injected
 tests, and do not create local macOS or workstation build requirements to fill them. Documentation builds can be
-downloaded as CI artifacts; no Pages environment is required. Keep `rtao-cli`'s binary `doc = false` to avoid its
+downloaded as CI artifacts; no Pages environment is required. Keep the `rtao` binary's `doc = false` to avoid its
 `rtao` rustdoc path colliding with the facade library.
 
 ### 12.9 Maintenance playbook

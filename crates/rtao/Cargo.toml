@@ -6,22 +6,28 @@ rust-version.workspace = true
 authors.workspace = true
 license = "(MIT OR Apache-2.0) AND Apache-2.0"
 repository.workspace = true
-description = "Rust SDK and operator framework for Bittensor subnets."
+description = "Rust SDK, operator framework and the rtao command line application for Bittensor subnets."
 documentation = "https://docs.rs/rtao"
 readme = "README.md"
 keywords = ["bittensor", "sdk", "blockchain", "substrate", "tao"]
-categories = ["cryptography::cryptocurrencies", "api-bindings"]
+categories = ["cryptography::cryptocurrencies", "api-bindings", "command-line-utilities"]
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 rustdoc-args = ["--cfg", "docsrs"]
+# The CLI (`cli`, a default feature) is not part of the library documentation.
+no-default-features = true
 features = ["full","validator","miner","owner","pow-gpu","subxt"]
 
 [lints]
 workspace = true
 
 [features]
-default = ["client","reads","tx"]
+# `cli` is a default so that `cargo install rtao` installs the full `rtao`
+# binary with no flags. Libraries depend on rtao with `default-features = false`
+# and name the features they use; the library never links rtao-cli (D-190).
+default = ["client","reads","tx","cli"]
+cli = ["dep:rtao-cli"]
 client = ["dep:rtao-client"]
 reads = ["client","dep:rtao-reads"]
 tx = ["client","dep:rtao-tx","dep:rtao-signer"]
@@ -40,19 +46,19 @@ miner = ["neuron","btauth-server","rtao-intents/serving","rtao-intents/commitmen
 owner = ["neuron","wallet-encrypted","rtao-neuron/owner","rtao-intents/registration","rtao-intents/governance","rtao-intents/hyperparameters","rtao-intents/identity","rtao-intents/proxy","rtao-intents/multisig","rtao-intents/collateral"]
 intents-all = ["intents","rtao-intents/all"]
 pow = ["intents","rtao-intents/pow"]
-pow-gpu = ["pow","rtao-intents/pow-gpu"]
-ledger = ["rtao-signer/ledger"]
-vault = ["rtao-signer/vault"]
-extension = ["rtao-signer/extension"]
+pow-gpu = ["pow","rtao-intents/pow-gpu","rtao-cli?/pow-gpu"]
+ledger = ["rtao-signer/ledger","rtao-cli?/ledger"]
+vault = ["rtao-signer/vault","rtao-cli?/vault"]
+extension = ["rtao-signer/extension","rtao-cli?/extension"]
 keychain = ["rtao-wallet/keychain"]
-evm = ["dep:rtao-evm"]
+evm = ["dep:rtao-evm","rtao-cli?/evm"]
 blocking = ["intents-all","metagraph","wallet","rtao-client/blocking","dep:rtao-runtime","dep:rtao-catalog","dep:bytes","dep:futures","dep:serde_json","dep:tokio"]
 prometheus = ["rtao-neuron?/prometheus","rtao-jsonrpc/metrics"]
 subxt = ["rtao-client/subxt"]
 compat-synapse = ["dep:rtao-compat-synapse","rtao-compat-synapse/axon","rtao-compat-synapse/dendrite","rtao-compat-synapse/tensor"]
 compat-epistula = ["dep:rtao-compat-epistula","rtao-compat-epistula/server","rtao-compat-epistula/client"]
 transport-quic = ["dep:rtao-transport-quic","rtao-transport-quic/client","rtao-transport-quic/server"]
-remote-signer = ["tx","btauth-client","dep:rtao-remote-signer","rtao-remote-signer/client"]
+remote-signer = ["tx","btauth-client","dep:rtao-remote-signer","rtao-remote-signer/client","rtao-cli?/remote-signer"]
 remote-signer-server = ["remote-signer","rtao-remote-signer/server-online"]
 full = ["intents-all","metagraph","wallet-encrypted","btauth-server","btauth-client","http-auth","redis","neuron","rtao-neuron/validator","rtao-neuron/miner","rtao-neuron/owner","pow","ledger","vault","extension","keychain","evm","blocking","prometheus","compat-synapse","compat-epistula","transport-quic","remote-signer","remote-signer-server"]
 
@@ -81,6 +87,7 @@ rtao-compat-synapse = { workspace = true, optional = true }
 rtao-compat-epistula = { workspace = true, optional = true }
 rtao-transport-quic = { workspace = true, optional = true }
 rtao-remote-signer = { workspace = true, optional = true }
+rtao-cli = { workspace = true, optional = true }
 
 [dev-dependencies]
 # Workspace crates are path-only dev-dependencies: `cargo publish` strips them,
@@ -93,6 +100,64 @@ clap.workspace = true
 tokio.workspace = true
 http.workspace = true
 serde_json.workspace = true
+hex.workspace = true
+zeroize.workspace = true
+# The CLI entry-point tests below run the `rtao` binary and use these crates
+# directly (D-190).
+rtao-client = { path = "../rtao-client", default-features = false }
+rtao-tx = { path = "../rtao-tx", default-features = false }
+rtao-signer = { path = "../rtao-signer", default-features = false }
+rtao-wallet = { path = "../rtao-wallet", default-features = false }
+rtao-catalog = { path = "../rtao-catalog", default-features = false }
+rtao-intents = { path = "../rtao-intents", default-features = false }
+
+# The `rtao` command line application. `doc = false`: the library and the
+# binary share the name `rtao` and would both document to `target/doc/rtao/`.
+[[bin]]
+name = "rtao"
+path = "src/main.rs"
+required-features = ["cli"]
+doc = false
+
+[[test]]
+name = "catalog_entrypoint"
+required-features = ["cli"]
+
+[[test]]
+name = "entrypoint_contract"
+required-features = ["cli"]
+
+[[test]]
+name = "file_input_contract"
+required-features = ["cli"]
+
+[[test]]
+name = "generic_wallet_prompts"
+required-features = ["cli"]
+
+[[test]]
+name = "m7_auxiliary_entrypoint"
+required-features = ["cli"]
+
+[[test]]
+name = "m8_help_theme"
+required-features = ["cli"]
+
+[[test]]
+name = "m8_misc_entrypoint"
+required-features = ["cli"]
+
+[[test]]
+name = "m8_upgrade_entrypoint"
+required-features = ["cli"]
+
+[[test]]
+name = "startup_contract"
+required-features = ["cli"]
+
+[[test]]
+name = "wallet_commands"
+required-features = ["cli"]
 
 [[example]]
 name = "validator"

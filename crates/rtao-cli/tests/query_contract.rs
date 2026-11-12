@@ -1,11 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Generated query prompts and defaults through real requests and fake transport.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    primitives::AccountId,
-    reads::ReadName,
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -15,6 +10,9 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_primitives::AccountId;
+use rtao_reads::ReadName;
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::{Map, Value, json};
 use std::{
@@ -48,7 +46,7 @@ impl Terminal for QueryTerminal {
         self.answers.pop_front().ok_or(PromptError::Unavailable)
     }
 
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
 

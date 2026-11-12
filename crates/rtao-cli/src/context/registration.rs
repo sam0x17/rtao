@@ -3,12 +3,10 @@
 //! Live registration costs and bounded progress at the application boundary.
 
 use futures::TryStreamExt;
-use rtao::{
-    client::{View, ViewExt},
-    primitives::{DynBalance, NetUid},
-    tx::DynIntent,
-};
+use rtao_client::{View, ViewExt};
+use rtao_primitives::{DynBalance, NetUid};
 use rtao_runtime::{runtime_apis as api, storage::subtensor_module as st};
+use rtao_tx::DynIntent;
 
 use crate::{
     error::CliError,
@@ -16,7 +14,7 @@ use crate::{
 };
 
 // py: sdk/python/bittensor/cli/context.py:1405-1433
-fn progress(output: &Output, progress: rtao::tx::Progress) -> Result<(), CliError> {
+fn progress(output: &Output, progress: rtao_tx::Progress) -> Result<(), CliError> {
     let fields = &progress.data;
     let deregistered = fields
         .get("deregistered_netuid")
@@ -82,7 +80,7 @@ fn progress(output: &Output, progress: rtao::tx::Progress) -> Result<(), CliErro
 /// Drain bounded progress while preserving the submission future and its receipt.
 pub(super) async fn with_progress<F: std::future::Future + ?Sized>(
     output: &Output,
-    mut receiver: tokio::sync::mpsc::Receiver<rtao::tx::Progress>,
+    mut receiver: tokio::sync::mpsc::Receiver<rtao_tx::Progress>,
     mut operation: std::pin::Pin<Box<F>>,
 ) -> (F::Output, Option<CliError>) {
     let mut render_error = None;
@@ -215,7 +213,7 @@ async fn subnet_creation<V: View + ?Sized>(
         for (keys, added) in networks {
             let netuid = keys
                 .last()
-                .and_then(rtao::core::DynValue::as_u128)
+                .and_then(rtao_core::DynValue::as_u128)
                 .and_then(|netuid| u16::try_from(netuid).ok())
                 .ok_or_else(|| CliError::failure("registration preview has a non-native netuid"))?;
             if netuid != 0 && added {

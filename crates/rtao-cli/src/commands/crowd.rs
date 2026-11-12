@@ -8,7 +8,8 @@ use crate::{
     output::TableSpec,
 };
 use clap::{Arg, ArgMatches, Command};
-use rtao::{client::Client, reads::ReadName};
+use rtao_client::Client;
+use rtao_reads::ReadName;
 use serde_json::{Map, Value, json};
 
 fn failure(error: impl std::fmt::Display) -> CliError {
@@ -140,7 +141,7 @@ pub async fn execute(
             Map::from_iter([("crowdloan_id".into(), json!(id))]),
         ),
     };
-    let payload = rtao::reads::dispatch(client, name, &params)
+    let payload = rtao_reads::dispatch(client, name, &params)
         .await
         .map_err(CliError::from)?;
     match request {

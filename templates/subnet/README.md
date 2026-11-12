@@ -37,7 +37,8 @@ mkdir -p "$RTAO_TEMP_ROOT/tmp"
 export TMPDIR="$RTAO_TEMP_ROOT/tmp" PYO3_NO_PYTHON=1
 cargo generate-lockfile
 cargo fetch --locked
-# Install rtao-cli at the resolved SDK version (or from the patched checkout), as ci.yml does.
+# Install the rtao binary at the resolved SDK version (`cargo install --locked rtao
+# --version <v>`, or from the patched checkout), as ci.yml does.
 bash ci/check.sh
 ```
 

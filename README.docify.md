@@ -2,7 +2,6 @@
 
 [![crates.io](https://img.shields.io/crates/v/rtao.svg?logo=rust)](https://crates.io/crates/rtao)
 [![docs.rs](https://img.shields.io/docsrs/rtao?logo=docs.rs)](https://docs.rs/rtao)
-[![rtao-cli](https://img.shields.io/crates/v/rtao-cli.svg?label=rtao-cli)](https://crates.io/crates/rtao-cli)
 [![downloads](https://img.shields.io/crates/d/rtao.svg)](https://crates.io/crates/rtao)
 [![MSRV](https://img.shields.io/crates/msrv/rtao.svg?label=MSRV)](https://github.com/sam0x17/rtao/blob/main/Cargo.toml)
 [![license](https://img.shields.io/crates/l/rtao.svg)](#license)
@@ -34,6 +33,17 @@ rtao = { version = "0.1", default-features = false, features = ["client", "reads
 ```
 
 or run `cargo add rtao --no-default-features --features client,reads`.
+
+Install the `rtao` command line tool from the same crate:
+
+```sh
+cargo install --locked rtao
+```
+
+The `rtao` crate's default features include `cli`, which builds that binary,
+so a library should set `default-features = false` and name the features it
+uses, as above. Before 0.1.1 the binary came from the `rtao-cli` crate; run
+`cargo uninstall rtao-cli` first if you installed it that way.
 
 ### From Git
 
@@ -91,7 +101,7 @@ the `[patch.crates-io] w3f-bls`, the `bittensor-core` fork tables and the
 ## Features
 
 The `rtao` facade crate re-exports the workspace through Cargo features. The
-defaults are `client`, `reads` and `tx`.
+defaults are `client`, `reads`, `tx` and `cli`.
 
 | Area | Features |
 |---|---|
@@ -100,9 +110,10 @@ defaults are `client`, `reads` and `tx`.
 | Wallets and signers | `wallet`, `wallet-encrypted`, `keychain`, `ledger`, `vault`, `extension`, `evm` |
 | Neurons | `neuron`, `validator`, `miner`, `owner`, `btauth`, `btauth-server`, `btauth-client`, `redis`, `prometheus` |
 | Compatibility | `compat-synapse`, `compat-epistula`, `transport-quic`, `remote-signer`, `remote-signer-server` |
+| Command line | `cli`: the `rtao` binary, from the `rtao-cli` library |
 
-`full` enables everything. The `rtao-cli` crate provides the `rtao` command
-line tool (`cargo install --locked rtao-cli`), and `templates/subnet` is a
+`full` enables every library feature; `cli` is separate. `cargo install
+--locked rtao` installs the `rtao` command line tool, and `templates/subnet` is a
 `cargo generate` template for a validator, miner and owner tool.
 
 ## Documentation

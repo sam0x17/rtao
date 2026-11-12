@@ -2,18 +2,16 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/multisig_helpers.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Internal semantic-intent dispatch through a saved multisig wallet.
 
-use rtao::{
-    client::{Client, ClientError, DynView, ViewExt},
-    primitives::{AccountId, CryptoType, NetUid, Spend},
-    signer::{BoxFuture, IntentKeyView, KeyView, SignerRole},
-    tx::{
-        BuildCx, Built, DynIntent, IntentError, IntentPreflight, Multisig, OriginView,
-        PolicySubject, PreflightCx, TxError,
-        multisig::{FundsRequest, check_multisig_funds, multisig_opening_shortfall},
-    },
-};
 use rtao_catalog::IntentSpec;
+use rtao_client::{Client, ClientError, DynView, ViewExt};
+use rtao_primitives::{AccountId, CryptoType, NetUid, Spend};
 use rtao_runtime::{CallBytes, CallDescriptor, RuntimeHandle, models::MultisigTimepoint};
+use rtao_signer::{BoxFuture, IntentKeyView, KeyView, SignerRole};
+use rtao_tx::{
+    BuildCx, Built, DynIntent, IntentError, IntentPreflight, Multisig, OriginView, PolicySubject,
+    PreflightCx, TxError,
+    multisig::{FundsRequest, check_multisig_funds, multisig_opening_shortfall},
+};
 use serde_json::{Value, json};
 use smallvec::SmallVec;
 use std::sync::{Mutex, MutexGuard};
@@ -303,13 +301,13 @@ impl DynIntent for SemanticMultisig<'_> {
     fn affects_all_subnets_dyn(&self) -> bool {
         self.semantic.affects_all_subnets_dyn()
     }
-    fn safety_dyn(&self) -> Result<rtao::tx::IntentSafety, IntentError> {
+    fn safety_dyn(&self) -> Result<rtao_tx::IntentSafety, IntentError> {
         self.semantic.safety_dyn()
     }
     fn safety_at_dyn<'b>(
         &'b self,
         cx: &'b BuildCx<'b, dyn DynView + 'b>,
-    ) -> BoxFuture<'b, Result<rtao::tx::IntentSafety, IntentError>> {
+    ) -> BoxFuture<'b, Result<rtao_tx::IntentSafety, IntentError>> {
         Box::pin(async move {
             let semantic_cx = BuildCx {
                 view: cx.view,
@@ -472,7 +470,7 @@ impl DynIntent for SemanticMultisig<'_> {
             inner.ensure_runtime(cx.runtime)?;
             let (outer, timepoint) = if self.group.threshold == 1 {
                 (
-                    rtao::client::compose::as_multi_threshold_1_with_mode(
+                    rtao_client::compose::as_multi_threshold_1_with_mode(
                         cx.runtime,
                         &self.others,
                         inner.clone(),
@@ -486,7 +484,7 @@ impl DynIntent for SemanticMultisig<'_> {
                         .client
                         .estimate_weight(inner.clone(), self.member, self.crypto)
                         .await?;
-                    let outer = rtao::client::compose::as_multi_existing_with_mode(
+                    let outer = rtao_client::compose::as_multi_existing_with_mode(
                         cx.view,
                         self.member,
                         &self.group.signatories,
@@ -520,7 +518,7 @@ impl DynIntent for SemanticMultisig<'_> {
                         .client
                         .estimate_weight(inner.clone(), self.member, self.crypto)
                         .await?;
-                    let outer = rtao::client::compose::as_multi_with_mode(
+                    let outer = rtao_client::compose::as_multi_with_mode(
                         cx.view,
                         self.member,
                         &self.group.signatories,
@@ -580,12 +578,10 @@ mod tests;
 #[cfg(test)]
 mod isolated_hook_tests {
     use super::*;
-    use rtao::{
-        client::{ClientConfig, Network, View},
-        signer::Hotkey,
-        tx::{Intent, IntentInterface, Signed, SystemClock},
-    };
+    use rtao_client::{ClientConfig, Network, View};
+    use rtao_signer::Hotkey;
     use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+    use rtao_tx::{Intent, IntentInterface, Signed, SystemClock};
 
     type HookInput = (&'static str, &'static str, AccountId, AccountId, Vec<u8>);
 
@@ -613,7 +609,7 @@ mod isolated_hook_tests {
     }
 
     impl IntentInterface for HookProbe {
-        const SPEC: &'static IntentSpec = <rtao::intents::ServeAxon as IntentInterface>::SPEC;
+        const SPEC: &'static IntentSpec = <rtao_intents::ServeAxon as IntentInterface>::SPEC;
         type Role = Hotkey;
         type Origin = Signed;
         type Output = ();
@@ -681,7 +677,7 @@ mod isolated_hook_tests {
         config.runtime_cache_dir = None;
         config.config_store = None;
         let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
-        let executor = rtao::Executor::new(client.clone());
+        let executor = rtao_intents::executor(client.clone());
         let semantic = HookProbe::default();
         let group = executor.multisig(&[member, AccountId([9; 32])], 2).await?;
         let adapter = SemanticMultisig::new(

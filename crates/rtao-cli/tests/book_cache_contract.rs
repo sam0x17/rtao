@@ -1,10 +1,10 @@
 //! Shared book/cache writers use only fixture-owned public files and metadata.
 
-use rtao::client::config::{ConfigFile, Paths};
 use rtao_cli::{
     books::{Books, MultisigBook},
     call::{FsRawCallCache, RawCallCache},
 };
+use rtao_client::config::{ConfigFile, Paths};
 use serde_json::{Value, json};
 use std::{
     error::Error,
@@ -74,7 +74,7 @@ fn entry(name: &str) -> Value {
     json!({"name":name,"threshold":2,"signatories":["alice","bob"],"note":"portable refs","custom":{"future":true}})
 }
 fn cache_spec(data: &[u8]) -> Result<(String, Value), Box<dyn Error>> {
-    let hash = hex::encode(rtao::core::codec::storage::hash_param("Blake2_256", data)?);
+    let hash = hex::encode(rtao_core::codec::storage::hash_param("Blake2_256", data)?);
     Ok((
         hash,
         json!({"target":"System.remark","params":{},"call_data":format!("0x{}",hex::encode(data))}),

@@ -59,12 +59,12 @@ check() {
   "$@" >> "$log" 2>&1
   printf '\nRTAO_CHECK_EXIT=0\n' >> "$log"
 }
-check build-arm cargo build --locked --release -p rtao-cli --target aarch64-apple-darwin
-check build-intel cargo build --locked --release -p rtao-cli --target x86_64-apple-darwin
+check build-arm cargo build --locked --release -p rtao --bin rtao --target aarch64-apple-darwin
+check build-intel cargo build --locked --release -p rtao --bin rtao --target x86_64-apple-darwin
 check facade-arm cargo check --locked -p rtao --all-features --target aarch64-apple-darwin
 check facade-intel cargo check --locked -p rtao --all-features --target x86_64-apple-darwin
-check test-cli-arm cargo test --locked -p rtao-cli --target aarch64-apple-darwin
-check test-cli-intel cargo test --locked -p rtao-cli --target x86_64-apple-darwin
+check test-cli-arm cargo test --locked -p rtao-cli -p rtao --target aarch64-apple-darwin
+check test-cli-intel cargo test --locked -p rtao-cli -p rtao --target x86_64-apple-darwin
 check test-suite-arm cargo nextest run --locked --workspace --all-features --profile ci --target aarch64-apple-darwin
 check test-suite-intel cargo nextest run --locked --workspace --all-features --profile ci --target x86_64-apple-darwin
 smoke_arm() {

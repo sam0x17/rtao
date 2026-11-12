@@ -3,16 +3,14 @@
 //! Public and late work refresh preserve the registration target and signer.
 
 use crate::{context::SubmissionExecution, error::CliError, output::Output};
-use rtao::{
-    client::{BlockRef, Client, Inclusion, ViewExt},
-    signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole},
-    tx::{DynIntent, ExecuteOptions, ExtrinsicResult, OriginView, PlanOptions},
-};
+use rtao_client::{BlockRef, Client, Inclusion, ViewExt};
 use rtao_intents::{
     AnyIntent, PowRegister,
     pow::{CancellationToken, MAX_WORK_AGE_BLOCKS, PowConfig, PowSolver, effective_difficulty},
 };
 use rtao_runtime::storage::subtensor_module as st;
+use rtao_signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole};
+use rtao_tx::{DynIntent, ExecuteOptions, ExtrinsicResult, OriginView, PlanOptions};
 use std::{sync::Arc, time::Duration};
 
 fn failure(error: impl std::fmt::Display) -> CliError {
@@ -72,7 +70,7 @@ impl SubmissionExecution for Execution {
                 .proxy_for
                 .map_or(OriginView::Keys(&unlocked), OriginView::Account);
             let mut intent = refresh_with_origin(client, intent, &origin).await?;
-            let executor = rtao::Executor::new(client.clone());
+            let executor = rtao_intents::executor(client.clone());
             for attempt in 0..3 {
                 let receipt = executor
                     .execute_dyn(intent.as_dyn(), &unlocked, options)
@@ -109,22 +107,22 @@ struct UnlockedKeys<'a> {
     role: SignerRole,
 }
 impl KeyView for UnlockedKeys<'_> {
-    fn coldkey_address(&self) -> Result<rtao::primitives::AccountId, SignerError> {
+    fn coldkey_address(&self) -> Result<rtao_primitives::AccountId, SignerError> {
         self.keys.coldkey_address()
     }
-    fn hotkey_address(&self) -> Result<rtao::primitives::AccountId, SignerError> {
+    fn hotkey_address(&self) -> Result<rtao_primitives::AccountId, SignerError> {
         self.keys.hotkey_address()
     }
     fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
         self.keys.hotkey_public_key()
     }
-    fn bare_signer_account(&self) -> Option<rtao::primitives::AccountId> {
+    fn bare_signer_account(&self) -> Option<rtao_primitives::AccountId> {
         self.keys.bare_signer_account()
     }
     fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
         self.keys.hotkey_descriptor()
     }
-    fn local_descriptor(&self, account: &rtao::primitives::AccountId) -> Option<Vec<u8>> {
+    fn local_descriptor(&self, account: &rtao_primitives::AccountId) -> Option<Vec<u8>> {
         self.keys.local_descriptor(account)
     }
     fn authority_descriptor(&self, role: SignerRole) -> Option<Vec<u8>> {
@@ -292,9 +290,9 @@ pub(super) fn validate_backend(backend: &str, devices: Option<&[u64]>) -> Result
 pub(super) async fn solve_public(
     solver: &PowSolver,
     client: &Client,
-    netuid: rtao::primitives::NetUid,
-    hotkey: rtao::primitives::AccountId,
-    coldkey: rtao::primitives::AccountId,
+    netuid: rtao_primitives::NetUid,
+    hotkey: rtao_primitives::AccountId,
+    coldkey: rtao_primitives::AccountId,
     backend: &str,
     devices: Option<&[u64]>,
 ) -> Result<rtao_intents::pow::PowProof, CliError> {
@@ -340,9 +338,9 @@ pub(super) async fn solve_public(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rtao::primitives::{Balance, H256, NetUid, Tao};
-    use rtao::tx::ChainError;
     use rtao_intents::pow::registration_prefix;
+    use rtao_primitives::{Balance, H256, NetUid, Tao};
+    use rtao_tx::ChainError;
     use serde_json::Map;
 
     #[test]
@@ -350,16 +348,16 @@ mod tests {
         let prefix = registration_prefix(
             NetUid(1),
             H256([1; 32]),
-            rtao::primitives::AccountId([2; 32]),
-            rtao::primitives::AccountId([3; 32]),
+            rtao_primitives::AccountId([2; 32]),
+            rtao_primitives::AccountId([3; 32]),
         )
         .map_err(|e| e.to_string())?;
         for difficulty in [1, 2, 19, u64::MAX] {
             for nonce in [0, 1, 4, u64::MAX] {
-                let seal = rtao::core::pow::seal(&prefix, nonce)?;
+                let seal = rtao_core::pow::seal(&prefix, nonce)?;
                 assert_eq!(
                     meets_difficulty(&seal, difficulty),
-                    rtao::core::pow::mine_cpu(&prefix, difficulty, nonce, 1)?.is_some()
+                    rtao_core::pow::mine_cpu(&prefix, difficulty, nonce, 1)?.is_some()
                 );
             }
         }

@@ -29,7 +29,7 @@ impl Terminal for NoTerminal {
     fn read_secret(
         &mut self,
         _: &str,
-    ) -> std::result::Result<rtao::wallet::SecretString, PromptError> {
+    ) -> std::result::Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> std::result::Result<(), PromptError> {
@@ -125,7 +125,7 @@ fn perpetual_add_prepares_mode_before_lock_and_preserves_exact_amount() -> Resul
         "--period",
         "64",
         "--hotkey",
-        &rtao::primitives::AccountId([1; 32]).to_string(),
+        &rtao_primitives::AccountId([1; 32]).to_string(),
     ])?;
     let mut ctx = context(&parsed)?;
     let tx = conviction::tx_requests(
@@ -172,7 +172,7 @@ fn collateral_all_and_floor_alias_use_semantic_intents() -> Result {
         ),
     ] {
         let mut args = args;
-        let hotkey = rtao::primitives::AccountId([1; 32]).to_string();
+        let hotkey = rtao_primitives::AccountId([1; 32]).to_string();
         args.extend(["--hotkey", hotkey.as_str()]);
         let parsed = tree()?.try_get_matches_from(args)?;
         let mut ctx = context(&parsed)?;
@@ -265,12 +265,9 @@ fn collateral_required_options_and_owner_default_help_match_curated_commands() -
 }
 
 async fn fake_client()
--> std::result::Result<(rtao::client::Client, rtao_testkit::FakeChain), Box<dyn std::error::Error>>
-{
-    use rtao::{
-        client::{Client, ClientConfig, Network},
-        primitives::AccountId,
-    };
+-> std::result::Result<(rtao_client::Client, rtao_testkit::FakeChain), Box<dyn std::error::Error>> {
+    use rtao_client::{Client, ClientConfig, Network};
+    use rtao_primitives::AccountId;
     use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
     let cold = AccountId([7; 32]);
     let hot = AccountId([8; 32]);
@@ -351,8 +348,8 @@ fn captured(ctx: &mut AppContext, json_mode: bool) -> rtao_cli::output::MemorySi
 }
 #[tokio::test]
 async fn public_reads_preserve_records_owner_default_and_never_submit() -> Result {
-    use rtao::primitives::AccountId;
     use rtao_cli::output::Stream;
+    use rtao_primitives::AccountId;
     let (client, chain) = fake_client().await?;
     let cold = AccountId([7; 32]).to_string();
     let hot = AccountId([8; 32]).to_string();
@@ -487,8 +484,8 @@ async fn public_reads_preserve_records_owner_default_and_never_submit() -> Resul
 
 #[tokio::test]
 async fn targeting_keeps_truthy_contact_json_types_and_ignores_falsy_labels() -> Result {
-    use rtao::primitives::AccountId;
     use rtao_cli::output::Stream;
+    use rtao_primitives::AccountId;
     let (client, chain) = fake_client().await?;
     let cold = AccountId([7; 32]).to_string();
     let hot = AccountId([8; 32]).to_string();
@@ -552,8 +549,8 @@ async fn targeting_keeps_truthy_contact_json_types_and_ignores_falsy_labels() ->
 #[tokio::test]
 async fn collateral_list_preserves_order_full_json_and_renders_nonempty_and_empty_humans() -> Result
 {
-    use rtao::primitives::AccountId;
     use rtao_cli::output::Stream;
+    use rtao_primitives::AccountId;
     let (client, chain) = fake_client().await?;
     let cold = AccountId([7; 32]);
     let hot = AccountId([8; 32]);
@@ -576,8 +573,8 @@ async fn collateral_list_preserves_order_full_json_and_renders_nonempty_and_empt
         let key = state.runtime.storage_key(
             entry,
             &[
-                rtao::core::codec::Value::Uint(1),
-                rtao::core::codec::Value::Str(retired.to_string()),
+                rtao_core::codec::Value::Uint(1),
+                rtao_core::codec::Value::Str(retired.to_string()),
             ],
         )?;
         state.seed_encoded(key, None);
@@ -639,7 +636,7 @@ async fn collateral_list_preserves_order_full_json_and_renders_nonempty_and_empt
 async fn empty_human_lock_view_still_reports_acceptance_and_dust() -> Result {
     use rtao_cli::output::Stream;
     let (client, chain) = fake_client().await?;
-    let cold = rtao::primitives::AccountId([7; 32]).to_string();
+    let cold = rtao_primitives::AccountId([7; 32]).to_string();
     let mut machine = None;
     for show_dust in [false, true] {
         let mut ordinary = None;
@@ -671,7 +668,7 @@ async fn empty_human_lock_view_still_reports_acceptance_and_dust() -> Result {
                     assert_eq!(records.as_array().ok_or("records")?.len(), 1);
                     assert_eq!(
                         records[0]["hotkey"],
-                        json!(rtao::primitives::AccountId([8; 32]))
+                        json!(rtao_primitives::AccountId([8; 32]))
                     );
                     assert_eq!(
                         records[0]["locked_amount"].as_f64().map(f64::to_bits),
@@ -700,7 +697,7 @@ async fn empty_human_lock_view_still_reports_acceptance_and_dust() -> Result {
                     assert!(!output.contains("  none"));
                     assert!(output.contains("perpetual"));
                     let total =
-                        rtao::primitives::DynBalance::from_rao(100, rtao::primitives::NetUid(0));
+                        rtao_primitives::DynBalance::from_rao(100, rtao_primitives::NetUid(0));
                     assert!(output.contains(&format!(
                         "total locked value {total} (spot, excl. slippage/fees)"
                     )));

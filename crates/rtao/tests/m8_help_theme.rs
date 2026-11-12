@@ -2,7 +2,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Installed help is informational; actual usage errors remain failures.
 
-use rtao::client::config::ConfigFile;
+use rtao_client::config::ConfigFile;
 use std::{
     error::Error,
     path::PathBuf,

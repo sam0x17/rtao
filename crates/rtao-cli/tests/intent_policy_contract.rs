@@ -11,11 +11,6 @@ use std::{
 };
 
 use clap::ArgMatches;
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    primitives::AccountId,
-    wallet::{PasswordPrompt, SecretString, WalletError},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -25,7 +20,10 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, OutputSink, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_primitives::AccountId;
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_wallet::{PasswordPrompt, SecretString, WalletError};
 
 const NOTICE: &str = "note: `--amount all` unstakes everything on a single subnet (--netuid); to unstake every position across all subnets, use `rtao stake unstake-all`";
 const ROOT_HELP: &str = "pass it explicitly, or run on a terminal to pick one";

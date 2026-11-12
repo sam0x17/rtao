@@ -21,18 +21,16 @@ use crate::{
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use futures::StreamExt;
-use rtao::{
-    client::{BlockRef, Client, Snapshot, ViewExt},
-    core::{DynValue, codec::Value as CoreValue, value_ext::ValueExt},
-    primitives::{AccountId, pyfmt},
-    signer::{BoxFuture, SignerRole},
-    tx::Multisig,
-};
+use rtao_client::{BlockRef, Client, Snapshot, ViewExt};
+use rtao_core::{DynValue, codec::Value as CoreValue, value_ext::ValueExt};
+use rtao_primitives::{AccountId, pyfmt};
 use rtao_runtime::{
     CallBytes, RuntimeHandle,
     models::{MultisigInfo, MultisigTimepoint, ProxyType},
     storage as st,
 };
+use rtao_signer::{BoxFuture, SignerRole};
+use rtao_tx::Multisig;
 use serde_json::{Map, Value, json};
 use std::{collections::BTreeSet, time::Duration};
 use zeroize::Zeroizing;
@@ -391,8 +389,8 @@ impl Request {
                 let account_mode = match text(matches, "account_mode") {
                     Some(mode) => mode.parse().map_err(failure)?,
                     None => match existing.map(|entry| entry.get("account_mode")) {
-                        None => rtao::primitives::AccountMode::Safe,
-                        Some(None) => rtao::primitives::AccountMode::Legacy,
+                        None => rtao_primitives::AccountMode::Safe,
+                        Some(None) => rtao_primitives::AccountMode::Legacy,
                         Some(Some(Value::String(mode))) => mode.parse().map_err(failure)?,
                         Some(Some(_)) => {
                             return Err(failure("account_mode must be 'legacy' or 'safe'"));
@@ -401,7 +399,7 @@ impl Request {
                 };
                 // An unusable signer set is refused before it is saved or
                 // replaces a funding target.
-                rtao::primitives::multisig_account_id(&signatories, threshold, account_mode)
+                rtao_primitives::multisig_account_id(&signatories, threshold, account_mode)
                     .map_err(failure)?;
                 let entry = json!({"name":name,"threshold":threshold,"signatories":refs,"note":text(matches,"note").unwrap_or(""),"account_mode":account_mode.as_str()});
                 Ok(Self::Add {
@@ -538,7 +536,7 @@ fn parse_blob(text: &str) -> Result<Vec<u8>, CliError> {
     hex::decode(text).map_err(|_| input("call data is not a valid hex string"))
 }
 fn hash_blob(blob: &[u8]) -> Result<[u8; 32], CliError> {
-    rtao::core::codec::storage::hash_param("Blake2_256", blob)
+    rtao_core::codec::storage::hash_param("Blake2_256", blob)
         .map_err(failure)?
         .try_into()
         .map_err(|_| failure("blake2_256 did not return 32 bytes"))
@@ -558,7 +556,7 @@ fn detail(output: &Output, title: Option<&str>, payload: Value) -> Result<(), Cl
 /// Run a family request using the application's resolved shared paths.
 pub async fn run(
     ctx: &mut AppContext,
-    paths: &rtao::client::config::Paths,
+    paths: &rtao_client::config::Paths,
     matches: &ArgMatches,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
@@ -589,7 +587,7 @@ pub async fn run(
 /// The caller owns the client lifetime; no signer is acquired by this path.
 pub async fn execute(
     ctx: &AppContext,
-    paths: &rtao::client::config::Paths,
+    paths: &rtao_client::config::Paths,
     request: &Request,
     client: Option<&Client>,
 ) -> Result<(), CliError> {
@@ -597,7 +595,7 @@ pub async fn execute(
 }
 async fn execute_with_fetch(
     ctx: &AppContext,
-    paths: &rtao::client::config::Paths,
+    paths: &rtao_client::config::Paths,
     request: &Request,
     client: Option<&Client>,
     fetch: &dyn UpgradeFetch,
@@ -606,7 +604,7 @@ async fn execute_with_fetch(
     execute_saved(ctx, paths, request, client, fetch, saved).await
 }
 async fn save_add(
-    paths: &rtao::client::config::Paths,
+    paths: &rtao_client::config::Paths,
     request: &Request,
 ) -> Result<Option<Value>, CliError> {
     if let Request::Add {
@@ -624,13 +622,13 @@ async fn save_add(
 }
 async fn execute_saved(
     ctx: &AppContext,
-    paths: &rtao::client::config::Paths,
+    paths: &rtao_client::config::Paths,
     request: &Request,
     client: Option<&Client>,
     fetch: &dyn UpgradeFetch,
     saved: Option<Value>,
 ) -> Result<(), CliError> {
-    use rtao::client::config::ConfigFile;
+    use rtao_client::config::ConfigFile;
     let book = MultisigBook::new(paths);
     match request {
         Request::List => {
@@ -796,7 +794,7 @@ async fn opening_call(
 // Metadata-guided offsets preserve the exact call bytes, including byte fields
 // whose decoded inspection strings can be ambiguous (literal UTF-8 "0x41").
 fn opening_inner_bytes(extrinsic: &[u8], runtime: &RuntimeHandle) -> Option<Vec<u8>> {
-    use rtao::core::{
+    use rtao_core::{
         codec::decode::{Cursor, compact_u128},
         ir::MetadataIr,
     };
@@ -1317,13 +1315,11 @@ mod tests {
         output::{MemorySink, OutputOptions, Stream},
         prompt::Terminal,
     };
-    use rtao::{
-        client::{
-            ClientConfig, Network,
-            config::{ConfigFile, Paths},
-        },
-        primitives::TaoBalance,
+    use rtao_client::{
+        ClientConfig, Network,
+        config::{ConfigFile, Paths},
     };
+    use rtao_primitives::TaoBalance;
     use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
     use std::{
         collections::BTreeMap,
@@ -1365,7 +1361,7 @@ mod tests {
         fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
             Err(PromptError::Unavailable)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -1431,7 +1427,7 @@ mod tests {
             signatories: accounts(),
             preset: Some("team".into()),
             refs: vec!["alice".into(), "bob".into(), "carol".into()],
-            account_mode: rtao::primitives::AccountMode::Legacy,
+            account_mode: rtao_primitives::AccountMode::Legacy,
         }
     }
     fn runtime() -> Result<RuntimeHandle, Box<dyn std::error::Error>> {
@@ -1570,7 +1566,7 @@ mod tests {
             entry,
             json!({"name":"new","threshold":2,"signatories":["alice","bob","carol","alice-alias"],"note":"portable","account_mode":"safe"})
         );
-        assert_eq!(group.account_mode, rtao::primitives::AccountMode::Safe);
+        assert_eq!(group.account_mode, rtao_primitives::AccountMode::Safe);
         assert_eq!(group.signatories, accounts());
         assert!(!overwrite);
         assert!(ctx.globals.signatories.is_empty());
@@ -1607,7 +1603,7 @@ mod tests {
 
     #[test]
     fn account_modes_default_new_groups_to_safe_and_keep_saved_ones() -> TestResult {
-        use rtao::primitives::AccountMode;
+        use rtao_primitives::AccountMode;
         let add =
             |extra: &[&'static str]| -> Result<(Value, RawMultisig), Box<dyn std::error::Error>> {
                 let mut args = vec![
@@ -1871,7 +1867,7 @@ mod tests {
         let mut body = vec![4];
         body.extend_from_slice(outer.as_bytes());
         let mut extrinsic = Vec::new();
-        rtao::core::codec::encode::compact(body.len() as u128, &mut extrinsic)?;
+        rtao_core::codec::encode::compact(body.len() as u128, &mut extrinsic)?;
         extrinsic.extend(body);
         assert_eq!(
             opening_inner_bytes(&extrinsic, &runtime),
@@ -1980,7 +1976,7 @@ mod tests {
         let files = Files::new()?;
         let runtime = runtime()?;
         let mut group = group();
-        group.account_mode = rtao::primitives::AccountMode::Safe;
+        group.account_mode = rtao_primitives::AccountMode::Safe;
         let safe = Multisig::with_mode(
             &runtime,
             &group.signatories,

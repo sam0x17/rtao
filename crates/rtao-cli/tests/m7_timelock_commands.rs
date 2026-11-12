@@ -1,7 +1,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/commands/timelock.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Timelock command fixtures inject crypto and beacon replies; no network or real encryption runs.
 
-use rtao::tx::timelock::{OpenOptions, Reveal, TimelockError, Timelocked};
 use rtao_cli::{
     application,
     books::Books,
@@ -13,6 +12,7 @@ use rtao_cli::{
     output::{DiagnosticContext, MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_tx::timelock::{OpenOptions, Reveal, TimelockError, Timelocked};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use std::{
@@ -729,7 +729,7 @@ async fn boundary_ciphertext_roundtrips_as_prefixed_hex_and_oversized_output_is_
         "0x{}",
         payload["ciphertext"].as_str().ok_or("missing ciphertext")?
     );
-    assert_eq!(encoded.len(), rtao::client::config::MAX_JSON_FILE_BYTES);
+    assert_eq!(encoded.len(), rtao_client::config::MAX_JSON_FILE_BYTES);
     let mut show = Fixture::new(&["rtao", "timelock", "show", &encoded], true, &[])?;
     show.run(&backend).await?;
     assert_eq!(show.payload()?["bytes"], json!(MAX_CIPHERTEXT_BYTES));
@@ -939,7 +939,7 @@ async fn oversized_sparse_ciphertext_is_rejected_before_beacon_and_left_unchange
     let root = FileRoot::new()?;
     let path = root.0.join("oversized.bin");
     let file = std::fs::File::create(&path)?;
-    let size = rtao::client::config::MAX_JSON_FILE_BYTES as u64 + 1;
+    let size = rtao_client::config::MAX_JSON_FILE_BYTES as u64 + 1;
     file.set_len(size)?;
     drop(file);
     let backend = Fake::default();

@@ -4,7 +4,7 @@
 
 mod masked_input;
 
-use rtao::wallet::{PasswordPrompt, PromptPolicy, WalletError};
+use rtao_wallet::{PasswordPrompt, PromptPolicy, WalletError};
 use secrecy::{ExposeSecret, SecretString};
 use serde_json::{Map, Value};
 use std::{
@@ -768,7 +768,7 @@ impl WalletPromptLookup for FsWalletPromptLookup {
 
 /// Python's unknown-name diagnostic, listing small sets and suggesting large sets.
 pub fn unknown_name_error(kind: &str, raw: &str, known: &[String]) -> String {
-    let quoted = rtao::primitives::pyfmt::string_repr(raw);
+    let quoted = rtao_primitives::pyfmt::string_repr(raw);
     if known.len() <= 8 {
         let mut known = known.to_vec();
         known.sort();
@@ -833,7 +833,7 @@ fn multisig_no_local_keys_error(books: &crate::books::Books, name: &str) -> Stri
     };
     format!(
         "{} is a saved multisig: it has no key files of its own, and this command needs a local key{hint}",
-        rtao::primitives::pyfmt::string_repr(name)
+        rtao_primitives::pyfmt::string_repr(name)
     )
 }
 fn validation(message: impl Into<String>) -> PromptValidation {
@@ -888,7 +888,7 @@ pub fn parse_wallet(
         Err(error) if require_coldkey => {
             return Err(validation(format!(
                 "wallet {} has no usable coldkey: {error}",
-                rtao::primitives::pyfmt::string_repr(raw)
+                rtao_primitives::pyfmt::string_repr(raw)
             )));
         }
         Err(_) => None,
@@ -924,7 +924,7 @@ pub fn parse_hotkey(
         return Err(validation(unknown_name_error(
             &format!(
                 "hotkey in wallet {}",
-                rtao::primitives::pyfmt::string_repr(&selection.wallet_name)
+                rtao_primitives::pyfmt::string_repr(&selection.wallet_name)
             ),
             raw,
             &known,
@@ -935,8 +935,8 @@ pub fn parse_hotkey(
         .map_err(|error| {
             validation(format!(
                 "cannot open hotkey {} in wallet {}: {error}",
-                rtao::primitives::pyfmt::string_repr(raw),
-                rtao::primitives::pyfmt::string_repr(&selection.wallet_name)
+                rtao_primitives::pyfmt::string_repr(raw),
+                rtao_primitives::pyfmt::string_repr(&selection.wallet_name)
             ))
         })?;
     selection.hotkey_name = raw.into();
@@ -993,7 +993,7 @@ pub fn parse_target_hotkey(
         let address = lookup.hotkey(wallet, hotkey).map_err(|error| {
             validation(format!(
                 "cannot open hotkey {}: {error}",
-                rtao::primitives::pyfmt::string_repr(raw)
+                rtao_primitives::pyfmt::string_repr(raw)
             ))
         })?;
         selection
@@ -1006,7 +1006,7 @@ pub fn parse_target_hotkey(
         unknown_name_error(
             &format!(
                 "hotkey in wallet {}",
-                rtao::primitives::pyfmt::string_repr(&selection.wallet_name)
+                rtao_primitives::pyfmt::string_repr(&selection.wallet_name)
             ),
             raw,
             &known
@@ -1144,7 +1144,7 @@ pub fn confirm_wallet(
             spec.help = Some(if known.is_empty() {
                 format!(
                     "{help} Wallet {} has no local hotkeys — paste the hotkey's ss58 address or an address-book name.",
-                    rtao::primitives::pyfmt::string_repr(&selection.wallet_name)
+                    rtao_primitives::pyfmt::string_repr(&selection.wallet_name)
                 )
             } else {
                 format!(
@@ -1881,7 +1881,7 @@ mod tests {
                 Ok(5)
             } else {
                 Err(WalletError::WrongPassword {
-                    source: rtao::wallet::PasswordSource::Prompt,
+                    source: rtao_wallet::PasswordSource::Prompt,
                 })
             })
         })

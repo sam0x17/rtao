@@ -7,23 +7,21 @@ use std::{collections::BTreeSet, path::PathBuf, sync::Arc};
 
 use crate::prompt::shell_quote;
 use futures::StreamExt;
-use rtao::client::config::{ConfigFile, MAX_JSON_FILE_BYTES, Paths, read_bounded_json_file};
+use rtao_client::config::{ConfigFile, MAX_JSON_FILE_BYTES, Paths, read_bounded_json_file};
 use rtao_runtime::models::{MultisigInfo, MultisigTimepoint};
 use std::{collections::BTreeMap, path::Path, time::Duration};
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::{Client, Inclusion, View, ViewExt},
-    core::{codec::Value as CoreValue, value_ext::ValueExt},
-    primitives::{AccountId, CryptoType},
-    signer::{BoxFuture, DynKeySource, SignerRole},
-    tx::{
-        ApproveOptions, ExecuteOptions, ExtrinsicResult, Multisig,
-        multisig::{FundsRequest, check_multisig_funds},
-    },
-    wallet::Wallet,
-};
+use rtao_client::{Client, Inclusion, View, ViewExt};
+use rtao_core::{codec::Value as CoreValue, value_ext::ValueExt};
+use rtao_primitives::{AccountId, CryptoType};
 use rtao_runtime::{Call, CallBytes, CallDescriptor, RuntimeHandle, models::ProxyType};
+use rtao_signer::{BoxFuture, DynKeySource, SignerRole};
+use rtao_tx::{
+    ApproveOptions, ExecuteOptions, ExtrinsicResult, Multisig,
+    multisig::{FundsRequest, check_multisig_funds},
+};
+use rtao_wallet::Wallet;
 use serde_json::{Map, Value as Json, json};
 
 use crate::{
@@ -122,7 +120,7 @@ pub(crate) fn account_mode_arg(help: &'static str) -> Arg {
 /// `validate_account_mode`; absent when the flag was not given.
 pub(crate) fn requested_account_mode(
     matches: &ArgMatches,
-) -> Result<Option<rtao::primitives::AccountMode>, CliError> {
+) -> Result<Option<rtao_primitives::AccountMode>, CliError> {
     matches
         .try_get_one::<String>("multisig_account_mode")
         .ok()
@@ -135,7 +133,7 @@ pub(crate) fn requested_account_mode(
 /// `--multisig-account-mode` is refused rather than deriving another account.
 pub(crate) fn check_saved_account_mode(
     group: &RawMultisig,
-    requested: Option<rtao::primitives::AccountMode>,
+    requested: Option<rtao_primitives::AccountMode>,
 ) -> Result<(), CliError> {
     match requested {
         Some(mode) if mode != group.account_mode => Err(CliError::input(
@@ -177,7 +175,7 @@ pub struct RawMultisig {
     /// Original wallet/contact references for portable replay labels.
     pub refs: Vec<String>,
     /// The group's derivation: a saved group's `account_mode`, else legacy.
-    pub account_mode: rtao::primitives::AccountMode,
+    pub account_mode: rtao_primitives::AccountMode,
 }
 
 /// Public origin and replay data for a composed raw or semantic multisig call.
@@ -256,11 +254,11 @@ pub(crate) fn decode_multisig_call_spec_at(
     let Ok(decoded) =
         runtime
             .core()
-            .decode_spec(&rtao::core::runtime::TypeSpec::Call, call.as_bytes(), true)
+            .decode_spec(&rtao_core::runtime::TypeSpec::Call, call.as_bytes(), true)
     else {
         return MultisigCallSpec::unknown(role);
     };
-    let decoded = rtao::core::DynValue::new(decoded).to_json();
+    let decoded = rtao_core::DynValue::new(decoded).to_json();
     decoded_call_spec(&decoded, role, 0).unwrap_or_else(|| MultisigCallSpec::unknown(role))
 }
 
@@ -660,7 +658,7 @@ pub fn load_params(
     if crate::prompt::python_strip(raw).is_empty() {
         return Ok(Map::new());
     }
-    match rtao::primitives::json::from_str::<Json>(raw)
+    match rtao_primitives::json::from_str::<Json>(raw)
         .map_err(|error| CliError::input(format!("invalid JSON: {error}")))?
     {
         Json::Object(params) => Ok(params),
@@ -711,10 +709,10 @@ pub fn shield_policy_for_target(target: &str) -> (bool, bool) {
 pub fn compose(runtime: &RuntimeHandle, request: &RawCallRequest) -> Result<CallBytes, CliError> {
     let mut call = compose_target(runtime, &request.target, &request.params, 0)?;
     if request.sudo {
-        call = rtao::client::compose::sudo(runtime, call).map_err(public_input)?;
+        call = rtao_client::compose::sudo(runtime, call).map_err(public_input)?;
     }
     if let Some(proxy) = request.proxy_for {
-        call = rtao::client::compose::proxy(runtime, proxy, request.force_proxy_type, call)
+        call = rtao_client::compose::proxy(runtime, proxy, request.force_proxy_type, call)
             .map_err(public_input)?;
     } else if request.force_proxy_type.is_some() {
         return Err(CliError::input("--force-proxy-type requires --proxy-for"));
@@ -988,7 +986,7 @@ pub async fn execute_with(
     let runtime = View::runtime(client).await.map_err(CliError::from)?;
     let call = compose(&runtime, request)?;
     // The review decides the Shield route (D-159); execution follows it.
-    let executor = rtao::Executor::new(client.clone()).with_auto_shield(false);
+    let executor = rtao_intents::executor(client.clone()).with_auto_shield(false);
     let multisig = request
         .multisig
         .as_ref()
@@ -1063,7 +1061,7 @@ pub async fn execute_rounds_with(
     let runtime = View::runtime(client).await.map_err(CliError::from)?;
     let call = compose(&runtime, request)?;
     // The review decides the Shield route (D-159); execution follows it.
-    let executor = rtao::Executor::new(client.clone()).with_auto_shield(false);
+    let executor = rtao_intents::executor(client.clone()).with_auto_shield(false);
     let multisig = request
         .multisig
         .as_ref()
@@ -1251,7 +1249,7 @@ async fn prepare_continuation(
         .estimate_weight(call.clone(), signer, CryptoType::Sr25519)
         .await
         .map_err(CliError::from)?;
-    let outer = rtao::client::compose::as_multi_existing_with_mode(
+    let outer = rtao_client::compose::as_multi_existing_with_mode(
         &snapshot,
         signer,
         &group.signatories,
@@ -1292,7 +1290,7 @@ struct RawShield {
 
 async fn approve_or_submit(
     ctx: &AppContext,
-    executor: &rtao::Executor,
+    executor: &rtao_tx::Executor,
     keys: &dyn DynKeySource,
     request: &RawCallRequest,
     multisig: &Option<Multisig>,
@@ -1604,7 +1602,7 @@ fn resolve_members(names: &NameResolver<'_>, refs: &[String]) -> Result<Vec<Acco
     let mut members = Vec::new();
     for reference in refs {
         // Members are identities: a receiving address names its account.
-        let member = rtao::primitives::receiving::parse_recipient(
+        let member = rtao_primitives::receiving::parse_recipient(
             &names
                 .resolve_address_ref("coldkey_ss58", reference)
                 .map_err(public_input)?
@@ -1665,7 +1663,7 @@ fn resolve_preset_with(
     // A group saved as safe composes the safe calls from its safe account;
     // omitted means legacy, as Python's `saved_account_mode`.
     let account_mode = match entry.get("account_mode") {
-        None => rtao::primitives::AccountMode::Legacy,
+        None => rtao_primitives::AccountMode::Legacy,
         Some(Json::String(mode)) => mode.parse().map_err(public_input)?,
         Some(_) => return Err(CliError::input("account_mode must be 'legacy' or 'safe'")),
     };
@@ -1847,7 +1845,7 @@ fn signing_rounds(
         // Python v488 `resolve_member_ref`: a receiving address, raw or
         // booked, names its member account.
         let member_address = || {
-            (rtao::primitives::receiving::is_receiving_address(reference)
+            (rtao_primitives::receiving::is_receiving_address(reference)
                 || is_bittensor_address(reference))
             .then(|| crate::books::account_of(reference).ok())
             .flatten()
@@ -1907,14 +1905,14 @@ fn signing_rounds(
             local.map(|(name, _)| name.clone()).ok_or_else(|| {
                 CliError::input(format!(
                     "member {} has no local wallet for --signatory {reference}=wallet",
-                    rtao::primitives::pyfmt::string_repr(reference)
+                    rtao_primitives::pyfmt::string_repr(reference)
                 ))
             })?
         } else {
             reference.to_owned()
         };
         let display = if is_bittensor_address(reference)
-            || rtao::primitives::receiving::is_receiving_address(reference)
+            || rtao_primitives::receiving::is_receiving_address(reference)
         {
             locals
                 .iter()
@@ -2312,7 +2310,7 @@ impl FsRawCallCache {
         let hash = normalize_cache_hash(hash)?;
         let path = self.path.clone();
         let runtime = runtime.clone();
-        rtao::core::offload(move || {
+        rtao_core::offload(move || {
             let (entries, _) = read_public_json_for_update(&path, true).map_err(public_failure)?;
             let Some(spec) = entries.get(&hash) else {
                 return Ok(None);
@@ -2331,7 +2329,7 @@ impl RawCallCache for FsRawCallCache {
     fn save(&self, hash: String, mut spec: Json) -> BoxFuture<'_, Result<(), CliError>> {
         let path = self.path.clone();
         Box::pin(async move {
-            rtao::core::offload(move || {
+            rtao_core::offload(move || {
                 let hash = normalize_cache_hash(&hash)?;
                 let bytes = authenticated_cache_data(&hash, &spec)?;
                 spec["call_hash"] = json!(hash);
@@ -2392,7 +2390,7 @@ fn authenticated_cache_data(hash: &str, spec: &Json) -> Result<Vec<u8>, CliError
     }
     let bytes = hex::decode(data).map_err(|_| CliError::input("multisig call data must be hex"))?;
     let computed =
-        rtao::core::codec::storage::hash_param("Blake2_256", &bytes).map_err(public_failure)?;
+        rtao_core::codec::storage::hash_param("Blake2_256", &bytes).map_err(public_failure)?;
     if format!("0x{}", hex::encode(computed)) != hash {
         return Err(CliError::input(
             "multisig call data does not match its call hash",
@@ -2453,7 +2451,7 @@ pub fn approval_timepoint(
         {
             continue;
         }
-        let attributes = rtao::core::DynValue::new(event.attributes.clone()).to_json();
+        let attributes = rtao_core::DynValue::new(event.attributes.clone()).to_json();
         let account: AccountId =
             serde_json::from_value(attributes.get("multisig").cloned().ok_or_else(refuse)?)
                 .map_err(|_| refuse())?;
@@ -2526,7 +2524,7 @@ async fn raw_query_pending(
     client: &Client,
     ms: &Multisig,
     call: &CallBytes,
-    receipt_block: Option<rtao::primitives::H256>,
+    receipt_block: Option<rtao_primitives::H256>,
 ) -> Result<Option<MultisigInfo>, CliError> {
     // The approval's inclusion block holds the pending state it produced. It
     // is read there, from the endpoint that reported the receipt when the
@@ -2540,7 +2538,7 @@ async fn raw_query_pending(
                 }
                 return raw_scan_pending(&snapshot, ms, call).await;
             }
-            Err(rtao::client::ClientError::BlockNotFound(_)) => {}
+            Err(rtao_client::ClientError::BlockNotFound(_)) => {}
             Err(error) => return Err(error.into()),
         }
     }
@@ -2571,8 +2569,8 @@ async fn raw_scan_pending<V: View>(
             .filter(|_| keys.len() == 1)
             .ok_or_else(|| CliError::failure("multisig map did not return its call-hash key"))?;
         let decoded = match key.as_core() {
-            rtao::core::codec::Value::Bytes(bytes) => bytes.clone(),
-            rtao::core::codec::Value::Str(text) => {
+            rtao_core::codec::Value::Bytes(bytes) => bytes.clone(),
+            rtao_core::codec::Value::Str(text) => {
                 hex::decode(text.strip_prefix("0x").unwrap_or(text))
                     .map_err(|_| CliError::failure("multisig map call-hash key is not hex"))?
             }
@@ -2597,7 +2595,7 @@ fn raw_soft_resolve_coldkey(
 ) -> Option<AccountId> {
     // Python v488 `_soft_resolve_coldkey`: members are identities, so a
     // receiving address (raw or booked) names its account.
-    if rtao::primitives::receiving::is_receiving_address(reference)
+    if rtao_primitives::receiving::is_receiving_address(reference)
         || is_bittensor_address(reference)
     {
         return crate::books::account_of(reference).ok();
@@ -2791,10 +2789,10 @@ pub fn multisig_replay_command(
     }
     // A safe group's co-signers derive the same account (Python's
     // `build_replay_command(account_mode=)`).
-    if raw.account_mode == rtao::primitives::AccountMode::Safe {
+    if raw.account_mode == rtao_primitives::AccountMode::Safe {
         tokens.extend(["--multisig-account-mode".into(), "safe".into()]);
     }
-    if request.role != rtao::signer::SignerRole::Coldkey {
+    if request.role != rtao_signer::SignerRole::Coldkey {
         tokens.extend(["--signer".into(), request.role.as_str().into()]);
     }
     let command = tokens

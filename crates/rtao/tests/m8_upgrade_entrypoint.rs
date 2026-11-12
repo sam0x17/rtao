@@ -1,6 +1,6 @@
 //! Actual upgrade routes reject bad public artifacts before chain connections.
 
-use rtao::client::config::ConfigFile;
+use rtao_client::config::ConfigFile;
 use std::{
     error::Error,
     path::PathBuf,

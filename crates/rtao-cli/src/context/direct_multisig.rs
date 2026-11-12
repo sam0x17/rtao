@@ -7,12 +7,10 @@ use crate::{
     call::{FsRawCallCache, MultisigFollowup, RawMultisig},
     error::CliError,
 };
-use rtao::{
-    client::{Client, View, config::MAX_JSON_FILE_BYTES},
-    primitives::AccountId,
-    tx::{DynIntent, ExtrinsicResult, IntentOutput, Multisig, MultisigCall},
-};
+use rtao_client::{Client, View, config::MAX_JSON_FILE_BYTES};
+use rtao_primitives::AccountId;
 use rtao_runtime::CallBytes;
+use rtao_tx::{DynIntent, ExtrinsicResult, IntentOutput, Multisig, MultisigCall};
 use serde_json::Value;
 use std::collections::BTreeSet;
 
@@ -32,7 +30,7 @@ fn saved_group(
     ctx: &AppContext,
     signatories: &[AccountId],
     threshold: u16,
-    mode: rtao::primitives::AccountMode,
+    mode: rtao_primitives::AccountMode,
 ) -> Result<(Option<String>, Vec<String>), CliError> {
     let lookup = FsAccountLookup::new(ctx.globals.wallet_path.clone()).map_err(failure)?;
     let wanted: BTreeSet<_> = signatories.iter().copied().collect();
@@ -42,7 +40,7 @@ fn saved_group(
         }
         // A saved group names one derivation; never relabel another mode's group.
         let saved = match entry.get("account_mode") {
-            None => Some(rtao::primitives::AccountMode::Legacy),
+            None => Some(rtao_primitives::AccountMode::Legacy),
             Some(Value::String(mode)) => mode.parse().ok(),
             Some(_) => None,
         };
@@ -101,8 +99,8 @@ pub(super) async fn followup(
         .and_then(|value| u16::try_from(value).ok())
         .filter(|threshold| *threshold >= 2)
         .ok_or_else(|| failure("direct multisig followup requires a native threshold"))?;
-    let mode: rtao::primitives::AccountMode = match args.get("account_mode") {
-        None | Some(Value::Null) => rtao::primitives::AccountMode::Legacy,
+    let mode: rtao_primitives::AccountMode = match args.get("account_mode") {
+        None | Some(Value::Null) => rtao_primitives::AccountMode::Legacy,
         Some(Value::String(mode)) => mode.parse().map_err(failure)?,
         Some(_) => return Err(failure("account_mode must be 'legacy' or 'safe'")),
     };
@@ -117,7 +115,7 @@ pub(super) async fn followup(
                 .as_str()
                 .ok_or_else(|| failure("direct multisig member is not an address"))
                 .and_then(|text| {
-                    rtao::primitives::receiving::parse_recipient(text)
+                    rtao_primitives::receiving::parse_recipient(text)
                         .map(|recipient| recipient.account)
                         .map_err(failure)
                 })

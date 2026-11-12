@@ -10,13 +10,11 @@ use crate::{
     prompt::{PromptHistory, WalletConfirmation},
 };
 use clap::{Arg, ArgMatches, Command};
-use rtao::{
-    client::{BlockRef, Client},
-    evm::{EvmAccount, association_proof},
-    primitives::{AccountId, NetUid},
-    signer::BoxFuture,
-};
+use rtao_client::{BlockRef, Client};
+use rtao_evm::{EvmAccount, association_proof};
 use rtao_intents::AssociateEvmKey;
+use rtao_primitives::{AccountId, NetUid};
+use rtao_signer::BoxFuture;
 use serde_json::{Value, json};
 
 pub(super) fn command() -> Command {
@@ -72,7 +70,7 @@ pub(super) async fn run(
     let key = leaf.get_one::<String>("evm_key").map(String::as_str);
     let info = key_info(ctx, key).await?;
     let public = ctx.clone();
-    let hotkey = rtao::core::offload(move || proof_hotkey(&public))
+    let hotkey = rtao_core::offload(move || proof_hotkey(&public))
         .await
         .map_err(failure)??;
     let block = client
@@ -145,7 +143,7 @@ impl ProofRequest {
                 "proof message".into(),
                 json!(format!(
                     "0x{}",
-                    hex::encode(rtao::evm::transactions::association_message(
+                    hex::encode(rtao_evm::transactions::association_message(
                         self.hotkey,
                         self.block_number,
                     ))
@@ -174,7 +172,7 @@ impl ProofRequest {
             },
             "proof": {
                 "scheme": "EIP-191 personal-sign",
-                "message": format!("0x{}", hex::encode(rtao::evm::transactions::association_message(self.hotkey, self.block_number))),
+                "message": format!("0x{}", hex::encode(rtao_evm::transactions::association_message(self.hotkey, self.block_number))),
                 "status": "required",
             },
             "fee_tao": null,
@@ -256,9 +254,8 @@ async fn run_prepared(
     ))?;
     let (signature, block_number) = {
         let account = backend.unlock(ctx).await?;
-        let unlocked =
-            rtao::evm::normalize_h160(&account.address().to_string()).map_err(failure)?;
-        let reviewed = rtao::evm::normalize_h160(&request.evm_address).map_err(failure)?;
+        let unlocked = rtao_evm::normalize_h160(&account.address().to_string()).map_err(failure)?;
+        let reviewed = rtao_evm::normalize_h160(&request.evm_address).map_err(failure)?;
         if unlocked != reviewed {
             return Err(CliError::failure(
                 "unlocked EVM key does not match the reviewed public address",
@@ -316,7 +313,7 @@ mod tests {
                 .push(label.into());
             self.answers.pop_front().ok_or(PromptError::Aborted)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -452,16 +449,16 @@ mod tests {
         assert_eq!(intent.block_number, request.block_number);
         let signature = hex::decode(intent.signature.trim_start_matches("0x"))?;
         assert_eq!(signature.len(), 65);
-        let recovered = rtao::evm::transactions::recover_association_owner(
+        let recovered = rtao_evm::transactions::recover_association_owner(
             request.hotkey,
             request.block_number,
             &signature,
         )?;
         assert_eq!(
-            rtao::evm::normalize_h160(&recovered.to_string())?,
+            rtao_evm::normalize_h160(&recovered.to_string())?,
             request.evm_address
         );
-        let changed = rtao::evm::transactions::recover_association_owner(
+        let changed = rtao_evm::transactions::recover_association_owner(
             AccountId([8; 32]),
             request.block_number,
             &signature,

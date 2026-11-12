@@ -3,10 +3,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/hyperparams_view.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Curated owner commands preserve real SDK arguments and lossless read output.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    primitives::NetUid,
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -16,6 +12,8 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_primitives::NetUid;
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::{Value, json};
 use std::{
@@ -88,7 +86,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -303,7 +301,7 @@ fn count_without_value_stays_a_read_and_explicit_zero_is_not_omission() -> TestR
     else {
         return Err("expected read".into());
     };
-    assert_eq!(query.name, rtao::reads::ReadName::MechanismCount);
+    assert_eq!(query.name, rtao_reads::ReadName::MechanismCount);
     let parsed = parse(&[
         "rtao",
         "hparams",
@@ -679,16 +677,14 @@ fn epoch_consensus_examples_round_trip_supported_setter_modes_and_preserve_raw_j
 
 mod null_pruning {
     use super::*;
-    use rtao::{
-        primitives::{AccountId, CryptoType, H256},
-        signer::{
-            BoxFuture, DynKeySource, KeyView, KeypairSigner, MultiSignature, Signer, SignerError,
-            SignerRole, SigningRequest,
-        },
-        tx::ExtrinsicResult,
-    };
     use rtao_cli::{context::ExternalSignerFactory, error::CliError};
+    use rtao_primitives::{AccountId, CryptoType, H256};
+    use rtao_signer::{
+        BoxFuture, DynKeySource, KeyView, KeypairSigner, MultiSignature, Signer, SignerError,
+        SignerRole, SigningRequest,
+    };
     use rtao_testkit::SubmitScript;
+    use rtao_tx::ExtrinsicResult;
     use std::{
         collections::VecDeque,
         fs,
@@ -773,7 +769,7 @@ mod null_pruning {
                 .ok_or("pruning target storage")?;
             let key = state
                 .runtime
-                .storage_key(info, &[rtao::core::codec::Value::Uint(u128::from(NET))])?;
+                .storage_key(info, &[rtao_core::codec::Value::Uint(u128::from(NET))])?;
             state.seed_encoded(key, None);
         }
         Ok(())
@@ -917,7 +913,7 @@ mod null_pruning {
     struct SavedPruning {
         chain: FakeChain,
         journal: PathBuf,
-        group: rtao::tx::Multisig,
+        group: rtao_tx::Multisig,
         inner: rtao_runtime::CallBytes,
         population: Arc<AtomicU16>,
         sink: MemorySink,
@@ -936,9 +932,9 @@ mod null_pruning {
             let index = self.signed.fetch_add(1, Ordering::SeqCst);
             assert!(index < 2, "one opening approval and one execution only");
             let runtime = self.chain.state().lock().expect("state").runtime.clone();
-            let decoded = rtao::core::DynValue::new(
+            let decoded = rtao_core::DynValue::new(
                 runtime
-                    .decode_spec(&rtao::core::runtime::TypeSpec::Call, request.call, true)
+                    .decode_spec(&rtao_core::runtime::TypeSpec::Call, request.call, true)
                     .map_err(|error| SignerError::KeyView(error.to_string()))?,
             )
             .to_json();
@@ -953,10 +949,10 @@ mod null_pruning {
             assert_eq!(decoded["call_function"], "as_multi");
             assert_eq!(
                 arg("call"),
-                &rtao::core::DynValue::new(
+                &rtao_core::DynValue::new(
                     runtime
                         .decode_spec(
-                            &rtao::core::runtime::TypeSpec::Call,
+                            &rtao_core::runtime::TypeSpec::Call,
                             self.inner.as_bytes(),
                             true,
                         )
@@ -1000,8 +996,8 @@ mod null_pruning {
                     } else {
                         let info = state.runtime.storage_entry("Multisig", "Multisigs").ok_or("multisig storage")?;
                         let storage_key = state.runtime.storage_key(info, &[
-                            rtao::core::codec::Value::Bytes(self.group.address.0.to_vec()),
-                            rtao::core::codec::Value::Bytes(self.inner.hash().to_vec()),
+                            rtao_core::codec::Value::Bytes(self.group.address.0.to_vec()),
+                            rtao_core::codec::Value::Bytes(self.inner.hash().to_vec()),
                         ]).map_err(|error| error.to_string())?;
                         state.seed_encoded(storage_key, None);
                         self.population.store(TARGET, Ordering::SeqCst);
@@ -1261,14 +1257,14 @@ mod null_pruning {
             f.factory.keys.signer.key.clone(),
             KeypairSigner::from_seed(&[8; 32], CryptoType::Ed25519)?,
         ];
-        let group = rtao::Executor::new(f.client.clone())
+        let group = rtao_intents::executor(f.client.clone())
             .multisig(&members.iter().map(Signer::account).collect::<Vec<_>>(), 2)
             .await?;
         let inner =
             rtao_runtime::calls::admin_utils::sudo_trim_null_uids_batch(NetUid(NET), TARGET)
                 .compose(&f.client.refresh_runtime().await?)?;
         f.chain
-            .mutate_state(|state| -> Result<(), rtao::core::CoreError> {
+            .mutate_state(|state| -> Result<(), rtao_core::CoreError> {
                 state.seed_python(
                     "SubtensorModule",
                     "SubnetOwner",
@@ -1305,8 +1301,8 @@ mod null_pruning {
             json!([{"name":"team","threshold":2,"signatories":members.iter().map(|member| member.account().to_string()).collect::<Vec<_>>()}]),
         );
         // Saved-call caching must stay inside this fixture's recorded root.
-        f.ctx.config_store = Some(rtao::client::config::Store::new(
-            rtao::client::config::Paths::new(&f._temp.0, |_| None),
+        f.ctx.config_store = Some(rtao_client::config::Store::new(
+            rtao_client::config::Paths::new(&f._temp.0, |_| None),
         ));
         let population = Arc::new(AtomicU16::new(192));
         let calls = Arc::new(Mutex::new(Vec::new()));
@@ -1376,7 +1372,7 @@ mod null_pruning {
             !f.journal.exists(),
             "verified execution removes the journal"
         );
-        assert_eq!(result.inclusion, rtao::client::Inclusion::Finalized);
+        assert_eq!(result.inclusion, rtao_client::Inclusion::Finalized);
         assert!(result.success);
         assert_eq!(result.data["multisig_followup"]["status"], "executed");
         assert_eq!(f.ctx.globals.wallet_name, "team");

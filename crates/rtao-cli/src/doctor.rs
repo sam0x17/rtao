@@ -17,7 +17,7 @@ use std::{
 use serde_json::Value as Json;
 use toml_edit::{DocumentMut, Item};
 
-use rtao::core::dependency_policy::{
+use rtao_core::dependency_policy::{
     BLS_PACKAGE, CORE_PACKAGE, CRATES_IO, LockedPackage, validate_bls_lock, validate_bls_tree,
 };
 
@@ -334,14 +334,14 @@ fn warnings(manifest: &DocumentMut, lock: &DocumentMut, record: &DocumentMut) ->
         );
     }
     if republished(record, "core")
-        .is_ok_and(|core| core.version != rtao::core::UPSTREAM_CORE_VERSION)
+        .is_ok_and(|core| core.version != rtao_core::UPSTREAM_CORE_VERSION)
     {
         notes.push(format!(
             "the workspace's rtao records {CORE_PACKAGE} {}, this rtao binary {}; the workspace's own record was verified",
             republished(record, "core")
                 .map(|core| core.version)
                 .unwrap_or_default(),
-            rtao::core::UPSTREAM_CORE_VERSION
+            rtao_core::UPSTREAM_CORE_VERSION
         ));
     }
     (!notes.is_empty()).then(|| notes.join("; "))
@@ -368,7 +368,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use rtao::core::dependency_policy::DORMANT_BLS_CHECKSUM;
+    use rtao_core::dependency_policy::DORMANT_BLS_CHECKSUM;
 
     const VERSION: &str = "0.490.0";
     const SUM: &str = "1111111111111111111111111111111111111111111111111111111111111111";
@@ -481,7 +481,7 @@ mod tests {
         assert!(obsolete_patches(&parse("[workspace]\n")?).is_empty());
         let mut core_record = record(false)?;
         core_record["publish"]["core"]["version"] =
-            toml_edit::value(rtao::core::UPSTREAM_CORE_VERSION);
+            toml_edit::value(rtao_core::UPSTREAM_CORE_VERSION);
         assert!(warnings(&parse("[workspace]\n")?, &lock(None, None)?, &core_record).is_none());
         let warning = warnings(&manifest, &lock(None, None)?, &core_record)
             .ok_or("obsolete patch not reported")?;

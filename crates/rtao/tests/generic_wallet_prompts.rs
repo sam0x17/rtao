@@ -1,13 +1,5 @@
 //! Actual required-argument parsing confirms local signing wallets first.
 
-use rtao::{
-    primitives::{AccountId, CryptoType},
-    signer::{DynKeySource, SignerRole},
-    wallet::{
-        NativePasswordFuture, NativePasswordProvider, PasswordPrompt, PasswordSources,
-        PromptPolicy, RegenerateFrom, SecretString, Wallet, WalletError, WriteOptions,
-    },
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -17,6 +9,12 @@ use rtao_cli::{
     globals::Globals,
     output::{DiagnosticContext, MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptContext, PromptError, PromptHistory, SharedTerminal, Terminal},
+};
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{DynKeySource, SignerRole};
+use rtao_wallet::{
+    NativePasswordFuture, NativePasswordProvider, PasswordPrompt, PasswordSources, PromptPolicy,
+    RegenerateFrom, SecretString, Wallet, WalletError, WriteOptions,
 };
 use serde_json::{Map, Value, json};
 use std::{
@@ -88,7 +86,7 @@ impl Terminal for Input {
             .push(label.into());
         self.lines.pop_front().ok_or(PromptError::Aborted)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         self.trace
             .lock()
             .map_err(|_| PromptError::Io)?
@@ -323,15 +321,15 @@ async fn actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_
             };
             assert_eq!(before.lines().count(), notices);
             assert!(before.lines().all(|line| line == "error: wrong password"));
-            let client_error = CliError::from(rtao::client::ClientError::Signing(error.clone()));
+            let client_error = CliError::from(rtao_client::ClientError::Signing(error.clone()));
             assert_eq!(client_error.code, 1);
             assert_eq!(client_error.message, error.to_string());
             assert_eq!(client_error.help.as_deref(), Some(expected_help));
             let transaction =
-                rtao::tx::TxError::from(rtao::client::ClientError::Signing(error.clone()));
+                rtao_tx::TxError::from(rtao_client::ClientError::Signing(error.clone()));
             assert!(matches!(
                 transaction,
-                rtao::tx::TxError::Signer(ref signer) if signer.help() == Some(expected_help)
+                rtao_tx::TxError::Signer(ref signer) if signer.help() == Some(expected_help)
             ));
             let error = CliError::from(error);
             assert_eq!(error.code, 1);
@@ -444,11 +442,11 @@ async fn actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_
             },
         )
         .await?;
-    let ciphertext = rtao::wallet::encrypt_message("private-message-fixture", &account.to_string())
+    let ciphertext = rtao_wallet::encrypt_message("private-message-fixture", &account.to_string())
         .await?
         .ciphertext;
     let private = std::fs::read(encrypted.reference().coldkey_path())?;
-    assert!(rtao::core::keyfile_json::keyfile_data_is_encrypted_nacl(
+    assert!(rtao_core::keyfile_json::keyfile_data_is_encrypted_nacl(
         &private
     ));
     std::fs::create_dir_all(root.0.join("encrypted/hotkeys"))?;
@@ -459,8 +457,8 @@ async fn actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_
     )?;
     let password_file = root.0.join("password.txt");
     std::fs::write(&password_file, WRONG_PASSWORD)?;
-    let cold_env = rtao::wallet::env_var_name(&encrypted.reference().coldkey_path());
-    let hot_env = rtao::wallet::env_var_name(&encrypted.reference().hotkey_path());
+    let cold_env = rtao_wallet::env_var_name(&encrypted.reference().coldkey_path());
+    let hot_env = rtao_wallet::env_var_name(&encrypted.reference().hotkey_path());
     let mut child = std::process::Command::new(std::env::current_exe()?);
     child
         .args([
@@ -490,7 +488,7 @@ async fn actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_
     // public signer conversion. Earlier env/file sources must beat both native
     // flags even on hosts where those native services are unavailable.
     let encoded =
-        rtao::core::keyfile_env::encode_password_for_environment(&cold_env, WRONG_PASSWORD)?;
+        rtao_core::keyfile_env::encode_password_for_environment(&cold_env, WRONG_PASSWORD)?;
     let file_value = password_file.to_string_lossy();
     for (operation, mode, variable, value, source, expected_help) in [
         (
@@ -547,7 +545,7 @@ async fn actual_sign_and_decrypt_prompt_wallet_before_required_input_and_do_not_
             .env_remove("RTAO_PASSWORD_CONTRACT_ROOT")
             .env(variable, value)
             .stdin(std::process::Stdio::null());
-        for (index, file) in rtao::client::config::ConfigFile::ALL.iter().enumerate() {
+        for (index, file) in rtao_client::config::ConfigFile::ALL.iter().enumerate() {
             command.env(
                 file.environment(),
                 root.0.join(format!("config-{index}.json")),
@@ -610,7 +608,7 @@ fn actual_generic_wallet_missing_fields_remain_noninteractive_and_never_touch_ke
             true,
             true,
             PromptContext {
-                policy: rtao::wallet::PromptPolicy::Never,
+                policy: rtao_wallet::PromptPolicy::Never,
                 ..Default::default()
             },
         ),
@@ -839,7 +837,7 @@ async fn required_positional_address_keeps_declaration_order_retries_and_actual_
             .iter()
             .any(|token| token == "--ss58")
     );
-    let paths = rtao::client::config::Paths::new(&root.0, |_| None);
+    let paths = rtao_client::config::Paths::new(&root.0, |_| None);
     addresses::run(
         &app,
         &paths,
@@ -847,7 +845,7 @@ async fn required_positional_address_keeps_declaration_order_retries_and_actual_
     )
     .await?;
     let saved: Value = serde_json::from_slice(&std::fs::read(
-        paths.path(rtao::client::config::ConfigFile::Addresses),
+        paths.path(rtao_client::config::ConfigFile::Addresses),
     )?)?;
     let record = saved
         .as_array()
@@ -1488,10 +1486,10 @@ async fn required_evm_pubkey_position_uses_public_picker_and_actual_offline_hand
 #[tokio::test]
 async fn evm_pubkey_accepts_a_receiving_address() -> TestResult {
     let root = Root::new()?;
-    let key = rtao::core::keys::Keypair::from_seed(&[5; 32], rtao::core::keys::CRYPTO_HASHED)?;
+    let key = rtao_core::keys::Keypair::from_seed(&[5; 32], rtao_core::keys::CRYPTO_HASHED)?;
     let descriptor = key.authorization_descriptor()?;
-    let account = rtao::primitives::receiving::descriptor_account(&descriptor)?;
-    let address = rtao::core::keys::encode_hashed_receiving_address(&descriptor)?;
+    let account = rtao_primitives::receiving::descriptor_account(&descriptor)?;
+    let address = rtao_core::keys::encode_hashed_receiving_address(&descriptor)?;
     let command = rtao_cli::commands::command_tree()?;
     let argv = original(&["rtao", "evm", "pubkey", address.as_str()]);
     let (input, _trace) = terminal(&[], true, true);

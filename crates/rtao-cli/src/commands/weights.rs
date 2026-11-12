@@ -8,8 +8,8 @@ use crate::{
     prompt::python_strip,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::client::config::{MAX_JSON_FILE_BYTES, read_bounded_json_file};
-use rtao::primitives::pyfmt;
+use rtao_client::config::{MAX_JSON_FILE_BYTES, read_bounded_json_file};
+use rtao_primitives::pyfmt;
 use serde_json::{Map, Value, json};
 use std::path::Path;
 

@@ -8,8 +8,8 @@ use crate::{
     output::{HumanView, Output, OutputError},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::tx::{ChainError, ToolSpec};
 use rtao_catalog::{ErrorCode, errors};
+use rtao_tx::{ChainError, ToolSpec};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
@@ -60,7 +60,7 @@ pub fn explain_command() -> Command {
 
 /// Project all 86 intents into Python's nine tool fields plus D-029's `rust`.
 ///
-/// This mirrors [`rtao::tx::Executor::tools`]: deserialize the authenticated
+/// This mirrors [`rtao_tx::Executor::tools`]: deserialize the authenticated
 /// catalog record into [`ToolSpec`] and normalize its documentation URL.
 /// The `rust` object is additive and never changes an upstream field.
 pub fn tools_payload(rust_tools: &[RustTool]) -> Result<Value, CliError> {

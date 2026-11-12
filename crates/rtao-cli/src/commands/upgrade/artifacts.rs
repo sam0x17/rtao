@@ -3,7 +3,7 @@
 
 use crate::error::CliError;
 use futures::future::BoxFuture;
-use rtao::primitives::AccountId;
+use rtao_primitives::AccountId;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
@@ -430,7 +430,7 @@ pub(super) fn parse_hex_blob(raw: &[u8]) -> Result<Vec<u8>, CliError> {
 }
 
 pub(super) fn call_hash_hex(blob: &[u8]) -> Result<String, CliError> {
-    let bytes = rtao::core::codec::storage::hash_param("Blake2_256", blob)
+    let bytes = rtao_core::codec::storage::hash_param("Blake2_256", blob)
         .map_err(|_| CliError::failure("cannot hash upgrade call data"))?;
     if bytes.len() != 32 {
         return Err(CliError::failure("blake2_256 did not return 32 bytes"));

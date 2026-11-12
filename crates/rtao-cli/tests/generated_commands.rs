@@ -5,13 +5,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Generated parser and SDK dispatch exercised with authenticated FakeChain state.
 
-use rtao::{
-    client::{Client, ClientConfig, HeadProvider, Network, View},
-    primitives::{AccountId, CryptoType, H256, NetUid},
-    reads::ReadName,
-    signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
-    tx::{ExtrinsicResult, IntentInterface},
-};
 use rtao_cli::{
     application,
     books::{AccountKind, Books, address_cli_name},
@@ -25,6 +18,12 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, HeadProvider, Network, View};
+use rtao_primitives::{AccountId, CryptoType, H256, NetUid};
+use rtao_reads::ReadName;
+use rtao_signer::{
+    BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
+};
 use rtao_testkit::{
     FakeChain, FakeState,
     fixtures::{
@@ -33,6 +32,7 @@ use rtao_testkit::{
     },
     rpc::RpcClient,
 };
+use rtao_tx::{ExtrinsicResult, IntentInterface};
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
@@ -60,7 +60,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -109,7 +109,7 @@ fn cli_samples(name: &str) -> TestResult<BTreeMap<String, Value>> {
     let table = rtao_catalog::py::table("sdk/python/tests/harness/samples.py", name)
         .ok_or("authenticated CLI sample table")?;
     assert_eq!(table.blob, "8a6ded3185596b57cef116eeb602b57cbb3d6ce4");
-    let extracted = rtao::primitives::json::from_str::<Value>(table.value_json)?;
+    let extracted = rtao_primitives::json::from_str::<Value>(table.value_json)?;
     let decoded = literal(&extracted)?;
     Ok(decoded
         .as_object()
@@ -175,7 +175,7 @@ fn bind_cli_sample_work(state: &FakeState, op: &str, args: &mut Value) -> TestRe
         )?;
         args["work_block"] = json!(state.block);
         args["nonce"] = json!(0);
-        args["work_hex"] = json!(hex::encode(rtao::core::pow::seal(&prefix, 0)?));
+        args["work_hex"] = json!(hex::encode(rtao_core::pow::seal(&prefix, 0)?));
     }
     Ok(())
 }
@@ -392,7 +392,7 @@ fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability()
     );
     assert!(generated::intent_command("not_a_catalog_operation").is_err());
     let query = generated::query_command()?;
-    for read in rtao::reads::ReadName::ALL {
+    for read in rtao_reads::ReadName::ALL {
         let name = read.as_str().replace('_', "-");
         assert_eq!(
             query.find_subcommand(&name).is_some(),
@@ -405,11 +405,11 @@ fn advertisement_distinguishes_real_behavior_and_compiled_feature_availability()
             "{read}"
         );
     }
-    let balance: rtao::reads::ReadName = "balance".parse()?;
+    let balance: rtao_reads::ReadName = "balance".parse()?;
     assert!(balance.implemented());
     assert_eq!(
         balance.interface_metadata().output_type_name,
-        std::any::type_name::<rtao::primitives::DynBalance>()
+        std::any::type_name::<rtao_primitives::DynBalance>()
     );
     Ok(())
 }
@@ -444,7 +444,7 @@ fn catalog_interface_metadata_covers_every_operation_and_pending_body() -> TestR
         assert_eq!(row.role.is_some(), row.compiled);
         assert_eq!(row.output.is_some(), row.compiled);
     }
-    let reads = rtao::reads::ReadName::ALL;
+    let reads = rtao_reads::ReadName::ALL;
     assert_eq!(reads.len(), rtao_catalog::READS.len());
     assert_eq!(
         reads
@@ -473,13 +473,13 @@ fn complete_query_tree_exposes_every_read_and_authenticated_parameter() -> TestR
         .get_subcommands()
         .map(|command| command.get_name().to_owned())
         .collect::<BTreeSet<_>>();
-    let expected = rtao::reads::ReadName::ALL
+    let expected = rtao_reads::ReadName::ALL
         .into_iter()
         .filter(|name| !pending(name.as_str()))
         .map(|name| name.as_str().replace('_', "-"))
         .collect::<BTreeSet<_>>();
     assert_eq!(actual, expected);
-    for name in rtao::reads::ReadName::ALL
+    for name in rtao_reads::ReadName::ALL
         .into_iter()
         .filter(|name| !pending(name.as_str()))
     {
@@ -609,7 +609,7 @@ fn tools_retain_python_tool_fields_and_distinguish_unavailable_rust_metadata() -
 
 #[test]
 fn exact_money_keeps_native_u64_precision_exponents_and_all_policy() -> TestResult {
-    use rtao::primitives::{Amount, Money, ResolvedAmount};
+    use rtao_primitives::{Amount, Money, ResolvedAmount};
 
     let spec = rtao_catalog::INTENTS
         .iter()
@@ -1405,8 +1405,7 @@ async fn generated_transfer_submits_real_semantic_bytes_hooks_and_requested_peri
     assert_eq!(submissions.len(), 1);
     let runtime = View::runtime(&client).await?;
     let decoded =
-        rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
-            .to_json();
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?).to_json();
     assert_eq!(decoded["era"][0], json!(64));
     assert_eq!(decoded["call"]["call_module"], json!("Balances"));
     assert_eq!(
@@ -1480,7 +1479,7 @@ async fn generated_transfer_submits_real_semantic_bytes_hooks_and_requested_peri
         assert_eq!(submitted.len(), 1);
         let runtime = View::runtime(&client).await?;
         let decoded =
-            rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submitted[0], true)?)
+            rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submitted[0], true)?)
                 .to_json();
         assert_eq!(decoded["call"]["call_module"], "Sudo");
         assert_eq!(decoded["call"]["call_function"], "sudo");
@@ -1604,7 +1603,7 @@ async fn block_query_pins_real_storage_and_does_not_read_the_current_head_value(
 
 #[test]
 fn optional_own_key_null_defaults_survive_and_query_arrays_use_csv_rules() -> TestResult {
-    let optional = rtao::reads::ReadName::ALL
+    let optional = rtao_reads::ReadName::ALL
         .into_iter()
         .find(|name| {
             schema::read_fields(*name).is_ok_and(|fields| {
@@ -1621,7 +1620,7 @@ fn optional_own_key_null_defaults_survive_and_query_arrays_use_csv_rules() -> Te
             .iter()
             .any(|field| field.own_key && field.preserve_null())
     );
-    let name: rtao::reads::ReadName = "balances".parse()?;
+    let name: rtao_reads::ReadName = "balances".parse()?;
     let array = schema::read_fields(name)?
         .into_iter()
         .find(|field| field.name == "coldkey_ss58s")
@@ -1817,15 +1816,15 @@ async fn query_resolves_csv_contact_names_before_actual_batched_read_dispatch() 
 
 #[test]
 fn human_grouped_or_matrix_projection_never_changes_machine_json() -> TestResult {
-    let name = rtao::reads::ReadName::ALL
+    let name = rtao_reads::ReadName::ALL
         .into_iter()
         .find(|name| name.implemented() && name.spec().render.is_some())
         .ok_or("render hint")?;
     let payload = match name.spec().render {
-        Some(rtao::reads::RenderHint::Grouped { .. }) => {
+        Some(rtao_reads::RenderHint::Grouped { .. }) => {
             json!({"owner":[{"amount":"btcli user data","raw":{"opaque":true}}]})
         }
-        Some(rtao::reads::RenderHint::Matrix { .. }) => json!({"row":{"column":0.25}}),
+        Some(rtao_reads::RenderHint::Matrix { .. }) => json!({"row":{"column":0.25}}),
         _ => return Err("missing hint".into()),
     };
     let sink = MemorySink::default();
@@ -1955,7 +1954,7 @@ impl Terminal for PromptTerminal {
             .push(label.into());
         self.answers.pop_front().ok_or(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, message: &str) -> Result<(), PromptError> {
@@ -2091,7 +2090,7 @@ async fn pow_request(
         keys.key.account(),
         keys.key.account(),
     )?;
-    let work = rtao::core::pow::seal(&prefix, 0)?;
+    let work = rtao_core::pow::seal(&prefix, 0)?;
     Ok(TxRequest {
         op: "pow_register",
         args: serde_json::Map::from_iter([
@@ -2132,7 +2131,7 @@ async fn initially_expired_future_and_difficulty_invalid_pow_prepare_before_sign
         } else {
             let mut invalid = None;
             for candidate in 0..1000 {
-                if rtao::core::pow::mine_cpu(&prefix, difficulty, candidate, 1)?.is_none() {
+                if rtao_core::pow::mine_cpu(&prefix, difficulty, candidate, 1)?.is_none() {
                     invalid = Some(candidate);
                     break;
                 }
@@ -2144,15 +2143,15 @@ async fn initially_expired_future_and_difficulty_invalid_pow_prepare_before_sign
         request.args.insert("hotkey_ss58".into(), json!(hotkey));
         request.args.insert(
             "work_hex".into(),
-            json!(hex::encode(rtao::core::pow::seal(&prefix, nonce)?)),
+            json!(hex::encode(rtao_core::pow::seal(&prefix, nonce)?)),
         );
         let original = request.intent()?;
         assert!(
-            rtao::Executor::new(client.clone())
+            rtao_intents::executor(client.clone())
                 .plan_dyn(
                     original.as_dyn(),
                     &keys,
-                    &rtao::tx::PlanOptions {
+                    &rtao_tx::PlanOptions {
                         proxy_for: Some(owner),
                         ..Default::default()
                     },
@@ -2202,7 +2201,7 @@ async fn initially_expired_future_and_difficulty_invalid_pow_prepare_before_sign
         assert_eq!(submissions.len(), 1);
         let runtime = client.refresh_runtime().await?;
         let decoded =
-            rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
+            rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
                 .to_json();
         let proxy = &decoded["call"];
         assert_eq!(proxy["call_function"], json!("proxy"));
@@ -2230,13 +2229,13 @@ async fn initially_expired_future_and_difficulty_invalid_pow_prepare_before_sign
         let nonce = arg("nonce").and_then(Value::as_u64).ok_or("nonce")?;
         let hash = client.rpc().block_hash(100).await?.ok_or("fresh hash")?;
         let prefix = rtao_intents::pow::registration_prefix(NetUid(1), hash, hotkey, owner)?;
-        let expected = rtao::core::pow::mine_cpu(&prefix, difficulty, nonce, 1)?
+        let expected = rtao_core::pow::mine_cpu(&prefix, difficulty, nonce, 1)?
             .ok_or("submitted proof must satisfy the current difficulty")?
             .1;
         assert_eq!(
             arg("work"),
             Some(
-                &rtao::core::DynValue::new(rtao::core::codec::Value::Bytes(expected.to_vec()))
+                &rtao_core::DynValue::new(rtao_core::codec::Value::Bytes(expected.to_vec()))
                     .to_json()
             )
         );
@@ -2356,8 +2355,7 @@ async fn pow_uses_real_cpu_refresh_after_unlock_delay_and_only_one_cached_signer
     assert_eq!(submissions.len(), 1);
     let runtime = client.refresh_runtime().await?;
     let decoded =
-        rtao::core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?)
-            .to_json();
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?).to_json();
     assert_eq!(decoded["call"]["call_function"], json!("pow_register"));
     let args = decoded["call"]["call_args"].as_array().ok_or("call args")?;
     let work_block = args
@@ -2403,7 +2401,7 @@ async fn pow_preview_and_fresh_invalid_seal_cannot_start_signing_or_replace_the_
         rtao_cli::commands::pow::refresh_if_needed(&client, original.clone(), &keys).await?;
     assert_eq!(refreshed, original);
     assert!(
-        rtao::Executor::new(client.clone())
+        rtao_intents::executor(client.clone())
             .plan_dyn(refreshed.as_dyn(), &keys, &Default::default())
             .await
             .is_err()
@@ -2539,7 +2537,7 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
         let parsed = tree()?.try_get_matches_from(argv)?;
         let (mut ctx, _) = context(
             &parsed,
-            &generated::read_reserved(rtao::reads::ReadName::Multisig),
+            &generated::read_reserved(rtao_reads::ReadName::Multisig),
         )?;
         ctx.globals.wallet_path = root.path().to_owned();
         ctx.passwords.native_provider = None;
@@ -2556,7 +2554,7 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
         let mut history = PromptHistory::default();
         let request = QueryRequest::from_matches(
             &ctx,
-            rtao::reads::ReadName::Multisig,
+            rtao_reads::ReadName::Multisig,
             leaf(&parsed)?,
             &mut history,
         )?;
@@ -2689,7 +2687,7 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
         let reserved = if hotkey {
             generated::intent_reserved("move_lock")?
         } else {
-            generated::read_reserved(rtao::reads::ReadName::Multisig)
+            generated::read_reserved(rtao_reads::ReadName::Multisig)
         };
         let (mut ctx, _) = context(&parsed, &reserved)?;
         ctx.globals.wallet_path = root.path().join("absent-public-wallet-directory");
@@ -2713,7 +2711,7 @@ fn synchronous_query_and_lock_pickers_keep_natural_choices_duplicate_keys_and_py
         } else {
             let request = QueryRequest::from_matches(
                 &ctx,
-                rtao::reads::ReadName::Multisig,
+                rtao_reads::ReadName::Multisig,
                 leaf(&parsed)?,
                 &mut history,
             )?;

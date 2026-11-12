@@ -1,16 +1,15 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/prompt.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/main.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! The rtao command line application.
+//! The `rtao` binary's process entry point: argv dispatch, the offline
+//! doctor and the exit status. The `rtao` package's binary calls `main`.
 
-#![deny(missing_docs)]
-
-mod doctor;
+use crate::doctor;
 
 #[cfg(feature = "evm")]
-use rtao_cli::commands::evm;
+use crate::commands::evm;
 #[cfg(feature = "extension")]
-use rtao_cli::commands::extension;
-use rtao_cli::{
+use crate::commands::extension;
+use crate::{
     application,
     commands::{
         addresses, axon, catalog, collateral, config, conviction, crowd, gamma, generated, hparams,
@@ -109,10 +108,10 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
     let mut argv = env::args_os().collect::<Vec<_>>();
     #[allow(deprecated)]
     if let Some(home) = env::home_dir() {
-        let paths = rtao::client::config::Paths::new(&home, |key| env::var_os(key));
+        let paths = rtao_client::config::Paths::new(&home, |key| env::var_os(key));
         application::warn_legacy_config(
             &home,
-            paths.path(rtao::client::config::ConfigFile::Config),
+            paths.path(rtao_client::config::ConfigFile::Config),
             &mut std::io::stderr().lock(),
         )
         .map_err(|error| CliError::failure(error.to_string()))?;
@@ -125,7 +124,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
             .iter()
             .skip(2)
             .any(|arg| arg == "--help" || arg == "-h")
-            && let Err(error) = rtao_cli::commands::command_tree()?.try_get_matches_from(&argv)
+            && let Err(error) = crate::commands::command_tree()?.try_get_matches_from(&argv)
             && !error.use_stderr()
         {
             return Err(fast_path_parse_error(error));
@@ -139,11 +138,11 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
         println!(
             "rtao {} (bittensor-core {})",
             env!("CARGO_PKG_VERSION"),
-            rtao::core::BITTENSOR_CORE_TAG
+            rtao_core::BITTENSOR_CORE_TAG
         );
         return Ok(());
     }
-    let mut command = rtao_cli::commands::command_tree()?;
+    let mut command = crate::commands::command_tree()?;
     if argv.len() == 1 || argv.get(1).is_some_and(|arg| arg == "help") {
         print!("{}", command.render_long_help());
         return Ok(());
@@ -156,19 +155,16 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
         let (_, leaf) = matches
             .subcommand()
             .ok_or_else(|| CliError::input("missing completion command"))?;
-        return rtao_cli::completions::run(
+        return crate::completions::run(
             &command,
             leaf,
-            &rtao_cli::output::Output::new(
-                Default::default(),
-                Arc::new(rtao_cli::output::ProcessSink),
-            ),
+            &crate::output::Output::new(Default::default(), Arc::new(crate::output::ProcessSink)),
         );
     }
     let _interrupt_watcher = InterruptWatcher::register(cancel.clone())?;
-    let paths = rtao::client::config::Paths::from_process()
-        .map_err(|e| CliError::failure(e.to_string()))?;
-    let store = rtao::client::config::Store::new(paths);
+    let paths =
+        rtao_client::config::Paths::from_process().map_err(|e| CliError::failure(e.to_string()))?;
+    let store = rtao_client::config::Store::new(paths);
     let config = store
         .load()
         .await
@@ -192,7 +188,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
         .iter()
         .map(|arg| arg.to_string_lossy().into_owned())
         .collect::<Vec<_>>();
-    let prompt_history = rtao_cli::prompt::PromptHistory::default();
+    let prompt_history = crate::prompt::PromptHistory::default();
     let mut prepared_context = None;
     if let Some(partial) =
         application::pending_prompt_matches(&command, &argv, &context, &prompting)?
@@ -236,8 +232,8 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                 // Missing-input acquisition owns a diagnostic, including JSON
                 // before any AppContext exists. Other clap errors keep their
                 // original rendering and exit status.
-                let output = rtao_cli::output::Output::new(
-                    rtao_cli::output::OutputOptions {
+                let output = crate::output::Output::new(
+                    crate::output::OutputOptions {
                         json_mode: context.json || replay_args.iter().any(|arg| arg == "--json"),
                         quiet: context.quiet
                             || replay_args
@@ -245,7 +241,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                                 .any(|arg| arg == "--quiet" || arg == "-q"),
                         network: None,
                     },
-                    Arc::new(rtao_cli::output::ProcessSink),
+                    Arc::new(crate::output::ProcessSink),
                 );
                 output
                     .error(
@@ -347,15 +343,15 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
     if cancel.is_cancelled() {
         return Err(CliError::aborted());
     }
-    rtao_cli::logs::setup_logging(app.globals.verbosity, app.globals.quiet)
+    crate::logs::setup_logging(app.globals.verbosity, app.globals.quiet)
         .map_err(|e| CliError::failure(e.to_string()))?;
     let replay = invocation.history.replay_command(&replay_args);
     let result = Box::pin(async {
         // Async handlers borrow argv; final success guidance still needs it.
         let replay_args = replay_args.as_slice();
         match name {
-            "call" => rtao_cli::call::run(&mut app, matches, &replay).await,
-            "completions" => rtao_cli::completions::run(&completion_tree, matches, &app.output),
+            "call" => crate::call::run(&mut app, matches, &replay).await,
+            "completions" => crate::completions::run(&completion_tree, matches, &app.output),
             "config" => config::run(&store, &app.output, matches).await,
             "tools" => catalog::run_tools(&app.output, &generated::rust_tools()?),
             "explain" => catalog::run_explain(&app.output, matches),
@@ -390,7 +386,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                                 app_ref,
                                 Some(&client),
                                 matches,
-                                rtao_cli::context::SubmissionOptions {
+                                crate::context::SubmissionOptions {
                                     replay: Some(&replay),
                                     ..Default::default()
                                 },
@@ -434,7 +430,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                             app_ref,
                             &client,
                             &request,
-                            rtao_cli::context::SubmissionOptions {
+                            crate::context::SubmissionOptions {
                                 replay: Some(&replay),
                                 ..Default::default()
                             },
@@ -463,7 +459,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                             app_ref,
                             &client,
                             &request,
-                            rtao_cli::context::SubmissionOptions {
+                            crate::context::SubmissionOptions {
                                 replay: Some(&replay),
                                 ..Default::default()
                             },
@@ -506,7 +502,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                             app_ref,
                             &client,
                             &prepared.request,
-                            rtao_cli::context::SubmissionOptions {
+                            crate::context::SubmissionOptions {
                                 review: prepared.review.as_ref(),
                                 replay: Some(&replay),
                                 ..Default::default()
@@ -578,7 +574,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                                 app_ref,
                                 &client,
                                 &request,
-                                rtao_cli::context::SubmissionOptions {
+                                crate::context::SubmissionOptions {
                                     replay: Some(&replay),
                                     ..Default::default()
                                 },
@@ -606,7 +602,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                             app_ref,
                             &client,
                             &request,
-                            rtao_cli::context::SubmissionOptions {
+                            crate::context::SubmissionOptions {
                                 replay: Some(&replay),
                                 ..Default::default()
                             },
@@ -651,7 +647,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                             app_ref,
                             &client,
                             &request,
-                            rtao_cli::context::SubmissionOptions {
+                            crate::context::SubmissionOptions {
                                 replay: Some(&replay),
                                 ..Default::default()
                             },
@@ -683,7 +679,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                             app_ref,
                             &client,
                             &request,
-                            rtao_cli::context::SubmissionOptions {
+                            crate::context::SubmissionOptions {
                                 replay: Some(&replay),
                                 ..Default::default()
                             },
@@ -730,7 +726,7 @@ async fn run(cancel: TerminalCancel, final_output: &mut Output) -> Result<(), Cl
                             app_ref,
                             &client,
                             &request,
-                            rtao_cli::context::SubmissionOptions {
+                            crate::context::SubmissionOptions {
                                 replay: Some(&replay),
                                 ..Default::default()
                             },
@@ -797,8 +793,10 @@ fn truthy(value: &serde_json::Value) -> bool {
     }
 }
 
+/// Run the `rtao` command line application on the process's argv and
+/// return its exit status.
 #[tokio::main]
-async fn main() -> ExitCode {
+pub async fn main() -> ExitCode {
     let cancel = TerminalCancel::default();
     let argv = env::args_os().collect::<Vec<_>>();
     let mut output = Output::process(OutputOptions {

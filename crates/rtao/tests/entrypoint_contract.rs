@@ -1,6 +1,6 @@
 //! Exercise the real CLI entry point without network or native password access.
 #![allow(clippy::unwrap_used)]
-use rtao::client::config::ConfigFile;
+use rtao_client::config::ConfigFile;
 use std::{
     path::PathBuf,
     process::{Command, Stdio},
@@ -59,7 +59,7 @@ fn help_version_and_missing_raw_target_have_real_statuses() -> Result<(), Box<dy
     assert!(!text.contains("allow-raw"));
     let version = root.command().arg("--version").output()?;
     assert!(version.status.success());
-    assert!(String::from_utf8(version.stdout)?.contains(rtao::core::BITTENSOR_CORE_TAG));
+    assert!(String::from_utf8(version.stdout)?.contains(rtao_core::BITTENSOR_CORE_TAG));
     let help = "pass the options explicitly, or run on a terminal to be prompted";
     for (args, message) in [
         (vec!["call", "--json"], "missing required option: `target`"),

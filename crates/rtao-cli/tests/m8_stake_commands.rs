@@ -4,15 +4,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Native-amount stake records and command routes over fake chain transports.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    primitives::{AccountId, DynBalance, NetUid},
-    reads::reads::{
-        m6_locks::ColdkeyLock,
-        m6_staking::StakeAvailability,
-        owner::{StakePosition, StakeValuation},
-    },
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -21,6 +12,13 @@ use rtao_cli::{
     globals::Globals,
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
+};
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_primitives::{AccountId, DynBalance, NetUid};
+use rtao_reads::reads::{
+    m6_locks::ColdkeyLock,
+    m6_staking::StakeAvailability,
+    owner::{StakePosition, StakeValuation},
 };
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::{Value, json};
@@ -50,7 +48,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -510,26 +508,26 @@ fn wizard_emits_the_exact_pinned_python_payload_without_a_connection() -> TestRe
 
 #[derive(Clone)]
 struct PublicKeys(Arc<std::sync::atomic::AtomicUsize>);
-impl rtao::signer::KeyView for PublicKeys {
-    fn coldkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+impl rtao_signer::KeyView for PublicKeys {
+    fn coldkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         Ok(OWNER)
     }
-    fn hotkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+    fn hotkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         Ok(HOT)
     }
-    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao::signer::SignerError> {
+    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao_signer::SignerError> {
         Ok(HOT.0)
     }
 }
-impl rtao::signer::DynKeySource for PublicKeys {
+impl rtao_signer::DynKeySource for PublicKeys {
     fn signer_for<'a>(
         &'a self,
-        _: rtao::signer::SignerRole,
-    ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn rtao::signer::Signer>, rtao::signer::SignerError>>
+        _: rtao_signer::SignerRole,
+    ) -> rtao_signer::BoxFuture<'a, Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>>
     {
         Box::pin(async {
             self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            Err(rtao::signer::SignerError::KeyView(
+            Err(rtao_signer::SignerError::KeyView(
                 "a preview must never acquire a signer".into(),
             ))
         })
@@ -539,19 +537,19 @@ impl rtao_cli::context::ExternalSignerFactory for PublicKeys {
     fn keys<'a>(
         &'a self,
         _: &'a Globals,
-        _: rtao::signer::SignerRole,
-    ) -> rtao::signer::BoxFuture<
+        _: rtao_signer::SignerRole,
+    ) -> rtao_signer::BoxFuture<
         'a,
-        Result<Arc<dyn rtao::signer::DynKeySource>, rtao_cli::error::CliError>,
+        Result<Arc<dyn rtao_signer::DynKeySource>, rtao_cli::error::CliError>,
     > {
-        Box::pin(async { Ok(Arc::new(self.clone()) as Arc<dyn rtao::signer::DynKeySource>) })
+        Box::pin(async { Ok(Arc::new(self.clone()) as Arc<dyn rtao_signer::DynKeySource>) })
     }
 }
 
 #[tokio::test]
 async fn bulk_exit_uses_atomic_calls_and_child_shield_default_without_acquiring_a_key() -> TestResult
 {
-    use rtao::client::View;
+    use rtao_client::View;
     let mut state = FakeState::try_default()?;
     state.seed_python(
         "System",
@@ -577,7 +575,7 @@ async fn bulk_exit_uses_atomic_calls_and_child_shield_default_without_acquiring_
     .compose(&runtime)?;
     let tx = exit::transaction(false, &[HOT, OTHER], None)?;
     let intent = tx.intent()?;
-    let plan = rtao::Executor::new(client.clone())
+    let plan = rtao_intents::executor(client.clone())
         .plan_dyn(intent.as_dyn(), &keys, &Default::default())
         .await?;
     assert_eq!(plan.call().as_bytes(), expected.as_bytes());
@@ -655,7 +653,7 @@ async fn bulk_exit_uses_atomic_calls_and_child_shield_default_without_acquiring_
 }
 
 fn seed_list_availability(state: &mut FakeState, has_root: bool, locked: u64) -> TestResult {
-    use rtao::core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
+    use rtao_core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
     use rtao_testkit::fakes::json_to_core;
     let api = "StakeInfoRuntimeApi";
     let method = "get_stake_availability_for_coldkeys";
@@ -935,7 +933,7 @@ impl Terminal for ScriptTerminal {
             .push(label.into());
         self.answers.pop_front().ok_or(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -1473,7 +1471,7 @@ async fn stake_list_uses_natural_local_aliases_and_empty_contacts_allow_chain_na
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_subnet_lifecycle.py @ 5749dbfbe4a78ccd3938d46ffae45e059488feb7 (Apache-2.0); modified by rtao.
 #[test]
 fn lifecycle_stake_records_preserve_state_and_explain_automatic_payout() -> TestResult {
-    use rtao::reads::SubnetLifecycleState as State;
+    use rtao_reads::SubnetLifecycleState as State;
     for (state, note) in [
         (State::PendingDissolution, "pending automatic payout"),
         (State::Dissolving, "automatic payout in progress"),

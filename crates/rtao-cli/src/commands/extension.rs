@@ -8,7 +8,7 @@ use crate::{
     output::{Output, TableSpec},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::signer::extension::{
+use rtao_signer::extension::{
     BridgeClient, BridgeOptions, BridgePaths, BridgeWaiting, DEFAULT_BRIDGE_HOST,
     DEFAULT_BRIDGE_PORT, EnsureBridgeOptions, ExtensionAccount, bridge_ws_url, ensure_bridge,
     run_bridge, run_bridge_daemon, stop_bridge_daemon,
@@ -139,7 +139,7 @@ fn listener(command: Command) -> Command {
                 .default_value("39295")
                 .allow_negative_numbers(true)
                 .value_parser(|raw: &str| {
-                    rtao::primitives::pyfmt::parse_integer(raw)
+                    rtao_primitives::pyfmt::parse_integer(raw)
                         .map(|port| port.to_string())
                         .ok_or_else(|| "bridge port must be an integer".to_owned())
                 })

@@ -11,12 +11,10 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::Client,
-    primitives::{AccountId, DynBalance, NetUid},
-    reads::reads::{m6_delegation, m6_locks, m6_staking, owner},
-    tx::ExtrinsicResult,
-};
+use rtao_client::Client;
+use rtao_primitives::{AccountId, DynBalance, NetUid};
+use rtao_reads::reads::{m6_delegation, m6_locks, m6_staking, owner};
+use rtao_tx::ExtrinsicResult;
 use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -29,13 +27,13 @@ pub mod picker;
 
 /// Explain pending automatic payout for a reporting-only stake position.
 pub fn automatic_payout_note(
-    state: Option<rtao::reads::SubnetLifecycleState>,
+    state: Option<rtao_reads::SubnetLifecycleState>,
 ) -> Option<&'static str> {
     match state {
-        Some(rtao::reads::SubnetLifecycleState::PendingDissolution) => {
+        Some(rtao_reads::SubnetLifecycleState::PendingDissolution) => {
             Some("pending automatic payout")
         }
-        Some(rtao::reads::SubnetLifecycleState::Dissolving) => Some("automatic payout in progress"),
+        Some(rtao_reads::SubnetLifecycleState::Dissolving) => Some("automatic payout in progress"),
         _ => None,
     }
 }
@@ -317,7 +315,7 @@ impl Request {
                         || {
                             format!(
                                 "wallet {}",
-                                rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+                                rtao_primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
                             )
                         },
                         str::to_owned,
@@ -656,7 +654,7 @@ pub fn position_records(
             ("root_staked_tao".into(), json!(staked.amount())),
             (
                 "personal_yield".into(),
-                json!(rtao::primitives::ratio::integer_division(
+                json!(rtao_primitives::ratio::integer_division(
                     i128::from(owed.rao),
                     principal
                 )),
@@ -810,7 +808,7 @@ async fn list(
         for (netuid, value, group) in ordered {
             if !dust && value < 1_000_000 {
                 dust_groups += 1;
-                dust_value_tao += rtao::primitives::pyfmt::rao_to_f64(value);
+                dust_value_tao += rtao_primitives::pyfmt::rao_to_f64(value);
                 continue;
             }
             let state = valuation
@@ -918,7 +916,7 @@ async fn list(
     if accrued_total > 0 || principal_total > 0 {
         let accrued = DynBalance::from_rao(accrued_total, NetUid::ROOT);
         let principal = DynBalance::from_rao(principal_total, NetUid::ROOT);
-        let accrued_display = match rtao::primitives::ratio::integer_division(
+        let accrued_display = match rtao_primitives::ratio::integer_division(
             i128::from(accrued_total),
             principal_total,
         ) {

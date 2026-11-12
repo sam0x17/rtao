@@ -9,11 +9,6 @@ use std::{
     },
 };
 
-use rtao::{
-    client::{Client, ClientConfig, Network, View},
-    primitives::{AccountId, CryptoType},
-    signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
-};
 use rtao_cli::{
     application::command_tree,
     books::Books,
@@ -22,6 +17,11 @@ use rtao_cli::{
     globals::Globals,
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
+};
+use rtao_client::{Client, ClientConfig, Network, View};
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{
+    BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
 };
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::{Map, json};
@@ -39,7 +39,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -179,7 +179,7 @@ async fn absent_raw_shield_key_allows_only_the_unforced_default_to_submit() -> T
                 assert!(result?.ok_or("raw receipt")?.success);
                 assert_eq!(keys.unlocks.load(Ordering::SeqCst), 1);
                 assert_eq!(submissions.len(), 1);
-                let decoded = rtao::core::DynValue::new(
+                let decoded = rtao_core::DynValue::new(
                     runtime.core().decode_extrinsic(&submissions[0], true)?,
                 )
                 .to_json();

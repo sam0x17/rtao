@@ -20,7 +20,7 @@ feature:
 
 ```toml
 [dependencies]
-rtao = { path = "../rtao/crates/rtao", features = ["compat-synapse"] }
+rtao = { path = "../rtao/crates/rtao", default-features = false, features = ["compat-synapse"] }
 ```
 
 The facade enables the server and client halves of `compat-epistula`. Depend

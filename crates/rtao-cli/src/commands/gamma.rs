@@ -10,7 +10,9 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{client::Client, primitives::AccountId, reads::ReadName};
+use rtao_client::Client;
+use rtao_primitives::AccountId;
+use rtao_reads::ReadName;
 use serde_json::{Map, Value, json};
 
 /// The deposit owner's calls are the generated intent commands (`tx
@@ -291,7 +293,7 @@ pub async fn execute_prepared_read(
                 ("netuid".into(), json!(netuid)),
                 ("hotkey_ss58".into(), json!(hotkey)),
             ]);
-            let deposit = rtao::reads::dispatch(client, ReadName::GammaDeposit, &params)
+            let deposit = rtao_reads::dispatch(client, ReadName::GammaDeposit, &params)
                 .await
                 .map_err(CliError::from)?;
             if deposit.is_null() {
@@ -337,7 +339,7 @@ pub async fn execute_prepared_read(
         }
         ReadRequest::List { coldkey } => {
             let params = Map::from_iter([("coldkey_ss58".into(), json!(coldkey))]);
-            let deposits = rtao::reads::dispatch(client, ReadName::GammaDeposits, &params)
+            let deposits = rtao_reads::dispatch(client, ReadName::GammaDeposits, &params)
                 .await
                 .map_err(CliError::from)?;
             let rows = deposits

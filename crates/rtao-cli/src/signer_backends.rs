@@ -14,10 +14,8 @@ use std::{
 };
 
 use parking_lot::Mutex;
-use rtao::{
-    primitives::AccountId,
-    signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole},
-};
+use rtao_primitives::AccountId;
+use rtao_signer::{BoxFuture, DynKeySource, KeyView, Signer, SignerError, SignerRole};
 use tokio::sync::Mutex as AsyncMutex;
 
 use crate::{

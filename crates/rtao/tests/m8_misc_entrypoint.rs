@@ -1,6 +1,6 @@
 //! Actual misc helper routing remains offline for conversion and bad selections.
 
-use rtao::client::config::ConfigFile;
+use rtao_client::config::ConfigFile;
 use serde_json::{Value, json};
 use std::{
     error::Error,

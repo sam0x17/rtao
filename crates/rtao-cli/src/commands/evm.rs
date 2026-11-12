@@ -23,11 +23,9 @@ use crate::{
     prompt::{PromptHistory, PromptSpec, PromptValidation, ask_with, python_strip},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::Client,
-    evm::{self, Address, EvmKeyInfo, EvmNetwork, EvmRpc, EvmTxPreview, U256},
-    primitives::{DynBalance, NetUid},
-};
+use rtao_client::Client;
+use rtao_evm::{self as evm, Address, EvmKeyInfo, EvmNetwork, EvmRpc, EvmTxPreview, U256};
+use rtao_primitives::{DynBalance, NetUid};
 use serde_json::{Map, Value, json};
 use std::{future::Future, pin::Pin, str::FromStr, time::Duration};
 
@@ -211,7 +209,7 @@ fn fund_amount(leaf: &ArgMatches) -> Result<Option<String>, CliError> {
         return Ok(Some("all".into()));
     }
     if let Some(amount) = amount {
-        rtao::primitives::Amount::parse(amount)
+        rtao_primitives::Amount::parse(amount)
             .and_then(|amount| amount.resolve(NetUid::ROOT, true))
             .map_err(|error| CliError::input(error.to_string()))?;
     }
@@ -234,7 +232,7 @@ async fn fund_request(
             &mut terminal,
             &PromptSpec::new("amount_tao", "--amount-tao"),
             |raw| {
-                rtao::primitives::Amount::parse(raw)
+                rtao_primitives::Amount::parse(raw)
                     .and_then(|amount| amount.resolve(NetUid::ROOT, true))
                     .map_err(|error| PromptValidation::Message(error.to_string()))
             },
@@ -265,7 +263,7 @@ async fn resolve_text(
 ) -> Result<String, CliError> {
     let ctx = ctx.clone();
     let value = value.map(str::to_owned);
-    rtao::core::offload(move || ctx.resolve_address_text(param, value.as_deref()))
+    rtao_core::offload(move || ctx.resolve_address_text(param, value.as_deref()))
         .await
         .map_err(failure)??
         .ok_or_else(|| CliError::input(format!("cannot resolve {param}")))
@@ -282,8 +280,8 @@ async fn native_account(
     address: &str,
     rpc_url: Option<&str>,
     write: bool,
-) -> Result<rtao::primitives::AccountId, CliError> {
-    if !rtao::primitives::receiving::is_receiving_address(address) {
+) -> Result<rtao_primitives::AccountId, CliError> {
+    if !rtao_primitives::receiving::is_receiving_address(address) {
         return crate::books::account_of(address)
             .map_err(|error| CliError::input(error.to_string()));
     }
@@ -298,7 +296,7 @@ async fn native_account(
     }
     let address = address.to_owned();
     ctx.run(move |client| async move {
-        rtao::tx::receiving::account_for_registered_write(&client, &address)
+        rtao_tx::receiving::account_for_registered_write(&client, &address)
             .await
             .map_err(|error| CliError::input(error.to_string()))
     })
@@ -309,18 +307,18 @@ async fn native_account(
 async fn evm_recipient(
     ctx: &AppContext,
     address: &str,
-) -> Result<(rtao::primitives::receiving::Recipient, Option<bool>), CliError> {
+) -> Result<(rtao_primitives::receiving::Recipient, Option<bool>), CliError> {
     let address = address.to_owned();
     ctx.run(move |client| async move {
         let snapshot = client
-            .at(rtao::client::BlockRef::Best)
+            .at(rtao_client::BlockRef::Best)
             .await
             .map_err(CliError::from)?;
         let runtime = snapshot.block().runtime.clone();
         let recipient = rtao_intents::evm::resolve_evm_recipient(&snapshot, &runtime, &address)
             .await
             .map_err(|error| CliError::input(error.to_string()))?;
-        let enabled = rtao::tx::hashed::hashed_accounts_enabled(&snapshot, &runtime)
+        let enabled = rtao_tx::hashed::hashed_accounts_enabled(&snapshot, &runtime)
             .await
             .map_err(|error| CliError::input(error.to_string()))?;
         Ok((recipient, enabled))
@@ -347,16 +345,16 @@ fn key_ref(ctx: &AppContext, value: Option<&str>) -> (String, String) {
 async fn key_info(ctx: &AppContext, value: Option<&str>) -> Result<EvmKeyInfo, CliError> {
     let (wallet, name) = key_ref(ctx, value);
     let root = ctx.globals.wallet_path.clone();
-    rtao::core::offload(move || evm::get_evm_key_info(&name, &wallet, &root))
+    rtao_core::offload(move || evm::get_evm_key_info(&name, &wallet, &root))
         .await
         .map_err(failure)?
         .map_err(|error| failure(error).with_help("create one with `rtao evm key new`"))
 }
 async fn address_of(ctx: &AppContext, value: Option<&str>) -> Result<String, CliError> {
     if let Some(value) = value
-        && rtao::primitives::receiving::is_receiving_address(value)
+        && rtao_primitives::receiving::is_receiving_address(value)
     {
-        rtao::primitives::receiving::parse_recipient(value)
+        rtao_primitives::receiving::parse_recipient(value)
             .map_err(|error| CliError::input(error.to_string()))?;
         return Err(CliError::input(
             "EVM routes cannot set up a receiving address; use `wallet transfer` with the complete receiving address",
@@ -393,7 +391,7 @@ async fn rpc(ctx: &AppContext, endpoint: Option<&str>) -> Result<(EvmNetwork, Ev
     })
     .map_err(failure)?;
     let url = network.rpc_url.clone();
-    let rpc = rtao::core::offload(move || EvmRpc::new(url))
+    let rpc = rtao_core::offload(move || EvmRpc::new(url))
         .await
         .map_err(failure)?
         .map_err(failure)?;
@@ -494,12 +492,11 @@ impl EvmTxBackend for NativeEvmTx {
     ) -> EvmFuture<'a, Value> {
         Box::pin(async move {
             let account = keys::unlock_key(ctx, key).await?;
-            let signed = rtao::core::offload(move || {
-                evm::transactions::sign_transaction(&account, &preview)
-            })
-            .await
-            .map_err(failure)?
-            .map_err(failure)?;
+            let signed =
+                rtao_core::offload(move || evm::transactions::sign_transaction(&account, &preview))
+                    .await
+                    .map_err(failure)?
+                    .map_err(failure)?;
             let (_, rpc) = rpc(ctx, endpoint).await?;
             let hash = signed.hash;
             rpc.send_raw_transaction(&signed.raw)
@@ -582,7 +579,7 @@ pub async fn submit_evm_tx_with_backend(
         ));
     }
     let cloned = preview.clone();
-    let public = rtao::core::offload(move || cloned.to_json())
+    let public = rtao_core::offload(move || cloned.to_json())
         .await
         .map_err(failure)?
         .map_err(failure)?;
@@ -836,7 +833,7 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
             let recipient = ctx
                 .run(move |client| async move {
                     let snapshot = client
-                        .at(rtao::client::BlockRef::Best)
+                        .at(rtao_client::BlockRef::Best)
                         .await
                         .map_err(CliError::from)?;
                     let runtime = snapshot.block().runtime.clone();
@@ -846,7 +843,7 @@ async fn address(ctx: &AppContext, name: &str, leaf: &ArgMatches) -> Result<(), 
                 })
                 .await?;
             let direct = recipient.account
-                != rtao::primitives::evm::mirror_account(&address).map_err(failure)?;
+                != rtao_primitives::evm::mirror_account(&address).map_err(failure)?;
             let (label, key) = if direct {
                 ("native receiving address", "native_receiving_address")
             } else {
@@ -932,22 +929,22 @@ struct DepositRoute {
 
 async fn deposit_route(
     client: &Client,
-    account: rtao::primitives::AccountId,
+    account: rtao_primitives::AccountId,
 ) -> Result<DepositRoute, CliError> {
-    use rtao::client::ViewExt;
+    use rtao_client::ViewExt;
     let snapshot = client
-        .at(rtao::client::BlockRef::Best)
+        .at(rtao_client::BlockRef::Best)
         .await
         .map_err(CliError::from)?;
     let runtime = snapshot.block().runtime.clone();
-    let invalid = |error: rtao::tx::IntentError| CliError::input(error.to_string());
+    let invalid = |error: rtao_tx::IntentError| CliError::input(error.to_string());
     let (alias, recipient) =
         rtao_intents::evm::resolve_evm_deposit(&snapshot, &runtime, account, None)
             .await
             .map_err(invalid)?;
     let direct =
-        recipient.account != rtao::primitives::evm::mirror_account(&alias).map_err(failure)?;
-    let hashed_enabled = rtao::tx::hashed::hashed_accounts_enabled(&snapshot, &runtime)
+        recipient.account != rtao_primitives::evm::mirror_account(&alias).map_err(failure)?;
+    let hashed_enabled = rtao_tx::hashed::hashed_accounts_enabled(&snapshot, &runtime)
         .await
         .map_err(invalid)?
         == Some(true);
@@ -1169,7 +1166,7 @@ mod input_regression_tests {
         fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
             Err(PromptError::Unavailable)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -1457,9 +1454,9 @@ mod input_regression_tests {
         // recipient guard and a custom endpoint need not be the selected
         // chain, so a receiving address there is refused; stake show needs
         // the selected chain's native mapping and refuses any override.
-        let key = rtao::core::keys::Keypair::from_seed(&[21; 32], rtao::core::keys::CRYPTO_HASHED)?;
+        let key = rtao_core::keys::Keypair::from_seed(&[21; 32], rtao_core::keys::CRYPTO_HASHED)?;
         let receiving =
-            rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+            rtao_core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
         for (verb, amount) in [("add", "--amount-tao"), ("remove", "--amount-alpha")] {
             let fixture = Fixture::new(&[
                 "rtao",
@@ -1490,7 +1487,7 @@ mod input_regression_tests {
             );
             assert!(fake.calls.lock().map_err(|_| "poisoned")?.is_empty());
         }
-        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        let hotkey = rtao_primitives::AccountId([9; 32]).to_string();
         let fixture = Fixture::new(&[
             "rtao",
             "evm",
@@ -1520,7 +1517,7 @@ mod input_regression_tests {
 
     #[tokio::test]
     async fn root_alpha_remove_refuses_before_public_or_private_backend_calls() -> TestResult {
-        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        let hotkey = rtao_primitives::AccountId([9; 32]).to_string();
         let fixture = Fixture::new(&[
             "rtao",
             "evm",
@@ -1548,7 +1545,7 @@ mod input_regression_tests {
 
     #[tokio::test]
     async fn valid_alpha_remove_and_root_add_keep_exact_call_words_and_dry_run() -> TestResult {
-        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        let hotkey = rtao_primitives::AccountId([9; 32]).to_string();
         for (command, flag, netuid, amount, rao, function) in [
             (
                 "remove",
@@ -1623,7 +1620,7 @@ mod input_regression_tests {
     #[tokio::test]
     async fn alpha_remove_retains_native_negative_precision_range_and_text_refusals() -> TestResult
     {
-        let hotkey = rtao::primitives::AccountId([9; 32]).to_string();
+        let hotkey = rtao_primitives::AccountId([9; 32]).to_string();
         for amount in ["-1", "0.0000000001", "18446744073.709551616", "+1", " 1"] {
             let amount_flag = format!("--amount-alpha={amount}");
             let fixture = Fixture::new(&[

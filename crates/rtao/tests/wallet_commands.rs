@@ -1,10 +1,5 @@
 //! Wallet command fixtures use only task-owned files and injected terminals.
 
-use rtao::{
-    primitives::{AccountId, CryptoType},
-    signer::{KeyView, SignerRole},
-    wallet::{PasswordSources, SecretString, Wallet},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -14,6 +9,9 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, OutputSink, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{KeyView, SignerRole};
+use rtao_wallet::{PasswordSources, SecretString, Wallet};
 use serde_json::{Value, json};
 use std::{
     collections::VecDeque,
@@ -241,10 +239,10 @@ async fn creates_both_real_key_schemes_and_keeps_the_single_json_mnemonic_payloa
     let phrase = value["coldkey_mnemonic"]
         .as_str()
         .ok_or("coldkey mnemonic")?;
-    let derived = rtao::core::keys::Keypair::from_mnemonic(phrase, 0, None)?;
+    let derived = rtao_core::keys::Keypair::from_mnemonic(phrase, 0, None)?;
     assert_eq!(derived.public_key_bytes(), local.coldkey_address()?.0);
     let phrase = value["hotkey_mnemonic"].as_str().ok_or("hotkey mnemonic")?;
-    let derived = rtao::core::keys::Keypair::from_mnemonic(phrase, 1, None)?;
+    let derived = rtao_core::keys::Keypair::from_mnemonic(phrase, 1, None)?;
     assert_eq!(derived.public_key_bytes(), local.hotkey_address()?.0);
     assert!(sink.bytes(Stream::Stderr)?.is_empty());
     assert_eq!(reads.load(Ordering::Relaxed), 0);
@@ -327,12 +325,12 @@ async fn default_coldkey_encryption_uses_confirmed_hidden_password_without_echo(
             "matched-private-password",
         ],
     )?;
-    ctx.passwords.prompt = rtao::wallet::PromptPolicy::IfTty;
+    ctx.passwords.prompt = rtao_wallet::PromptPolicy::IfTty;
     run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
     assert_eq!(reads.load(Ordering::Relaxed), 4);
     let local = Wallet::new("encrypted", "default", &root.0)?;
     let bytes = std::fs::read(local.reference().coldkey_path())?;
-    assert!(rtao::core::keyfile_json::keyfile_data_is_encrypted_nacl(
+    assert!(rtao_core::keyfile_json::keyfile_data_is_encrypted_nacl(
         &bytes
     ));
     let identity = local.public_info(SignerRole::Coldkey)?.account;
@@ -431,9 +429,9 @@ async fn seed_and_private_key_recovery_do_not_echo_material_or_put_it_in_replay(
     let value = payload(&sink)?;
     assert_eq!(value.as_object().ok_or("recovery object")?.len(), 4);
     let bytes = hex::decode(&seed)?;
-    let keypair = rtao::core::keys::Keypair::from_seed(&bytes, 0)?;
+    let keypair = rtao_core::keys::Keypair::from_seed(&bytes, 0)?;
     assert_eq!(value["ss58"], json!(AccountId(keypair.public_key_bytes())));
-    let private_keypair = rtao::core::keys::Keypair::from_seed(&bytes, 1)?;
+    let private_keypair = rtao_core::keys::Keypair::from_seed(&bytes, 1)?;
     let private = zeroize::Zeroizing::new(format!(
         "0x{}",
         hex::encode(private_keypair.private_key_bytes().ok_or("private key")?)
@@ -594,7 +592,7 @@ async fn show_reads_watch_only_companions_and_saved_multisigs_without_secret_pro
     let account = AccountId([13; 32]);
     let wallet = Wallet::new("watch", "default", &root.0)?;
     wallet
-        .regenerate_coldkeypub(account, CryptoType::Ed25519, rtao::wallet::Overwrite::No)
+        .regenerate_coldkeypub(account, CryptoType::Ed25519, rtao_wallet::Overwrite::No)
         .await?;
     let (matches, mut ctx, sink, reads) = fixture(
         &root,
@@ -711,7 +709,7 @@ async fn encrypted_json_import_uses_hidden_backup_password_and_reloads_the_real_
     let public_path = restored.reference().coldkeypub_path();
     let encrypted_before = std::fs::read(&secret_path)?;
     let public_before = std::fs::read(&public_path)?;
-    assert!(rtao::core::keyfile_json::keyfile_data_is_encrypted_nacl(
+    assert!(rtao_core::keyfile_json::keyfile_data_is_encrypted_nacl(
         &encrypted_before
     ));
     // Construct a fresh handle and actually decrypt the written coldkey. A
@@ -865,7 +863,7 @@ async fn password_env_export_is_pure_and_uses_the_existing_keyfile_encoder() -> 
         ctx.globals.wallet_path = PathBuf::from("/rtao_wallet_export_fixture");
         ctx.passwords.password = Some(SecretString::new("env-password-sentinel".into()));
         let wallet = ctx.wallet()?;
-        let name = rtao::wallet::env_var_name(wallet.coldkey_file().path());
+        let name = rtao_wallet::env_var_name(wallet.coldkey_file().path());
         let before = std::env::var_os(&name);
         run(&mut ctx, &matches, &mut PromptHistory::default()).await?;
         let output = sink.text(Stream::Stdout)?;
@@ -887,7 +885,7 @@ async fn password_env_export_is_pure_and_uses_the_existing_keyfile_encoder() -> 
             .strip_prefix(&format!("export {name}="))
             .ok_or("shell assignment")?;
         assert_eq!(
-            rtao::core::keyfile_env::decode_password_from_environment(&name, encoded)?,
+            rtao_core::keyfile_env::decode_password_from_environment(&name, encoded)?,
             "env-password-sentinel"
         );
         assert_eq!(std::env::var_os(&name), before);
@@ -952,7 +950,7 @@ async fn password_export_sink_failure_emits_one_guarded_document_and_redacts_the
             sink.clone(),
         );
         let wallet = ctx.wallet()?;
-        let name = rtao::wallet::env_var_name(wallet.coldkey_file().path());
+        let name = rtao_wallet::env_var_name(wallet.coldkey_file().path());
         let error = run(&mut ctx, &matches, &mut PromptHistory::default())
             .await
             .err()
@@ -980,7 +978,7 @@ async fn password_export_sink_failure_emits_one_guarded_document_and_redacts_the
             .strip_prefix(&format!("export {name}="))
             .ok_or("shell assignment")?;
         assert_eq!(
-            rtao::core::keyfile_env::decode_password_from_environment(&name, encoded)?,
+            rtao_core::keyfile_env::decode_password_from_environment(&name, encoded)?,
             "disposable export sentinel π"
         );
         assert!(!error.message.contains(encoded));
@@ -1213,18 +1211,18 @@ async fn watch_only_hashed_companions_need_the_receiving_address() -> TestResult
     let created = source
         .create_new_coldkey_as(
             None,
-            rtao::wallet::KeyScheme::Authority(rtao::primitives::AuthorityType::HashedSr25519),
-            rtao::wallet::WriteOptions {
+            rtao_wallet::KeyScheme::Authority(rtao_primitives::AuthorityType::HashedSr25519),
+            rtao_wallet::WriteOptions {
                 encrypt: false,
                 password: None,
-                ..rtao::wallet::WriteOptions::coldkey()
+                ..rtao_wallet::WriteOptions::coldkey()
             },
         )
         .await?;
     let descriptor = source
         .authority_descriptor(SignerRole::Coldkey)
         .ok_or("descriptor")?;
-    let address = rtao::core::keys::encode_hashed_receiving_address(&descriptor)?;
+    let address = rtao_core::keys::encode_hashed_receiving_address(&descriptor)?;
     let (matches, mut ctx, sink, _) = fixture(
         &root,
         &[
@@ -1310,10 +1308,8 @@ async fn watch_only_hashed_companions_need_the_receiving_address() -> TestResult
 // generation commitment).
 #[tokio::test]
 async fn falcon_cli_recovery_restores_the_authority_in_every_profile() -> TestResult {
-    use rtao::{
-        core::keys::Keypair,
-        signer::{AuthoritySigner, DynKeySource, KeypairAuthoritySigner},
-    };
+    use rtao_core::keys::Keypair;
+    use rtao_signer::{AuthoritySigner, DynKeySource, KeypairAuthoritySigner};
     let seed = "5b".repeat(32);
     let phrase = Keypair::generate_mnemonic(24)?;
     for (scheme, mode, code) in [

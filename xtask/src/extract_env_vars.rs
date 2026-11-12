@@ -1856,7 +1856,7 @@ mod tests {
         ] {
             assert!(parity_map(&root, &names, Some(&changed)).is_err());
         }
-        let divergence = "schema=1\n[env.EXISTING]\ndivergence='ENV-PENDING-TEST'\nclass='pending'\npython_behavior='Reads the named global option.'\nrtao_behavior='No process reader exists yet.'\nrationale='Assigned to the planned CLI milestone.'\nresolution='Replace this row when the reader lands.'\nevidence='crates/rtao-cli/src/main.rs'\n";
+        let divergence = "schema=1\n[env.EXISTING]\ndivergence='ENV-PENDING-TEST'\nclass='pending'\npython_behavior='Reads the named global option.'\nrtao_behavior='No process reader exists yet.'\nrationale='Assigned to the planned CLI milestone.'\nresolution='Replace this row when the reader lands.'\nevidence='crates/rtao-cli/src/entry.rs'\n";
         assert_eq!(parity_map(&root, &names, Some(divergence))?["pending"], 1);
         assert!(
             parity_map(

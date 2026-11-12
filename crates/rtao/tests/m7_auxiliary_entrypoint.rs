@@ -1,6 +1,6 @@
 //! Real auxiliary routes use isolated config paths and never start native or network services.
 
-use rtao::client::config::ConfigFile;
+use rtao_client::config::ConfigFile;
 use serde_json::Value;
 use std::{
     error::Error,

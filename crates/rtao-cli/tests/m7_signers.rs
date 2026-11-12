@@ -8,17 +8,6 @@ use std::{
     task::Poll,
 };
 
-use rtao::{
-    client::{Client, ClientConfig, Network, View},
-    primitives::{AccountId, CryptoType},
-    signer::{
-        BoxFuture, Coldkey, KeypairSigner, MultiSignature, Signer, SignerError, SignerRole,
-        SigningRequest,
-    },
-    tx::{
-        BuildCx, Built, Intent, IntentError, IntentInterface, IntentPreflight, PreflightCx, Signed,
-    },
-};
 use rtao_cli::{
     application::command_tree,
     books::Books,
@@ -30,7 +19,16 @@ use rtao_cli::{
     prompt::{PromptError, PromptHistory, Terminal},
     signer_backends::{BackendRequest, BackendSession, NativeSignerFactory, SigningBackend},
 };
+use rtao_client::{Client, ClientConfig, Network, View};
+use rtao_primitives::{AccountId, CryptoType};
+use rtao_signer::{
+    BoxFuture, Coldkey, KeypairSigner, MultiSignature, Signer, SignerError, SignerRole,
+    SigningRequest,
+};
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_tx::{
+    BuildCx, Built, Intent, IntentError, IntentInterface, IntentPreflight, PreflightCx, Signed,
+};
 use serde_json::{Value, json};
 
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -55,7 +53,7 @@ impl Terminal for TestTerminal {
     fn read_secret(
         &mut self,
         _: &str,
-    ) -> std::result::Result<rtao::wallet::SecretString, PromptError> {
+    ) -> std::result::Result<rtao_wallet::SecretString, PromptError> {
         self.trace.lock().expect("trace").push("wallet-secret");
         Err(PromptError::Unavailable)
     }
@@ -297,7 +295,7 @@ impl SubmissionHooks for Hooks {
     }
     fn on_result<'a>(
         &'a self,
-        _: &'a rtao::tx::ExtrinsicResult,
+        _: &'a rtao_tx::ExtrinsicResult,
     ) -> BoxFuture<'a, std::result::Result<(), CliError>> {
         Box::pin(async move {
             self.trace.lock().expect("trace").push("durable-receipt");

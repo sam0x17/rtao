@@ -8,13 +8,11 @@ use crate::{
     output::{Output, OutputOptions, ReviewSection},
     prompt::Terminal,
 };
-use rtao::{
-    client::{CallBytes, Client, ClientConfig},
-    primitives::AccountId,
-    signer::{DynKeySource, SignerRole},
-    tx::{DynIntent, ExecuteOptions, PlanOptions, ShieldOptions},
-    wallet::{PasswordSources, PromptPolicy, Wallet},
-};
+use rtao_client::{CallBytes, Client, ClientConfig};
+use rtao_primitives::AccountId;
+use rtao_signer::{DynKeySource, SignerRole};
+use rtao_tx::{DynIntent, ExecuteOptions, PlanOptions, ShieldOptions};
+use rtao_wallet::{PasswordSources, PromptPolicy, Wallet};
 use serde_json::{Map, Value};
 use std::{
     future::Future,
@@ -45,7 +43,7 @@ pub struct AppContext {
     /// Authenticated shared config values, retained for runtime fallbacks.
     pub config: Map<String, Value>,
     /// Optional injected shared cache store used during chain startup.
-    pub config_store: Option<rtao::client::config::Store>,
+    pub config_store: Option<rtao_client::config::Store>,
     /// Shared address/proxy/multisig book readers.
     pub books: Books,
     /// Data and diagnostic streams.
@@ -214,7 +212,7 @@ impl AppContext {
         self.output
             .classify_address(&resolved.address, resolved.kind)
             .map_err(|e| CliError::failure(e.to_string()))?;
-        if rtao::primitives::receiving::is_receiving_address(&resolved.address) {
+        if rtao_primitives::receiving::is_receiving_address(&resolved.address) {
             return Ok(Some(resolved.address));
         }
         resolved
@@ -240,7 +238,7 @@ impl AppContext {
                     return Ok(None);
                 };
                 let configured = crate::globals::config_string(configured);
-                self.output.message(&format!("dispatching via configured proxy_for {} — pass `--proxy-for self` to sign directly",rtao::primitives::pyfmt::string_repr(&configured))).map_err(|e|CliError::failure(e.to_string()))?;
+                self.output.message(&format!("dispatching via configured proxy_for {} — pass `--proxy-for self` to sign directly",rtao_primitives::pyfmt::string_repr(&configured))).map_err(|e|CliError::failure(e.to_string()))?;
                 self.resolve_address("proxy_for", Some(&configured))
             }
         }
@@ -285,9 +283,9 @@ impl AppContext {
     /// `--max-registration-deposit` or an interactive answer must.
     pub fn confirm_registration_sponsorship(
         &self,
-        quote: &rtao::tx::RegistrationSponsorship,
+        quote: &rtao_tx::RegistrationSponsorship,
     ) -> Result<(), CliError> {
-        let amount = rtao::primitives::DynBalance::from(quote.deposit).to_decimal_string();
+        let amount = rtao_primitives::DynBalance::from(quote.deposit).to_decimal_string();
         let amount = amount
             .trim_end_matches('0')
             .trim_end_matches('.')
@@ -446,7 +444,7 @@ impl AppContext {
         if !choice.enabled {
             return Ok(choice);
         }
-        let key = rtao::reads::generated::interfaces::mev_shield_next_key(client)
+        let key = rtao_reads::generated::interfaces::mev_shield_next_key(client)
             .await
             .map_err(|e| CliError::failure(e.to_string()))?;
         if key.is_none() {
@@ -479,7 +477,7 @@ impl AppContext {
         call: Option<&CallBytes>,
     ) -> Option<String> {
         let pair = async {
-            let free = rtao::reads::generated::interfaces::balance(client, payer)
+            let free = rtao_reads::generated::interfaces::balance(client, payer)
                 .await
                 .ok()?;
             let fee = client
@@ -498,12 +496,12 @@ impl AppContext {
                 return None;
             }
             let fee =
-                rtao::primitives::DynBalance::from_rao(fee.rao(), rtao::primitives::NetUid::ROOT);
+                rtao_primitives::DynBalance::from_rao(fee.rao(), rtao_primitives::NetUid::ROOT);
             return Some(format!(
                 "free TAO ({free}) cannot cover the MEV-shield outer carrier fee (~{fee}); alpha fees only apply to the unshielded call — use --no-mev-shield"
             ));
         }
-        let free = rtao::reads::generated::interfaces::balance(client, payer)
+        let free = rtao_reads::generated::interfaces::balance(client, payer)
             .await
             .ok()?;
         (free.rao==0).then(||"free TAO cannot cover the MEV-shield outer carrier fee; alpha fees only apply to the unshielded call — use --no-mev-shield".into())
@@ -541,7 +539,7 @@ impl AppContext {
         keys: &dyn DynKeySource,
         wait_for_finalization: bool,
         replay: Option<&str>,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         self.submit_with_hooks(client, intent, keys, wait_for_finalization, replay, None)
             .await
     }
@@ -555,7 +553,7 @@ impl AppContext {
         wait_for_finalization: bool,
         replay: Option<&str>,
         hooks: Option<&dyn SubmissionHooks>,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         self.submit_with_keys_options(
             client,
             intent,
@@ -578,7 +576,7 @@ impl AppContext {
         intent: &dyn DynIntent,
         keys: &dyn DynKeySource,
         options: SubmissionOptions<'_>,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         let outcome = self
             .perform_submission(
                 client,
@@ -616,7 +614,7 @@ impl AppContext {
         hooks: Option<&dyn SubmissionHooks>,
         claim_source: RootClaimSource<'_>,
         mut outcome: Option<SubmissionOutcome>,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         if let Some(outcome) = &mut outcome
             && outcome.hook_error.is_none()
             && direct_multisig::eligible(intent, &outcome.receipt)
@@ -692,7 +690,7 @@ impl AppContext {
         owner: AccountId,
         proxy: Option<AccountId>,
     ) -> Result<Option<AccountId>, CliError> {
-        use rtao::client::ViewExt;
+        use rtao_client::ViewExt;
 
         let args = intent.to_json_dyn();
         let op = intent.spec().name;
@@ -721,7 +719,7 @@ impl AppContext {
             Ok(payout) if payout.0 > 0 => payout.0,
             _ => return Ok(None),
         };
-        let amount = rtao::primitives::DynBalance::from_rao(payout, rtao::primitives::NetUid::ROOT);
+        let amount = rtao_primitives::DynBalance::from_rao(payout, rtao_primitives::NetUid::ROOT);
         let proxy_flag = proxy.map_or_else(|| "self".to_owned(), |proxy| proxy.to_string());
         let mut command =
             format!("rtao root claim --hotkey {hotkey} --coldkey {owner} --proxy-for {proxy_flag}");
@@ -764,7 +762,7 @@ impl AppContext {
         &self,
         intent: &dyn DynIntent,
         outcome: Option<SubmissionOutcome>,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         let Some(outcome) = outcome else {
             return Ok(None);
         };
@@ -842,7 +840,7 @@ impl AppContext {
         }
         // The review decides the Shield route (D-159), as Python's CLI passes
         // an explicit `shielded`; execution follows it.
-        let executor = rtao::Executor::new(client.clone()).with_auto_shield(false);
+        let executor = rtao_intents::executor(client.clone()).with_auto_shield(false);
         let spec = intent.semantic_intent_dyn().spec();
         // py: sdk/python/bittensor/cli/context.py:1155-1161
         match spec.origin {
@@ -1173,7 +1171,7 @@ impl AppContext {
                             format!(
                                 "~{}",
                                 self.output
-                                    .balance(fee.rao(), rtao::primitives::NetUid::ROOT)
+                                    .balance(fee.rao(), rtao_primitives::NetUid::ROOT)
                                     .0
                                     .to_python_string()
                             )
@@ -1309,15 +1307,15 @@ impl AppContext {
                             .and_then(Value::as_u64)
                     }
                     .and_then(|netuid| u16::try_from(netuid).ok())
-                    .map(rtao::primitives::NetUid);
+                    .map(rtao_primitives::NetUid);
                     subnet
                         .and_then(|netuid| {
-                            serde_json::from_value::<rtao::primitives::Amount>(value.clone())
+                            serde_json::from_value::<rtao_primitives::Amount>(value.clone())
                                 .ok()
                                 .and_then(|amount| amount.resolve(netuid, true).ok())
                                 .map(|amount| match amount {
-                                    rtao::primitives::ResolvedAmount::All => "all".into(),
-                                    rtao::primitives::ResolvedAmount::Exact(amount) => self
+                                    rtao_primitives::ResolvedAmount::All => "all".into(),
+                                    rtao_primitives::ResolvedAmount::Exact(amount) => self
                                         .output
                                         .balance(amount.rao, amount.netuid)
                                         .0
@@ -1359,11 +1357,9 @@ impl AppContext {
         // A general --yes is not permission to lock an additional deposit
         // (D-148): the composed call's registration reserve is approved here,
         // and execution accepts only this exact quote.
-        let approved_sponsorship = rtao::tx::sponsorship::registration_sponsorship_quote(
-            &plan.extras,
-            plan.signer_address,
-        )
-        .map_err(|error| CliError::failure(error.to_string()))?;
+        let approved_sponsorship =
+            rtao_tx::sponsorship::registration_sponsorship_quote(&plan.extras, plan.signer_address)
+                .map_err(|error| CliError::failure(error.to_string()))?;
         if let Some(quote) = &approved_sponsorship {
             self.confirm_registration_sponsorship(quote)?;
         }
@@ -1406,7 +1402,7 @@ impl AppContext {
             && signing
                 .authority_descriptor(role)
                 .is_some_and(|descriptor| {
-                    !rtao::primitives::receiving::is_stateless_pq_descriptor(&descriptor)
+                    !rtao_primitives::receiving::is_stateless_pq_descriptor(&descriptor)
                 });
         let opts = ExecuteOptions {
             expected_call: control.bind_reviewed_call.then(|| plan.call().clone()),
@@ -1422,7 +1418,7 @@ impl AppContext {
             shielded: choice.enabled,
             progress,
             max_registration_deposit: self.globals.max_registration_deposit,
-            on_registration_sponsorship: Some(rtao::tx::SponsorshipConsent::new(move |quote| {
+            on_registration_sponsorship: Some(rtao_tx::SponsorshipConsent::new(move |quote| {
                 let approved = approved_sponsorship.as_ref() == Some(&quote);
                 async move { approved }
             })),
@@ -1458,9 +1454,9 @@ impl AppContext {
                         signing,
                         &ShieldOptions {
                             period: if control.period == Some(4) {
-                                rtao::client::ShieldPeriod::P4
+                                rtao_client::ShieldPeriod::P4
                             } else {
-                                rtao::client::ShieldPeriod::P8
+                                rtao_client::ShieldPeriod::P8
                             },
                             execute: opts.clone(),
                             ..Default::default()
@@ -1572,7 +1568,7 @@ struct ApprovalFactory<'a> {
     factory: &'a dyn crate::call::RawSignerFactory,
     selection: &'a crate::call::SigningSelection,
     wallet_name: &'a str,
-    multisig: &'a rtao::tx::Multisig,
+    multisig: &'a rtao_tx::Multisig,
 }
 struct SubmissionControl<'a> {
     mev_shield_default: Option<bool>,
@@ -1594,12 +1590,12 @@ struct SubmissionOutcome {
     dispatch_proxy: Option<AccountId>,
     shield: ShieldChoice,
     required_shield: bool,
-    receipt: rtao::tx::ExtrinsicResult,
+    receipt: rtao_tx::ExtrinsicResult,
     release_error: Option<CliError>,
     hook_error: Option<CliError>,
 }
 impl SubmissionOutcome {
-    fn into_receipt(self) -> Result<rtao::tx::ExtrinsicResult, CliError> {
+    fn into_receipt(self) -> Result<rtao_tx::ExtrinsicResult, CliError> {
         if let Some(error) = self.hook_error {
             return Err(known_receipt_error(error, &self.receipt));
         }
@@ -1614,7 +1610,7 @@ impl SubmissionOutcome {
 
 pub(crate) fn known_receipt_error(
     mut error: CliError,
-    receipt: &rtao::tx::ExtrinsicResult,
+    receipt: &rtao_tx::ExtrinsicResult,
 ) -> CliError {
     let identity = format!(
         "the transaction was already submitted{}",
@@ -1642,27 +1638,27 @@ pub(crate) fn known_receipt_error(
 /// Recovery callbacks owned by commands with sequential or durable workflows.
 pub trait SubmissionHooks: Send + Sync {
     /// Persist intent/recovery state after confirmation, before signing.
-    fn before_submit(&self) -> rtao::signer::BoxFuture<'_, Result<(), CliError>>;
+    fn before_submit(&self) -> rtao_signer::BoxFuture<'_, Result<(), CliError>>;
     /// Persist the reviewed outer call after confirmation, before acquiring an
     /// approval source or private signer. The default retains legacy hooks.
     fn before_submit_with_plan<'a>(
         &'a self,
-        _plan: &'a rtao::tx::Plan,
-    ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>> {
+        _plan: &'a rtao_tx::Plan,
+    ) -> rtao_signer::BoxFuture<'a, Result<(), CliError>> {
         self.before_submit()
     }
     /// Persist each known raw outcome exactly once, before source release,
     /// follow-up lookup or rendering can fail. It has no follow-up annotation.
     fn on_result<'a>(
         &'a self,
-        result: &'a rtao::tx::ExtrinsicResult,
-    ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>>;
+        result: &'a rtao_tx::ExtrinsicResult,
+    ) -> rtao_signer::BoxFuture<'a, Result<(), CliError>>;
     /// Update durable recovery details after multisig enrichment. This
     /// never replaces the earlier raw-receipt callback and must be idempotent.
     fn after_followup<'a>(
         &'a self,
-        _result: &'a rtao::tx::ExtrinsicResult,
-    ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>> {
+        _result: &'a rtao_tx::ExtrinsicResult,
+    ) -> rtao_signer::BoxFuture<'a, Result<(), CliError>> {
         Box::pin(async { Ok(()) })
     }
 }
@@ -1738,9 +1734,9 @@ pub trait SubmissionExecution: Send + Sync {
         &'a self,
         _client: &'a Client,
         _intent: &'a dyn DynIntent,
-        _public: &'a dyn rtao::signer::KeyView,
+        _public: &'a dyn rtao_signer::KeyView,
         _options: &'a PlanOptions,
-    ) -> rtao::signer::BoxFuture<'a, Result<Option<Box<dyn DynIntent>>, CliError>> {
+    ) -> rtao_signer::BoxFuture<'a, Result<Option<Box<dyn DynIntent>>, CliError>> {
         Box::pin(async { Ok(None) })
     }
     /// Execute the reviewed semantic target with the selected signing source.
@@ -1750,7 +1746,7 @@ pub trait SubmissionExecution: Send + Sync {
         intent: &'a dyn DynIntent,
         keys: &'a dyn DynKeySource,
         options: &'a ExecuteOptions,
-    ) -> rtao::signer::BoxFuture<'a, Result<rtao::tx::ExtrinsicResult, CliError>>;
+    ) -> rtao_signer::BoxFuture<'a, Result<rtao_tx::ExtrinsicResult, CliError>>;
 }
 fn json_truthy(value: &Value) -> bool {
     match value {
@@ -1817,7 +1813,7 @@ mod tests {
                 .pop_front()
                 .unwrap_or(Err(PromptError::Aborted))
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -1972,7 +1968,7 @@ mod tests {
     #[tokio::test]
     async fn required_child_shield_refuses_batch_before_identity_fee_or_signer_acquisition()
     -> Result<(), Box<dyn std::error::Error>> {
-        use rtao::signer::{BoxFuture, KeyView, Signer, SignerError};
+        use rtao_signer::{BoxFuture, KeyView, Signer, SignerError};
         use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
         use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -2001,8 +1997,7 @@ mod tests {
             }
         }
         let chain = FakeChain::from_state(FakeState::try_default()?);
-        let mut config =
-            ClientConfig::new(rtao::client::Network::resolve_with("local", |_| None)?)?;
+        let mut config = ClientConfig::new(rtao_client::Network::resolve_with("local", |_| None)?)?;
         config.track_heads = false;
         config.runtime_cache_dir = None;
         config.config_store = None;
@@ -2111,10 +2106,8 @@ mod tests {
     #[tokio::test]
     async fn real_hotkey_batch_preview_uses_hotkey_payer_without_coldkey_access_or_unlock()
     -> Result<(), Box<dyn std::error::Error>> {
-        use rtao::{
-            client::Network,
-            signer::{BoxFuture, KeyView, Signer, SignerError},
-        };
+        use rtao_client::Network;
+        use rtao_signer::{BoxFuture, KeyView, Signer, SignerError};
         use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
         use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -2309,14 +2302,14 @@ pub trait ExternalSignerFactory: Send + Sync {
         &'a self,
         globals: &'a Globals,
         role: SignerRole,
-    ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>>;
+    ) -> rtao_signer::BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>>;
     /// Report a completed or failed external session, then release its UI.
     fn release<'a>(
         &'a self,
         _globals: &'a Globals,
         _keys: &'a dyn DynKeySource,
         _success: bool,
-    ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>> {
+    ) -> rtao_signer::BoxFuture<'a, Result<(), CliError>> {
         Box::pin(async { Ok(()) })
     }
 }
@@ -2325,7 +2318,7 @@ pub trait ExternalSignerFactory: Send + Sync {
 #[derive(Clone)]
 pub struct CliWalletKeys {
     wallet: Wallet,
-    hotkey: rtao::wallet::HotkeyFile,
+    hotkey: rtao_wallet::HotkeyFile,
     output: Output,
 }
 impl CliWalletKeys {
@@ -2372,34 +2365,34 @@ impl CliWalletKeys {
     async fn unlock(
         &self,
         role: SignerRole,
-    ) -> Result<Arc<dyn rtao::signer::Signer>, rtao::wallet::WalletError> {
+    ) -> Result<Arc<dyn rtao_signer::Signer>, rtao_wallet::WalletError> {
         for attempts_left in [2, 1, 0] {
             let result = match role {
                 SignerRole::Coldkey => self.wallet.unlock_coldkey().await,
                 SignerRole::Hotkey => self.hotkey.unlock().await,
             };
             match result {
-                Err(rtao::wallet::WalletError::WrongPassword {
-                    source: rtao::wallet::PasswordSource::Prompt,
+                Err(rtao_wallet::WalletError::WrongPassword {
+                    source: rtao_wallet::PasswordSource::Prompt,
                 }) if role == SignerRole::Coldkey && attempts_left > 0 => {
                     self.output.message("error: wrong password").map_err(|_| {
-                        rtao::wallet::WalletError::NativePassword("password diagnostic failed")
+                        rtao_wallet::WalletError::NativePassword("password diagnostic failed")
                     })?;
                 }
                 result => return result,
             }
         }
-        Err(rtao::wallet::WalletError::PasswordRequired)
+        Err(rtao_wallet::WalletError::PasswordRequired)
     }
 }
-impl rtao::signer::KeyView for CliWalletKeys {
-    fn hotkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+impl rtao_signer::KeyView for CliWalletKeys {
+    fn hotkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         self.wallet.hotkey_address()
     }
-    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao::signer::SignerError> {
+    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao_signer::SignerError> {
         self.wallet.hotkey_public_key()
     }
-    fn coldkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+    fn coldkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         self.wallet.coldkey_address()
     }
     fn hotkey_descriptor(&self) -> Option<Vec<u8>> {
@@ -2416,7 +2409,7 @@ impl DynKeySource for CliWalletKeys {
     fn signer_for<'a>(
         &'a self,
         role: SignerRole,
-    ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn rtao::signer::Signer>, rtao::signer::SignerError>>
+    ) -> rtao_signer::BoxFuture<'a, Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>>
     {
         Box::pin(async move {
             self.unlock(role)
@@ -2429,13 +2422,13 @@ impl DynKeySource for CliWalletKeys {
 // py: sdk/python/bittensor/cli/context.py:1900-1945
 // Resolve remediation before the typed password source crosses the signer seam.
 pub(crate) fn wallet_key_error(
-    error: rtao::wallet::WalletError,
+    error: rtao_wallet::WalletError,
     role: SignerRole,
-) -> rtao::signer::SignerError {
-    use rtao::wallet::{PasswordSource, WalletError};
+) -> rtao_signer::SignerError {
+    use rtao_wallet::{PasswordSource, WalletError};
 
     let WalletError::WrongPassword { source } = &error else {
-        return rtao::signer::SignerError::KeyView(error.to_string());
+        return rtao_signer::SignerError::KeyView(error.to_string());
     };
     let help = match source {
         PasswordSource::Prompt => {
@@ -2456,7 +2449,7 @@ pub(crate) fn wallet_key_error(
             format!("supply the {role} password used when the key was created")
         }
     };
-    rtao::signer::SignerError::WithHelp {
+    rtao_signer::SignerError::WithHelp {
         message: error.to_string(),
         help,
     }
@@ -2530,7 +2523,7 @@ pub trait ConnectionFactory: Send + Sync {
     fn connect<'a>(
         &'a self,
         config: ClientConfig,
-    ) -> rtao::signer::BoxFuture<'a, Result<Client, CliError>>;
+    ) -> rtao_signer::BoxFuture<'a, Result<Client, CliError>>;
 }
 /// The normal WebSocket client connector.
 #[derive(Clone, Copy, Debug, Default)]
@@ -2539,7 +2532,7 @@ impl ConnectionFactory for NetworkConnector {
     fn connect<'a>(
         &'a self,
         config: ClientConfig,
-    ) -> rtao::signer::BoxFuture<'a, Result<Client, CliError>> {
+    ) -> rtao_signer::BoxFuture<'a, Result<Client, CliError>> {
         Box::pin(async move { Client::connect(config).await.map_err(CliError::from) })
     }
 }
@@ -2551,7 +2544,7 @@ impl AppContext {
         root: &clap::ArgMatches,
         command: &clap::ArgMatches,
         reserved: &[&str],
-        store: &rtao::client::config::Store,
+        store: &rtao_client::config::Store,
         home: &std::path::Path,
         env: impl Fn(&str) -> Option<String>,
         terminal: crate::prompt::SharedTerminal,
@@ -2650,7 +2643,7 @@ impl AppContext {
             } else {
                 let source = client.clone();
                 Some(SubnetNamesTask(tokio::spawn(async move {
-                    rtao::reads::generated::interfaces::subnet_names(&source).await
+                    rtao_reads::generated::interfaces::subnet_names(&source).await
                 })))
             };
             self.ensure_not_interrupted()?;
@@ -2838,7 +2831,7 @@ impl AppContext {
             ))
         })?;
         Ok(Some(
-            if rtao::primitives::receiving::is_receiving_address(&resolved.address) {
+            if rtao_primitives::receiving::is_receiving_address(&resolved.address) {
                 resolved.address
             } else {
                 account.to_string()
@@ -2855,7 +2848,7 @@ impl AppContext {
         replay: Option<&str>,
         external: Option<&dyn ExternalSignerFactory>,
         history: &mut crate::prompt::PromptHistory,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         self.submit_with_options(
             client,
             intent,
@@ -2880,7 +2873,7 @@ impl AppContext {
         options: SubmissionOptions<'_>,
         external: Option<&dyn ExternalSignerFactory>,
         history: &mut crate::prompt::PromptHistory,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         if let Some(review) = options.review {
             review.validate(intent)?;
         }
@@ -3015,8 +3008,8 @@ impl AppContext {
     /// external signer, and Vault signs standard Sr25519/Ed25519 keys only.
     pub fn external_signer_account(
         &self,
-    ) -> Result<Option<(AccountId, rtao::primitives::CryptoType)>, CliError> {
-        use rtao::primitives::CryptoType;
+    ) -> Result<Option<(AccountId, rtao_primitives::CryptoType)>, CliError> {
+        use rtao_primitives::CryptoType;
         if !self.globals.uses_external_signer() {
             return Ok(None);
         }
@@ -3024,7 +3017,7 @@ impl AppContext {
         let lookup = FsAccountLookup::new(self.globals.wallet_path.clone())
             .map_err(|e| CliError::failure(e.to_string()))?;
         let refuse_receiving = |address: &str| -> CliError {
-            if let Err(error) = rtao::primitives::receiving::parse_recipient(address) {
+            if let Err(error) = rtao_primitives::receiving::parse_recipient(address) {
                 return CliError::input(error.to_string());
             }
             CliError::input(if vault {
@@ -3035,7 +3028,7 @@ impl AppContext {
         };
         let wallet = |name: &str| -> Result<Option<(AccountId, CryptoType)>, CliError> {
             let Ok(reference) =
-                rtao::wallet::WalletRef::new(name, "default", lookup.root().to_owned())
+                rtao_wallet::WalletRef::new(name, "default", lookup.root().to_owned())
             else {
                 return Ok(None);
             };
@@ -3048,7 +3041,7 @@ impl AppContext {
             Ok(Some((info.account, info.crypto_type)))
         };
         let resolve = |value: &str| -> Result<Option<(AccountId, CryptoType)>, CliError> {
-            if rtao::primitives::receiving::is_receiving_address(value) {
+            if rtao_primitives::receiving::is_receiving_address(value) {
                 return Err(refuse_receiving(value));
             }
             if crate::books::is_bittensor_address(value) {
@@ -3060,7 +3053,7 @@ impl AppContext {
             if let Some(entry) = self.books.address_entry(value)
                 && let Some(address) = entry.get("address").and_then(Value::as_str)
             {
-                if rtao::primitives::receiving::is_receiving_address(address) {
+                if rtao_primitives::receiving::is_receiving_address(address) {
                     return Err(refuse_receiving(address));
                 }
                 if let Ok(account) = address.parse() {
@@ -3099,8 +3092,8 @@ impl AppContext {
     }
 }
 
-type SubnetNameMap = std::collections::BTreeMap<rtao::primitives::NetUid, String>;
-struct SubnetNamesTask(tokio::task::JoinHandle<Result<SubnetNameMap, rtao::reads::ReadError>>);
+type SubnetNameMap = std::collections::BTreeMap<rtao_primitives::NetUid, String>;
+struct SubnetNamesTask(tokio::task::JoinHandle<Result<SubnetNameMap, rtao_reads::ReadError>>);
 impl Drop for SubnetNamesTask {
     fn drop(&mut self) {
         self.0.abort();
@@ -3108,14 +3101,14 @@ impl Drop for SubnetNamesTask {
 }
 
 struct PublicApprovalKeys(AccountId);
-impl rtao::signer::KeyView for PublicApprovalKeys {
-    fn coldkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+impl rtao_signer::KeyView for PublicApprovalKeys {
+    fn coldkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         Ok(self.0)
     }
-    fn hotkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+    fn hotkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         Ok(self.0)
     }
-    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao::signer::SignerError> {
+    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao_signer::SignerError> {
         Ok(self.0.0)
     }
 }
@@ -3123,10 +3116,10 @@ impl DynKeySource for PublicApprovalKeys {
     fn signer_for<'a>(
         &'a self,
         _: SignerRole,
-    ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn rtao::signer::Signer>, rtao::signer::SignerError>>
+    ) -> rtao_signer::BoxFuture<'a, Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>>
     {
         Box::pin(async {
-            Err(rtao::signer::SignerError::KeyView(
+            Err(rtao_signer::SignerError::KeyView(
                 "public approval view cannot sign".into(),
             ))
         })
@@ -3169,7 +3162,7 @@ impl crate::call::RawSignerFactory for ExternalRoundFactory<'_> {
         &'a self,
         ctx: &'a AppContext,
         selection: &'a crate::call::SigningSelection,
-    ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
+    ) -> rtao_signer::BoxFuture<'a, Result<Arc<dyn DynKeySource>, CliError>> {
         Box::pin(async move {
             if crate::globals::normalize_signer_backend(&selection.backend) == "wallet" {
                 return crate::call::RawSignerFactory::source(
@@ -3198,7 +3191,7 @@ impl crate::call::RawSignerFactory for ExternalRoundFactory<'_> {
         selection: &'a crate::call::SigningSelection,
         source: &'a dyn DynKeySource,
         success: bool,
-    ) -> rtao::signer::BoxFuture<'a, Result<(), CliError>> {
+    ) -> rtao_signer::BoxFuture<'a, Result<(), CliError>> {
         Box::pin(async move {
             let globals = self
                 .active
@@ -3223,7 +3216,7 @@ impl AppContext {
         replay: Option<&str>,
         factory: &dyn crate::call::RawSignerFactory,
         cache: &dyn crate::call::RawCallCache,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         self.submit_saved_with_options(
             client,
             intent,
@@ -3248,7 +3241,7 @@ impl AppContext {
         options: SubmissionOptions<'_>,
         factory: &dyn crate::call::RawSignerFactory,
         cache: &dyn crate::call::RawCallCache,
-    ) -> Result<Option<rtao::tx::ExtrinsicResult>, CliError> {
+    ) -> Result<Option<rtao_tx::ExtrinsicResult>, CliError> {
         use crate::call::MultisigFollowup;
         if let Some(review) = options.review {
             review.validate(intent)?;
@@ -3256,7 +3249,7 @@ impl AppContext {
         let raw = crate::call::resolve_preset(self, &self.globals.wallet_name)?;
         let rounds = crate::call::plan_rounds(self, Some(&raw), SignerRole::Coldkey, None)?;
         // Each round's review decides its Shield route (D-159).
-        let group = rtao::Executor::new(client.clone())
+        let group = rtao_intents::executor(client.clone())
             .with_auto_shield(false)
             .multisig_with_mode(&raw.signatories, raw.threshold, raw.account_mode)
             .await
@@ -3284,7 +3277,7 @@ impl AppContext {
         }
         let mut inner: Option<crate::multisig::ReviewedInnerCall> = None;
         let mut opening: Option<rtao_runtime::models::MultisigTimepoint> = None;
-        let mut last: Option<(rtao::tx::ExtrinsicResult, ShieldChoice, bool)> = None;
+        let mut last: Option<(rtao_tx::ExtrinsicResult, ShieldChoice, bool)> = None;
         let attempt = async {
             for (index, selection) in rounds.iter().enumerate() {
                 if let Some((receipt, ..)) = &last {
@@ -3321,9 +3314,9 @@ impl AppContext {
                         .ok()
                         .and_then(|wallet| wallet.public_info(SignerRole::Coldkey).ok())
                         .map(|info| info.crypto_type)
-                        .unwrap_or(rtao::primitives::CryptoType::Sr25519)
+                        .unwrap_or(rtao_primitives::CryptoType::Sr25519)
                     } else {
-                        rtao::primitives::CryptoType::Sr25519
+                        rtao_primitives::CryptoType::Sr25519
                     };
                 let adapter = crate::multisig::SemanticMultisig::new(
                     intent,

@@ -3,10 +3,6 @@
 // Additional sources at the same commit/license: sdk/python/bittensor/cli/commands/root_move.py, sdk/python/bittensor/cli/commands/root_swap.py, sdk/python/bittensor/cli/root_helpers.py.
 //! Root commands prepare real intents over metadata-backed fake transports.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    primitives::AccountId,
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -19,6 +15,8 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_primitives::AccountId;
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
 use serde_json::{Value, json};
 use std::{
@@ -95,7 +93,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -116,7 +114,7 @@ impl Terminal for ScriptTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         self.answers.pop_front().ok_or(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, message: &str) -> Result<(), PromptError> {
@@ -427,27 +425,27 @@ fn interactive_explicit_position_owner_selects_its_local_signing_wallet() -> Tes
 }
 
 struct PublicReviewKeys(AtomicU64);
-impl rtao::signer::KeyView for PublicReviewKeys {
-    fn coldkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+impl rtao_signer::KeyView for PublicReviewKeys {
+    fn coldkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         Ok(OWNER)
     }
-    fn hotkey_address(&self) -> Result<AccountId, rtao::signer::SignerError> {
+    fn hotkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
         Ok(HOT)
     }
-    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao::signer::SignerError> {
+    fn hotkey_public_key(&self) -> Result<[u8; 32], rtao_signer::SignerError> {
         Ok(HOT.0)
     }
 }
-impl rtao::signer::DynKeySource for PublicReviewKeys {
+impl rtao_signer::DynKeySource for PublicReviewKeys {
     fn signer_for<'a>(
         &'a self,
-        _: rtao::signer::SignerRole,
-    ) -> rtao::signer::BoxFuture<'a, Result<Arc<dyn rtao::signer::Signer>, rtao::signer::SignerError>>
+        _: rtao_signer::SignerRole,
+    ) -> rtao_signer::BoxFuture<'a, Result<Arc<dyn rtao_signer::Signer>, rtao_signer::SignerError>>
     {
         self.0.fetch_add(1, Ordering::SeqCst);
         Box::pin(async {
-            Err(rtao::signer::SignerError::KeyUnavailable(
-                rtao::signer::SignerRole::Coldkey,
+            Err(rtao_signer::SignerError::KeyUnavailable(
+                rtao_signer::SignerRole::Coldkey,
             ))
         })
     }
@@ -889,7 +887,7 @@ async fn move_picker_retains_selected_name_and_only_reloads_required_identities(
                 .map_err(|_| PromptError::Io)?;
             Ok(answer)
         }
-        fn read_secret(&mut self, label: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, label: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             self.inner.read_secret(label)
         }
         fn message(&mut self, message: &str) -> Result<(), PromptError> {
@@ -1917,7 +1915,7 @@ async fn swap_quotes_both_legs_sets_destination_floor_and_keeps_all_sentinel() -
 #[tokio::test]
 async fn root_decimal_spellings_prepare_exact_typed_amounts_and_identical_quote_inputs()
 -> TestResult {
-    use rtao::primitives::{Money, NetUid, ResolvedAmount};
+    use rtao_primitives::{Money, NetUid, ResolvedAmount};
     let (client, chain) = client(seed()?).await?;
     let hotkey = HOT.to_string();
     let mut canonical_quotes = std::collections::BTreeMap::<u64, Vec<Value>>::new();
@@ -2060,7 +2058,7 @@ async fn root_decimal_spellings_prepare_exact_typed_amounts_and_identical_quote_
 #[test]
 fn root_decimal_boundary_retains_native_refusals_budgets_and_strict_money_constructors()
 -> TestResult {
-    use rtao::primitives::{Amount, Money};
+    use rtao_primitives::{Amount, Money};
     let hotkey = HOT.to_string();
     let mut refused = [
         "-1",
@@ -2447,10 +2445,10 @@ async fn human_lists_preserve_percentages_fund_notes_dust_and_detail_returns() -
 // accounts, and a claim's hotkey is an identity.
 #[tokio::test]
 async fn root_move_and_allocate_keep_receiving_validators_and_claim_reduces_them() -> TestResult {
-    use rtao::core::keys::{CRYPTO_HASHED, Keypair, encode_hashed_receiving_address};
+    use rtao_core::keys::{CRYPTO_HASHED, Keypair, encode_hashed_receiving_address};
     let key = Keypair::from_seed(&[19; 32], CRYPTO_HASHED)?;
     let receiving = encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
-    let account = rtao::primitives::receiving::parse_recipient(&receiving)?.account;
+    let account = rtao_primitives::receiving::parse_recipient(&receiving)?.account;
     let owner = OWNER.to_string();
     let hotkey = HOT.to_string();
     // Move to a receiving destination.
@@ -2478,7 +2476,7 @@ async fn root_move_and_allocate_keep_receiving_validators_and_claim_reduces_them
     // A receiving spelling of the same validator is still the same validator.
     let key_hot = Keypair::from_seed(&[20; 32], CRYPTO_HASHED)?;
     let receiving_hot = encode_hashed_receiving_address(&key_hot.hashed_descriptor()?)?;
-    let hot_account = rtao::primitives::receiving::parse_recipient(&receiving_hot)?.account;
+    let hot_account = rtao_primitives::receiving::parse_recipient(&receiving_hot)?.account;
     let parsed = parse(&[
         "rtao",
         "root",

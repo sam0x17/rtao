@@ -253,7 +253,7 @@ fn steps(root: &Path, job: &str, plan: &str, baseline: Option<&str>) -> Result<V
                 "--features",
                 "full",
             ]),
-            cargo(&["+1.90", "check", "--locked", "-p", "rtao-cli"]),
+            cargo(&["+1.90", "check", "--locked", "-p", "rtao"]),
         ],
         "features" => {
             let mut steps = vec![

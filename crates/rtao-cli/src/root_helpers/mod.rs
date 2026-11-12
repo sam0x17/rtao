@@ -6,10 +6,8 @@ pub mod basket_index;
 pub mod basket_index_data;
 
 use crate::error::CliError;
-use rtao::{
-    client::{BlockRef, Client},
-    primitives::{AccountId, DynBalance, NetUid},
-};
+use rtao_client::{BlockRef, Client};
+use rtao_primitives::{AccountId, DynBalance, NetUid};
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -38,7 +36,7 @@ impl RootPosition {
     }
     /// Yield since the last claim relative to principal.
     pub fn return_pct(&self) -> Option<f64> {
-        rtao::primitives::ratio::integer_division(i128::from(self.accrued.rao), self.staked.rao)
+        rtao_primitives::ratio::integer_division(i128::from(self.accrued.rao), self.staked.rao)
     }
     /// Python-compatible public position record.
     pub fn as_record(&self) -> Result<serde_json::Value, CliError> {
@@ -61,10 +59,10 @@ pub async fn fetch_root_positions(
     owner: AccountId,
 ) -> Result<Vec<RootPosition>, CliError> {
     let snapshot = client.at(BlockRef::Best).await.map_err(CliError::from)?;
-    let stakes = rtao::reads::reads::m6_staking::stake_for_coldkey(&snapshot, owner)
+    let stakes = rtao_reads::reads::m6_staking::stake_for_coldkey(&snapshot, owner)
         .await
         .map_err(CliError::from)?;
-    let owed = rtao::reads::reads::m6_root::root_basket_owed_breakdown(&snapshot, owner)
+    let owed = rtao_reads::reads::m6_root::root_basket_owed_breakdown(&snapshot, owner)
         .await
         .map_err(CliError::from)?;
     // Python dict comprehensions retain the last duplicate, rather than summing.

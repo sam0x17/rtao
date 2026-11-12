@@ -33,8 +33,8 @@ export PKG_CONFIG_LIBDIR_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pk
 started=$(date +%s)
 # rtao doctor's offline Cargo metadata needs every locked package cached.
 cargo fetch --locked
-cargo build --locked --release -p rtao-cli --target "$target"
-cargo test --locked -p rtao-cli --target "$target"
+cargo build --locked --release -p rtao --bin rtao --target "$target"
+cargo test --locked -p rtao-cli -p rtao --target "$target"
 cargo check --locked -p rtao --all-features --target "$target"
 cargo nextest run --locked --workspace --all-features --profile ci --target "$target"
 binary="$CARGO_TARGET_DIR/$target/release/rtao"

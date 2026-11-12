@@ -1,10 +1,5 @@
 //! Wallet accounting and read-only dispatch through authenticated metadata and FakeChain.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec},
-    primitives::AccountId,
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -14,6 +9,9 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
+use rtao_primitives::AccountId;
 use rtao_testkit::{
     FakeChain, FakeState,
     fakes::{RpcRequest, json_to_core},
@@ -47,7 +45,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {

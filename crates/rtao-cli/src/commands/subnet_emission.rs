@@ -34,13 +34,11 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgMatches, Command};
-use rtao::{
-    client::{BlockRef, Client, Inclusion},
-    primitives::{H256, NetUid, emission_weights as ew, pyfmt::fmt_grouped},
-    reads::reads::subnets::{SubnetEmissionWeights, subnet_emission_weights},
-    tx::ExtrinsicResult,
-};
+use rtao_client::{BlockRef, Client, Inclusion};
 use rtao_intents::SetSubnetEmissionWeights;
+use rtao_primitives::{H256, NetUid, emission_weights as ew, pyfmt::fmt_grouped};
+use rtao_reads::reads::subnets::{SubnetEmissionWeights, subnet_emission_weights};
+use rtao_tx::ExtrinsicResult;
 use serde_json::{Value, json};
 use std::time::Duration;
 
@@ -552,11 +550,11 @@ async fn submit(
         values: slots.iter().map(|slot| json!(proposed[*slot])).collect(),
         renormalize,
     };
-    rtao::tx::Intent::validate(&intent).map_err(|error| CliError::input(error.to_string()))?;
+    rtao_tx::Intent::validate(&intent).map_err(|error| CliError::input(error.to_string()))?;
     let preview = ew::preview(&info.weights, proposed, &info.root_inputs());
     let review = CommandReview::new(
         &intent,
-        rtao::tx::Intent::summary(&intent),
+        rtao_tx::Intent::summary(&intent),
         vec![ReviewSection {
             title: "Emission weights".into(),
             rows: card(info, &preview),
@@ -631,7 +629,7 @@ fn applied_weights(receipt: &ExtrinsicResult, netuid: NetUid) -> Option<ew::Weig
         .rev()
         .filter(|event| event.matches("SubtensorModule", "SubnetEmissionWeightsSet"))
         .find_map(|event| {
-            let attributes = rtao::core::DynValue::new(event.attributes.clone()).to_json();
+            let attributes = rtao_core::DynValue::new(event.attributes.clone()).to_json();
             if attributes.get("netuid")?.as_u64()? != u64::from(netuid.0) {
                 return None;
             }
@@ -643,7 +641,7 @@ fn applied_weights(receipt: &ExtrinsicResult, netuid: NetUid) -> Option<ew::Weig
 
 /// Wait until the endpoint that reported `block` finalizes its height, and
 /// say whether `block` is the block finalized there.
-async fn finalizes(client: &Client, block: H256) -> Result<bool, rtao::client::ClientError> {
+async fn finalizes(client: &Client, block: H256) -> Result<bool, rtao_client::ClientError> {
     let chain = client.receipt_client().await?;
     let number = chain.at(BlockRef::Hash(block)).await?.block().number;
     loop {

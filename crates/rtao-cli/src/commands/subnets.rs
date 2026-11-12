@@ -12,13 +12,11 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::{BlockRef, Client, ViewExt},
-    primitives::{AccountId, NetUid, hyperparams::RawInteger, ratio::integer_division},
-    reads::ReadName,
-    tx::ExtrinsicResult,
-};
+use rtao_client::{BlockRef, Client, ViewExt};
 use rtao_intents::pow::{PowConfig, PowSolver};
+use rtao_primitives::{AccountId, NetUid, hyperparams::RawInteger, ratio::integer_division};
+use rtao_reads::ReadName;
+use rtao_tx::ExtrinsicResult;
 use serde_json::{Map, Value, json};
 use std::{
     collections::BTreeMap,
@@ -434,7 +432,7 @@ async fn execute_inspect(
     client: &Client,
     request: &InspectRequest,
 ) -> Result<(), CliError> {
-    use rtao::reads::reads::{m6_locks, m6_root, m6_staking, owner};
+    use rtao_reads::reads::{m6_locks, m6_root, m6_staking, owner};
     use rtao_runtime::storage::subtensor_module as st;
     let at = client
         .at(request.block.map_or(BlockRef::Best, BlockRef::Number))
@@ -486,7 +484,7 @@ async fn execute_inspect(
                 }
                 (
                     "burn_cost",
-                    rtao::primitives::DynBalance::from_rao(
+                    rtao_primitives::DynBalance::from_rao(
                         at.storage(&st::BURN, (netuid,))
                             .await
                             .map_err(CliError::from)?
@@ -534,7 +532,7 @@ async fn execute_inspect(
                 ))
                 .await
                 .map_err(CliError::from)?;
-            let state = rtao::reads::reads::lifecycle::subnet_state(&at, netuid)
+            let state = rtao_reads::reads::lifecycle::subnet_state(&at, netuid)
                 .await
                 .map_err(CliError::from)?;
             if state.is_none() {
@@ -543,7 +541,7 @@ async fn execute_inspect(
             let info = m6_root::SubnetInfo {
                 netuid,
                 tempo,
-                burn: rtao::primitives::DynBalance::from_rao(burn.0, NetUid::ROOT),
+                burn: rtao_primitives::DynBalance::from_rao(burn.0, NetUid::ROOT),
                 neuron_count,
                 state,
                 pool_emission_enabled,
@@ -673,7 +671,7 @@ async fn execute_inspect(
                     .checked_mul(7200)
                     .ok_or_else(|| failure("daily emission exceeds native u64 balance"))?;
                 let emission =
-                    rtao::primitives::DynBalance::from_rao(emission, NetUid::ROOT).amount();
+                    rtao_primitives::DynBalance::from_rao(emission, NetUid::ROOT).amount();
                 let price = prices
                     .get(&i.netuid)
                     .copied()
@@ -849,7 +847,7 @@ pub fn conviction_eta(blocks: Option<u128>) -> String {
 /// Render all locks in JSON while applying the Python dust cutoff only to human rows.
 pub fn render_convictions(
     output: &Output,
-    data: &rtao::reads::reads::m6_locks::SubnetConvictions,
+    data: &rtao_reads::reads::m6_locks::SubnetConvictions,
     all: bool,
 ) -> Result<(), CliError> {
     render_convictions_named(output, data, all, &BTreeMap::new())
@@ -857,7 +855,7 @@ pub fn render_convictions(
 
 fn render_convictions_named(
     output: &Output,
-    data: &rtao::reads::reads::m6_locks::SubnetConvictions,
+    data: &rtao_reads::reads::m6_locks::SubnetConvictions,
     all: bool,
     names: &BTreeMap<String, String>,
 ) -> Result<(), CliError> {
@@ -1032,7 +1030,7 @@ fn render_convictions_named(
 fn raw_text(value: &Value) -> String {
     fn repr(value: &Value) -> String {
         match value {
-            Value::String(value) => rtao::primitives::pyfmt::string_repr(value),
+            Value::String(value) => rtao_primitives::pyfmt::string_repr(value),
             _ => raw_text(value),
         }
     }
@@ -1051,7 +1049,7 @@ fn raw_text(value: &Value) -> String {
                 .iter()
                 .map(|(key, value)| format!(
                     "{}: {}",
-                    rtao::primitives::pyfmt::string_repr(key),
+                    rtao_primitives::pyfmt::string_repr(key),
                     repr(value)
                 ))
                 .collect::<Vec<_>>()
@@ -1128,13 +1126,13 @@ pub fn render_metagraph(
         ))
     };
     let graph_balance = |rao, subnet| {
-        let mut balance = rtao::primitives::DynBalance::from_rao(rao, subnet);
+        let mut balance = rtao_primitives::DynBalance::from_rao(rao, subnet);
         if subnet != NetUid::ROOT {
             balance.symbol = graph
                 .get("symbol")
                 .and_then(Value::as_str)
                 .filter(|symbol| !symbol.is_empty())
-                .map(|symbol| rtao::primitives::Symbol::new(symbol.to_owned()));
+                .map(|symbol| rtao_primitives::Symbol::new(symbol.to_owned()));
         }
         balance
     };
@@ -1433,7 +1431,7 @@ pub async fn execute(
                 .at(request.block.map_or(BlockRef::Best, BlockRef::Number))
                 .await
                 .map_err(CliError::from)?;
-            let graph = rtao::reads::dispatch(&at, request.name, &request.params)
+            let graph = rtao_reads::dispatch(&at, request.name, &request.params)
                 .await
                 .map_err(CliError::from)?;
             let netuid =

@@ -258,7 +258,7 @@ impl<R: ProcessRunner> MacosPasswords<R> {
                     &format!("Unlock {wallet_name} coldkey"),
                     &format!(
                         "Enter the password for wallet {}.",
-                        rtao::primitives::pyfmt::string_repr(wallet_name)
+                        rtao_primitives::pyfmt::string_repr(wallet_name)
                     ),
                 )
                 .await
@@ -284,7 +284,7 @@ impl fmt::Display for NativePasswordError {
             Self::MissingKeychain(name) => write!(
                 f,
                 "no Keychain password for wallet {}; run `rtao wallet keychain save -w {name}`",
-                rtao::primitives::pyfmt::string_repr(name)
+                rtao_primitives::pyfmt::string_repr(name)
             ),
             Self::Native(error) => error.fmt(f),
         }
@@ -313,7 +313,7 @@ impl<R: ProcessRunner> NativePasswordAdapter<R> {
         self.native.into_inner()
     }
 }
-fn wallet_error(error: MacosPasswordError) -> rtao::wallet::WalletError {
+fn wallet_error(error: MacosPasswordError) -> rtao_wallet::WalletError {
     let message = match error {
         MacosPasswordError::DialogUnavailable => "macOS password dialog is only available on macOS",
         MacosPasswordError::KeychainUnavailable => "macOS Keychain is only available on macOS",
@@ -325,13 +325,13 @@ fn wallet_error(error: MacosPasswordError) -> rtao::wallet::WalletError {
         MacosPasswordError::InvalidEncoding => "password subprocess returned invalid UTF-8",
         MacosPasswordError::AccessFailed => "could not access macOS Keychain",
     };
-    rtao::wallet::WalletError::NativePassword(message)
+    rtao_wallet::WalletError::NativePassword(message)
 }
-impl<R: ProcessRunner> rtao::wallet::NativePasswordProvider for NativePasswordAdapter<R> {
+impl<R: ProcessRunner> rtao_wallet::NativePasswordProvider for NativePasswordAdapter<R> {
     fn keychain_load<'a>(
         &'a self,
         wallet_name: &'a str,
-    ) -> rtao::wallet::NativePasswordFuture<'a, Option<SecretString>> {
+    ) -> rtao_wallet::NativePasswordFuture<'a, Option<SecretString>> {
         Box::pin(async move {
             self.native
                 .lock()
@@ -345,7 +345,7 @@ impl<R: ProcessRunner> rtao::wallet::NativePasswordProvider for NativePasswordAd
         &'a self,
         title: &'a str,
         message: &'a str,
-    ) -> rtao::wallet::NativePasswordFuture<'a, SecretString> {
+    ) -> rtao_wallet::NativePasswordFuture<'a, SecretString> {
         Box::pin(async move {
             self.native
                 .lock()
@@ -625,7 +625,7 @@ mod tests {
     // parent test removes only password variables in a separate process; no
     // keyfile, encryption, real Keychain or dialog process is needed.
     async fn deferred_adapter_wallet_resolution() {
-        use rtao::wallet::{PasswordSources, Wallet, WalletError, resolve_wallet_password};
+        use rtao_wallet::{PasswordSources, Wallet, WalletError, resolve_wallet_password};
         use std::sync::{
             Arc,
             atomic::{AtomicUsize, Ordering},
@@ -849,7 +849,7 @@ mod tests {
         assert_eq!(native.into_runner().seen.len(), 1);
 
         let wallet =
-            rtao::wallet::Wallet::new("native-resolution", "default", "native-password-fixture")
+            rtao_wallet::Wallet::new("native-resolution", "default", "native-password-fixture")
                 .unwrap();
         let child = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
@@ -860,7 +860,7 @@ mod tests {
             .env(CHILD, "1")
             .env_remove("BT_WALLET_PASSWORD")
             .env_remove("BT_WALLET_PASSWORD_FILE")
-            .env_remove(rtao::wallet::env_var_name(wallet.coldkey_file().path()))
+            .env_remove(rtao_wallet::env_var_name(wallet.coldkey_file().path()))
             .stdin(std::process::Stdio::null())
             .output()
             .unwrap();

@@ -9,7 +9,9 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgMatches, Command};
-use rtao::{client::Client, primitives::AccountId, reads::ReadName};
+use rtao_client::Client;
+use rtao_primitives::AccountId;
+use rtao_reads::ReadName;
 use serde_json::{Map, Value, json};
 
 fn netuid() -> Arg {
@@ -138,16 +140,16 @@ pub async fn execute_prepared_read(
     let netuid = request.netuid;
     let mut params = Map::from_iter([("netuid".into(), json!(netuid))]);
     let data = match request.position {
-        None => rtao::reads::dispatch(client, ReadName::SubnetCollateral, &params)
+        None => rtao_reads::dispatch(client, ReadName::SubnetCollateral, &params)
             .await
             .map_err(CliError::from)?,
         Some((hotkey, coldkey)) => {
             params.insert("hotkey_ss58".into(), json!(hotkey));
             params.insert("coldkey_ss58".into(), json!(coldkey));
-            let collateral = rtao::reads::dispatch(client, ReadName::MinerCollateral, &params)
+            let collateral = rtao_reads::dispatch(client, ReadName::MinerCollateral, &params)
                 .await
                 .map_err(CliError::from)?;
-            let policy = rtao::reads::dispatch(
+            let policy = rtao_reads::dispatch(
                 client,
                 ReadName::CollateralPolicy,
                 &Map::from_iter([("netuid".into(), json!(netuid))]),

@@ -3,7 +3,7 @@
 //! native checked balances; only display ratios use floating point.
 use super::basket_index_data::{BASELINES, INDEX, TR_INDEX};
 pub use super::basket_index_data::{EPOCH_BLOCK, GENERATED_BLOCK};
-use rtao::reads::reads::owner::{ChainPricing, ValidatorBasketSummary};
+use rtao_reads::reads::owner::{ChainPricing, ValidatorBasketSummary};
 use serde::Serialize;
 
 /// Frozen or provisional divisor for a fund.
@@ -246,7 +246,7 @@ pub fn normalize_positions(rows: &[Fund]) -> (f64, Vec<Normalized>) {
 /// Signed elapsed days at twelve seconds per block, including historical views.
 pub fn age_days(first: Option<u64>, current: u64) -> Option<f64> {
     first.and_then(|first| {
-        rtao::primitives::ratio::integer_division(i128::from(current) - i128::from(first), 7200)
+        rtao_primitives::ratio::integer_division(i128::from(current) - i128::from(first), 7200)
     })
 }
 
@@ -316,7 +316,7 @@ mod tests {
     fn runtime_prices_override_fallback_and_mixed_boards_share_runtime_levels() {
         let mut canonical = row("canonical");
         canonical.chain_pricing = Some(ChainPricing {
-            hotkey: rtao::primitives::AccountId([1; 32]),
+            hotkey: rtao_primitives::AccountId([1; 32]),
             spot_price: 12.0,
             display_price: 3.0,
             stake_price: 5.0,

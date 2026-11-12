@@ -5,7 +5,7 @@
 use std::{future::Future, pin::Pin};
 
 use clap::{Arg, ArgMatches, Command};
-use rtao::evm::{ContractArtifact, Precompile};
+use rtao_evm::{ContractArtifact, Precompile};
 use serde_json::{Map, Value, json};
 
 use crate::{
@@ -112,7 +112,7 @@ pub(super) fn arguments(leaf: &ArgMatches) -> Result<Vec<Value>, CliError> {
         total = total
             .checked_add(raw.len())
             .ok_or_else(|| input("ABI arguments exceed 16 MiB limit"))?;
-        if total > rtao::evm::precompiles::MAX_ABI_BYTES {
+        if total > rtao_evm::precompiles::MAX_ABI_BYTES {
             return Err(input("ABI arguments exceed 16 MiB limit"));
         }
         Ok(Value::String(raw.clone()))
@@ -129,18 +129,18 @@ struct CallTarget {
 
 impl CallTarget {
     fn load(name: &str, abi_path: Option<&str>) -> Result<Self, CliError> {
-        if name.starts_with("0x") || rtao::evm::is_h160(&format!("0x{name}")) {
-            let address = rtao::evm::normalize_h160(name).map_err(input)?;
+        if name.starts_with("0x") || rtao_evm::is_h160(&format!("0x{name}")) {
+            let address = rtao_evm::normalize_h160(name).map_err(input)?;
             // Typed validation also refuses a historical text shape containing
             // whitespace rather than twenty actual address bytes.
-            rtao::evm::addresses::parse_h160(&address).map_err(input)?;
+            rtao_evm::addresses::parse_h160(&address).map_err(input)?;
             let path = abi_path.filter(|path| !path.is_empty()).ok_or_else(|| {
                 input(format!(
                     "{address} is a contract address — pass its interface with --abi"
                 ))
                 .with_help("accepts a Hardhat/Foundry artifact JSON or a bare ABI array")
             })?;
-            let artifact = rtao::evm::load_artifact(path).map_err(input)?;
+            let artifact = rtao_evm::load_artifact(path).map_err(input)?;
             if artifact.abi.is_none() {
                 return Err(input(format!("{path} contains bytecode but no ABI")));
             }
@@ -151,7 +151,7 @@ impl CallTarget {
                 precompile: None,
             });
         }
-        let precompile = rtao::evm::get_precompile(name).map_err(input)?;
+        let precompile = rtao_evm::get_precompile(name).map_err(input)?;
         Ok(Self {
             label: precompile.name.into(),
             address: precompile.address(),
@@ -174,7 +174,7 @@ impl CallTarget {
                     .unwrap_or_default()
                     .to_owned();
                 if let Some(note) = self.precompile.and_then(|precompile| {
-                    rtao::evm::function_deprecation(precompile.name, &function.name)
+                    rtao_evm::function_deprecation(precompile.name, &function.name)
                 }) {
                     mutability = format!("{mutability} (deprecated: {note})");
                 }
@@ -246,23 +246,23 @@ impl PreparedCall {
         );
         // Metadata uses the ABI name; encoding and decoding keep the full selection.
         let deprecation = target.precompile.and_then(|precompile| {
-            rtao::evm::function_deprecation(precompile.name, &function_abi.name)
+            rtao_evm::function_deprecation(precompile.name, &function_abi.name)
         });
         let caller_role = target
             .precompile
-            .and_then(|precompile| rtao::evm::caller_role(precompile.name, &function_abi.name));
+            .and_then(|precompile| rtao_evm::caller_role(precompile.name, &function_abi.name));
         let registers_network = target.precompile.is_some_and(|precompile| {
             precompile.name == "subnet" && function_abi.name == "registerNetwork"
         });
         let encoded = match target.precompile {
             Some(precompile) => precompile.encode_call(&function, args),
-            None => rtao::evm::encode_call(function_abi, args),
+            None => rtao_evm::encode_call(function_abi, args),
         }
         .map_err(input)?;
         let data = hex::decode(encoded.strip_prefix("0x").unwrap_or(&encoded)).map_err(input)?;
         // Python treats argument descriptions as best-effort human preview.
         // Native amount rejection already happened during precompile encoding.
-        let preview = rtao::evm::describe_arguments(function_abi, args)
+        let preview = rtao_evm::describe_arguments(function_abi, args)
             .unwrap_or_default()
             .into_iter()
             .map(|(key, value)| (format!("arg {key}"), Value::String(value)))
@@ -295,7 +295,7 @@ impl PreparedCall {
             .function(&self.function)
             .map_err(input)?;
         let mut values =
-            rtao::evm::precompiles::decode_result_bytes(function, raw).map_err(failure)?;
+            rtao_evm::precompiles::decode_result_bytes(function, raw).map_err(failure)?;
         Ok(if values.len() == 1 {
             values.remove(0)
         } else {
@@ -305,7 +305,7 @@ impl PreparedCall {
 }
 
 fn catalog() -> TableSpec {
-    let mut entries = rtao::evm::PRECOMPILES.iter().collect::<Vec<_>>();
+    let mut entries = rtao_evm::PRECOMPILES.iter().collect::<Vec<_>>();
     entries.sort_by_key(|entry| entry.index);
     let mut records = Vec::new();
     let rows = entries.into_iter().map(|entry| {
@@ -405,7 +405,7 @@ async fn native_value(
         };
         if !items.iter().any(|item| {
             item.as_str()
-                .is_some_and(rtao::primitives::receiving::is_receiving_address)
+                .is_some_and(rtao_primitives::receiving::is_receiving_address)
         }) {
             return Ok(value);
         }
@@ -418,7 +418,7 @@ async fn native_value(
     match value.as_str() {
         Some(text)
             if kind.starts_with("bytes")
-                && rtao::primitives::receiving::is_receiving_address(text) =>
+                && rtao_primitives::receiving::is_receiving_address(text) =>
         {
             let account = super::native_account(ctx, text, rpc_url, write).await?;
             Ok(json!(account.to_string()))
@@ -439,7 +439,7 @@ async fn run_with_backends(
         "precompiles" => return ctx.output.table(&catalog()).map_err(failure),
         "abi" => {
             let name = optional(leaf, "name").ok_or_else(|| input("missing precompile name"))?;
-            let precompile = rtao::evm::get_precompile(name).map_err(input)?;
+            let precompile = rtao_evm::get_precompile(name).map_err(input)?;
             let abi: Value = serde_json::from_str(precompile.abi_json()).map_err(failure)?;
             return ctx
                 .output
@@ -453,11 +453,11 @@ async fn run_with_backends(
         .ok_or_else(|| input("missing call target"))?
         .to_owned();
     let abi = optional(leaf, "abi_path").map(str::to_owned);
-    let target = rtao::core::offload(move || CallTarget::load(&name, abi.as_deref()))
+    let target = rtao_core::offload(move || CallTarget::load(&name, abi.as_deref()))
         .await
         .map_err(failure)??;
     let Some(function) = optional(leaf, "function") else {
-        let table = rtao::core::offload(move || target.table())
+        let table = rtao_core::offload(move || target.table())
             .await
             .map_err(failure)??;
         return ctx.output.table(&table).map_err(failure);
@@ -465,10 +465,9 @@ async fn run_with_backends(
     let args = arguments(leaf)?;
     let args = native_arguments(ctx, &target, function, args, optional(leaf, "rpc_url")).await?;
     let function_owned = function.to_owned();
-    let mut prepared =
-        rtao::core::offload(move || PreparedCall::new(target, function_owned, &args))
-            .await
-            .map_err(failure)??;
+    let mut prepared = rtao_core::offload(move || PreparedCall::new(target, function_owned, &args))
+        .await
+        .map_err(failure)??;
     if let Some(note) = prepared.deprecation {
         ctx.output
             .message(&format!(
@@ -480,7 +479,7 @@ async fn run_with_backends(
     if prepared.view {
         let data = if prepared.data.len() > 64 * 1024 {
             let bytes = std::mem::take(&mut prepared.data);
-            rtao::core::offload(move || hex::encode(bytes))
+            rtao_core::offload(move || hex::encode(bytes))
                 .await
                 .map_err(failure)?
         } else {
@@ -488,7 +487,7 @@ async fn run_with_backends(
         };
         let tx = json!({"to":prepared.target.address,"data":format!("0x{data}")});
         let raw = backend.eth_call(ctx, optional(leaf, "rpc_url"), tx).await?;
-        let result = rtao::core::offload(move || prepared.decode(&raw))
+        let result = rtao_core::offload(move || prepared.decode(&raw))
             .await
             .map_err(failure)??;
         return ctx.output.value(&result).map_err(failure);
@@ -727,7 +726,7 @@ mod falsy_option_tests {
         output::{MemorySink, Output, OutputOptions, Stream},
         prompt::{PromptError, Terminal},
     };
-    use rtao::evm::{Address, EvmKeyInfo, EvmTxPreview, U256};
+    use rtao_evm::{Address, EvmKeyInfo, EvmTxPreview, U256};
     use secrecy::SecretString;
     use std::{
         error::Error,
@@ -1035,11 +1034,11 @@ mod falsy_option_tests {
     async fn view_bytes_arguments_take_the_account_of_a_receiving_address() -> TestResult {
         // Python v488 `_native_arguments`: a read resolves a receiving
         // address in a bytes argument to its account, without a chain read.
-        let key = rtao::core::keys::Keypair::from_seed(&[22; 32], rtao::core::keys::CRYPTO_HASHED)?;
+        let key = rtao_core::keys::Keypair::from_seed(&[22; 32], rtao_core::keys::CRYPTO_HASHED)?;
         let receiving =
-            rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
-        let account = rtao::primitives::receiving::parse_recipient(&receiving)?.account;
-        let coldkey = rtao::primitives::AccountId([3; 32]).to_string();
+            rtao_core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+        let account = rtao_primitives::receiving::parse_recipient(&receiving)?.account;
+        let coldkey = rtao_primitives::AccountId([3; 32]).to_string();
         let fixture = Fixture::new("staking-v2", "getStake", &[&receiving, &coldkey, "1"], &[])?;
         let read = ReadProbe::default();
         fixture.run(&read, &TxProbe::default()).await?;

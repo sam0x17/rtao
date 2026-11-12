@@ -18,14 +18,12 @@ use crate::{
     root_helpers::{self, RootPosition, basket_index},
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::{BlockRef, Client, ReadPlan, ViewExt},
-    core::codec::Value as DynValue,
-    primitives::{AccountId, Amount, DynBalance, Money, NetUid, ResolvedAmount},
-    reads::reads::{m6_root, m6_staking, owner},
-    tx::ExtrinsicResult,
-};
+use rtao_client::{BlockRef, Client, ReadPlan, ViewExt};
+use rtao_core::codec::Value as DynValue;
+use rtao_primitives::{AccountId, Amount, DynBalance, Money, NetUid, ResolvedAmount};
+use rtao_reads::reads::{m6_root, m6_staking, owner};
 use rtao_runtime::storage::subtensor_module as st;
+use rtao_tx::ExtrinsicResult;
 use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -641,8 +639,8 @@ async fn payment_selector(
     client: &Client,
     value: &str,
 ) -> Result<(AccountId, String), CliError> {
-    if rtao::primitives::receiving::is_receiving_address(value) {
-        let recipient = rtao::primitives::receiving::parse_recipient(value)
+    if rtao_primitives::receiving::is_receiving_address(value) {
+        let recipient = rtao_primitives::receiving::parse_recipient(value)
             .map_err(|error| CliError::input(error.to_string()))?;
         return Ok((recipient.account, recipient.address));
     }
@@ -651,15 +649,15 @@ async fn payment_selector(
 }
 /// An account-identity selector: a receiving address names its account.
 async fn selector(ctx: &AppContext, client: &Client, value: &str) -> Result<AccountId, CliError> {
-    if rtao::primitives::receiving::is_receiving_address(value) {
-        return rtao::primitives::receiving::parse_recipient(value)
+    if rtao_primitives::receiving::is_receiving_address(value) {
+        return rtao_primitives::receiving::parse_recipient(value)
             .map(|recipient| recipient.account)
             .map_err(|error| CliError::input(error.to_string()));
     }
     if let Ok(account) = value.parse::<AccountId>() {
         return Ok(account);
     }
-    if let Some(uid) = rtao::primitives::pyfmt::parse_integer(value)
+    if let Some(uid) = rtao_primitives::pyfmt::parse_integer(value)
         .filter(|_| !value.is_empty() && value.chars().all(char::is_numeric))
     {
         let uid = uid
@@ -1005,7 +1003,7 @@ pub fn minimum_out(expected: u64, percent: f64) -> Result<u64, CliError> {
     if expected == 0 || percent == 0.0 {
         return Ok(expected);
     }
-    let text = rtao::primitives::pyfmt::float_repr(percent);
+    let text = rtao_primitives::pyfmt::float_repr(percent);
     let (mantissa, exponent) = match text.split_once(['e', 'E']) {
         Some((mantissa, exponent)) => (mantissa, exponent.parse::<i32>().map_err(failure)?),
         None => (text.as_str(), 0),
@@ -1556,7 +1554,7 @@ async fn prepare_transaction_inner(
                     json!(format!(
                         "{} (expected less {}% max slippage; the trade rolls back below this)",
                         DynBalance::from_rao(floor, *dest),
-                        rtao::primitives::pyfmt::fmt_g(*max_slippage)
+                        rtao_primitives::pyfmt::fmt_g(*max_slippage)
                     )),
                 ));
             } else {

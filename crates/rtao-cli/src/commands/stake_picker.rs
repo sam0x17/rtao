@@ -9,14 +9,12 @@ use crate::{
     error::CliError,
     prompt::{PromptError, PromptHistory, Terminal, python_strip},
 };
-use rtao::{
-    client::Client,
-    primitives::{AccountId, DynBalance, NetUid},
-    reads::reads::{
-        m6_locks::{self, ColdkeyLock},
-        m6_staking::{self, StakeAvailability},
-        owner::{self, StakePosition, StakeValuation},
-    },
+use rtao_client::Client;
+use rtao_primitives::{AccountId, DynBalance, NetUid};
+use rtao_reads::reads::{
+    m6_locks::{self, ColdkeyLock},
+    m6_staking::{self, StakeAvailability},
+    owner::{self, StakePosition, StakeValuation},
 };
 use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -56,7 +54,7 @@ fn numbered(raw: &str) -> bool {
         })
 }
 fn choice_index(raw: &str) -> Option<usize> {
-    rtao::primitives::pyfmt::parse_integer(raw)?
+    rtao_primitives::pyfmt::parse_integer(raw)?
         .to_string()
         .parse::<usize>()
         .ok()?
@@ -107,7 +105,7 @@ pub(crate) fn owner_label(ctx: &AppContext, account: AccountId) -> String {
     if ctx.books.multisig(&ctx.globals.wallet_name).is_some() {
         return format!(
             "multisig {}",
-            rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+            rtao_primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
         );
     }
     if ctx.globals.uses_external_signer() {
@@ -117,7 +115,7 @@ pub(crate) fn owner_label(ctx: &AppContext, account: AccountId) -> String {
     }
     format!(
         "wallet {}",
-        rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+        rtao_primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
     )
 }
 
@@ -650,7 +648,7 @@ fn ask_netuid(ctx: &AppContext, field: &str, choices: &[SubnetChoice]) -> Result
         if raw.is_empty() {
             return Ok(first.netuid);
         }
-        if let Some(netuid) = rtao::primitives::pyfmt::parse_integer(&raw)
+        if let Some(netuid) = rtao_primitives::pyfmt::parse_integer(&raw)
             .and_then(|value| value.to_string().parse::<u16>().ok())
         {
             if choices.iter().any(|choice| choice.netuid == NetUid(netuid)) {
@@ -704,7 +702,7 @@ pub fn destination(
         // addresses included; an unparseable entry is not offered.
         if let (Some(name), Some(address)) = (row["name"].as_str(), row["address"].as_str())
             && !address.is_empty()
-            && let Ok(recipient) = rtao::primitives::receiving::parse_recipient(address)
+            && let Ok(recipient) = rtao_primitives::receiving::parse_recipient(address)
             && seen.insert(recipient.address.clone())
         {
             choices.push(NameCandidate {
@@ -888,7 +886,7 @@ fn pick_account(
             &if hotkey {
                 format!(
                     "wallet {} has no local hotkeys — paste the validator's ss58 address or an address-book name",
-                    rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+                    rtao_primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
                 )
             } else {
                 "no address-book contacts or other local wallets — paste the receiving address"
@@ -969,7 +967,7 @@ mod tests {
         fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
             self.answers.pop_front().ok_or(PromptError::Aborted)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, text: &str) -> Result<(), PromptError> {

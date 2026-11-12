@@ -10,13 +10,11 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
-use rtao::{
-    client::Client,
-    primitives::{AccountId, DynBalance, NetUid},
-    reads::{
-        ReadName,
-        reads::{m6_locks, m6_staking},
-    },
+use rtao_client::Client;
+use rtao_primitives::{AccountId, DynBalance, NetUid};
+use rtao_reads::{
+    ReadName,
+    reads::{m6_locks, m6_staking},
 };
 use serde_json::{Map, Value, json};
 use std::collections::BTreeMap;
@@ -325,7 +323,7 @@ pub async fn execute_prepared_read(
             ("coldkey_ss58".into(), json!(owner)),
             ("netuid".into(), json!(subnet)),
         ]);
-        let lock = rtao::reads::dispatch(client, ReadName::ColdkeyLock, &params)
+        let lock = rtao_reads::dispatch(client, ReadName::ColdkeyLock, &params)
             .await
             .map_err(CliError::from)?;
         let conviction = if lock.is_null() {
@@ -333,7 +331,7 @@ pub async fn execute_prepared_read(
         } else {
             params.remove("coldkey_ss58");
             params.insert("hotkey_ss58".into(), lock["hotkey"].clone());
-            rtao::reads::dispatch(client, ReadName::HotkeyConviction, &params)
+            rtao_reads::dispatch(client, ReadName::HotkeyConviction, &params)
                 .await
                 .map_err(CliError::from)?
         };
@@ -367,7 +365,7 @@ pub async fn execute_prepared_read(
             let accepts = m6_locks::accepts_locked_alpha(client, owner)
                 .await
                 .map_err(CliError::from)?;
-            let identities = rtao::reads::reads::owner::hotkey_identities(
+            let identities = rtao_reads::reads::owner::hotkey_identities(
                 client,
                 locks
                     .iter()
@@ -464,7 +462,7 @@ pub async fn execute_prepared_read(
                 let identity = if local.is_some() {
                     Value::Null
                 } else {
-                    rtao::reads::dispatch(
+                    rtao_reads::dispatch(
                         client,
                         ReadName::Identity,
                         &Map::from_iter([("coldkey_ss58".into(), json!(position.coldkey))]),

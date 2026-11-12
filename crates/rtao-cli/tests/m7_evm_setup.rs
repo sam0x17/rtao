@@ -3,13 +3,6 @@
 
 #![cfg(feature = "evm")]
 
-use rtao::{
-    client::{Client, ClientConfig, Inclusion, Network},
-    evm::{self, EvmKeyInfo},
-    primitives::{AccountId, CryptoType, H256},
-    signer::{BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole},
-    tx::{ExtrinsicResult, IntentInterface, Plan, PlanOptions},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -20,7 +13,14 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Inclusion, Network};
+use rtao_evm::{self as evm, EvmKeyInfo};
+use rtao_primitives::{AccountId, CryptoType, H256};
+use rtao_signer::{
+    BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
+};
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_tx::{ExtrinsicResult, IntentInterface, Plan, PlanOptions};
 use serde_json::{Value, json};
 use std::{
     collections::VecDeque,
@@ -44,7 +44,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -801,7 +801,7 @@ async fn actual_executor_wraps_both_native_steps_in_sudo_without_unlocking() -> 
         ),
     ] {
         assert_eq!(step.to_json()[field], expected);
-        let plan = rtao::Executor::new(client.clone())
+        let plan = rtao_intents::executor(client.clone())
             .plan_dyn(&step, &keys, &PlanOptions::default())
             .await?;
         assert!(plan.ok());
@@ -1025,7 +1025,7 @@ async fn default_native_submission_preserves_reviewed_calls_and_hooks_for_both_s
     assert_eq!(submissions.len(), 2);
     for (index, encoded) in submissions.iter().enumerate() {
         let decoded = runtime.core().decode_extrinsic(encoded, true)?;
-        let decoded = rtao::core::DynValue::new(decoded).to_json();
+        let decoded = rtao_core::DynValue::new(decoded).to_json();
         let reviewed = client.decode_scale("Call", &plans[index]).await?.to_json();
         assert_eq!(decoded["call"], reviewed);
     }

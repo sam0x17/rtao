@@ -7,7 +7,7 @@ use crate::{
     output::Output,
 };
 use clap::{Arg, ArgMatches, Command};
-use rtao::client::config::{ConfigFile, Store, settable};
+use rtao_client::config::{ConfigFile, Store, settable};
 use serde_json::{Value, json};
 
 /// The five persistent config commands, with read-tier global overrides.

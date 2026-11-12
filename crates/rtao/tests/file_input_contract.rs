@@ -1,6 +1,5 @@
 //! Public file inputs pass through the real CLI parsers before connecting or signing.
 
-use rtao::client::config::MAX_JSON_FILE_BYTES;
 use rtao_cli::{
     application::command_tree,
     books::Books,
@@ -12,6 +11,7 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions},
     prompt::{PromptError, Terminal},
 };
+use rtao_client::config::MAX_JSON_FILE_BYTES;
 use serde_json::json;
 use std::{
     error::Error,
@@ -67,7 +67,7 @@ impl Terminal for NoTerminal {
     fn read_line(&mut self, _: &str) -> Result<String, PromptError> {
         Err(PromptError::Unavailable)
     }
-    fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+    fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
         Err(PromptError::Unavailable)
     }
     fn message(&mut self, _: &str) -> Result<(), PromptError> {

@@ -10,12 +10,10 @@ use crate::{
     prompt::PromptHistory,
 };
 use clap::{Arg, ArgMatches, Command};
-use rtao::{
-    client::{Client, Inclusion, View},
-    evm::{self, EvmKeyInfo, EvmNetwork, EvmRpc, U256},
-    signer::{BoxFuture, Coldkey},
-    tx::{BuildCx, Built, ExtrinsicResult, Intent, IntentError, IntentInterface, Root},
-};
+use rtao_client::{Client, Inclusion, View};
+use rtao_evm::{self as evm, EvmKeyInfo, EvmNetwork, EvmRpc, U256};
+use rtao_signer::{BoxFuture, Coldkey};
+use rtao_tx::{BuildCx, Built, ExtrinsicResult, Intent, IntentError, IntentInterface, Root};
 use serde_json::{Value, json};
 
 /// Build the four setup and diagnosis commands.
@@ -204,7 +202,7 @@ impl SetupBackend for NativeBackend {
         let wallet = ctx.globals.wallet_name.clone();
         let path = ctx.globals.wallet_path.clone();
         Box::pin(async move {
-            rtao::core::offload(move || evm::list_evm_keys(&wallet, &path))
+            rtao_core::offload(move || evm::list_evm_keys(&wallet, &path))
                 .await
                 .map_err(failure)?
                 .map_err(failure)
@@ -371,7 +369,7 @@ fn configuration(
             .map_err(failure),
         value => Err(CliError::input(format!(
             "unknown format {}",
-            rtao::primitives::pyfmt::string_repr(value)
+            rtao_primitives::pyfmt::string_repr(value)
         ))
         .with_help("expected one of: metamask, hardhat, remix")),
     }
@@ -605,7 +603,7 @@ async fn setup(
     ctx.confirm(&format!(
         "submit {} sudo extrinsic(s) with wallet {}",
         plan.len(),
-        rtao::primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
+        rtao_primitives::pyfmt::string_repr(&ctx.globals.wallet_name)
     ))?;
     // One aggregate confirmation covers these exact immutable steps. Shared
     // submission still performs and binds the real runtime/policy review; its

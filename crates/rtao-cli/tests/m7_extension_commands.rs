@@ -2,7 +2,6 @@
 
 #![cfg(feature = "extension")]
 
-use rtao::signer::extension::{BridgeOptions, BridgePaths, EnsureBridgeOptions, ExtensionAccount};
 use rtao_cli::{
     application,
     books::Books,
@@ -12,6 +11,7 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, Terminal},
 };
+use rtao_signer::extension::{BridgeOptions, BridgePaths, EnsureBridgeOptions, ExtensionAccount};
 use secrecy::SecretString;
 use serde_json::{Value, json};
 use std::{

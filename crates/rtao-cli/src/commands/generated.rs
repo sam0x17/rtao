@@ -22,14 +22,12 @@ use crate::{
     },
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::{BlockRef, Client},
-    reads::{ReadName, RenderHint},
-    signer::DynKeySource,
-    tx::ExtrinsicResult,
-};
 use rtao_catalog::IntentSpec;
+use rtao_client::{BlockRef, Client};
 use rtao_intents::{AnyIntent, InterfaceMetadata};
+use rtao_reads::{ReadName, RenderHint};
+use rtao_signer::DynKeySource;
+use rtao_tx::ExtrinsicResult;
 use serde_json::{Map, Value, json};
 use std::collections::BTreeSet;
 
@@ -373,7 +371,7 @@ impl PromptResolver for ArgumentResolver<'_> {
             terminal.message(&if hotkey {
                 format!(
                     "wallet {} has no local hotkeys — paste the validator's ss58 address or an address-book name",
-                    rtao::primitives::pyfmt::string_repr(&self.ctx.globals.wallet_name)
+                    rtao_primitives::pyfmt::string_repr(&self.ctx.globals.wallet_name)
                 )
             } else {
                 "no address-book contacts or other local wallets — paste the destination ss58".into()
@@ -393,7 +391,7 @@ impl PromptResolver for ArgumentResolver<'_> {
                 });
             let selected = if numbered && !choices.is_empty() {
                 Some(
-                    rtao::primitives::pyfmt::parse_integer(raw)
+                    rtao_primitives::pyfmt::parse_integer(raw)
                         .and_then(|value| value.to_string().parse::<usize>().ok())
                         .and_then(|index| index.checked_sub(1))
                         .and_then(|index| choices.get(index))
@@ -412,7 +410,7 @@ impl PromptResolver for ArgumentResolver<'_> {
                 // resolution may find a contact alias for the same account;
                 // Python records the numeric menu choice first.
                 address
-                    .parse::<rtao::primitives::AccountId>()
+                    .parse::<rtao_primitives::AccountId>()
                     .map_err(|error| PromptValidation::Message(error.to_string()))?;
                 self.ctx
                     .output
@@ -626,7 +624,7 @@ impl TxRequest {
                     }
                 };
                 let label = super::stake::picker::owner_label(ctx, owner);
-                let free = rtao::reads::generated::interfaces::balance(client, owner)
+                let free = rtao_reads::generated::interfaces::balance(client, owner)
                     .await
                     .map_err(CliError::from)?;
                 Some(format!("free balance of {label}: {free}"))
@@ -876,13 +874,13 @@ pub async fn execute_query(
             .at(BlockRef::Number(block))
             .await
             .map_err(CliError::from)?;
-        rtao::reads::dispatch(&snapshot, request.name, &request.params).await
+        rtao_reads::dispatch(&snapshot, request.name, &request.params).await
     } else {
-        rtao::reads::dispatch(client, request.name, &request.params).await
+        rtao_reads::dispatch(client, request.name, &request.params).await
     }
     .map_err(|error| match error {
-        rtao::reads::ReadError::InvalidParam { .. } => input(error),
-        rtao::reads::ReadError::Client(error) => CliError::from(error),
+        rtao_reads::ReadError::InvalidParam { .. } => input(error),
+        rtao_reads::ReadError::Client(error) => CliError::from(error),
         _ => failure(error),
     })?;
     render_query(output, request.name, &payload)?;

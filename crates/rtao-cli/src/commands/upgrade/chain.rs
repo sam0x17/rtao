@@ -2,10 +2,8 @@
 //! Snapshot-bound discovery and live-metadata verification.
 
 use super::{artifacts::*, *};
-use rtao::{
-    client::{Snapshot, ViewExt},
-    core::{DynValue, codec::Value as CoreValue},
-};
+use rtao_client::{Snapshot, ViewExt};
+use rtao_core::{DynValue, codec::Value as CoreValue};
 use rtao_runtime::{
     CallBytes, RuntimeHandle, calls,
     models::{MultisigInfo, MultisigTimepoint},
@@ -32,7 +30,7 @@ pub(super) fn reconstruct(
         calls::sudo::sudo_unchecked_weight(code, weight(PROPOSAL_REF_TIME, PROPOSAL_PROOF_SIZE))
             .compose(runtime)
             .map_err(failure)?;
-    rtao::client::compose::proxy(runtime, real, None, sudo).map_err(failure)
+    rtao_client::compose::proxy(runtime, real, None, sudo).map_err(failure)
 }
 
 pub(super) fn finalizing(

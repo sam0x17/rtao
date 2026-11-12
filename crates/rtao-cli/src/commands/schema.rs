@@ -9,11 +9,9 @@ use crate::{
     prompt::python_strip,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command, parser::ValueSource};
-use rtao::{
-    primitives::{DynBalance, Money, NetUid},
-    reads::ReadName,
-};
 use rtao_catalog::{IntentSpec, ParamSpec};
+use rtao_primitives::{DynBalance, Money, NetUid};
+use rtao_reads::ReadName;
 use serde_json::{Map, Value, json};
 
 /// One authenticated argument's command-line shape.
@@ -299,14 +297,14 @@ pub fn values(matches: &ArgMatches, fields: &[Field]) -> Result<Map<String, Valu
 }
 
 fn integer(raw: &str) -> Result<Value, CliError> {
-    let integer = rtao::primitives::pyfmt::parse_integer(raw)
+    let integer = rtao_primitives::pyfmt::parse_integer(raw)
         .ok_or_else(|| CliError::input(format!("expected an integer, got {raw:?}")))?;
     // The generated native parameter type enforces its exact range afterwards.
-    rtao::primitives::json::from_str(&integer.to_string())
+    rtao_primitives::json::from_str(&integer.to_string())
         .map_err(|error| CliError::input(error.to_string()))
 }
 fn number(raw: &str) -> Result<Value, CliError> {
-    let number = rtao::primitives::pyfmt::parse_float(raw)
+    let number = rtao_primitives::pyfmt::parse_float(raw)
         .filter(|value| value.is_finite())
         .ok_or_else(|| CliError::input(format!("expected a finite number, got {raw:?}")))?;
     Ok(json!(number))
@@ -352,7 +350,7 @@ pub(super) fn normalize_money_text(raw: &str, netuid: NetUid) -> Result<String, 
             if unsigned.is_empty() || !decimal_digits(unsigned) {
                 return Err(invalid());
             }
-            let exponent = rtao::primitives::pyfmt::parse_integer(exponent)
+            let exponent = rtao_primitives::pyfmt::parse_integer(exponent)
                 .ok_or_else(invalid)?
                 .to_string()
                 .parse::<i64>()
@@ -373,7 +371,7 @@ pub(super) fn normalize_money_text(raw: &str, netuid: NetUid) -> Result<String, 
     {
         return Err(invalid());
     }
-    let coefficient = rtao::primitives::pyfmt::parse_integer(&format!("{integer}{fraction}"))
+    let coefficient = rtao_primitives::pyfmt::parse_integer(&format!("{integer}{fraction}"))
         .ok_or_else(invalid)?
         .to_string();
     if negative && coefficient != "0" {
@@ -427,10 +425,10 @@ pub fn coerce(field: &Field, raw: &str) -> Result<Value, CliError> {
         "integer" => integer(raw),
         "number" => number(raw),
         "native_number" => integer(raw).or_else(|_| number(raw)),
-        "json" => rtao::primitives::json::from_str(raw)
+        "json" => rtao_primitives::json::from_str(raw)
             .map_err(|error| CliError::input(format!("invalid JSON: {error}"))),
         "object" => {
-            let value: Value = rtao::primitives::json::from_str(raw)
+            let value: Value = rtao_primitives::json::from_str(raw)
                 .map_err(|e| CliError::input(format!("invalid JSON: {e}")))?;
             if value.is_object() {
                 Ok(value)
@@ -441,7 +439,7 @@ pub fn coerce(field: &Field, raw: &str) -> Result<Value, CliError> {
         "array" => {
             let text = python_strip(raw);
             if !field.query && text.starts_with('[') {
-                return rtao::primitives::json::from_str(text)
+                return rtao_primitives::json::from_str(text)
                     .map_err(|e| CliError::input(format!("invalid JSON list: {e}")));
             }
             let parts = text

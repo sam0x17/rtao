@@ -3,12 +3,6 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_subnet_lifecycle.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
 //! Wallet parity exercises actual command dispatch, keyfile policy and fake RPC.
 
-use rtao::{
-    client::{Client, ClientConfig, Network},
-    core::keys::Keypair,
-    primitives::{AccountId, CryptoType},
-    wallet::{ExposeSecret, PasswordSources, RegenerateFrom, SecretString, Wallet, WriteOptions},
-};
 use rtao_cli::{
     application,
     books::Books,
@@ -18,7 +12,13 @@ use rtao_cli::{
     output::{MemorySink, Output, OutputOptions, Stream},
     prompt::{PromptError, PromptHistory, Terminal},
 };
+use rtao_client::{Client, ClientConfig, Network};
+use rtao_core::keys::Keypair;
+use rtao_primitives::{AccountId, CryptoType};
 use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+use rtao_wallet::{
+    ExposeSecret, PasswordSources, RegenerateFrom, SecretString, Wallet, WriteOptions,
+};
 use serde_json::{Value, json};
 use std::{
     error::Error,
@@ -61,7 +61,7 @@ async fn nonpositive_history_limit_returns_exact_empty_json_without_chain_or_htt
 #[tokio::test]
 async fn encrypted_hotkey_decrypt_prompts_without_inheriting_coldkey_password_sources() -> TestResult
 {
-    use rtao::wallet::{PasswordPrompt, PromptPolicy, WalletError};
+    use rtao_wallet::{PasswordPrompt, PromptPolicy, WalletError};
     use std::sync::atomic::AtomicUsize;
     struct Password {
         calls: AtomicUsize,
@@ -84,12 +84,12 @@ async fn encrypted_hotkey_decrypt_prompts_without_inheriting_coldkey_password_so
             WriteOptions {
                 encrypt: true,
                 password: Some(SecretString::new("hotkey-fixture-password".into())),
-                overwrite: rtao::wallet::Overwrite::No,
+                overwrite: rtao_wallet::Overwrite::No,
             },
         )
         .await?;
     let encrypted =
-        rtao::wallet::encrypt_message("hotkey private message", &account.to_string()).await?;
+        rtao_wallet::encrypt_message("hotkey private message", &account.to_string()).await?;
     let (parsed, mut ctx, sink) = context(
         &root,
         &[
@@ -397,7 +397,7 @@ async fn sign_verify_uses_exact_utf8_bare_hex_and_false_exit_contract() -> TestR
         .map(std::str::from_utf8)
         .collect::<Result<Vec<_>, _>>()?
         .join(" \t");
-    assert!(rtao::wallet::verify_message_as(
+    assert!(rtao_wallet::verify_message_as(
         "π\nhello",
         &spaced,
         &account.to_string(),
@@ -405,7 +405,7 @@ async fn sign_verify_uses_exact_utf8_bare_hex_and_false_exit_contract() -> TestR
     )?);
     // Without a trusted scheme a bare SS58 address never verifies (D-173).
     #[allow(deprecated)]
-    let assumed = rtao::wallet::verify_message("π\nhello", &spaced, &account.to_string());
+    let assumed = rtao_wallet::verify_message("π\nhello", &spaced, &account.to_string());
     assert!(!assumed);
     for (signature, message, expected) in [
         (signature, "π\nhello", true),
@@ -548,7 +548,7 @@ async fn sdk_decrypt_reuses_authenticated_password_policy_and_refuses_non_utf8()
             WriteOptions::coldkey(),
         )
         .await?;
-    let cipher = rtao::wallet::encrypt_message("hello", &account.to_string()).await?;
+    let cipher = rtao_wallet::encrypt_message("hello", &account.to_string()).await?;
     assert_eq!(
         wallet
             .decrypt_message(&cipher.ciphertext, false)
@@ -567,7 +567,7 @@ async fn sdk_decrypt_reuses_authenticated_password_policy_and_refuses_non_utf8()
         .ok_or("wrong password must fail")?;
     assert!(matches!(
         error,
-        rtao::wallet::WalletError::WrongPassword { .. }
+        rtao_wallet::WalletError::WrongPassword { .. }
     ));
     assert!(!error.to_string().contains("wrong-fixture-password"));
     let invalid = Keypair::encrypt_for(&account.to_string(), &[0xff], 0)?;
@@ -826,7 +826,7 @@ fn seed_overview_availability(
     coldkey: AccountId,
     rows: &[(u16, u64, u64, u64)],
 ) -> TestResult {
-    use rtao::core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
+    use rtao_core::{codec::Value as CoreValue, ops::runtime_api, runtime::TypeSpec};
     use rtao_testkit::fakes::json_to_core;
     let api = "StakeInfoRuntimeApi";
     let method = "get_stake_availability_for_coldkeys";
@@ -1102,7 +1102,7 @@ async fn overview_human_groups_wallet_subtotals_and_lock_targets_without_repeati
                 .token_symbols()
                 .await
                 .into_iter()
-                .map(|(netuid, symbol)| (netuid.get(), rtao::primitives::Symbol::new(symbol))),
+                .map(|(netuid, symbol)| (netuid.get(), rtao_primitives::Symbol::new(symbol))),
         )?;
         wallet::run_with_client(
             &mut ctx,
@@ -1254,7 +1254,8 @@ fn unencrypted(options: WriteOptions) -> WriteOptions {
 #[tokio::test]
 async fn hashed_wallets_show_and_list_receiving_addresses_and_sign_messages_only_classically()
 -> TestResult {
-    use rtao::{primitives::AuthorityType, wallet::KeyScheme};
+    use rtao_primitives::AuthorityType;
+    use rtao_wallet::KeyScheme;
     let root = Root::new()?;
     let wallet = Wallet::new("alice", "default", &root.0)?;
     let cold = wallet
@@ -1312,8 +1313,8 @@ async fn transfers_keep_receiving_destinations_and_accept_the_compatibility_desc
 -> TestResult {
     let root = Root::new()?;
     root.public("alice", COLD)?;
-    let key = Keypair::from_seed(&[9; 32], rtao::core::keys::CRYPTO_HASHED)?;
-    let receiving = rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+    let key = Keypair::from_seed(&[9; 32], rtao_core::keys::CRYPTO_HASHED)?;
+    let receiving = rtao_core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
     let mut state = FakeState::default();
     state.seed_python(
         "System",
@@ -1382,7 +1383,8 @@ async fn transfers_keep_receiving_destinations_and_accept_the_compatibility_desc
 #[tokio::test]
 async fn local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_accounts()
 -> TestResult {
-    use rtao::{primitives::AuthorityType, wallet::KeyScheme};
+    use rtao_primitives::AuthorityType;
+    use rtao_wallet::KeyScheme;
     let root = Root::new()?;
     let wallet = Wallet::new("alice", "default", &root.0)?;
     let cold = wallet
@@ -1405,11 +1407,9 @@ async fn local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_a
     let receiving = ctx
         .resolve_address_text("dest_ss58", Some("alice"))?
         .ok_or("receiving")?;
-    assert!(rtao::primitives::receiving::is_receiving_address(
-        &receiving
-    ));
+    assert!(rtao_primitives::receiving::is_receiving_address(&receiving));
     assert_eq!(
-        rtao::primitives::receiving::parse_recipient(&receiving)?.account,
+        rtao_primitives::receiving::parse_recipient(&receiving)?.account,
         cold.account
     );
     // The omitted own coldkey and hotkey default the same way.
@@ -1420,7 +1420,7 @@ async fn local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_a
     let hotkey = ctx
         .resolve_address_text("hotkey_ss58", None)?
         .ok_or("hotkey")?;
-    assert!(rtao::primitives::receiving::is_receiving_address(&hotkey));
+    assert!(rtao_primitives::receiving::is_receiving_address(&hotkey));
     // Identity consumers take the account, from a name or the address itself.
     for value in [Some("alice"), Some(receiving.as_str()), None] {
         assert_eq!(
@@ -1450,10 +1450,10 @@ async fn local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_a
         json!({"name":"named","threshold":2,"signatories":["alice", "bob"]}),
         json!({"name":"booked","threshold":2,"signatories":["alice-contact", "bob"]}),
     ];
-    let (expected, _) = rtao::primitives::multisig_account_id(
+    let (expected, _) = rtao_primitives::multisig_account_id(
         &[cold.account, COLD],
         2,
-        rtao::primitives::AccountMode::Legacy,
+        rtao_primitives::AccountMode::Legacy,
     )?;
     for name in ["team", "named", "booked"] {
         assert_eq!(
@@ -1482,12 +1482,10 @@ async fn local_hashed_wallets_resolve_to_receiving_addresses_and_identities_to_a
 // receiving address; an unregistered or mismatched registration refuses.
 #[tokio::test]
 async fn hashed_wallet_sign_reads_its_finalized_generation_from_chain_state() -> TestResult {
-    use rtao::{
-        core::keys::{CRYPTO_HASHED, Keypair, encode_hashed_receiving_address},
-        primitives::{AuthorityType, receiving::descriptor_value},
-        signer::{AuthoritySigner, KeypairAuthoritySigner},
-        wallet::{KeyScheme, RegenerateFrom},
-    };
+    use rtao_core::keys::{CRYPTO_HASHED, Keypair, encode_hashed_receiving_address};
+    use rtao_primitives::{AuthorityType, receiving::descriptor_value};
+    use rtao_signer::{AuthoritySigner, KeypairAuthoritySigner};
+    use rtao_wallet::{KeyScheme, RegenerateFrom};
     let seed = [61u8; 32];
     let root = Root::new()?;
     let wallet = Wallet::new("alice", "default", &root.0)?;
@@ -1537,13 +1535,13 @@ async fn hashed_wallet_sign_reads_its_finalized_generation_from_chain_state() ->
     let signed = value(&sink)?;
     assert_eq!(signed["signer_address"], json!(account));
     let signature = signed["signed_message"].as_str().ok_or("signature")?;
-    assert!(rtao::wallet::verify_message_as(
+    assert!(rtao_wallet::verify_message_as(
         "hello hashed",
         signature,
         &receiving,
         None
     )?);
-    assert!(!rtao::wallet::verify_message_as(
+    assert!(!rtao_wallet::verify_message_as(
         "another message",
         signature,
         &receiving,
@@ -1573,7 +1571,8 @@ async fn hashed_wallet_sign_reads_its_finalized_generation_from_chain_state() ->
 // what its registration status means for sharing, with one Type row per key.
 #[tokio::test]
 async fn hashed_wallet_human_views_label_both_address_forms_and_their_status() -> TestResult {
-    use rtao::{primitives::AuthorityType, wallet::KeyScheme};
+    use rtao_primitives::AuthorityType;
+    use rtao_wallet::KeyScheme;
     let root = Root::new()?;
     let wallet = Wallet::new("alice", "default", &root.0)?;
     let cold = wallet
@@ -1632,10 +1631,8 @@ async fn hashed_wallet_human_views_label_both_address_forms_and_their_status() -
 #[tokio::test]
 async fn external_signers_refuse_receiving_addresses_and_vault_keeps_standard_schemes() -> TestResult
 {
-    use rtao::{
-        primitives::AuthorityType,
-        wallet::{KeyScheme, RegenerateFrom},
-    };
+    use rtao_primitives::AuthorityType;
+    use rtao_wallet::{KeyScheme, RegenerateFrom};
     let root = Root::new()?;
     let ed = Wallet::new("ed", "default", &root.0)?
         .regenerate_coldkey(
@@ -1651,8 +1648,8 @@ async fn external_signers_refuse_receiving_addresses_and_vault_keeps_standard_sc
             unencrypted(WriteOptions::coldkey()),
         )
         .await?;
-    let key = Keypair::from_seed(&[9; 32], rtao::core::keys::CRYPTO_HASHED)?;
-    let receiving = rtao::core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
+    let key = Keypair::from_seed(&[9; 32], rtao_core::keys::CRYPTO_HASHED)?;
+    let receiving = rtao_core::keys::encode_hashed_receiving_address(&key.hashed_descriptor()?)?;
     let (_, mut ctx, _) = context(&root, &["wallet", "show", "--offline"])?;
     ctx.globals.signer_backend = Some("vault".into());
     ctx.globals.wallet_name = "ed".into();

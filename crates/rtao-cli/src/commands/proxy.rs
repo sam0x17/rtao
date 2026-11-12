@@ -18,11 +18,9 @@ use crate::{
     },
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::{Client, config::Paths},
-    primitives::{AccountId, pyfmt},
-    tx::ExtrinsicResult,
-};
+use rtao_client::{Client, config::Paths};
+use rtao_primitives::{AccountId, pyfmt};
+use rtao_tx::ExtrinsicResult;
 use serde_json::{Map, Value, json};
 use std::collections::BTreeSet;
 
@@ -531,7 +529,7 @@ async fn remove_hotkey_proxies(
     let Some(hotkey) = local_hotkey(ctx) else {
         return Ok(None);
     };
-    let data = rtao::reads::generated::interfaces::proxies(client, hotkey)
+    let data = rtao_reads::generated::interfaces::proxies(client, hotkey)
         .await
         .map_err(CliError::from)?;
     if data.proxies.is_empty() {
@@ -581,7 +579,7 @@ async fn list(ctx: &AppContext, client: &Client, owner: AccountId) -> Result<(),
             ctx.output.name_address(address, name).map_err(failure)?;
         }
     }
-    let data = rtao::reads::generated::interfaces::proxies(client, owner)
+    let data = rtao_reads::generated::interfaces::proxies(client, owner)
         .await
         .map_err(CliError::from)?;
     let records = serde_json::to_value(&data.proxies).map_err(failure)?;
@@ -745,11 +743,11 @@ pub async fn book_execute(
             let mut entry = json!({"name":name_arg()?,"address":text(leaf,"address").ok_or_else(|| CliError::input("missing proxy address"))?,"spawner":text(leaf,"spawner").unwrap_or_default(),"proxy_type":text(leaf,"proxy_type").unwrap_or("Staking"),"note":text(leaf,"note").unwrap_or_default(),"account_mode":account_mode});
             for field in ["delay", "index", "height", "ext_index"] {
                 if let Some(raw) = text(leaf, field) {
-                    let value = rtao::primitives::pyfmt::parse_integer(raw).ok_or_else(|| {
+                    let value = rtao_primitives::pyfmt::parse_integer(raw).ok_or_else(|| {
                         CliError::input(format!("expected an integer, got {raw:?}"))
                     })?;
                     entry[field] =
-                        rtao::primitives::json::from_str(&value.to_string()).map_err(failure)?;
+                        rtao_primitives::json::from_str(&value.to_string()).map_err(failure)?;
                 }
             }
             let stored = book.add(entry).await.map_err(failure)?;
@@ -895,7 +893,7 @@ async fn book_status(client: &Client, entry: &Value) -> Result<String, CliError>
         return Ok("no address recorded".into());
     };
     let account = address.parse::<AccountId>().map_err(failure)?;
-    let data = rtao::reads::generated::interfaces::proxies(client, account)
+    let data = rtao_reads::generated::interfaces::proxies(client, account)
         .await
         .map_err(CliError::from)?;
     if data.proxies.is_empty() {
@@ -1033,12 +1031,10 @@ mod tests {
         globals::Globals,
         output::{MemorySink, Output, OutputOptions, Stream},
     };
-    use rtao::{
-        client::{ClientConfig, Network, config::ConfigFile},
-        primitives::CryptoType,
-        signer::{
-            BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
-        },
+    use rtao_client::{ClientConfig, Network, config::ConfigFile};
+    use rtao_primitives::CryptoType;
+    use rtao_signer::{
+        BoxFuture, DynKeySource, KeyView, KeypairSigner, Signer, SignerError, SignerRole,
     };
     use rtao_testkit::{FakeChain, FakeState, SubmitScript, rpc::RpcClient};
     use std::{
@@ -1070,7 +1066,7 @@ mod tests {
             self.reads.fetch_add(1, Ordering::SeqCst);
             self.replies.pop_front().ok_or(PromptError::Aborted)
         }
-        fn read_secret(&mut self, _: &str) -> Result<rtao::wallet::SecretString, PromptError> {
+        fn read_secret(&mut self, _: &str) -> Result<rtao_wallet::SecretString, PromptError> {
             Err(PromptError::Unavailable)
         }
         fn message(&mut self, _: &str) -> Result<(), PromptError> {
@@ -1521,7 +1517,7 @@ mod tests {
             "--no-mev-shield",
         ])?;
         let (mut ctx, sink, _) = context(&parsed, Books::default(), false, &[])?;
-        ctx.config_store = Some(rtao::client::config::Store::new(files.paths.clone()));
+        ctx.config_store = Some(rtao_client::config::Store::new(files.paths.clone()));
         let request = Request::from_matches(
             &mut ctx,
             parsed.subcommand().ok_or("proxy")?.1,

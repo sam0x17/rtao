@@ -13,7 +13,7 @@ digest=$(sed -n 's/^pinned = .*digest = "\(sha256:[0-9a-f]*\)".*$/\1/p' "$crate/
 [[ "$image" =~ ^ghcr.io/[a-zA-Z0-9_/-]+$ ]]
 # The checkout root, when the SDK comes from one; empty for the release.
 sdk=$(cd "$crate/../.." && pwd -P)
-if ! test -f "$sdk/upstream.toml" || ! test -f "$sdk/crates/rtao-cli/Cargo.toml"; then
+if ! test -f "$sdk/upstream.toml" || ! test -f "$sdk/crates/rtao/src/main.rs"; then
   sdk=
 fi
 printf 'RTAO_SOURCE=%s\nRTAO_VERSION=%s\nLOCALNET_IMAGE=%s@%s\n' "$sdk" "$version" "$image" "$digest"

@@ -6,10 +6,8 @@ use crate::{
     commands::generated::{self, TxRequest},
     context::{CliWalletKeys, SubmissionOptions},
 };
-use rtao::{
-    client::{BlockRef, View},
-    signer::{DynKeySource, Signer},
-};
+use rtao_client::{BlockRef, View};
+use rtao_signer::{DynKeySource, Signer};
 
 pub(super) mod history;
 
@@ -256,7 +254,7 @@ async fn identity_request(
             .ok_or_else(|| input("missing coldkey"))?,
     };
     let view = client.pin().await.map_err(CliError::from)?;
-    let current = rtao::reads::reads::owner::identity(&view, owner)
+    let current = rtao_reads::reads::owner::identity(&view, owner)
         .await
         .map_err(CliError::from)?
         .unwrap_or_else(|| json!({}));
@@ -324,7 +322,7 @@ pub(super) async fn get_identity(
         None => client.pin().await,
     }
     .map_err(CliError::from)?;
-    let identity = rtao::reads::reads::owner::identity(&view, owner)
+    let identity = rtao_reads::reads::owner::identity(&view, owner)
         .await
         .map_err(CliError::from)?;
     if ctx.globals.json {
@@ -353,7 +351,7 @@ pub(super) async fn swap_check(
         .ok_or_else(|| input("missing coldkey"))?;
     let view = client.pin().await.map_err(CliError::from)?;
     let Some(announcement) =
-        rtao::reads::reads::m6_accounts::coldkey_swap_announcement(&view, owner)
+        rtao_reads::reads::m6_accounts::coldkey_swap_announcement(&view, owner)
             .await
             .map_err(CliError::from)?
     else {
@@ -489,7 +487,7 @@ pub(super) async fn run_local_with(
             })
             .transpose()?;
         let valid =
-            rtao::wallet::verify_message_as(message, signature, ss58, crypto).map_err(failure)?;
+            rtao_wallet::verify_message_as(message, signature, ss58, crypto).map_err(failure)?;
         ctx.output
             .detail(
                 None,
@@ -509,7 +507,7 @@ pub(super) async fn run_local_with(
     if name == "encrypt" {
         let message = text(matches, "message").ok_or_else(|| input("missing --message"))?;
         let recipient = text(matches, "recipient").ok_or_else(|| input("missing --recipient"))?;
-        let result = rtao::wallet::encrypt_message(message, recipient)
+        let result = rtao_wallet::encrypt_message(message, recipient)
             .await
             .map_err(failure)?;
         return ctx
@@ -540,18 +538,18 @@ pub(super) async fn run_local_with(
     )?;
     let wallet = ctx
         .wallet()?
-        .with_hotkey_password_sources(rtao::wallet::PasswordSources {
+        .with_hotkey_password_sources(rtao_wallet::PasswordSources {
             prompt: ctx.passwords.prompt,
             prompt_callback: ctx.passwords.prompt_callback.clone(),
             ..Default::default()
         });
     if name == "unlock" {
         let file = wallet.reference().coldkey_path();
-        let data = rtao::core::offload(move || rtao::wallet::read_keyfile_data(&file))
+        let data = rtao_core::offload(move || rtao_wallet::read_keyfile_data(&file))
             .await
             .map_err(|_| failure("keyfile inspection task failed"))?
             .map_err(failure)?;
-        let encrypted = rtao::core::keyfile_json::keyfile_data_is_encrypted(&data);
+        let encrypted = rtao_core::keyfile_json::keyfile_data_is_encrypted(&data);
         let ss58 = if encrypted {
             local_signer(ctx, wallet, false).await?.account()
         } else {
@@ -671,9 +669,9 @@ async fn finalized_generation_at(
     descriptor: Vec<u8>,
 ) -> Result<u64, CliError> {
     {
-        use rtao::client::ViewExt;
+        use rtao_client::ViewExt;
         let finalized = client
-            .at(rtao::client::BlockRef::Finalized)
+            .at(rtao_client::BlockRef::Finalized)
             .await
             .map_err(CliError::from)?;
         let record = finalized
@@ -688,7 +686,7 @@ async fn finalized_generation_at(
         let record = record.ok_or_else(unregistered)?;
         let stored = record
             .get("descriptor")
-            .and_then(|stored| rtao::primitives::receiving::descriptor_bytes(stored).ok())
+            .and_then(|stored| rtao_primitives::receiving::descriptor_bytes(stored).ok())
             .ok_or_else(unregistered)?;
         if stored != descriptor {
             return Err(unregistered());
@@ -723,8 +721,8 @@ async fn decrypt_with_retry(
 ) -> Result<SecretString, CliError> {
     for attempts_left in [2, 1, 0] {
         match wallet.decrypt_message(ciphertext, hotkey).await {
-            Err(rtao::wallet::WalletError::WrongPassword {
-                source: rtao::wallet::PasswordSource::Prompt,
+            Err(rtao_wallet::WalletError::WrongPassword {
+                source: rtao_wallet::PasswordSource::Prompt,
             }) if !hotkey && attempts_left > 0 => {
                 ctx.output
                     .message("error: wrong password")

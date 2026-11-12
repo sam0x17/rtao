@@ -37,7 +37,7 @@ async fn batch_uids(
     if pairs.is_empty() {
         return Ok(BTreeMap::new());
     }
-    let mut plan = rtao::client::ReadPlan::new();
+    let mut plan = rtao_client::ReadPlan::new();
     for (netuid, hotkey) in pairs {
         plan.push(
             rtao_runtime::storage::subtensor_module::UIDS.surface(),
@@ -68,7 +68,7 @@ pub(super) async fn overview(
     matches: &ArgMatches,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
-    use rtao::reads::reads::{m6_locks, m6_staking};
+    use rtao_reads::reads::{m6_locks, m6_staking};
     let targets = overview_targets(ctx, enabled(matches, "all"), history).await?;
     let filter = matches.get_one::<u16>("netuid").copied().map(NetUid);
     let view = snapshot(client, matches).await?;
@@ -402,7 +402,7 @@ pub(super) async fn registrations(
     matches: &ArgMatches,
     history: &mut PromptHistory,
 ) -> Result<(), CliError> {
-    use rtao::reads::reads::m6_accounts;
+    use rtao_reads::reads::m6_accounts;
     let all = enabled(matches, "all");
     let filter = matches.get_one::<u16>("netuid").copied().map(NetUid);
     let listed = super::list_records(&ctx.globals.wallet_path).await?;

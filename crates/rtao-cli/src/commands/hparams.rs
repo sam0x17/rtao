@@ -18,17 +18,15 @@ use crate::{
     },
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::{
-    client::{BlockRef, Client, View, ViewExt},
-    core::codec::Value as CoreValue,
-    neuron::{TrimNullAction, TrimNullConfig, TrimNullSession, TrimNullStep},
-    primitives::{AccountId, NetUid, hyperparams::RawInteger, pyfmt},
-    reads::ReadName,
-    reads::reads::owner::DelegateTake,
-    signer::BoxFuture,
-    tx::{ExtrinsicResult, Plan},
-};
 use rtao_catalog::{hyperparams::TABLE, owner_map::OWNER_HYPERPARAMETERS};
+use rtao_client::{BlockRef, Client, View, ViewExt};
+use rtao_core::codec::Value as CoreValue;
+use rtao_neuron::{TrimNullAction, TrimNullConfig, TrimNullSession, TrimNullStep};
+use rtao_primitives::{AccountId, NetUid, hyperparams::RawInteger, pyfmt};
+use rtao_reads::ReadName;
+use rtao_reads::reads::owner::DelegateTake;
+use rtao_signer::BoxFuture;
+use rtao_tx::{ExtrinsicResult, Plan};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use std::{
@@ -299,10 +297,10 @@ fn pruning_recovery_path(
     let paths = if let Some(store) = &ctx.config_store {
         store.paths()
     } else {
-        process_paths = rtao::client::config::Paths::from_process().map_err(failure)?;
+        process_paths = rtao_client::config::Paths::from_process().map_err(failure)?;
         &process_paths
     };
-    let config = paths.path(rtao::client::config::ConfigFile::Config);
+    let config = paths.path(rtao_client::config::ConfigFile::Config);
     let parent = config
         .parent()
         .ok_or_else(|| failure("CLI config has no parent"))?;
@@ -769,7 +767,7 @@ impl IdentityRequest {
         history: &mut PromptHistory,
     ) -> Result<TxRequest, CliError> {
         let netuid = self.netuid;
-        let current = rtao::reads::reads::owner::subnet_identity(client, netuid)
+        let current = rtao_reads::reads::owner::subnet_identity(client, netuid)
             .await
             .map_err(CliError::from)?
             .and_then(|identity| identity.as_object().cloned())
@@ -957,7 +955,7 @@ impl Request {
             && ctx.prompt_context().interactive(&ctx.terminal)
         {
             let hotkey = take_hotkey(ctx, args, history)?;
-            let record = rtao::reads::reads::owner::delegate_take(client, hotkey)
+            let record = rtao_reads::reads::owner::delegate_take(client, hotkey)
                 .await
                 .map_err(CliError::from)?;
             ctx.output
@@ -1028,7 +1026,7 @@ pub async fn fetch_hyperparameters<V: View + ?Sized>(
     netuid: NetUid,
 ) -> Result<Option<Map<String, Value>>, CliError> {
     let snapshot = view.pin().await.map_err(CliError::from)?;
-    let Some(params) = rtao::reads::reads::owner::subnet_hyperparameters(&snapshot, netuid)
+    let Some(params) = rtao_reads::reads::owner::subnet_hyperparameters(&snapshot, netuid)
         .await
         .map_err(CliError::from)?
     else {
@@ -1126,7 +1124,7 @@ fn example_value(name: &str, fraction: Option<f64>, raw: &Value) -> String {
             raw.as_bool()
                 .map(|value| RawInteger::Unsigned(u128::from(value)))
         })
-        && let Some(value) = rtao::primitives::ratio::integer_division_big(&raw.into(), denominator)
+        && let Some(value) = rtao_primitives::ratio::integer_division_big(&raw.into(), denominator)
     {
         return with_decimal_point(pyfmt::fmt_g(value));
     }
@@ -1381,7 +1379,7 @@ pub async fn execute(
                 .at(query.block.map_or(BlockRef::Best, BlockRef::Number))
                 .await
                 .map_err(CliError::from)?;
-            let payload = rtao::reads::dispatch(&snapshot, query.name, &query.params)
+            let payload = rtao_reads::dispatch(&snapshot, query.name, &query.params)
                 .await
                 .map_err(CliError::from)?;
             render_read(&ctx.output, query, payload)?;
@@ -1401,13 +1399,11 @@ mod validator_tests {
         output::{MemorySink, OutputOptions, Stream},
         prompt::Terminal,
     };
-    use rtao::{
-        client::{ClientConfig, Network},
-        primitives::PerU16,
-        wallet::SecretString,
-    };
+    use rtao_client::{ClientConfig, Network};
+    use rtao_primitives::PerU16;
     use rtao_runtime::storage::subtensor_module as st;
     use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+    use rtao_wallet::SecretString;
     use std::{
         collections::VecDeque,
         error::Error,

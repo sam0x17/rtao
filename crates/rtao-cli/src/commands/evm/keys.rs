@@ -13,7 +13,7 @@ use crate::{
     secrets::argv_secret_warning,
 };
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use rtao::evm::{
+use rtao_evm::{
     ETH_DERIVATION_PATH, EvmAccount, EvmKeyInfo, EvmKeyOptions,
     keys::{self as evm_keys, ImportSource, PasswordResolver},
 };
@@ -181,7 +181,7 @@ fn expand_path(path: &Path) -> Result<PathBuf, CliError> {
     }
 }
 fn read_secret_text(path: &Path, password_file: bool) -> Result<Zeroizing<String>, CliError> {
-    let bytes = rtao::wallet::read_keyfile_data(&expand_path(path)?).map_err(|_| {
+    let bytes = rtao_wallet::read_keyfile_data(&expand_path(path)?).map_err(|_| {
         failure(if password_file {
             "password file must be a readable regular file no larger than 16 MiB"
         } else {
@@ -220,7 +220,7 @@ async fn explicit_password(ctx: &AppContext) -> Result<Option<Zeroizing<String>>
         .or(ctx.passwords.password_file.as_ref())
     {
         let path = path.clone();
-        return rtao::core::offload(move || read_secret_text(&path, true))
+        return rtao_core::offload(move || read_secret_text(&path, true))
             .await
             .map_err(failure)?
             .map(Some);
@@ -303,13 +303,13 @@ impl KeyPrompt {
     }
 }
 impl PasswordResolver for KeyPrompt {
-    fn resolve(&self, confirm: bool) -> rtao::evm::Result<Zeroizing<String>> {
+    fn resolve(&self, confirm: bool) -> rtao_evm::Result<Zeroizing<String>> {
         self.prompt(confirm).map_err(|error| {
             let public = error.to_string();
             if let Ok(mut saved) = self.error.lock() {
                 *saved = Some(error);
             }
-            rtao::evm::Error::Validation(public)
+            rtao_evm::Error::Validation(public)
         })
     }
 }
@@ -429,7 +429,7 @@ async fn unlock_with(
     let (wallet, name) = key_ref(ctx, value);
     let options = options(ctx, wallet, name, false).await?;
     let prompt = KeyPrompt::new(ctx);
-    rtao::core::offload(move || prompt.finish(backend.unlock(&options, &prompt)))
+    rtao_core::offload(move || prompt.finish(backend.unlock(&options, &prompt)))
         .await
         .map_err(failure)?
 }
@@ -452,7 +452,7 @@ async fn import_source(ctx: &AppContext, leaf: &ArgMatches) -> Result<KeyImport,
             .map(checked_password)
             .transpose()?;
         let path = PathBuf::from(path);
-        let json = rtao::core::offload(move || read_secret_text(&path, false))
+        let json = rtao_core::offload(move || read_secret_text(&path, false))
             .await
             .map_err(failure)??;
         return Ok(KeyImport::Keystore { json, password });
@@ -471,7 +471,7 @@ async fn import_source(ctx: &AppContext, leaf: &ArgMatches) -> Result<KeyImport,
     }
     let terminal = ctx.terminal.clone();
     let context = ctx.prompt_context();
-    let answer = rtao::core::offload(move || {
+    let answer = rtao_core::offload(move || {
         let mut terminal = terminal
             .lock()
             .map_err(|_| failure("terminal lock poisoned"))?;
@@ -584,7 +584,7 @@ async fn run_with_backend(
         "list" => {
             let wallet = ctx.globals.wallet_name.clone();
             let root = ctx.globals.wallet_path.clone();
-            let records = rtao::core::offload(move || backend.list(&wallet, &root))
+            let records = rtao_core::offload(move || backend.list(&wallet, &root))
                 .await
                 .map_err(failure)??;
             let mut table = TableSpec::new(
@@ -620,7 +620,7 @@ async fn run_with_backend(
             let info_wallet = wallet.clone();
             let info_key = key.clone();
             let info =
-                rtao::core::offload(move || info_backend.info(&info_key, &info_wallet, &root))
+                rtao_core::offload(move || info_backend.info(&info_key, &info_wallet, &root))
                     .await
                     .map_err(failure)??;
             if name == "show" {
@@ -636,7 +636,7 @@ async fn run_with_backend(
                 .filter(|path| !path.is_empty())
                 .map(str::to_owned);
             let destination = out.as_deref().map(Path::new).map(expand_path).transpose()?;
-            let document = rtao::core::offload(move || {
+            let document = rtao_core::offload(move || {
                 let document = backend.export(&key, &wallet, &root)?;
                 if let Some(path) = destination {
                     backend.write(&path, &document)?;
@@ -691,7 +691,7 @@ async fn run_with_backend(
             )
             .await?;
             let prompt = KeyPrompt::new(ctx);
-            let info = rtao::core::offload(move || {
+            let info = rtao_core::offload(move || {
                 let result = match source {
                     Some(source) => backend.import(source, &options, &prompt),
                     None => backend.create(&options, &prompt),

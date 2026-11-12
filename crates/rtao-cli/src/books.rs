@@ -15,12 +15,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use rtao::{
-    client::config::{ConfigFile, Paths},
-    primitives::{AccountId, pyfmt},
-    signer::SignerRole,
-    wallet::{WalletError, WalletRef},
-};
+use rtao_client::config::{ConfigFile, Paths};
+use rtao_primitives::{AccountId, pyfmt};
+use rtao_signer::SignerRole;
+use rtao_wallet::{WalletError, WalletRef};
 use serde_json::Value;
 use zeroize::Zeroizing;
 
@@ -117,7 +115,7 @@ struct PublicBook {
 impl PublicBook {
     async fn load(&self) -> Result<Vec<Value>, ResolveError> {
         let path = self.path.clone();
-        rtao::core::offload(move || Ok(read_json(&path)?.as_array().cloned().unwrap_or_default()))
+        rtao_core::offload(move || Ok(read_json(&path)?.as_array().cloned().unwrap_or_default()))
             .await
             .map_err(|_| ResolveError::new("public book worker failed"))?
     }
@@ -127,7 +125,7 @@ impl PublicBook {
         change: impl FnOnce(&mut Vec<Value>) -> Result<(T, bool), ResolveError> + Send + 'static,
     ) -> Result<T, ResolveError> {
         let path = self.path.clone();
-        rtao::core::offload(move || {
+        rtao_core::offload(move || {
             let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
             let entries = value
                 .as_array_mut()
@@ -358,7 +356,7 @@ impl MultisigBook {
     /// Read the saved rows without changing malformed input.
     pub async fn load(&self) -> Result<Vec<Value>, ResolveError> {
         let path = self.path.clone();
-        rtao::core::offload(move || {
+        rtao_core::offload(move || {
             let (value, _) = read_public_json_for_update(&path, false)?;
             Ok(value.as_array().cloned().unwrap_or_default())
         })
@@ -371,7 +369,7 @@ impl MultisigBook {
     /// backup only after the replacement has passed its size/depth checks.
     pub async fn save(&self, entries: Vec<Value>) -> Result<PathBuf, ResolveError> {
         let path = self.path.clone();
-        rtao::core::offload(move || {
+        rtao_core::offload(move || {
             let value = Value::Array(entries);
             validate_multisigs(&value)?;
             let (_, corrupt) = read_public_json_for_update(&path, false)?;
@@ -386,7 +384,7 @@ impl MultisigBook {
     /// Other rows and their unknown fields retain their order and values.
     pub async fn add(&self, entry: Value, overwrite: bool) -> Result<Value, ResolveError> {
         let path = self.path.clone();
-        rtao::core::offload(move || {
+        rtao_core::offload(move || {
             validate_multisig(&entry)?;
             // A saved multisig names its derivation; omitted means legacy.
             match entry.get("account_mode") {
@@ -418,7 +416,7 @@ impl MultisigBook {
     pub async fn remove(&self, name: &str) -> Result<bool, ResolveError> {
         let path = self.path.clone();
         let name = name.to_owned();
-        rtao::core::offload(move || {
+        rtao_core::offload(move || {
             let (mut value, corrupt) = read_public_json_for_update(&path, false)?;
             let entries = value.as_array_mut().ok_or_else(invalid_multisig)?;
             let before = entries.len();
@@ -493,7 +491,7 @@ impl Books {
     /// error. Filesystem work runs on a blocking worker.
     pub async fn load(paths: &Paths) -> Result<Self, ResolveError> {
         let paths = paths.clone();
-        rtao::core::offload(move || Self::load_blocking(&paths))
+        rtao_core::offload(move || Self::load_blocking(&paths))
             .await
             .map_err(|error| ResolveError::new(error.to_string()))?
     }
@@ -553,8 +551,8 @@ fn named<'a>(rows: &'a [Value], name: &str) -> Option<&'a Value> {
 }
 
 fn read_json(path: &Path) -> Result<Value, ResolveError> {
-    match rtao::client::config::read_bounded_json_file(path) {
-        Ok(bytes) => Ok(rtao::primitives::json::from_slice(&bytes).unwrap_or(Value::Null)),
+    match rtao_client::config::read_bounded_json_file(path) {
+        Ok(bytes) => Ok(rtao_primitives::json::from_slice(&bytes).unwrap_or(Value::Null)),
         Err(error) if error.kind() == io::ErrorKind::FileTooLarge => Err(ResolveError::new(
             "book or public keyfile exceeds the 16 MiB input limit",
         )),
@@ -587,7 +585,7 @@ pub(crate) fn read_public_json_for_update(
     }
     // This reader uses O_NONBLOCK on Unix and validates the opened descriptor,
     // closing the file-type race between the path check and open.
-    let bytes = rtao::wallet::read_keyfile_data(path).map_err(|_| {
+    let bytes = rtao_wallet::read_keyfile_data(path).map_err(|_| {
         ResolveError::new("public JSON must be a readable regular file no larger than 16 MiB")
     })?;
     match serde_json::from_slice::<Value>(&bytes) {
@@ -851,14 +849,14 @@ impl FsAccountLookup {
         role: SignerRole,
         name: &str,
     ) -> Result<String, ResolveError> {
-        use rtao::signer::KeyView;
+        use rtao_signer::KeyView;
         let reference = self.reference(wallet, hotkey)?;
         let info = reference
             .public_info(role)
             .map_err(|error| public_lookup_error(error, name))?;
         if !info
             .authority
-            .is_some_and(rtao::primitives::AuthorityType::requires_registration)
+            .is_some_and(rtao_primitives::AuthorityType::requires_registration)
         {
             return Ok(info.account.to_string());
         }
@@ -868,7 +866,7 @@ impl FsAccountLookup {
         reference
             .authority_descriptor(role)
             .and_then(|descriptor| {
-                rtao::core::keys::encode_hashed_receiving_address(&descriptor).ok()
+                rtao_core::keys::encode_hashed_receiving_address(&descriptor).ok()
             })
             .ok_or_else(|| {
                 ResolveError::new(format!(
@@ -1290,9 +1288,9 @@ impl<'a> NameResolver<'a> {
         resolving: &mut ResolutionState,
     ) -> Result<ResolvedAddress, ResolveError> {
         let kind = AccountKind::for_param(param);
-        let (address, source, name) = if rtao::primitives::receiving::is_receiving_address(value) {
+        let (address, source, name) = if rtao_primitives::receiving::is_receiving_address(value) {
             // Python v488: a complete receiving address keeps its descriptor.
-            let recipient = rtao::primitives::receiving::parse_recipient(value)
+            let recipient = rtao_primitives::receiving::parse_recipient(value)
                 .map_err(|error| ResolveError::new(error.to_string()))?;
             let name = self
                 .books
@@ -1318,8 +1316,8 @@ impl<'a> NameResolver<'a> {
         } else if let Some(address) = self.books.address(value) {
             (
                 // Python v488: a booked receiving address in canonical form.
-                if rtao::primitives::receiving::is_receiving_address(address) {
-                    rtao::primitives::receiving::parse_recipient(address)
+                if rtao_primitives::receiving::is_receiving_address(address) {
+                    rtao_primitives::receiving::parse_recipient(address)
                         .map_err(|error| ResolveError::new(error.to_string()))?
                         .address
                 } else {
@@ -1407,10 +1405,10 @@ impl<'a> NameResolver<'a> {
             // A group saved as safe resolves to its safe account, never the
             // legacy account of the same members; omitted means legacy.
             let mode = match entry.get("account_mode") {
-                None => rtao::primitives::AccountMode::Legacy,
+                None => rtao_primitives::AccountMode::Legacy,
                 Some(Value::String(mode)) => {
                     mode.parse()
-                        .map_err(|error: rtao::primitives::AccountModeError| {
+                        .map_err(|error: rtao_primitives::AccountModeError| {
                             ResolveError::new(error.to_string())
                         })?
                 }
@@ -1451,7 +1449,7 @@ impl<'a> NameResolver<'a> {
                     keys.push(key);
                 }
             }
-            let (account, _) = rtao::primitives::multisig_account_id(&keys, threshold, mode)
+            let (account, _) = rtao_primitives::multisig_account_id(&keys, threshold, mode)
                 .map_err(|error| ResolveError::new(error.to_string()))?;
             Ok(account.to_string())
         };
@@ -1473,7 +1471,7 @@ impl<'a> NameResolver<'a> {
 /// Python v488 `parse_recipient(address).account`: the account a resolved
 /// SS58 or complete receiving address names (identity consumers only).
 pub fn account_of(address: &str) -> Result<AccountId, ResolveError> {
-    rtao::primitives::receiving::parse_recipient(address)
+    rtao_primitives::receiving::parse_recipient(address)
         .map(|recipient| recipient.account)
         .map_err(|error| ResolveError::new(error.to_string()))
 }
@@ -1502,8 +1500,8 @@ pub(crate) fn threshold_u16(value: &Value) -> Option<u16> {
 
 /// True only for a valid Bittensor (format 42) ss58 account.
 pub fn is_bittensor_address(value: &str) -> bool {
-    rtao::core::keys::public_key_from_ss58(value)
-        .is_ok_and(|public| rtao::core::keys::ss58_from_public(public, 42) == value)
+    rtao_core::keys::public_key_from_ss58(value)
+        .is_ok_and(|public| rtao_core::keys::ss58_from_public(public, 42) == value)
 }
 
 /// CLI flag spelling for address parameters, including embedded `_ss58`.
@@ -1749,11 +1747,8 @@ mod tests {
         );
         // The core's safe derivation of the same members, a different account.
         let members = [ALICE.parse::<AccountId>()?, BOB.parse::<AccountId>()?];
-        let (safe, _) = rtao::primitives::multisig_account_id(
-            &members,
-            2,
-            rtao::primitives::AccountMode::Safe,
-        )?;
+        let (safe, _) =
+            rtao_primitives::multisig_account_id(&members, 2, rtao_primitives::AccountMode::Safe)?;
         let resolved = names.resolve_address_ref("new_coldkey", "safe")?.address;
         assert_eq!(resolved, safe.to_string());
         assert_ne!(resolved, "5F3QVbS78a4aTYLiRAD8N3czjqVoNyV42L19CXyhqUMCh4Ch");
