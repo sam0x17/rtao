@@ -2,12 +2,18 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-11-12
+
 ### `cargo install rtao` installs the CLI (D-190)
 
 - Changed: the `rtao` crate ships the `rtao` binary. `cargo install --locked rtao` installs it with no flags, because the new `cli` feature, which builds the binary, is a default. `cargo install --locked rtao --features ledger,vault,extension,evm` adds those backends: the facade's `ledger`, `vault`, `extension`, `evm`, `pow-gpu` and `remote-signer` features also enable the CLI's.
 - Changed: `rtao-cli` is the library behind the binary and has no binary of its own; the process entry point is `rtao_cli::entry::main`. It depends on the workspace crates directly instead of on the facade, so the facade can depend on it; its public API is unchanged. `rtao-cli` 0.1.0 is the last version that installs a binary: run `cargo uninstall rtao-cli` before `cargo install rtao` if you installed it.
 - Library users: depend on `rtao` with `default-features = false` and name the features you use (the README, the book and the subnet template already do). With the default features a build also compiles the CLI and its dependencies (vendored OpenSSL, libsodium, `serde_json/preserve_order`), although the library never links it. `full` does not include `cli`, and docs.rs builds without it.
 - The release lanes build `-p rtao --bin rtao` and test `rtao-cli` and `rtao`; the archives still contain `rtao`. The subnet template installs the doctor from `rtao` (from `rtao-cli` when the resolved SDK is 0.1.0). The ten test files that run the binary moved from `rtao-cli` to `rtao`.
+
+### Republished package checksums (D-183, D-184)
+
+- `rtao-core` and `rtao-testkit` record the crates.io SHA256 of each `rtao-upstream-*` 0.490.0 package, so `rtao doctor` compares a workspace's `Cargo.lock` with them. 0.1.0 checked the versions only.
 
 ### Republished packages publish on every hourly run; tighter core-bump guard (D-189, repository maintenance)
 

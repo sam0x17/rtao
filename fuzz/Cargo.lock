@@ -3052,7 +3052,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-btauth"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "axum",
  "hex",
@@ -3072,7 +3072,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-catalog"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rtao-primitives",
  "serde",
@@ -3080,7 +3080,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-client"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "blake2",
  "bytes",
@@ -3112,7 +3112,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rtao-core-ext",
  "rtao-upstream-core",
@@ -3123,7 +3123,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-core-ext"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "frame-metadata",
  "hex",
@@ -3158,7 +3158,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-jsonrpc"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "blake2",
  "futures",
@@ -3182,7 +3182,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-metagraph"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arc-swap",
  "bytes",
@@ -3203,7 +3203,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-primitives"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "num-bigint",
@@ -3222,7 +3222,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-reads"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "futures",
@@ -3241,7 +3241,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-runtime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "blake2",
  "bytes",
@@ -3257,7 +3257,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-signer"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitflags 2.13.2",
  "blake2",
