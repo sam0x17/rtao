@@ -15,6 +15,7 @@
 #   ci/runtime-adopt.sh forks-pending <upstream.toml>
 #   ci/runtime-adopt.sh forks-package <out-dir>
 #   ci/runtime-adopt.sh forks-plan <upstream.toml> <order.txt> <verified.txt> <commit> <plan.json>
+#   ci/runtime-adopt.sh forks-held <plan.json>
 #   ci/runtime-adopt.sh forks-publish <plan.json> <published.json>
 #   ci/runtime-adopt.sh forks-record <plan.json> <published.json> <candidate> <evidence-dir>
 #   ci/runtime-adopt.sh forks-notify <outcome> <stage> [<evidence-dir>]
@@ -1313,6 +1314,7 @@ fork_order=(macros fips204 w3f-bls hashed tle core)
 forks_marker='<!-- rtao-forks-publish -->'
 release_marker='<!-- rtao-release-proposal -->'
 crates_index=${RTAO_CRATES_INDEX:-https://index.crates.io}
+crates_download=${RTAO_CRATES_DOWNLOAD:-https://static.crates.io/crates}
 
 # The [publish.<key>] entries of an upstream.toml in dependency order, one
 # per line: key, package, version and checksum ("-" when none is recorded).
@@ -1400,6 +1402,57 @@ forks_package() {
   CARGO_TARGET_DIR=$checkout/target cargo package --locked "${args[@]}"
   xtask forks verify-packaged | tee "$out/verified.txt"
   forks_plan upstream.toml "$out/order.txt" "$out/verified.txt" "$(git rev-parse HEAD)" "$out/plan.json"
+  forks_held "$out/plan.json"
+}
+
+# A pending version crates.io already holds under another SHA256 was uploaded
+# from an earlier commit: an archive names the commit it was packaged from in
+# .cargo_vcs_info.json, so a run that published but could not record before
+# main moved (a superseded record, a partial publication) leaves versions no
+# later commit packages to the same bytes. Such a version is accepted only
+# when the archive was packaged cleanly from upstream/<key> at a commit on the
+# plan commit's history and packaging that commit here reproduces its SHA256
+# exactly; the plan then carries the held SHA256 (the token job skips it and
+# forks-record's verify-published checks its files against the revision).
+# Anything else stops the run before the token job.
+forks_held() {
+  local plan=${1:?forks-held <plan.json>} checkout=${RTAO_ADOPT_CHECKOUT:-$root}
+  local key package version sha found dir vcs commit actual
+  : "${RTAO_TEMP_ROOT:?task-scoped scratch}"
+  while IFS=$'\t' read -r key package version sha; do
+    found=$(index_checksum "$package" "$version") || die "crates.io's index could not be read for $package"
+    [[ -n "$found" && "$found" != "$sha" ]] || continue
+    [[ "$found" =~ ^[0-9a-f]{64}$ ]] || die "crates.io's index gives $package $version the checksum $found"
+    dir=$RTAO_TEMP_ROOT/held/$package-$version
+    rm -rf "$dir"
+    mkdir -p "$dir/extracted"
+    curl -sS --fail --location --max-time 120 --retry 3 --retry-delay 5 -o "$dir/package.crate" \
+      "$crates_download/$package/$package-$version.crate" >/dev/null || die "could not download $package $version from crates.io"
+    [[ "$(sha256sum "$dir/package.crate" | cut -c1-64)" == "$found" ]] ||
+      die "the downloaded $package $version is not the archive crates.io's index records ($found)"
+    tar -xzf "$dir/package.crate" -C "$dir/extracted" --no-same-owner --no-same-permissions \
+      "$package-$version/.cargo_vcs_info.json" || die "crates.io's $package $version names no commit (.cargo_vcs_info.json)"
+    vcs=$dir/extracted/$package-$version/.cargo_vcs_info.json
+    commit=$(jq -r '.git.sha1 // empty' "$vcs") || die "crates.io's $package $version has an unreadable .cargo_vcs_info.json"
+    [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || die "crates.io's $package $version names no full commit"
+    [[ "$(jq -r '.git.dirty // false' "$vcs")" == false && "$(jq -r '.path_in_vcs // empty' "$vcs")" == "upstream/$key" ]] ||
+      die "crates.io holds $package $version with SHA256 $found, packaged from a dirty tree or not from upstream/$key"
+    git -C "$checkout" merge-base --is-ancestor "$commit" HEAD 2>/dev/null ||
+      die "crates.io holds $package $version with SHA256 $found, packaged from $commit, which is not on this commit's history"
+    git -C "$checkout" worktree add -q --detach "$dir/tree" "$commit" >/dev/null 2>&1 || die "could not check out $commit"
+    if ! (cd "$dir/tree" && CARGO_TARGET_DIR=$dir/target cargo package --locked --no-verify -q -p "$package") >&2; then
+      git -C "$checkout" worktree remove --force "$dir/tree"
+      die "cargo package $package at $commit failed"
+    fi
+    git -C "$checkout" worktree remove --force "$dir/tree"
+    actual=$(sha256sum "$dir/target/package/$package-$version.crate" 2>/dev/null | cut -c1-64)
+    [[ "$actual" == "$found" ]] ||
+      die "crates.io holds $package $version with SHA256 $found, but packaging $commit gives ${actual:-no archive}"
+    jq --arg key "$key" --arg sha "$found" --arg commit "$commit" \
+      '.entries |= map(if .key == $key then .sha256 = $sha | .packaged_from = $commit else . end)' "$plan" >"$plan.new"
+    mv "$plan.new" "$plan"
+    echo "$package $version: already on crates.io from $commit, on this commit's history; packaging it reproduces $found"
+  done < <(jq -r '.entries[] | [.key, .package, .version, .sha256] | @tsv' "$plan")
 }
 
 # The index path of a crate name (crates.io's sparse index layout).
@@ -2085,6 +2138,7 @@ case "$command" in
   forks-pending) forks_pending "$@" ;;
   forks-package) forks_package "$@" ;;
   forks-plan) forks_plan "$@" ;;
+  forks-held) forks_held "$@" ;;
   forks-publish) forks_publish "$@" ;;
   forks-record) forks_record "$@" ;;
   forks-notify) forks_notify "$@" ;;

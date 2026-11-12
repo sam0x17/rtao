@@ -241,11 +241,14 @@ jobs:
             echo "RTAO_TEMP_ROOT=$RUNNER_TEMP/forks"
             echo "FORKS=$RUNNER_TEMP/forks-plan"
           } >> "$GITHUB_ENV"
-      # main as it is now, including what this run's push job landed.
+      # main as it is now, including what this run's push job landed; with
+      # its history, since a version an earlier commit published is checked
+      # by packaging that commit (forks-held).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: main
+          fetch-depth: 0
       - name: List the republished packages without a recorded checksum
         id: pending
         run: |

@@ -5,6 +5,7 @@
 ### Republished packages publish on every hourly run; tighter core-bump guard (D-189, repository maintenance)
 
 - runtime-adopt's publication jobs no longer skip on runs that adopted nothing, so a failed or partial publication is retried on the next hourly run, and a skipped publication on main is reported as a failure.
+- A version an earlier run published from an older commit (after a superseded record or a partial publication) is recorded on a later run once packaging that commit reproduces crates.io's archive, instead of stopping every run.
 - A core bump's commit guard admits only the republished packages' manifests, without build scripts, git sources or paths outside the packages.
 
 ### Republished packages published automatically; template on crates.io (D-188, repository maintenance)

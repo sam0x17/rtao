@@ -231,7 +231,11 @@ crate it depends on is not published yet.
   --no-verify -p`, only when the archive it packages has the verified
   SHA256; a version crates.io already holds is skipped when its index
   checksum is that SHA256 and stops the run otherwise; a 429 waits and
-  retries); a read-only job records the checksums in `upstream.toml` and its
+  retries). An archive names the commit it was packaged from, so a version
+  an earlier run published from an older commit has another SHA256 than a
+  later commit packages: the read-only job accepts it only when that commit
+  is on main's history and packaging it reproduces crates.io's archive
+  (D-189). A read-only job records the checksums in `upstream.toml` and its
   crate copies, runs `forks verify-published` and commits as the bot, and a
   job that builds nothing pushes the record. Any failure commits nothing,
   opens one issue and alerts. Success opens or refreshes an issue proposing

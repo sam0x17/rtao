@@ -701,7 +701,8 @@ done
 case "$1" in
   package)
     mkdir -p "$CARGO_TARGET_DIR/package"
-    cp "$d/crate" "$CARGO_TARGET_DIR/package/$package-$(cat "$d/version").crate"
+    if [[ -f "$d/repack" ]]; then source=$d/repack; else source=$d/crate; fi
+    cp "$source" "$CARGO_TARGET_DIR/package/$package-$(cat "$d/version").crate"
     ;;
   publish)
     response=$(head -1 "$d/responses" 2>/dev/null || true)
@@ -741,6 +742,11 @@ while (($#)); do
   esac
 done
 name=${url##*/}
+if [[ "$name" == *.crate ]]; then
+  [[ -f "$FAKE_CARGO/download-$name" ]] || exit 22
+  cp "$FAKE_CARGO/download-$name" "$out"
+  exit 0
+fi
 if [[ -f "$FAKE_CARGO/index-down" ]]; then : >"$out"; printf 503; exit 0; fi
 if [[ -f "$FAKE_CARGO/index-$name" ]]; then cp "$FAKE_CARGO/index-$name" "$out"; printf 200; else : >"$out"; printf 404; fi
 CURL
@@ -793,6 +799,48 @@ publish_case empty-plan refuse ok "" 'core archive' true '.entries = []' '$calls
 publish_case index-unreadable refuse ok down 'core archive' true . '$calls == ""'
 RTAO_INDEX_ATTEMPTS=2 publish_case published-bytes-differ refuse foreign "" 'core archive' true . "$uploads == 1"
 RTAO_INDEX_ATTEMPTS=2 publish_case never-indexed refuse 'already exists' "" 'core archive' true . "$uploads == 1"
+
+# A pending version crates.io already holds under another SHA256 (published
+# from an earlier commit, whose archives differ in .cargo_vcs_info.json): the
+# plan takes the held SHA256 only when the archive names a clean
+# upstream/<key> commit on the plan commit's history and packaging it there
+# reproduces the archive.
+held=$pub/held
+git clone -q "$pub/checkout" "$held/checkout"
+git -C "$held/checkout" -c user.name=t -c user.email=t@invalid commit -q --allow-empty -m later
+held_plan_commit=$(git -C "$held/checkout" rev-parse HEAD)
+# held_case <name> <expected: pass|refuse> <vcs json> [repack bytes]
+held_case() {
+  local d=$held/$1 got=refuse sha
+  mkdir -p "$d/state" "$d/archive/rtao-upstream-core-0.490.1"
+  printf '%s' "$3" >"$d/archive/rtao-upstream-core-0.490.1/.cargo_vcs_info.json"
+  printf 'pub fn f() {}\n' >"$d/archive/rtao-upstream-core-0.490.1/lib.rs"
+  tar -czf "$d/state/crate" -C "$d/archive" rtao-upstream-core-0.490.1
+  sha=$(sha256sum "$d/state/crate" | cut -c1-64)
+  cp "$d/state/crate" "$d/state/download-rtao-upstream-core-0.490.1.crate"
+  echo 0.490.1 >"$d/state/version"
+  printf '{"name":"rtao-upstream-core","vers":"0.490.1","cksum":"%s"}\n' "$sha" >"$d/state/index-rtao-upstream-core"
+  [[ -z "${4:-}" ]] || printf '%s' "$4" >"$d/state/repack"
+  jq -n --arg commit "$held_plan_commit" --arg sha "$core_sha" \
+    '{commit: $commit, entries: [{key: "core", package: "rtao-upstream-core", version: "0.490.1", sha256: $sha}]}' >"$d/plan.json"
+  if FAKE_CARGO=$d/state PATH=$pub/bin:$PATH RTAO_ADOPT_CHECKOUT=$held/checkout RTAO_TEMP_ROOT=$d/tmp \
+    bash "$script" forks-held "$d/plan.json" >"$d/log" 2>&1 &&
+    jq -e --arg sha "$sha" --arg commit "$pub_commit" '.entries[0].sha256 == $sha and .entries[0].packaged_from == $commit' "$d/plan.json" >/dev/null; then
+    got=pass
+  fi
+  if [[ "$got" == "$2" && -z "$(git -C "$held/checkout" worktree list | sed 1d)" ]]; then
+    echo "ok   held $1: $got"
+  else
+    echo "FAIL held $1: expected $2, got $got; $(tail -2 "$d/log" | tr '\n' ' ')"
+    failures=$((failures + 1))
+  fi
+}
+held_case from-an-earlier-commit pass "{\"git\":{\"sha1\":\"$pub_commit\"},\"path_in_vcs\":\"upstream/core\"}"
+held_case from-another-history refuse "{\"git\":{\"sha1\":\"$(printf 'a%.0s' {1..40})\"},\"path_in_vcs\":\"upstream/core\"}"
+held_case from-a-dirty-tree refuse "{\"git\":{\"sha1\":\"$pub_commit\",\"dirty\":true},\"path_in_vcs\":\"upstream/core\"}"
+held_case from-another-path refuse "{\"git\":{\"sha1\":\"$pub_commit\"},\"path_in_vcs\":\"elsewhere/core\"}"
+held_case without-a-commit refuse '{"path_in_vcs":"upstream/core"}'
+held_case not-reproduced refuse "{\"git\":{\"sha1\":\"$pub_commit\"},\"path_in_vcs\":\"upstream/core\"}" 'other bytes'
 
 # The publication's issue, alert and release proposal (stand-in gh and curl
 # from the issue loop above).
