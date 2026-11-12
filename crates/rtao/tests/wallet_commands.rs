@@ -996,6 +996,11 @@ fn fifo_json_import_and_public_listing_refuse_without_a_writer() -> TestResult {
     use std::process::{Command, Output as ProcessOutput, Stdio};
     use std::time::{Duration, Instant};
 
+    // A blocked open never returns, so the bound only has to separate a hang
+    // from a slow start. A binary's first launch on macOS waits for the
+    // system's code assessment, which has taken longer than 5 seconds.
+    const PROCESS_LIMIT: Duration = Duration::from_secs(60);
+
     fn bounded_output(command: &mut Command) -> std::io::Result<ProcessOutput> {
         let mut child = command
             .stdout(Stdio::piped())
@@ -1012,7 +1017,7 @@ fn fifo_json_import_and_public_listing_refuse_without_a_writer() -> TestResult {
                     return Err(error);
                 }
             }
-            if start.elapsed() >= Duration::from_secs(5) {
+            if start.elapsed() >= PROCESS_LIMIT {
                 let _ = child.kill();
                 let _ = child.wait();
                 return Err(std::io::Error::new(

@@ -403,6 +403,12 @@ fn actual_cli_config_startup_preserves_an_oversized_source() -> TestResult {
     Ok(())
 }
 
+/// A blocked process never exits, so the bound only has to separate a hang from
+/// a slow start. A binary's first launch on macOS waits for the system's code
+/// assessment, which has taken longer than 5 seconds.
+#[cfg(unix)]
+const PROCESS_LIMIT: Duration = Duration::from_secs(60);
+
 #[cfg(unix)]
 fn bounded_output(command: &mut std::process::Command) -> std::io::Result<std::process::Output> {
     use std::process::Stdio;
@@ -423,7 +429,7 @@ fn bounded_output(command: &mut std::process::Command) -> std::io::Result<std::p
                 return Err(error);
             }
         }
-        if started.elapsed() >= Duration::from_secs(5) {
+        if started.elapsed() >= PROCESS_LIMIT {
             let _ = child.kill();
             let _ = child.wait();
             return Err(std::io::Error::new(
