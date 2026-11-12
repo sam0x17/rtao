@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-11-12
+
 ### Pair-budget test independent of wall time (D-187, repository maintenance)
 
 - The rtao-neuron test that exhausts a shielded weight submission's pair budget no longer depends on host speed. It sets neither execution deadline, as rtao-tx's durable shield tests do. Before, it kept the default 30 s admission window, which covers all fourteen reseals, and failed on slower hosts (x86_64 under Rosetta). The SDK is unchanged.

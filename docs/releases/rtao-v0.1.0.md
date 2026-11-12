@@ -98,6 +98,8 @@ widely pinned revision:
   inputs copied into the crates that read them; release notes that fit GitHub's
   limit; the republished core's `MODIFICATIONS` lists the files the core patch
   changes; a macOS release lane that passes with default-feature CLI tests.
+- D-187: the pair-budget readiness test no longer depends on host speed
+  (repository maintenance; the SDK is unchanged).
 
 ## Journal compatibility
 
