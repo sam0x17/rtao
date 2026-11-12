@@ -39,6 +39,7 @@ version = "0.490.0"
 repo = "https://github.com/RaoFoundation/subtensor.git"
 rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 path = "support/macros"
+checksum = "af6512f4f282a44776829c7f9a90a91502fdb84e4698f73001242a08460f159f"
 
 [publish.fips204]
 package = "rtao-upstream-fips204"
@@ -46,6 +47,7 @@ version = "0.490.0"
 repo = "https://github.com/RaoFoundation/subtensor.git"
 rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 path = "vendor/fips204"
+checksum = "edd26876e5c4c802d365c07d4e5b3087106874cd6ed76330a10638e09f28f9f6"
 
 [publish.w3f-bls]
 package = "rtao-upstream-w3f-bls"
@@ -53,6 +55,7 @@ version = "0.490.0"
 repo = "https://github.com/RaoFoundation/subtensor.git"
 rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 path = "vendor/w3f-bls"
+checksum = "da7fc645110016dfacb00acb8db5c9a92fe36e4afa1f98ddb34e722e02dc8d52"
 
 [publish.hashed]
 package = "rtao-upstream-hashed"
@@ -60,6 +63,7 @@ version = "0.490.0"
 repo = "https://github.com/RaoFoundation/subtensor.git"
 rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 path = "primitives/hashed"
+checksum = "3b1208977c861959f4a15795735692df380671dd50a0c52f12011b3374355255"
 
 [publish.tle]
 package = "rtao-upstream-tle"
@@ -67,6 +71,7 @@ version = "0.490.0"
 repo = "https://github.com/ideal-lab5/timelock"
 rev = "5416406cfd32799e31e1795393d4916894de4468"
 path = "tle"
+checksum = "5dba56a0245cf22b2bd6a5e5503b4f480ff888a2fa40061f128862a2da6c79bf"
 
 [publish.core]
 package = "rtao-upstream-core"
@@ -74,6 +79,7 @@ version = "0.490.0"
 repo = "https://github.com/sam0x17/subtensor.git"
 rev = "d7fd8762625a93b9837cde28d496b0819a976f0e"
 path = "sdk/bittensor-core"
+checksum = "954983f3870ef1e2d504316116cfa6aa309be06330af01df7dd13571a627fe53"
 
 [parity]
 tag = "v490"
