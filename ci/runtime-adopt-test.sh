@@ -215,7 +215,7 @@ expect_pins core-bump-unreleased-source "$unreleased_root" "$(bump "$current")" 
 # The commit guard: a core bump may change manifests and locks, and in a
 # manifest only the core's references; everything else stays refused.
 sed -n -e '/^die() {/,/^}/p' -e '/^tooling_paths=/p' -e '/^core_bump_paths=/p' -e '/^core_reference=/p' \
-  -e '/^vendored_sources=/p' -e '/^generated_packages=/p' -e '/^republished_dependency=/p' \
+  -e '/^vendored_sources=/p' -e '/^generated_packages=/p' -e '/^generated_manifest=/p' -e '/^generated_manifest_refused=/p' -e '/^generated_manifest_path=/p' -e '/^republished_dependency=/p' \
   -e '/^publish_record_files=/p' -e '/^publish_checksum=/p' -e '/^without_publish_checksums() {/,/^}/p' \
   -e '/^check_publish_record() {/,/^}/p' -e '/^record_checksums() {/,/^}/p' \
   -e '/^check_paths() {/,/^}/p' "$script" >"$work/paths.sh"
@@ -239,9 +239,9 @@ bittensor-core = { package = "rtao-upstream-core", path = "upstream/core", versi
 w3f-bls = { package = "rtao-upstream-w3f-bls", path = "upstream/w3f-bls", version = "=0.490.0", default-features = false, features = ["std"] }
 tle = { package = "rtao-upstream-tle", path = "upstream/tle", version = "=0.490.0", default-features = false }
 TOML
-mkdir -p "$guard/upstream/core" "$guard/crates/rtao-core" "$guard/crates/rtao-testkit"
+mkdir -p "$guard/upstream/core/src" "$guard/crates/rtao-core" "$guard/crates/rtao-testkit"
 printf '[package]\nname = "rtao-upstream-core"\nversion = "0.490.0"\n' >"$guard/upstream/core/Cargo.toml"
-printf 'fn main() {}\n' >"$guard/upstream/core/build.rs"
+printf 'pub fn f() {}\n' >"$guard/upstream/core/src/lib.rs"
 cat >"$guard/upstream.toml" <<TOML
 [core]
 tag = "v490"
@@ -298,12 +298,19 @@ guard_case adoption-refuses-manifest-outside-vendored-sources refuse adopt-finne
 guard_case core-bump-refuses-another-repository refuse core-bump "sed -i 's|$fork_url|https://github.com/attacker/subtensor.git|' Cargo.toml"
 # A core bump moves the republished packages (D-188): their generated sources
 # and, in the root manifest, only the version of each exact requirement.
-republished="sed -i 's/version = \"=0.490.0\"/version = \"=0.491.0\"/' Cargo.toml && sed -i 's/0.490.0/0.491.0/' upstream/core/Cargo.toml && echo '// moved' >>upstream/core/build.rs"
+republished="sed -i 's/version = \"=0.490.0\"/version = \"=0.491.0\"/' Cargo.toml && sed -i 's/0.490.0/0.491.0/' upstream/core/Cargo.toml && echo '// moved' >>upstream/core/src/lib.rs"
 guard_case core-bump-moves-republished-packages pass core-bump "$moved && $republished"
 guard_case core-bump-refuses-a-republished-path-change refuse core-bump "$republished && sed -i 's|path = \"upstream/tle\"|path = \"elsewhere/tle\"|' Cargo.toml"
 guard_case core-bump-refuses-a-republished-feature-change refuse core-bump "$republished && sed -i '/^tle = /s/default-features = false/default-features = true/' Cargo.toml"
 guard_case core-bump-refuses-an-unpaired-republished-line refuse core-bump "sed -i '/^tle = /d' Cargo.toml"
 guard_case adoption-refuses-generated-packages refuse adopt-finney "$republished"
+guard_case core-bump-refuses-a-republished-build-script refuse core-bump "$moved && $republished && echo 'fn main() {}' >upstream/core/build.rs && git add upstream/core/build.rs"
+guard_case core-bump-refuses-a-republished-lock refuse core-bump "$moved && $republished && echo 'lock' >upstream/core/Cargo.lock && git add upstream/core/Cargo.lock"
+guard_case core-bump-refuses-a-republished-git-source refuse core-bump "$moved && $republished && echo 'evil = { git = \"https://github.com/attacker/evil.git\" }' >>upstream/core/Cargo.toml"
+guard_case core-bump-refuses-a-republished-build-key refuse core-bump "$moved && $republished && sed -i '/^\[package\]/a build = \"src/evil.rs\"' upstream/core/Cargo.toml"
+guard_case core-bump-refuses-a-republished-foreign-path refuse core-bump "$moved && $republished && echo 'evil = { version = \"1\", path = \"../../xtask\" }' >>upstream/core/Cargo.toml"
+guard_case core-bump-refuses-a-republished-patch refuse core-bump "$moved && $republished && printf '[patch.crates-io]\nserde = { path = \"../macros\" }\n' >>upstream/core/Cargo.toml"
+guard_case core-bump-admits-a-republished-sibling pass core-bump "$moved && $republished && echo 'tle = { package = \"rtao-upstream-tle\", version = \"=0.491.0\", path = \"../tle\" }' >>upstream/core/Cargo.toml"
 # The [publish] record (D-188): checksum lines added to [publish.<key>] tables
 # of upstream.toml and its byte-identical crate copies, nothing else.
 copies="cp upstream.toml crates/rtao-core/upstream.toml && cp upstream.toml crates/rtao-testkit/upstream.toml"
@@ -706,6 +713,12 @@ case "$1" in
       echo "error: crate version \`$(cat "$d/version")\` is already uploaded" >&2
       exit 101
     fi
+    if [[ "$response" == foreign ]]; then
+      # crates.io stored other bytes than the ones checked here.
+      printf '{"name":"%s","vers":"%s","cksum":"%s"}\n' "$package" "$(cat "$d/version")" \
+        "$(printf 'f%.0s' {1..64})" >>"$d/index-$package"
+      exit 0
+    fi
     if [[ -z "$response" || "$response" == ok ]]; then
       printf '{"name":"%s","vers":"%s","cksum":"%s"}\n' "$package" "$(cat "$d/version")" \
         "$(sha256sum "$d/crate" | cut -c1-64)" >>"$d/index-$package"
@@ -728,6 +741,7 @@ while (($#)); do
   esac
 done
 name=${url##*/}
+if [[ -f "$FAKE_CARGO/index-down" ]]; then : >"$out"; printf 503; exit 0; fi
 if [[ -f "$FAKE_CARGO/index-$name" ]]; then cp "$FAKE_CARGO/index-$name" "$out"; printf 200; else : >"$out"; printf 404; fi
 CURL
 chmod +x "$pub/bin/cargo" "$pub/bin/curl"
@@ -738,19 +752,24 @@ publish_case() {
   printf '%s' "$5" >"$d/state/crate"
   echo 0.490.1 >"$d/state/version"
   printf '%s' "$3" | tr ',' '\n' >"$d/state/responses"
-  [[ -z "$4" ]] || printf '%s\n' "$4" >"$d/state/index-rtao-upstream-core"
+  case "$4" in
+    "") ;;
+    down) : >"$d/state/index-down" ;;
+    *) printf '%s\n' "$4" >"$d/state/index-rtao-upstream-core" ;;
+  esac
   jq -n --arg commit "$pub_commit" --arg sha "$core_sha" \
     '{commit: $commit, entries: [{key: "core", package: "rtao-upstream-core", version: "0.490.1", sha256: $sha}]}' |
     jq "${7:-.}" >"$d/plan.json"
   if FAKE_CARGO=$d/state PATH=$pub/bin:$PATH CARGO_REGISTRY_TOKEN=x RTAO_ADOPT_CHECKOUT=$pub/checkout \
     CARGO_TARGET_DIR=$d/target RTAO_PUBLISH_PAUSE=0 RTAO_INDEX_PAUSE=0 RTAO_PUBLISH_ATTEMPTS=${PUBLISH_ATTEMPTS:-8} \
+    RTAO_INDEX_ATTEMPTS=${RTAO_INDEX_ATTEMPTS:-30} \
     bash "$script" forks-publish "$d/plan.json" "$d/published.json" >"$d/log" 2>&1 &&
     jq -e "$6" "$d/published.json" >/dev/null 2>&1; then
     got=pass
   fi
   # Checks on what was called, whatever the outcome.
   if [[ "$got" == "$2" ]] && jq -e -n --rawfile calls <(cat "$d/state/calls" 2>/dev/null) "${8:-true}" >/dev/null; then
-    echo "ok   publish $1: $got ($(tr '\n' ' ' <"$d/state/calls" 2>/dev/null))"
+    echo "ok   publish $1: $got ($(tr '\n' ' ' 2>/dev/null <"$d/state/calls"))"
   else
     echo "FAIL publish $1: expected $2, got $got; $(tail -3 "$d/log" | tr '\n' ' ')"
     failures=$((failures + 1))
@@ -771,6 +790,9 @@ publish_case wrong-commit refuse ok "" 'core archive' true ".commit = \"$commit4
 publish_case plan-not-pending refuse ok "" 'core archive' true \
   '.entries[0] += {key: "macros", package: "rtao-upstream-macros", version: "0.490.0"}' '$calls == ""'
 publish_case empty-plan refuse ok "" 'core archive' true '.entries = []' '$calls == ""'
+publish_case index-unreadable refuse ok down 'core archive' true . '$calls == ""'
+RTAO_INDEX_ATTEMPTS=2 publish_case published-bytes-differ refuse foreign "" 'core archive' true . "$uploads == 1"
+RTAO_INDEX_ATTEMPTS=2 publish_case never-indexed refuse 'already exists' "" 'core archive' true . "$uploads == 1"
 
 # The publication's issue, alert and release proposal (stand-in gh and curl
 # from the issue loop above).

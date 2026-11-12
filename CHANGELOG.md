@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Republished packages publish on every hourly run; tighter core-bump guard (D-189, repository maintenance)
+
+- runtime-adopt's publication jobs no longer skip on runs that adopted nothing, so a failed or partial publication is retried on the next hourly run, and a skipped publication on main is reported as a failure.
+- A core bump's commit guard admits only the republished packages' manifests, without build scripts, git sources or paths outside the packages.
+
 ### Republished packages published automatically; template on crates.io (D-188, repository maintenance)
 
 - The hourly runtime-adopt workflow publishes new `rtao-upstream-*` versions (after a core bump or a new core adaptation revision) in dependency order, records their checksums in `upstream.toml` `[publish]` after `cargo xtask forks verify-published`, and opens an issue proposing the next rtao release. Verification builds run without the crates.io token; the publishing job builds nothing and uploads only archives with the verified SHA256. It never publishes rtao crates. A failure commits nothing, opens an issue and alerts.

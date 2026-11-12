@@ -1142,6 +1142,14 @@ core_reference='^[-+]([A-Za-z0-9_-]+ = \{ git = "https://github\.com/(RaoFoundat
 # (pin --check), and the root manifest's exact requirements on them; each such
 # line may change only its version (D-188).
 generated_packages='^upstream/(macros|fips204|w3f-bls|hashed|tle|core)/'
+# Of their tooling files only the manifests may change, and no added manifest
+# line may bring in a git source, a build script, links, another registry, a
+# [patch]/[replace]/[workspace] table or a path outside the packages
+# themselves: a build script or a new source in a republished package needs a
+# reviewed commit, not the bump's guard.
+generated_manifest='^upstream/(macros|fips204|w3f-bls|hashed|tle|core)/Cargo\.toml$'
+generated_manifest_refused='(^|[{,] *)(git|build|links|registry|registry-index|workspace) *=|^ *\[+ *(patch|replace|workspace)'
+generated_manifest_path='^path *= *"(src/lib\.rs|\.\./(macros|fips204|w3f-bls|hashed|tle|core))"$'
 republished_dependency='^[-+](bittensor-core|w3f-bls|tle) = \{ package = "rtao-upstream-(core|w3f-bls|tle)", path = "upstream/(core|w3f-bls|tle)", version = "=0\.[0-9]+\.[0-9]+", default-features = false(, features = \["std"\])? \}$'
 # The record of published packages (D-188) adds one checksum line to
 # [publish.<key>] tables of upstream.toml and of its two crate copies, which
@@ -1169,13 +1177,21 @@ check_publish_record() {
     die "the [publish] record adds checksum lines outside the [publish.<key>] tables"
 }
 check_paths() {
-  local touched manifest stray
+  local touched manifest stray added
   if [[ "${3:-}" == publish-forks ]]; then
     check_publish_record "$1" "$2"
     return
   fi
   touched=$(git diff --name-only "$1" "$2" | grep -Ev "$vendored_sources" | grep -E "$tooling_paths" || true)
   if [[ "${3:-}" == core-bump ]]; then
+    for manifest in $(grep -E "$generated_packages" <<<"$touched" || true); do
+      [[ "$manifest" =~ $generated_manifest ]] ||
+        die "the core bump changes $manifest; of the republished packages' tooling only their manifests may move"
+      added=$(git diff --no-color --no-ext-diff -U0 "$1" "$2" -- "$manifest" | grep -E '^\+' | grep -Ev '^\+\+\+ ' | cut -c2- || true)
+      stray=$(grep -E "$generated_manifest_refused" <<<"$added" || true)
+      stray+=$(grep -oE 'path *= *"[^"]*"' <<<"$added" | grep -Ev "$generated_manifest_path" || true)
+      [[ -z "$stray" ]] || die "the core bump's $manifest adds what the guard does not admit: $stray"
+    done
     touched=$(grep -Ev "$generated_packages" <<<"$touched" || true)
     for manifest in $(grep -E '(^|/)Cargo\.toml$' <<<"$touched" || true); do
       stray=$(git diff --no-color --no-ext-diff -U0 "$1" "$2" -- "$manifest" |
