@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testnet runtime 491 recorded automatically
+
+- Testnet finalized spec 491 (`:code` `0x4201278656a17aff924ca24123c8e5866d569a84a7150bb0372bc7078fc6173c`) at block 8459072; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `breaking`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/43921725109)). Source: upstream commit `be3a11b1a5300bb58d6fbad3c629e4a926bb2f44`, whose v491 prerelease wasm is this `:code`. The parity pin is unchanged.
+
 ### Rust 1.100 toolchain; dependencies only the features that use them pull in (D-191)
 
 - The development toolchain is Rust 1.100.0. The MSRV stays 1.90 and the subnet template keeps 1.90.0. The macOS release lane needs Rust 1.100.0 installed; the checksum-pinned Intel standard library follows it.
