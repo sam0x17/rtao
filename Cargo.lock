@@ -6014,7 +6014,7 @@ dependencies = [
 
 [[package]]
 name = "rtao"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -6056,7 +6056,7 @@ version = "0.2.0"
 
 [[package]]
 name = "rtao-btauth"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum",
  "bytes",
@@ -6089,7 +6089,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-catalog"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "rtao-primitives",
  "serde",
@@ -6098,7 +6098,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "caseless",
  "clap",
@@ -6147,7 +6147,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-client"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake2",
  "bytes",
@@ -6184,7 +6184,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-compat-epistula"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum",
  "bytes",
@@ -6209,7 +6209,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-compat-synapse"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -6239,7 +6239,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "blake2",
@@ -6253,7 +6253,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-core-ext"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "criterion",
  "frame-metadata",
@@ -6268,7 +6268,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-evm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "aes",
  "alloy-consensus",
@@ -6304,7 +6304,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-intents"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "criterion",
@@ -6328,7 +6328,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-jsonrpc"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake2",
  "futures",
@@ -6353,7 +6353,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-metagraph"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "arc-swap",
  "blake2",
@@ -6379,7 +6379,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-neuron"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -6421,7 +6421,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-primitives"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "num-bigint",
@@ -6442,7 +6442,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-reads"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "futures",
@@ -6462,7 +6462,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-remote-signer"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum",
  "blake2",
@@ -6502,7 +6502,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-runtime"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake2",
  "bytes",
@@ -6522,7 +6522,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-signer"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -6554,7 +6554,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-testkit"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ark-serialize 0.4.2",
  "blake2",
@@ -6603,7 +6603,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-transport-quic"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "base64 0.22.1",
  "blake2",
@@ -6632,7 +6632,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-tx"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "chrono",
  "futures",
@@ -6789,7 +6789,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-wallet"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "hex",
  "libc",
@@ -9957,7 +9957,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "blake2",

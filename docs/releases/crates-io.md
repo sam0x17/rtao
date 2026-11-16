@@ -11,7 +11,7 @@ packages (D-183); the transport crate is `rtao-jsonrpc` (D-182).
 ## 1. Packaging already in place (D-181)
 
 - Every `rtao-*` entry in `[workspace.dependencies]` carries the version that
-  `cargo publish` writes into dependants: the workspace version (`0.1.1`),
+  `cargo publish` writes into dependants: the workspace version (`0.1.2`),
   and `0.2.0` for `rtao-arena`. Bump them with `[workspace.package] version`.
 - Dev-dependencies on workspace crates are path-only (no `workspace = true`),
   so `cargo publish` strips them. `rtao-testkit` depends on `rtao-client`,

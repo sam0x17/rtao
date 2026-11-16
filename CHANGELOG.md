@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-11-16
+
 ### New environment names during runtime adoption (D-194)
 
 - Fixed: runtime adoption records newly extracted upstream environment names as explicit pending parity work, including their authenticated source spans and read semantics. New names no longer stop adoption at extraction. Existing decisions remain validated, vanished names still fail, and strict parity still refuses pending behavior. Normal `extract` and `extract --check` retain exact inventory coverage.
