@@ -884,21 +884,30 @@ fn extract_at(root: &Path, check: bool) -> Result<()> {
 /// Extract btauth goldens and Python tables, or verify their committed outputs.
 pub fn run(args: &[String]) -> Result<()> {
     let mut check = false;
+    let mut adopt = false;
     for arg in args {
         match arg.as_str() {
             "--check" => check = true,
+            "--adopt" => adopt = true,
             "--help" | "-h" => {
                 println!(
-                    "cargo xtask extract [--check]\n\nRust-only literal extraction from vendored upstream Python. --check is read-only and offline."
+                    "cargo xtask extract [--check | --adopt]\n\nRust-only literal extraction from vendored upstream Python. --check is read-only and offline. --adopt records newly discovered environment names as pending parity work; existing decisions must remain valid."
                 );
                 return Ok(());
             }
             _ => bail!("unknown extract argument {arg:?}"),
         }
     }
+    ensure!(
+        !(check && adopt),
+        "extract --check cannot be combined with --adopt"
+    );
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .context("xtask has no workspace parent")?;
+    if adopt {
+        resolved::stage_pending_environment(root)?;
+    }
     extract_at(root, check)?;
     resolved::extract_at(root, check)?;
     crate::extract_receipt::extract_at(root, check)?;
@@ -912,6 +921,15 @@ pub fn run(args: &[String]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn check_refuses_adoption_before_extracting() -> Result<()> {
+        let error = run(&["--check".into(), "--adopt".into()])
+            .err()
+            .context("check must never stage parity decisions")?;
+        assert!(error.to_string().contains("cannot be combined"));
+        Ok(())
+    }
 
     fn value(source: &str) -> Result<Value> {
         Ok(extract_values(source, "literal_test.py", &["VALUE"])?["VALUE"]["value"].clone())

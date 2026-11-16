@@ -1539,11 +1539,7 @@ fn parity_map(root: &Path, names: &BTreeSet<String>, text: Option<&str>) -> Resu
     )
 }
 
-pub(super) fn outputs(
-    root: &Path,
-    pins: &DocumentMut,
-    _tables: &Value,
-) -> Result<Vec<(&'static str, Vec<u8>)>> {
+fn occurrences(root: &Path) -> Result<(usize, Vec<Value>)> {
     let tree = Resolver::new(root)?.tree;
     let paths = tree
         .keys()
@@ -1568,7 +1564,11 @@ pub(super) fn outputs(
             row["name"].as_str().unwrap_or("").to_owned(),
         )
     });
-    let names = occurrences
+    Ok((paths.len(), occurrences))
+}
+
+fn names(occurrences: &[Value]) -> Result<BTreeSet<String>> {
+    occurrences
         .iter()
         .map(|row| {
             row["name"]
@@ -1576,7 +1576,80 @@ pub(super) fn outputs(
                 .context("environment occurrence has no name")
                 .map(str::to_owned)
         })
-        .collect::<Result<BTreeSet<_>>>()?;
+        .collect()
+}
+
+// Only the adoption path calls this. Ordinary extraction still requires an
+// exact map, and strict parity refuses the pending rows it creates.
+fn adoption_map(root: &Path, text: &str, occurrences: &[Value]) -> Result<String> {
+    let mut map = text
+        .parse::<DocumentMut>()
+        .context("parse parity/env.toml")?;
+    let section = if map.get("env").is_some() {
+        "env"
+    } else {
+        "variables"
+    };
+    let mapped = map
+        .get(section)
+        .and_then(|item| item.as_table_like())
+        .context("environment parity decisions are absent")?
+        .iter()
+        .map(|(name, _)| name.to_owned())
+        .collect::<BTreeSet<_>>();
+    // Validate every existing decision before extending it; never repair an
+    // invalid consumer or erase a vanished/renamed variable automatically.
+    parity_map(root, &mapped, Some(text))?;
+    let names = names(occurrences)?;
+    let vanished = mapped.difference(&names).collect::<Vec<_>>();
+    ensure!(
+        vanished.is_empty(),
+        "adoption refuses vanished environment names: {vanished:?}"
+    );
+    for name in names.difference(&mapped) {
+        let reads = occurrences
+            .iter()
+            .filter(|row| row["name"].as_str() == Some(name.as_str()))
+            .cloned()
+            .collect::<Vec<_>>();
+        let mut row = toml_edit::Table::new();
+        for (key, value) in [
+            ("divergence", format!("ENV-ADOPTION-PENDING-{name}")),
+            ("class", "pending".to_owned()),
+            ("python_behavior", format!("Authenticated upstream reads: {}", serde_json::to_string(&reads)?)),
+            ("rtao_behavior", "No reviewed Rust consumer is recorded for this name. Adoption does not claim its behavior is implemented.".to_owned()),
+            ("rationale", "New environment behavior remains due under the runtime adoption policy; it does not hold back authenticated runtime artifacts.".to_owned()),
+            ("resolution", "Review the upstream reads and Rust callers, implement or justify the behavior, and replace this pending row with a reviewed consumer or divergence.".to_owned()),
+            ("evidence", "crates/rtao-cli/src/entry.rs".to_owned()),
+            ("notes", "The CLI entry point is a review starting point, not evidence of a consumer. The authenticated source spans, defaults and empty/missing semantics are recorded above.".to_owned()),
+        ] {
+            row.insert(key, toml_edit::value(value));
+        }
+        map[section][name] = toml_edit::Item::Table(row);
+    }
+    let updated = map.to_string();
+    parity_map(root, &names, Some(&updated))?;
+    Ok(updated)
+}
+
+pub(super) fn stage_pending(root: &Path) -> Result<()> {
+    let path = root.join("parity/env.toml");
+    let text = fs::read_to_string(&path)?;
+    let (_, occurrences) = occurrences(root)?;
+    let updated = adoption_map(root, &text, &occurrences)?;
+    if text != updated {
+        fs::write(path, updated)?;
+    }
+    Ok(())
+}
+
+pub(super) fn outputs(
+    root: &Path,
+    pins: &DocumentMut,
+    _tables: &Value,
+) -> Result<Vec<(&'static str, Vec<u8>)>> {
+    let (modules, occurrences) = occurrences(root)?;
+    let names = names(&occurrences)?;
     let mut inventory = BTreeMap::<String, Vec<usize>>::new();
     for (index, row) in occurrences.iter().enumerate() {
         inventory
@@ -1589,7 +1662,7 @@ pub(super) fn outputs(
             .or_default()
             .push(index);
     }
-    let mut document = json!({"format":1,"provenance":{"tag":pins["parity"]["tag"].as_str().context("parity tag missing")?,"commit":pins["parity"]["commit"].as_str().context("parity commit missing")?},"scope":{"root":PY,"authenticated_modules":paths.len()},"inventory":inventory,"occurrences":occurrences,"parity":parity_comparison(root,&names)?});
+    let mut document = json!({"format":1,"provenance":{"tag":pins["parity"]["tag"].as_str().context("parity tag missing")?,"commit":pins["parity"]["commit"].as_str().context("parity commit missing")?},"scope":{"root":PY,"authenticated_modules":modules},"inventory":inventory,"occurrences":occurrences,"parity":parity_comparison(root,&names)?});
     document.sort_all_objects();
     Ok(vec![(
         "vendor/upstream/extracted/env_vars.json",
@@ -1820,6 +1893,70 @@ mod tests {
                 .as_str()
                 .is_some_and(|blob| blob.len() == 40)
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn adoption_records_new_environment_reads_without_claiming_implementation() -> Result<()> {
+        let root = root()?;
+        let existing = "# keep reviewed decisions\nschema=1\n[env.EXISTING]\nconsumer='rtao_client::Network::resolve'\nrust_path='crates/rtao-client/src/network.rs'\nnotes='Reviewed endpoint reader.'\n";
+        let rows = fixture(
+            "import os\nA = os.getenv('EXISTING')\nB = os.getenv('NEW', '') or 'fallback'\nC = os.environ['NEW']\n",
+        )?;
+        for original in [
+            existing.to_owned(),
+            existing.replace("[env.", "[variables."),
+        ] {
+            let updated = adoption_map(&root, &original, &rows)?;
+            assert!(updated.starts_with(&original));
+            assert_eq!(adoption_map(&root, &updated, &rows)?, updated);
+            let summary = parity_map(&root, &names(&rows)?, Some(&updated))?;
+            assert_eq!(summary["consumers"], 1);
+            assert_eq!(summary["pending"], 1);
+            let document = updated.parse::<DocumentMut>()?;
+            let section = if document.get("env").is_some() {
+                "env"
+            } else {
+                "variables"
+            };
+            let row = &document[section]["NEW"];
+            assert!(row.get("consumer").is_none());
+            let behavior = row["python_behavior"]
+                .as_str()
+                .context("behavior missing")?;
+            let reads: Vec<Value> = serde_json::from_str(
+                behavior
+                    .strip_prefix("Authenticated upstream reads: ")
+                    .context("source prefix missing")?,
+            )?;
+            assert_eq!(reads, rows[1..]);
+            assert!(parity_map(&root, &names(&rows)?, Some(&original)).is_err());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn adoption_refuses_invalid_decisions_and_vanished_names() -> Result<()> {
+        let root = root()?;
+        let existing = "schema=1\n[env.EXISTING]\nconsumer='rtao_client::Network::resolve'\nrust_path='crates/rtao-client/src/network.rs'\nnotes='Reviewed endpoint reader.'\n";
+        let unchanged = fixture("import os\nA = os.getenv('EXISTING')\n")?;
+        assert_eq!(adoption_map(&root, existing, &unchanged)?, existing);
+        for source in ["import os\nA = os.getenv('RENAMED')\n", "A = 1\n"] {
+            let error = adoption_map(&root, existing, &fixture(source)?)
+                .err()
+                .context("vanished name accepted")?
+                .to_string();
+            assert!(error.contains("vanished") && error.contains("EXISTING"));
+        }
+        for invalid in [
+            existing.replace("Network::resolve", "Network::missing"),
+            existing.replace("schema=1", "schema=2"),
+            existing.replace("notes='Reviewed endpoint reader.'", ""),
+            format!("{existing}\n[variables.OTHER]\n"),
+            "not valid TOML".into(),
+        ] {
+            assert!(adoption_map(&root, &invalid, &unchanged).is_err());
+        }
         Ok(())
     }
 

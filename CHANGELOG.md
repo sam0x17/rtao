@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New environment names during runtime adoption (D-194)
+
+- Fixed: runtime adoption records newly extracted upstream environment names as explicit pending parity work, including their authenticated source spans and read semantics. New names no longer stop adoption at extraction. Existing decisions remain validated, vanished names still fail, and strict parity still refuses pending behavior. Normal `extract` and `extract --check` retain exact inventory coverage.
+
 ### Subnet convictions on runtime 491 (D-193)
 
 - Fixed ahead of Finney's upgrade: `subnet_convictions` reads `OwnerLock` and `DecayingOwnerLock` only where the queried block's runtime has them. Runtime 491, active on testnet, removes both maps and keeps the subnet owner's locks in the owner hotkey's own `HotkeyLock` and `DecayingHotkeyLock` rows, which the read now rolls forward as owner locks, as upstream's Python does. Before this, rtao-reads failed to compile against 491 metadata. Results on 490 blocks are unchanged.

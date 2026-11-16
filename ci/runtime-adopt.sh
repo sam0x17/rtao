@@ -806,7 +806,7 @@ adopt() {
       fi
       stage_done
       stage extract
-      xtask extract
+      xtask extract --adopt
       stage_done
       stage regen
       # Operations new to the catalog are pending ports, not a regeneration
@@ -930,7 +930,7 @@ adopt() {
       xtask core-surface
       stage_done
       stage extract
-      xtask extract
+      xtask extract --adopt
       stage_done
       stage regen
       xtask parity pending --base "$root"

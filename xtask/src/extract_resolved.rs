@@ -3553,6 +3553,10 @@ fn outputs(root: &Path) -> Result<Vec<(&'static str, Vec<u8>)>> {
     Ok(generated)
 }
 
+pub(super) fn stage_pending_environment(root: &Path) -> Result<()> {
+    env_vars::stage_pending(root)
+}
+
 pub(super) fn extract_at(root: &Path, check: bool) -> Result<()> {
     for (relative, expected) in outputs(root)? {
         let path = root.join(relative);

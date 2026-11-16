@@ -25,6 +25,7 @@ testnet_code=$(awk '/^\[\[runtimes\]\]/{s=""} $1=="spec"{s=$3} $1=="code_hash"{c
 testnet_spec=${testnet_code%% *}
 testnet_code=${testnet_code##* }
 next=$((spec + 1))
+next_testnet=$(( (testnet_spec > spec ? testnet_spec : spec) + 1 ))
 other=0x$(printf '%064d' 7)
 merge=$(printf '%040d' 3)
 
@@ -77,13 +78,13 @@ expect finney-code-changed "$(observation "$spec" "$other" "$testnet_spec" "$tes
   '.action == "blocked" and (.reason | test(":code changed"))'
 expect finney-behind-pin "$(observation "$((spec - 1))" "$other" "$testnet_spec" "$testnet_code")" \
   '.action == "blocked" and (.reason | test("ahead of Finney"))'
-expect testnet-new "$(observation "$spec" "$code" "$next" "$other")" \
-  ".action == \"record-testnet\" and .spec == $next and .network == \"testnet\""
+expect testnet-new "$(observation "$spec" "$code" "$next_testnet" "$other")" \
+  ".action == \"record-testnet\" and .spec == $next_testnet and .network == \"testnet\""
 expect testnet-code-changed "$(observation "$spec" "$code" "$testnet_spec" "$other")" \
   '.action == "blocked" and .network == "testnet"'
-expect both-new "$(observation "$next" "$other" "$next" "$other" "$release")" \
+expect both-new "$(observation "$next" "$other" "$next_testnet" "$other" "$release")" \
   '.action == "adopt-finney" and (.deferred | map(.action)) == ["record-testnet"]'
-expect finney-blocked-testnet-new "$(observation "$spec" "$other" "$next" "$other")" \
+expect finney-blocked-testnet-new "$(observation "$spec" "$other" "$next_testnet" "$other")" \
   '.action == "record-testnet" and (.deferred | map(.action)) == ["blocked"]'
 expect finney-unreachable "$(observation null "" "$testnet_spec" "$testnet_code")" \
   '.action == "none" and (.unobserved | length) == 1'
@@ -146,7 +147,7 @@ expect retry-after-a-day "$(retry "$(previous 9 24)")" '.action == "adopt-finney
 expect retry-when-inputs-change "$(retry "$(previous 3 1)" def)" '.action == "adopt-finney"'
 expect retry-when-forced "$(retry "$(previous 3 1)" abc true)" '.action == "adopt-finney"'
 expect other-runtime-not-held "$(retry "$(previous 3 1 abc finney-999-0x00000000)")" '.action == "adopt-finney"'
-expect backoff-does-not-hold-testnet "$(retry "$(previous 3 1)" | jq -c --argjson s "$next" --arg c "$other" '.testnet.spec = $s | .testnet.code = $c')" \
+expect backoff-does-not-hold-testnet "$(retry "$(previous 3 1)" | jq -c --argjson s "$next_testnet" --arg c "$other" '.testnet.spec = $s | .testnet.code = $c')" \
   '.action == "record-testnet" and (.deferred | map(.action)) == ["backoff"]'
 # The issue also records a blocked testnet; Finney's state still applies.
 shared=$(jq -cn --argjson f "$(state 3 1)" --argjson t "$(state 1 5 abc "testnet-$spec-${other:0:10}" decide)" '{($f.id): $f, ($t.id): $t}')
@@ -197,7 +198,7 @@ expect_pins core-bump-waits-for-a-blocked-finney "$held_root" "$(bump "$(observa
   '.action == "blocked" and .network == "finney" and (.core_bump | test("waits"))'
 expect_pins core-bump-waits-for-an-unobserved-finney "$held_root" "$(bump "$(observation null "" "$testnet_spec" "$testnet_code")")" \
   '.action == "none" and (.core_bump | test("waits"))'
-expect_pins core-bump-before-testnet "$held_root" "$(bump "$(observation "$spec" "$code" "$next" "$other")")" \
+expect_pins core-bump-before-testnet "$held_root" "$(bump "$(observation "$spec" "$code" "$next_testnet" "$other")")" \
   '.action == "core-bump" and (.deferred | map(.action)) == ["record-testnet"]'
 core_retry() { jq -c --argjson p "$1" --argjson force "${2:-false}" '.previous = $p | .inputs = "abc" | .force = $force' <<<"$(bump "$current")"; }
 expect_pins core-bump-backs-off "$held_root" "$(core_retry "$(previous 1 0.5 abc "$core_id" lock)")" \

@@ -48,6 +48,12 @@ opens one issue naming the failing stage, and the same failure is retried with
 backoff (1 h doubling, at most 24 h); fix that stage as above, and the fix on
 `main` retries at once and closes the issue.
 
+New environment names are also recorded as pending by `extract --adopt`, with
+authenticated upstream reads in `parity/env.toml` (D-194). Review and replace
+these rows when porting their behavior; strict parity refuses them. Ordinary
+extraction requires exact name coverage, and adoption still refuses vanished
+names or invalid existing decisions.
+
 # Workspace hygiene
 
 - Keep temporary tests, builds, extraction and rehearsals under one recorded
