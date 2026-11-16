@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Subnet convictions on runtime 491 (D-193)
+
+- Fixed ahead of Finney's upgrade: `subnet_convictions` reads `OwnerLock` and `DecayingOwnerLock` only where the queried block's runtime has them. Runtime 491, active on testnet, removes both maps and keeps the subnet owner's locks in the owner hotkey's own `HotkeyLock` and `DecayingHotkeyLock` rows, which the read now rolls forward as owner locks, as upstream's Python does. Before this, rtao-reads failed to compile against 491 metadata. Results on 490 blocks are unchanged.
+
 ### Testnet runtime 491 recorded automatically
 
 - Testnet finalized spec 491 (`:code` `0x4201278656a17aff924ca24123c8e5866d569a84a7150bb0372bc7078fc6173c`) at block 8459072; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `breaking`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/43921725109)). Source: upstream commit `be3a11b1a5300bb58d6fbad3c629e4a926bb2f44`, whose v491 prerelease wasm is this `:code`. The parity pin is unchanged.

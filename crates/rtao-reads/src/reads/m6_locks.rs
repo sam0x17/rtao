@@ -3,13 +3,14 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/{locks,collateral}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/locks.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/collateral.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/locks.py @ be3a11b1a5300bb58d6fbad3c629e4a926bb2f44 (Apache-2.0); modified by rtao.
 //! Locked-alpha accounting, conviction projections and registration collateral.
 
 use std::collections::BTreeMap;
 
 use futures::TryStreamExt;
-use rtao_client::{ReadPlan, View, ViewExt};
-use rtao_core::{DynValue, codec::Value};
+use rtao_client::{ClientError, ReadPlan, View, ViewExt, decode_typed};
+use rtao_core::{CoreError, DynValue, codec::Value};
 use rtao_primitives::{AccountId, DynBalance, NetUid, Symbol};
 use rtao_runtime::{models, runtime_apis as api, storage as st};
 use serde::Serialize;
@@ -18,6 +19,22 @@ use crate::ReadError;
 
 const DEFAULT_LOCK_RATE: u64 = 934_866;
 const ONE_YEAR_BLOCKS: u128 = 7200 * 365 + 1800;
+
+/// The owner hotkey's aggregates kept apart from its `HotkeyLock` rows, keyed
+/// by whether the aggregate is perpetual. Runtime 491 removed both maps: every
+/// hotkey, the owner's included, then has one perpetual and one decaying
+/// aggregate in `HotkeyLock`/`DecayingHotkeyLock`. They are read by name where
+/// the queried block's runtime has them, never through generated descriptors,
+/// so this read builds and runs on both layouts.
+// py: sdk/python/bittensor/reads/locks.py:21-26 (v491)
+const OWNER_LOCKS: [(bool, &str, &str); 2] = [
+    (true, "OwnerLock", "SubtensorModule.OwnerLock"),
+    (
+        false,
+        "DecayingOwnerLock",
+        "SubtensorModule.DecayingOwnerLock",
+    ),
+];
 
 fn surface(descriptor: &'static str, detail: impl Into<String>) -> ReadError {
     ReadError::SurfaceChanged {
@@ -587,8 +604,77 @@ fn rolled(
     )
 }
 
+/// The owner aggregates the queried runtime stores apart, in [`OWNER_LOCKS`]
+/// order, with `None` for a map the runtime has but that holds no entry for
+/// `netuid`. A map the runtime does not have is left out, so the result is
+/// empty where the owner hotkey's locks are in its own aggregates (runtime
+/// 491 and later). Each value must have the exact type `HotkeyLock` stores,
+/// which the typed `HotkeyLock` read checks against the `LockState` model.
+// py: sdk/python/bittensor/reads/locks.py:297-311 (v491)
+async fn owner_locks<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+) -> Result<Vec<(bool, Option<models::LockState>)>, ReadError> {
+    let runtime = view.runtime().await?;
+    let shape = |ty| runtime.exact_shape(ty).map_err(ClientError::from);
+    let mut present = Vec::with_capacity(OWNER_LOCKS.len());
+    let mut keys = Vec::with_capacity(OWNER_LOCKS.len());
+    for (perpetual, item, descriptor) in OWNER_LOCKS {
+        let Some(info) = runtime.storage_entry("SubtensorModule", item) else {
+            continue;
+        };
+        // HotkeyLock is keyed (netuid, hotkey) and was checked against the
+        // LockState model by the typed iteration before this read.
+        let hotkey_lock = runtime
+            .storage_entry("SubtensorModule", "HotkeyLock")
+            .ok_or_else(|| surface(descriptor, "HotkeyLock is absent"))?;
+        let [key_type] = info.key_types.as_slice() else {
+            return Err(surface(descriptor, "expected a map keyed by netuid alone"));
+        };
+        if hotkey_lock.key_types.len() != 2
+            || shape(*key_type)? != shape(hotkey_lock.key_types[0])?
+            || shape(info.value_type)? != shape(hotkey_lock.value_type)?
+        {
+            return Err(surface(
+                descriptor,
+                "expected a netuid map of the LockState HotkeyLock stores",
+            ));
+        }
+        keys.push(
+            runtime
+                .core()
+                .storage_key(info, &[Value::Uint(u128::from(netuid.0))])
+                .map_err(|error| ClientError::from(CoreError::from(error)))?,
+        );
+        present.push((perpetual, info));
+    }
+    if keys.is_empty() {
+        return Ok(Vec::new());
+    }
+    let values = view.storage_raw_many(&keys).await?;
+    present
+        .into_iter()
+        .zip(values)
+        .map(|((perpetual, info), bytes)| {
+            let bytes = match bytes.as_deref() {
+                Some(bytes) => bytes,
+                None if info.modifier == "Optional" => return Ok((perpetual, None)),
+                None => info.default_bytes.as_slice(),
+            };
+            let state = decode_typed::<models::LockState>(&runtime, info.value_type, bytes)?;
+            Ok((perpetual, Some(state)))
+        })
+        .collect()
+}
+
 /// Subnet-wide lock accounting and the pinned Python float projection.
-// py: sdk/python/bittensor/reads/locks.py:312-419
+///
+/// Reads the lock layout of the queried block's runtime: before runtime 491
+/// the owner hotkey's aggregates are `OwnerLock`/`DecayingOwnerLock`, rolled
+/// as owner locks, and its `HotkeyLock` rows mature like any other hotkey's;
+/// from 491 those maps are gone and the owner hotkey's own `HotkeyLock` and
+/// `DecayingHotkeyLock` rows are its owner aggregates.
+// py: sdk/python/bittensor/reads/locks.py:314-439 (v491)
 pub async fn subnet_convictions<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -602,27 +688,18 @@ pub async fn subnet_convictions<V: View + ?Sized>(
         .storage_iter(&st::subtensor_module::DECAYING_HOTKEY_LOCK, (netuid,))
         .try_collect()
         .await?;
-    let (
-        owner_lock,
-        decaying_owner_lock,
-        owner_hotkey,
-        alpha_out,
-        protocol_alpha,
-        unlock_rate,
-        maturity_rate,
-        registered_at,
-    ) = snapshot
-        .fetch((
-            st::subtensor_module::OWNER_LOCK.at((netuid,)),
-            st::subtensor_module::DECAYING_OWNER_LOCK.at((netuid,)),
-            st::subtensor_module::SUBNET_OWNER_HOTKEY.at((netuid,)),
-            st::subtensor_module::SUBNET_ALPHA_OUT.at((netuid,)),
-            st::subtensor_module::SUBNET_PROTOCOL_ALPHA.at((netuid,)),
-            st::subtensor_module::UNLOCK_RATE.at(()),
-            st::subtensor_module::MATURITY_RATE.at(()),
-            st::subtensor_module::NETWORK_REGISTERED_AT.at((netuid,)),
-        ))
-        .await?;
+    let owner_locks = owner_locks(&snapshot, netuid).await?;
+    let (owner_hotkey, alpha_out, protocol_alpha, unlock_rate, maturity_rate, registered_at) =
+        snapshot
+            .fetch((
+                st::subtensor_module::SUBNET_OWNER_HOTKEY.at((netuid,)),
+                st::subtensor_module::SUBNET_ALPHA_OUT.at((netuid,)),
+                st::subtensor_module::SUBNET_PROTOCOL_ALPHA.at((netuid,)),
+                st::subtensor_module::UNLOCK_RATE.at(()),
+                st::subtensor_module::MATURITY_RATE.at(()),
+                st::subtensor_module::NETWORK_REGISTERED_AT.at((netuid,)),
+            ))
+            .await?;
     // AlphaAssets is outside the generated Rust storage registry; the dynamic
     // named read still authenticates and decodes through this snapshot's metadata.
     let alpha_burned = snapshot
@@ -656,19 +733,24 @@ pub async fn subnet_convictions<V: View + ?Sized>(
     // interpreting it as the typed API's absent-owner convention.
     let owner = *owner_hotkey.raw();
     let owner_hotkey = Some(owner);
+    // py: sdk/python/bittensor/reads/locks.py:382-395 (v491)
+    // Where the owner aggregates are stored apart, the hotkey rows are not the owner's.
+    let row_owner = owner_locks.is_empty().then_some(owner);
     let mut groups = LockGroups::default();
     for (rows, perpetual) in [(hotkey_rows, true), (decaying_rows, false)] {
         for (keys, state) in rows {
             let [key] = keys.as_slice() else {
                 return Err(surface("subnet_convictions", "expected hotkey remainder"));
             };
+            let hotkey = account(key, "subnet_convictions")?;
+            let is_owner = row_owner == Some(hotkey);
             groups.add(
-                account(key, "subnet_convictions")?,
-                rolled(state, now, unlock_rate, maturity_rate, perpetual, false),
+                hotkey,
+                rolled(state, now, unlock_rate, maturity_rate, perpetual, is_owner),
             );
         }
     }
-    for (state, perpetual) in [(owner_lock, true), (decaying_owner_lock, false)] {
+    for (perpetual, state) in owner_locks {
         if let Some(state) = state {
             groups.add(
                 owner,

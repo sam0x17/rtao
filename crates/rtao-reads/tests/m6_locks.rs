@@ -1,9 +1,11 @@
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_subnet_convictions.py @ be3a11b1a5300bb58d6fbad3c629e4a926bb2f44 (Apache-2.0); modified by rtao.
 //! Lock and collateral reads through authenticated metadata and fake SCALE state.
 #![allow(clippy::unwrap_used, clippy::panic)]
 
 use std::collections::BTreeSet;
 
 use rtao_client::{BlockRef, Client, ClientConfig, Network, ReadKind};
+use rtao_core::runtime::Runtime;
 use rtao_primitives::{AccountId, NetUid};
 use rtao_reads::{HitKind, ReadName, dispatch, reads::m6_locks as locks};
 use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
@@ -28,6 +30,83 @@ async fn client(state: FakeState) -> (Client, FakeChain) {
 
 fn lock(mass: u64, conviction: u64, last_update: u64) -> Value {
     json!({"locked_mass": mass, "conviction": {"bits": u128::from(conviction) << 64}, "last_update": last_update})
+}
+
+/// The maps that held the subnet owner hotkey's aggregates before runtime 491.
+const OWNER_MAPS: [&str; 2] = ["OwnerLock", "DecayingOwnerLock"];
+
+/// Whether the runtime keeps the owner hotkey's aggregates in [`OWNER_MAPS`]
+/// (runtime 490 and earlier) rather than in its own `HotkeyLock` rows.
+fn has_owner_maps(state: &FakeState) -> bool {
+    state
+        .runtime
+        .storage_entry("SubtensorModule", "OwnerLock")
+        .is_some()
+}
+
+/// Finney 490 (the last runtime with [`OWNER_MAPS`]), whatever the pin.
+fn finney_490() -> FakeState {
+    let runtime = Runtime::parse(
+        include_bytes!("../../../vendor/metadata/finney/490.v15.scale"),
+        490,
+        1,
+        42,
+    )
+    .unwrap();
+    FakeState::try_finney(runtime).unwrap()
+}
+
+/// Remove `SubtensorModule` storage entries from the served metadata, as a
+/// runtime without them would serve it.
+fn without_storage(mut state: FakeState, items: &[&str]) -> FakeState {
+    state
+        .patch_metadata(|metadata| {
+            let pallet = metadata
+                .pallets
+                .iter_mut()
+                .find(|pallet| pallet.name == "SubtensorModule")
+                .unwrap();
+            let storage = pallet.storage.as_mut().unwrap();
+            storage
+                .entries
+                .retain(|entry| !items.contains(&entry.name.as_str()));
+        })
+        .unwrap();
+    state
+}
+
+/// The pinned runtime in the runtime-491 layout: no [`OWNER_MAPS`], so the
+/// owner hotkey's own `HotkeyLock`/`DecayingHotkeyLock` rows are its owner
+/// aggregates. On a 491 or later pin this is the pinned metadata unchanged.
+fn hotkey_aggregate_layout() -> FakeState {
+    without_storage(FakeState::default(), &OWNER_MAPS)
+}
+
+/// Seed the subnet owner's perpetual and decaying aggregates on subnet 1
+/// where the runtime keeps them: [`OWNER_MAPS`] before runtime 491, the owner
+/// hotkey's own rows from 491 (`migrate_one_lock_bucket_per_hotkey`).
+fn seed_owner_aggregates(
+    state: &mut FakeState,
+    owner: AccountId,
+    perpetual: Value,
+    decaying: Value,
+) {
+    let rows = if has_owner_maps(state) {
+        [
+            ("OwnerLock", vec![json!(1)], perpetual),
+            ("DecayingOwnerLock", vec![json!(1)], decaying),
+        ]
+    } else {
+        [
+            ("HotkeyLock", vec![json!(1), json!(owner)], perpetual),
+            ("DecayingHotkeyLock", vec![json!(1), json!(owner)], decaying),
+        ]
+    };
+    for (item, keys, value) in rows {
+        state
+            .seed_python("SubtensorModule", item, &keys, value)
+            .unwrap();
+    }
 }
 
 fn seed() -> FakeState {
@@ -67,8 +146,6 @@ fn seed() -> FakeState {
             vec![json!(1), json!(OTHER)],
             lock(1000, 1000, 100),
         ),
-        ("OwnerLock", vec![json!(1)], lock(1000, 1, 100)),
-        ("DecayingOwnerLock", vec![json!(1)], lock(500, 1, 100)),
         ("SubnetOwnerHotkey", vec![json!(1)], json!(OWNER)),
         ("SubnetAlphaOut", vec![json!(1)], json!(12000)),
         ("SubnetProtocolAlpha", vec![json!(1)], json!(1000)),
@@ -103,6 +180,8 @@ fn seed() -> FakeState {
             .seed_python("SubtensorModule", item, &keys, value)
             .unwrap();
     }
+    // The same owner aggregates in either layout give the same projection.
+    seed_owner_aggregates(&mut state, OWNER, lock(1000, 1, 100), lock(500, 1, 100));
     state
         .seed_python("AlphaAssets", "AlphaBurned", &[json!(1)], json!(1000))
         .unwrap();
@@ -137,7 +216,12 @@ fn seed() -> FakeState {
 
 #[tokio::test]
 async fn nine_reads_observe_the_exact_reviewed_descriptors_at_head_and_pinned_blocks() {
-    let (client, chain) = client(seed()).await;
+    let state = seed();
+    // From runtime 491 the owner maps are gone and subnet_convictions does not
+    // read them; a pin whose Python still names them declares them (D-193).
+    let owner_maps = has_owner_maps(&state);
+    let in_runtime = |item: &str| owner_maps || !OWNER_MAPS.contains(&item);
+    let (client, chain) = client(state).await;
     let samples = [
         (
             ReadName::AcceptsLockedAlpha,
@@ -237,6 +321,7 @@ async fn nine_reads_observe_the_exact_reviewed_descriptors_at_head_and_pinned_bl
     for (name, args, expected) in samples {
         let expected: BTreeSet<_> = expected
             .into_iter()
+            .filter(|(_, _, item)| in_runtime(item))
             .map(|(kind, pallet, item)| (kind, pallet.to_owned(), item.to_owned()))
             .collect();
         let declared: BTreeSet<_> = name
@@ -251,6 +336,7 @@ async fn nine_reads_observe_the_exact_reviewed_descriptors_at_head_and_pinned_bl
                 };
                 (kind, hit.container.to_owned(), hit.name.to_owned())
             })
+            .filter(|(_, _, item)| in_runtime(item))
             .collect();
         assert_eq!(declared, expected, "{name}");
         for block in [None, Some(99), Some(100)] {
@@ -637,7 +723,7 @@ async fn metadata_misses_decode_defaults_and_truncated_records_fail() {
 
 #[tokio::test]
 async fn perpetual_owner_projection_keeps_maximum_mass_and_refuses_aggregate_overflow() {
-    let mut state = FakeState::default();
+    let mut state = finney_490();
     for (item, value) in [
         ("SubnetOwnerHotkey", json!(HOT)),
         ("OwnerLock", lock(u64::MAX, 0, 100)),
@@ -684,7 +770,9 @@ async fn perpetual_owner_projection_keeps_maximum_mass_and_refuses_aggregate_ove
 #[tokio::test]
 async fn bucket_sums_compensate_globally_and_per_hotkey_without_reusing_rounded_totals() {
     let large = 1u64 << 53;
-    let mut state = FakeState::default();
+    // The owner map added below holds a third bucket for HOT, which only a
+    // runtime before 491 can store.
+    let mut state = finney_490();
     for (item, keys, value) in [
         ("SubnetOwnerHotkey", vec![json!(1)], json!(HOT)),
         ("SubnetAlphaOut", vec![json!(1)], json!(0)),
@@ -747,7 +835,7 @@ async fn bucket_sums_compensate_globally_and_per_hotkey_without_reusing_rounded_
 
 #[tokio::test]
 async fn elapsed_buckets_roll_mass_and_conviction_forward_and_future_updates_clamp_to_now() {
-    let mut state = FakeState::default();
+    let mut state = finney_490();
     for (item, keys, value) in [
         ("HotkeyLock", vec![json!(1), json!(HOT)], lock(3600, 0, 0)),
         (
@@ -835,7 +923,7 @@ async fn elapsed_buckets_roll_mass_and_conviction_forward_and_future_updates_cla
 
 #[tokio::test]
 async fn metadata_default_owner_is_the_raw_account_and_keeps_present_owner_buckets() {
-    let mut state = FakeState::default();
+    let mut state = finney_490();
     for (item, value) in [
         ("OwnerLock", lock(123, 1, 100)),
         ("SubnetAlphaOut", json!(1000)),
@@ -871,5 +959,280 @@ async fn metadata_default_owner_is_the_raw_account_and_keeps_present_owner_bucke
         (123, 123)
     );
     assert_eq!(result.leader_blocks_to_threshold, None);
+    client.close().await;
+}
+
+async fn owner_entry(mut state: FakeState) -> locks::ConvictionEntry {
+    state
+        .seed_python(
+            "SubtensorModule",
+            "SubnetOwnerHotkey",
+            &[json!(1)],
+            json!(OWNER),
+        )
+        .unwrap();
+    let (client, _) = client(state).await;
+    let result = locks::subnet_convictions(&client, NetUid(1)).await.unwrap();
+    client.close().await;
+    let [entry] = <[_; 1]>::try_from(result.hotkeys).unwrap();
+    assert_eq!(entry.hotkey, OWNER);
+    assert!(entry.is_owner);
+    entry
+}
+
+#[tokio::test]
+// pyt: unit/test_subnet_convictions.py::test_owner_hotkey_aggregate_has_owner_conviction (v491)
+async fn owner_hotkey_aggregate_has_owner_conviction() {
+    let mut state = hotkey_aggregate_layout();
+    state
+        .seed_python(
+            "SubtensorModule",
+            "HotkeyLock",
+            &[json!(1), json!(OWNER)],
+            lock(1_000, 0, 100),
+        )
+        .unwrap();
+    let entry = owner_entry(state).await;
+    assert_eq!(
+        (entry.locked_alpha.rao, entry.conviction_alpha.rao),
+        (1_000, 1_000)
+    );
+}
+
+#[tokio::test]
+// pyt: unit/test_subnet_convictions.py::test_runtime_with_owner_lock_storage_adds_the_owner_aggregates (v491)
+async fn runtime_with_owner_lock_storage_adds_the_owner_aggregates() {
+    let mut state = finney_490();
+    for (item, keys, value) in [
+        ("OwnerLock", vec![json!(1)], lock(1_000, 0, 100)),
+        ("DecayingOwnerLock", vec![json!(1)], lock(200, 0, 100)),
+        // Under that layout a hotkey-keyed aggregate matures like any other hotkey's.
+        (
+            "HotkeyLock",
+            vec![json!(1), json!(OWNER)],
+            lock(500, 0, 100),
+        ),
+    ] {
+        state
+            .seed_python("SubtensorModule", item, &keys, value)
+            .unwrap();
+    }
+    let entry = owner_entry(state).await;
+    assert_eq!(
+        (entry.locked_alpha.rao, entry.conviction_alpha.rao),
+        (1_700, 1_200)
+    );
+}
+
+#[tokio::test]
+// pyt: unit/test_subnet_convictions.py::test_runtime_with_only_the_perpetual_owner_lock_storage_reads_it (v491)
+async fn runtime_with_only_the_perpetual_owner_lock_storage_reads_it() {
+    let mut state = without_storage(finney_490(), &["DecayingOwnerLock"]);
+    for (item, keys, value) in [
+        ("OwnerLock", vec![json!(1)], lock(1_000, 0, 100)),
+        (
+            "HotkeyLock",
+            vec![json!(1), json!(OWNER)],
+            lock(500, 0, 100),
+        ),
+    ] {
+        state
+            .seed_python("SubtensorModule", item, &keys, value)
+            .unwrap();
+    }
+    let entry = owner_entry(state).await;
+    assert_eq!(
+        (entry.locked_alpha.rao, entry.conviction_alpha.rao),
+        (1_500, 1_000)
+    );
+}
+
+#[tokio::test]
+async fn a_present_owner_map_without_an_entry_still_marks_hotkey_rows_as_not_the_owners() {
+    // Python's `if owner_locks` is about the maps the runtime has, not their
+    // values: an empty OwnerLock on a runtime with the maps keeps the owner
+    // hotkey's HotkeyLock row maturing like any other.
+    let mut state = finney_490();
+    state
+        .seed_python(
+            "SubtensorModule",
+            "HotkeyLock",
+            &[json!(1), json!(OWNER)],
+            lock(500, 0, 100),
+        )
+        .unwrap();
+    let entry = owner_entry(state).await;
+    assert_eq!(
+        (entry.locked_alpha.rao, entry.conviction_alpha.rao),
+        (500, 0)
+    );
+}
+
+#[tokio::test]
+async fn owner_rows_in_the_hotkey_aggregate_layout_project_as_the_owner_maps_did() {
+    // migrate_one_lock_bucket_per_hotkey moves the owner maps into the owner
+    // hotkey's own aggregates; elapsed projections, the other hotkeys' rows
+    // and every total stay the same.
+    let mut results = Vec::new();
+    for mut state in [finney_490(), hotkey_aggregate_layout()] {
+        for (item, keys, value) in [
+            ("HotkeyLock", vec![json!(1), json!(HOT)], lock(3600, 0, 0)),
+            (
+                "DecayingHotkeyLock",
+                vec![json!(1), json!(OTHER)],
+                lock(1000, 100, 0),
+            ),
+            ("SubnetOwnerHotkey", vec![json!(1)], json!(OWNER)),
+            ("SubnetAlphaOut", vec![json!(1)], json!(12000)),
+            ("SubnetProtocolAlpha", vec![json!(1)], json!(1000)),
+            ("UnlockRate", vec![], json!(100)),
+            ("MaturityRate", vec![], json!(100)),
+        ] {
+            state
+                .seed_python("SubtensorModule", item, &keys, value)
+                .unwrap();
+        }
+        seed_owner_aggregates(&mut state, OWNER, lock(1000, 0, 0), lock(500, 0, 0));
+        let (client, _) = client(state).await;
+        let mut result = locks::subnet_convictions(&client, NetUid(1)).await.unwrap();
+        client.close().await;
+        // Scan order differs between the layouts; equal convictions sort stably.
+        result.hotkeys.sort_by_key(|entry| entry.hotkey);
+        results.push(result);
+    }
+    let owner = results[1]
+        .hotkeys
+        .iter()
+        .find(|entry| entry.hotkey == OWNER)
+        .unwrap();
+    assert!(owner.is_owner);
+    assert_eq!(
+        (owner.locked_alpha.rao, owner.conviction_alpha.rao),
+        (1183, 1183)
+    );
+    assert_eq!(results[0], results[1]);
+}
+
+#[tokio::test]
+async fn hotkey_aggregate_layout_marks_only_the_owner_hotkeys_rows_as_owner_locks() {
+    let mut state = hotkey_aggregate_layout();
+    for (item, keys, value) in [
+        ("HotkeyLock", vec![json!(1), json!(OWNER)], lock(1000, 0, 0)),
+        ("HotkeyLock", vec![json!(1), json!(HOT)], lock(1000, 0, 0)),
+        ("SubnetOwnerHotkey", vec![json!(1)], json!(OWNER)),
+        ("UnlockRate", vec![], json!(100)),
+        ("MaturityRate", vec![], json!(100)),
+    ] {
+        state
+            .seed_python("SubtensorModule", item, &keys, value)
+            .unwrap();
+    }
+    let (client, _) = client(state).await;
+    let result = locks::subnet_convictions(&client, NetUid(1)).await.unwrap();
+    let conviction = |hotkey| {
+        let entry = result
+            .hotkeys
+            .iter()
+            .find(|entry| entry.hotkey == hotkey)
+            .unwrap();
+        (entry.is_owner, entry.conviction_alpha.rao)
+    };
+    assert_eq!(conviction(OWNER), (true, 1000));
+    // 1000 (1 - e^-1): the perpetual non-owner aggregate matures.
+    assert_eq!(conviction(HOT), (false, 632));
+    client.close().await;
+}
+
+#[tokio::test]
+async fn metadata_default_owner_keeps_its_hotkey_rows_in_the_hotkey_aggregate_layout() {
+    let mut state = hotkey_aggregate_layout();
+    state
+        .seed_python(
+            "SubtensorModule",
+            "HotkeyLock",
+            &[json!(1), json!(AccountId::ZERO)],
+            lock(123, 1, 100),
+        )
+        .unwrap();
+    let info = state
+        .runtime
+        .storage_entry("SubtensorModule", "SubnetOwnerHotkey")
+        .unwrap();
+    let key = state
+        .runtime
+        .storage_key(info, &[rtao_core::codec::Value::Uint(1)])
+        .unwrap();
+    state.seed_encoded(key, None);
+    let (client, _) = client(state).await;
+    let result = locks::subnet_convictions(&client, NetUid(1)).await.unwrap();
+    assert_eq!(result.owner_hotkey, Some(AccountId::ZERO));
+    assert_eq!(result.hotkeys.len(), 1);
+    assert!(result.hotkeys[0].is_owner);
+    assert_eq!(
+        (
+            result.hotkeys[0].locked_alpha.rao,
+            result.hotkeys[0].conviction_alpha.rao
+        ),
+        (123, 123)
+    );
+    client.close().await;
+}
+
+#[tokio::test]
+async fn hotkey_aggregate_layout_reads_no_owner_map_at_head_or_pinned_blocks() {
+    let mut state = hotkey_aggregate_layout();
+    seed_owner_aggregates(&mut state, OWNER, lock(1000, 0, 100), lock(500, 0, 100));
+    let (client, _) = client(state).await;
+    for block in [None, Some(100)] {
+        let touches = if let Some(block) = block {
+            let view = RecordingView::new(client.at(BlockRef::Number(block)).await.unwrap());
+            locks::subnet_convictions(&view, NetUid(1)).await.unwrap();
+            view.touches()
+        } else {
+            let view = RecordingView::new(client.clone());
+            locks::subnet_convictions(&view, NetUid(1)).await.unwrap();
+            view.touches()
+        };
+        let items: BTreeSet<_> = touches.into_iter().map(|touch| touch.item).collect();
+        assert!(items.contains("HotkeyLock") && items.contains("DecayingHotkeyLock"));
+        assert!(OWNER_MAPS.iter().all(|item| !items.contains(*item)));
+    }
+    client.close().await;
+}
+
+#[tokio::test]
+async fn an_owner_map_of_another_value_type_is_refused() {
+    let mut state = finney_490();
+    state
+        .patch_metadata(|metadata| {
+            let pallet = metadata
+                .pallets
+                .iter_mut()
+                .find(|pallet| pallet.name == "SubtensorModule")
+                .unwrap();
+            let entries = &mut pallet.storage.as_mut().unwrap().entries;
+            let account_map = entries
+                .iter()
+                .find(|entry| entry.name == "SubnetOwnerHotkey")
+                .unwrap()
+                .ty
+                .clone();
+            entries
+                .iter_mut()
+                .find(|entry| entry.name == "DecayingOwnerLock")
+                .unwrap()
+                .ty = account_map;
+        })
+        .unwrap();
+    let (client, _) = client(state).await;
+    assert!(matches!(
+        locks::subnet_convictions(&client, NetUid(1))
+            .await
+            .unwrap_err(),
+        rtao_reads::ReadError::SurfaceChanged {
+            descriptor: "SubtensorModule.DecayingOwnerLock",
+            ..
+        }
+    ));
     client.close().await;
 }
