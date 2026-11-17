@@ -1,5 +1,5 @@
 # Operations awaiting behavior ports. The set only shrinks, except that a
 # parity pin bump adds operations new to the upstream catalog (D-128).
-intents = ["set_subnet_gamma_emission_whitelisted"]
+intents = []
 
 reads = []

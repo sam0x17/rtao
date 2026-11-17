@@ -11139,10 +11139,10 @@
         "python": "sdk/python/bittensor/intents/root.py",
         "rtao": "reconciled",
         "rust": [
-          "rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold}",
+          "rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold, SetSubnetGammaEmissionWhitelisted}",
           "rtao_intents::generated::interfaces"
         ],
-        "synced_blob": "1e7d78e639d650b602620fe387a1912a731d3ceb"
+        "synced_blob": "90293d19d3b80a8e195262916b22ab9f4769240d"
       },
       {
         "kind": "ported",
@@ -14383,7 +14383,7 @@
         "name": "set_subnet_gamma_emission_whitelisted",
         "oracle": "missing",
         "python_class": "SetSubnetGammaEmissionWhitelisted",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_subnet_identity",

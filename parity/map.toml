@@ -2300,10 +2300,10 @@ notes = "Source reconciliation 2026-10-15: complete authenticated registry sourc
 
 [[file]]
 py = "sdk/python/bittensor/intents/root.py"
-rs = ["rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold}","rtao_intents::generated::interfaces"]
+rs = ["rtao_intents::root::{SetSubnetEmissionEnabled, SetRootClaimThreshold, SetSubnetGammaEmissionWhitelisted}","rtao_intents::generated::interfaces"]
 kind = "ported"
-synced_blob = "1e7d78e639d650b602620fe387a1912a731d3ceb"
-synced_tag = "v490"
+synced_blob = "90293d19d3b80a8e195262916b22ab9f4769240d"
+synced_tag = "v491"
 milestone = "M5"
 notes = "v482 source mapping 2026-10-22: Only emission-enable description changes to default true for new registrations. Root origin, wraps and call arguments remain unchanged; normal extraction checks the actual declarations. Consumers: rtao_intents::SetSubnetEmissionEnabled; crates/rtao-intents/src/generated/interfaces.rs. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
 

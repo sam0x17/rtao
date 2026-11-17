@@ -329,9 +329,9 @@ InterfaceMetadata{name:"set_subnet_emission_weights",feature:"emission_weights",
 #[cfg(not(feature="emission_weights"))]
 InterfaceMetadata{name:"set_subnet_emission_weights",feature:"emission_weights",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "root")]
-InterfaceMetadata{name:"set_subnet_gamma_emission_whitelisted",feature:"root",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetSubnetGammaEmissionWhitelisted>()),role:Some(std::any::type_name::<<super::interfaces::SetSubnetGammaEmissionWhitelisted as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetSubnetGammaEmissionWhitelisted as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_subnet_gamma_emission_whitelisted",feature:"root",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetSubnetGammaEmissionWhitelisted>()),role:Some(std::any::type_name::<<super::interfaces::SetSubnetGammaEmissionWhitelisted as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetSubnetGammaEmissionWhitelisted as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="root"))]
-InterfaceMetadata{name:"set_subnet_gamma_emission_whitelisted",feature:"root",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_subnet_gamma_emission_whitelisted",feature:"root",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "identity")]
 InterfaceMetadata{name:"set_subnet_identity",feature:"identity",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetSubnetIdentity>()),role:Some(std::any::type_name::<<super::interfaces::SetSubnetIdentity as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetSubnetIdentity as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="identity"))]

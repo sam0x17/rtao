@@ -7,7 +7,9 @@ use rtao_runtime::calls::{admin_utils, subtensor_module, utility};
 use rtao_tx::{BuildCx, Built, Intent, IntentError};
 use smallvec::SmallVec;
 
-pub use crate::{SetRootClaimThreshold, SetSubnetEmissionEnabled};
+pub use crate::{
+    SetRootClaimThreshold, SetSubnetEmissionEnabled, SetSubnetGammaEmissionWhitelisted,
+};
 
 impl Intent for SetRootClaimThreshold {
     fn summary(&self) -> String {
@@ -74,6 +76,30 @@ impl Intent for SetSubnetEmissionEnabled {
 
     fn touches_netuids(&self) -> SmallVec<[NetUid; 2]> {
         self.netuids.iter().copied().collect()
+    }
+}
+
+impl Intent for SetSubnetGammaEmissionWhitelisted {
+    fn summary(&self) -> String {
+        if self.whitelisted {
+            format!("whitelist netuid {} for gamma emission", self.netuid.get())
+        } else {
+            format!(
+                "remove netuid {} from the gamma emission whitelist",
+                self.netuid.get()
+            )
+        }
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        Ok(Built::new(
+            admin_utils::sudo_set_subnet_gamma_emission_whitelisted(self.netuid, self.whitelisted)
+                .compose(cx.runtime)?,
+        ))
+    }
+
+    fn affects_all_subnets(&self) -> bool {
+        !self.whitelisted
     }
 }
 
@@ -363,6 +389,83 @@ mod tests {
                 })
                 .await
                 .is_err()
+        );
+        assert_eq!(chain.requests().len(), requests);
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn gamma_whitelist_matches_python_and_encodes_inner_call() -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let requests = chain.requests().len();
+        for (netuid, whitelisted) in [(NetUid::ROOT, true), (NetUid(3), false)] {
+            let intent = SetSubnetGammaEmissionWhitelisted {
+                netuid,
+                whitelisted,
+            };
+            assert_eq!(intent.affects_all_subnets(), !whitelisted);
+            assert_eq!(intent.spend(), Spend::None);
+            assert_eq!(intent.touches_netuids().as_slice(), &[netuid]);
+            assert_eq!(
+                intent.summary(),
+                if whitelisted {
+                    format!("whitelist netuid {} for gamma emission", netuid.get())
+                } else {
+                    format!(
+                        "remove netuid {} from the gamma emission whitelist",
+                        netuid.get()
+                    )
+                }
+            );
+            assert_eq!(
+                crate::AnyIntent::from_tool(
+                    "set_subnet_gamma_emission_whitelisted",
+                    intent.to_json()
+                )?
+                .to_json(),
+                intent.to_json()
+            );
+            let built = intent
+                .build(&BuildCx {
+                    view: &snapshot,
+                    origin: OriginView::Account(ORIGIN),
+                    runtime,
+                    clock: &SystemClock,
+                    spec: SetSubnetGammaEmissionWhitelisted::SPEC,
+                })
+                .await?;
+            let mut expected = vec![19, 121];
+            expected.extend_from_slice(&netuid.get().to_le_bytes());
+            expected.push(u8::from(whitelisted));
+            assert_eq!(built.call.as_bytes(), expected);
+            assert!(built.extras.is_empty());
+            assert_eq!(CallBytes::decode(&expected, runtime)?, built.call);
+            let decoded = decoded(&built.call, runtime)?;
+            assert_eq!(decoded["call_module"], "AdminUtils");
+            assert_eq!(
+                decoded["call_function"],
+                "sudo_set_subnet_gamma_emission_whitelisted"
+            );
+            assert_eq!(decoded["call_args"][0]["value"], netuid.get());
+            assert_eq!(decoded["call_args"][1]["value"], whitelisted);
+            if whitelisted {
+                assert_base_preflight(&intent, &built.call, &snapshot, &client).await?;
+            }
+        }
+        assert_eq!(SetSubnetGammaEmissionWhitelisted::SPEC.signer, "coldkey");
+        assert_eq!(SetSubnetGammaEmissionWhitelisted::SPEC.origin, "root");
+        assert_eq!(
+            SetSubnetGammaEmissionWhitelisted::SPEC.verify,
+            Some("subnet_gamma_emission_whitelisted")
+        );
+        assert_eq!(
+            SetSubnetGammaEmissionWhitelisted::SPEC.wraps,
+            &[
+                ("AdminUtils", "sudo_set_subnet_gamma_emission_whitelisted"),
+                ("Sudo", "sudo")
+            ]
         );
         assert_eq!(chain.requests().len(), requests);
         client.close().await;
