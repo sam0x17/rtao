@@ -8578,7 +8578,7 @@
           "ci/oracle/image_identity.py (source, binding and lock identity)",
           "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "c11c08784adfcdd8b859814dbf94ac6224717fa2"
+        "synced_blob": "255b656137494e0f517c49530f41c16874078da2"
       },
       {
         "kind": "oracle-only",
