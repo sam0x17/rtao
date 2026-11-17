@@ -365,6 +365,8 @@ async fn stored_callbacks_propagate_spend_subnets_and_global_policy_through_tool
             let callback =
                 child_bytes(&executor, &keys, threshold_one(proxy(child.clone()))).await?;
             seed_callback(&chain, &keys, 42, &callback)?;
+            let announced_inside_batch =
+                args["op"] == "batch" && args["intents"][0]["op"] == "multisig_threshold_1";
             let error = executor
                 .execute_tool(
                     args["op"].as_str().expect("operation"),
@@ -377,7 +379,12 @@ async fn stored_callbacks_propagate_spend_subnets_and_global_policy_through_tool
                 )
                 .await
                 .expect_err("stored child policy must survive wrappers");
-            assert!(error.to_string().contains(diagnostic), "{args}: {error}");
+            let expected = if announced_inside_batch {
+                "submit it directly, not inside another batch"
+            } else {
+                diagnostic
+            };
+            assert!(error.to_string().contains(expected), "{args}: {error}");
             no_private_or_submit(&chain, &keys);
             executor.client().close().await;
         }

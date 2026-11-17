@@ -265,6 +265,7 @@ async fn bounded_preimage<V: View + ?Sized>(
 fn leaf_safety(
     call: &CoreValue,
     descriptor: &'static rtao_runtime::CallDescriptor,
+    deferred: bool,
 ) -> Result<IntentSafety, IntentError> {
     let (pallet, name) = (descriptor.pallet, descriptor.name);
     let mut safety = base_safety(name, Spend::None);
@@ -273,7 +274,9 @@ fn leaf_safety(
         .any(|spec| spec.mev_shield_required && spec.wraps.contains(&(pallet, name)))
     {
         safety.mev_shield_required = true;
-        deferred_shield_refusal(&safety)?;
+        if deferred {
+            deferred_shield_refusal(&safety)?;
+        }
     }
     let spend_field = match (pallet, name) {
         ("Balances", "transfer_keep_alive" | "transfer_allow_death") => Some("value"),
@@ -460,17 +463,20 @@ fn leaf_safety(
     Ok(safety)
 }
 
-async fn finalize_safety_at<V: View + ?Sized>(
+enum PendingSafety {
+    Finalize(u32, usize, bool),
+    Encoded(CrowdloanCall, usize, bool),
+    Call(CoreValue, usize, bool),
+}
+
+async fn inspect_wire_safety_at<V: View + ?Sized>(
     cx: &BuildCx<'_, V>,
-    id: u32,
+    mut pending: Vec<PendingSafety>,
+    op: &'static str,
+    deferred: bool,
 ) -> Result<IntentSafety, IntentError> {
-    enum Pending {
-        Finalize(u32, usize, bool),
-        Encoded(CrowdloanCall, usize, bool),
-        Call(CoreValue, usize, bool),
-    }
-    let mut safety = base_safety(FinalizeCrowdloan::SPEC.name, Spend::None);
-    let mut pending = vec![Pending::Finalize(id, 0, false)];
+    use PendingSafety as Pending;
+    let mut safety = base_safety(op, Spend::None);
     let mut seen = BTreeSet::new();
     let mut visits = 0usize;
     let mut bytes_left = MAX_DEFERRED_BYTES;
@@ -609,12 +615,72 @@ async fn finalize_safety_at<V: View + ?Sized>(
                         }
                     }
                     ("System", "remark" | "remark_with_event") => {}
-                    _ => safety.include(leaf_safety(&call, descriptor)?),
+                    _ => safety.include(leaf_safety(&call, descriptor, deferred || future)?),
                 }
             }
         }
     }
-    deferred_shield_refusal(&safety)?;
+    if deferred {
+        deferred_shield_refusal(&safety)?;
+    }
+    Ok(safety)
+}
+
+async fn finalize_safety_at<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    id: u32,
+) -> Result<IntentSafety, IntentError> {
+    inspect_wire_safety_at(
+        cx,
+        vec![PendingSafety::Finalize(id, 0, false)],
+        FinalizeCrowdloan::SPEC.name,
+        true,
+    )
+    .await
+}
+
+/// Inspect the authenticated bytes of a saved announced call for policy.
+/// Unknown or opaque call shapes refuse rather than inheriting display args.
+pub(crate) async fn announced_wire_safety_at<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    call: &CallBytes,
+) -> Result<IntentSafety, IntentError> {
+    if call.as_bytes().len() > MAX_DEFERRED_BYTES {
+        return Err(callback_error(
+            "announced call exceeds its inspection byte budget",
+        ));
+    }
+    let decoded = cx
+        .runtime
+        .core()
+        .decode_spec(&rtao_core::runtime::TypeSpec::Call, call.as_bytes(), true)
+        .map_err(rtao_core::CoreError::from)?;
+    let directly_bounded = matches!(
+        (
+            decoded.field("call_module").and_then(ValueExt::as_str),
+            decoded.field("call_function").and_then(ValueExt::as_str),
+        ),
+        (
+            Some("Balances"),
+            Some("transfer_keep_alive" | "transfer_allow_death")
+        ) | (Some("Proxy"), Some("remove_proxy" | "remove_proxies"))
+            | (Some("System"), Some("remark" | "remark_with_event"))
+    );
+    let mut safety = inspect_wire_safety_at(
+        cx,
+        vec![PendingSafety::Call(decoded, 0, false)],
+        "execute_proxy_announced",
+        false,
+    )
+    .await?;
+    if !directly_bounded {
+        // The callback classifier covers spend and subnet effects, but some
+        // immediate calls reserve deposits or depend on a later dispatch.
+        // Until each is reviewed for saved replay, policy must see the worst
+        // case instead of trusting drifted display arguments.
+        safety.spend = Spend::Unbounded;
+        safety.affects_all_subnets = true;
+    }
     Ok(safety)
 }
 

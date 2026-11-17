@@ -148,29 +148,142 @@ pub fn proxy_grant_signer(proxy_type: &str) -> SignerRole {
 
 /// Bound nested arguments before generated serde conversion clones them.
 pub(crate) fn check_constructor_input(args: &Value) -> Result<(), IntentError> {
-    reject_saved_announcement(args)?;
+    check_saved_announcement_input(args)?;
     if let Some(inner_args) = args.get("inner_args") {
         crate::arguments::check_nested_json(inner_args)?;
     }
     Ok(())
 }
 
-// D-197: regeneration exposes saved announcement fields before their hand
-// port. Rebuilding the inner call must never discard an exact-byte pin.
-fn reject_saved_announcement(args: &Value) -> Result<(), IntentError> {
-    for field in [
-        "announced_call_data",
-        "expected_call_hash",
-        "announced_spec_version",
-        "announced_call_semantics",
-    ] {
-        if args.get(field).is_some_and(|value| !value.is_null()) {
-            return Err(IntentError::validation(format!(
-                "{field} is not implemented for saved proxy announcements; the supplied commitment cannot be ignored"
-            )));
+// Saved bytes are a commitment, not a hint to rebuild. Refuse any partial or
+// malformed pin before construction as well as after typed mutation.
+fn check_saved_announcement_input(args: &Value) -> Result<(), IntentError> {
+    let present = |field: &str| args.get(field).filter(|value| !value.is_null());
+    let Some(data) = present("announced_call_data") else {
+        for field in [
+            "expected_call_hash",
+            "announced_spec_version",
+            "announced_call_semantics",
+        ] {
+            if present(field).is_some() {
+                return Err(IntentError::validation(format!(
+                    "{field} requires announced_call_data; the supplied commitment cannot be ignored"
+                )));
+            }
+        }
+        return Ok(());
+    };
+    let Some(data) = data.as_str() else {
+        return Err(IntentError::validation(
+            "announced_call_data must be nonempty 0x-prefixed byte hex",
+        ));
+    };
+    let Some(digits) = data.strip_prefix("0x") else {
+        return Err(IntentError::validation(
+            "announced_call_data must be nonempty 0x-prefixed byte hex",
+        ));
+    };
+    if digits.is_empty()
+        || digits.len() % 2 != 0
+        || !digits.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(IntentError::validation(
+            "announced_call_data must be nonempty 0x-prefixed byte hex",
+        ));
+    }
+    if let Some(hash) = present("expected_call_hash") {
+        let valid = hash
+            .as_str()
+            .and_then(|value| value.strip_prefix("0x"))
+            .is_some_and(|digits| {
+                digits.len() == 64 && digits.bytes().all(|byte| byte.is_ascii_hexdigit())
+            });
+        if !valid {
+            return Err(IntentError::validation(
+                "expected_call_hash must be 0x-prefixed Blake2-256 hex",
+            ));
         }
     }
+    if present("announced_spec_version").is_some_and(|value| {
+        value
+            .as_u64()
+            .is_none_or(|version| version > u64::from(u32::MAX))
+    }) {
+        return Err(IntentError::validation(
+            "announced_spec_version must be a u32",
+        ));
+    }
+    if present("announced_call_semantics").is_some_and(|value| !value.is_object()) {
+        return Err(IntentError::validation(
+            "announced_call_semantics must be a decoded call object",
+        ));
+    }
     Ok(())
+}
+
+impl ExecuteProxyAnnounced {
+    fn saved_call(&self, runtime: &RuntimeHandle) -> Result<Option<CallBytes>, IntentError> {
+        let Some(data) = &self.announced_call_data else {
+            return Ok(None);
+        };
+        let digits = data.strip_prefix("0x").ok_or_else(|| {
+            IntentError::validation("announced_call_data must be nonempty 0x-prefixed byte hex")
+        })?;
+        let bytes = hex::decode(digits).map_err(|_| {
+            IntentError::validation("announced_call_data must be nonempty 0x-prefixed byte hex")
+        })?;
+        let call = CallBytes::decode(&bytes, runtime)?;
+        if let Some(expected) = &self.expected_call_hash {
+            let actual = format!("0x{}", hex::encode(call.hash()));
+            if !actual.eq_ignore_ascii_case(expected) {
+                return Err(IntentError::validation(format!(
+                    "saved call bytes do not match the selected announcement hash ({actual} != {expected})"
+                )));
+            }
+        }
+        if self
+            .announced_spec_version
+            .is_some_and(|version| version != u64::from(runtime.spec_version()))
+        {
+            let Some(original) = &self.announced_call_semantics else {
+                return Err(IntentError::validation(
+                    "runtime changed since this call was announced and the saved row has no original decoded semantics; cancel and re-announce it",
+                ));
+            };
+            let decoded = runtime.core().decode_spec(
+                &rtao_core::runtime::TypeSpec::Call,
+                call.as_bytes(),
+                true,
+            )?;
+            let current = rtao_core::codec::value::to_corpus_json(&decoded);
+            if &current != original {
+                return Err(IntentError::validation(
+                    "runtime metadata now decodes the announced bytes differently; cancel and re-announce the operation",
+                ));
+            }
+        }
+        Ok(Some(call))
+    }
+}
+
+fn include_saved_wire_safety(declared: &mut IntentSafety, wire: IntentSafety) {
+    declared.spend = match (declared.spend, wire.spend) {
+        (Spend::Unbounded, _) | (_, Spend::Unbounded) => Spend::Unbounded,
+        (Spend::None, spend) | (spend, Spend::None) => spend,
+        (Spend::Bounded(left), Spend::Bounded(right)) => {
+            Spend::Bounded(if left.rao() >= right.rao() {
+                left
+            } else {
+                right
+            })
+        }
+    };
+    declared.netuids.extend(wire.netuids);
+    declared.netuids.sort_unstable();
+    declared.netuids.dedup();
+    declared.affects_all_subnets |= wire.affects_all_subnets;
+    declared.contains_raw_calls |= wire.contains_raw_calls;
+    declared.mev_shield_required |= wire.mev_shield_required;
 }
 
 fn add_proxy_signer(
@@ -443,17 +556,26 @@ impl Intent for ExecuteProxyAnnounced {
     ) -> Result<IntentSafety, IntentError> {
         self.validate()?;
         let inner = crate::AnyIntent::from_tool(&self.inner_op, self.inner_args.clone())?;
+        let saved = self.saved_call(cx.runtime)?;
         let borrowed = cx.view;
-        let mut safety = inner
-            .as_dyn()
-            .safety_at_dyn(&BuildCx {
-                view: &borrowed as &dyn DynView,
-                origin: cx.origin,
-                runtime: cx.runtime,
-                clock: cx.clock,
-                spec: inner.spec(),
-            })
-            .await?;
+        let mut safety = if saved.is_some() {
+            inner.as_dyn().safety_dyn()?
+        } else {
+            inner
+                .as_dyn()
+                .safety_at_dyn(&BuildCx {
+                    view: &borrowed as &dyn DynView,
+                    origin: cx.origin,
+                    runtime: cx.runtime,
+                    clock: cx.clock,
+                    spec: inner.spec(),
+                })
+                .await?
+        };
+        if let Some(call) = saved {
+            let wire = crate::crowdloan::announced_wire_safety_at(cx, &call).await?;
+            include_saved_wire_safety(&mut safety, wire);
+        }
         safety.op = Self::SPEC.name;
         safety.mev_shield_required |= Self::SPEC.mev_shield_required;
         Ok(safety)
@@ -463,6 +585,11 @@ impl Intent for ExecuteProxyAnnounced {
         self.validate()?;
         let inner = crate::AnyIntent::from_tool(&self.inner_op, self.inner_args.clone())?;
         let mut safety = inner.as_dyn().safety_dyn()?;
+        if self.announced_call_data.is_some() {
+            // A context-free check cannot authenticate saved wire semantics.
+            safety.spend = Spend::Unbounded;
+            safety.affects_all_subnets = true;
+        }
         safety.op = Self::SPEC.name;
         safety.mev_shield_required |= Self::SPEC.mev_shield_required;
         Ok(safety)
@@ -505,13 +632,17 @@ impl Intent for ExecuteProxyAnnounced {
         // The announced call dispatches as the real account: compose it as a
         // direct submission from that account would be (its sudo wrapper and
         // adapters included) and keep its extras for the enclosing dispatch.
-        let built = rtao_tx::compose_nested_intent_call(
-            &outer_cx,
-            inner.as_dyn(),
-            rtao_tx::OriginView::Account(self.real_ss58.account()),
-            "announced proxy",
-        )
-        .await?;
+        let built = if let Some(call) = self.saved_call(cx.runtime)? {
+            Built::new(call)
+        } else {
+            rtao_tx::compose_nested_intent_call(
+                &outer_cx,
+                inner.as_dyn(),
+                rtao_tx::OriginView::Account(self.real_ss58.account()),
+                "announced proxy",
+            )
+            .await?
+        };
         let inner_call = built.call;
         let mut extras = built.extras;
         if announced_call_requires_direct(&inner_call, cx.runtime) {
@@ -541,13 +672,12 @@ impl Intent for ExecuteProxyAnnounced {
     }
 
     fn requires_build_for_policy(&self) -> bool {
-        crate::AnyIntent::from_tool(&self.inner_op, self.inner_args.clone())
-            .is_ok_and(|inner| inner.as_dyn().requires_build_for_policy_dyn())
+        true
     }
 
     fn validate(&self) -> Result<(), IntentError> {
         crate::arguments::check_nested_json(&self.inner_args)?;
-        reject_saved_announcement(&serde_json::to_value(self)?)?;
+        check_saved_announcement_input(&serde_json::to_value(self)?)?;
         // Python deliberately does not call check_proxy_type for this intent.
         // The nested registry checks its argument shape during build; runtime
         // composition validates force_proxy_type after that nested build.
@@ -560,7 +690,7 @@ impl Intent for ExecuteProxyAnnounced {
 mod tests {
     use super::*;
     use rtao_client::{BlockRef, Client, ClientConfig, Network, Snapshot};
-    use rtao_primitives::{AccountId, Spend};
+    use rtao_primitives::{AccountId, Balance, Spend, Tao};
     use rtao_runtime::{CallBytes, RuntimeHandle};
     use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
     use rtao_tx::{DynIntent, IntentInterface, OriginView, SystemClock};
@@ -694,46 +824,143 @@ mod tests {
     }
 
     #[test]
-    fn saved_announcement_pins_are_refused_before_rebuilding() -> anyhow::Result<()> {
-        for (field, value) in [
-            ("announced_call_data", json!("0x0000")),
-            ("expected_call_hash", json!("0x00")),
-            ("announced_spec_version", json!(0)),
-            ("announced_call_semantics", json!({})),
+    fn saved_announcement_pins_are_validated_before_build() -> anyhow::Result<()> {
+        let mut args = announced("remove_proxies", json!({})).to_json();
+        for field in [
+            "expected_call_hash",
+            "announced_spec_version",
+            "announced_call_semantics",
         ] {
-            let mut args = announced("remove_proxies", json!({})).to_json();
-            // Every explicit non-null pin is refused, including falsey values.
-            for value in [value, json!(false), json!(0), json!(""), json!({})] {
-                args[field] = value;
-                assert!(check_constructor_input(&args).is_err(), "{field}");
-                assert!(
-                    crate::AnyIntent::from_tool("execute_proxy_announced", args.clone()).is_err()
-                );
-            }
-            if ExecuteProxyAnnounced::SPEC
-                .fields
-                .iter()
-                .any(|f| f.name == field)
-            {
-                args[field] = match field {
-                    "announced_spec_version" => json!(0),
-                    "announced_call_semantics" => json!({}),
-                    _ => json!("0x00"),
-                };
-                let mut typed_args = args.clone();
-                typed_args
-                    .as_object_mut()
-                    .expect("announcement tool JSON is an object")
-                    .remove("op");
-                let typed: ExecuteProxyAnnounced = serde_json::from_value(typed_args)?;
-                assert!(
-                    typed.validate().is_err(),
-                    "typed mutation must retain {field}"
-                );
-            }
+            args[field] = match field {
+                "expected_call_hash" => json!(format!("0x{}", "00".repeat(32))),
+                "announced_spec_version" => json!(491),
+                _ => json!({}),
+            };
+            assert!(check_constructor_input(&args).is_err(), "orphaned {field}");
             args[field] = Value::Null;
-            assert!(check_constructor_input(&args).is_ok());
         }
+        for bad in [
+            json!(false),
+            json!(0),
+            json!(""),
+            json!("0x"),
+            json!("0x0"),
+            json!("0xgg"),
+            json!({}),
+        ] {
+            args["announced_call_data"] = bad;
+            assert!(check_constructor_input(&args).is_err());
+        }
+        args["announced_call_data"] = json!("0x1003");
+        assert!(check_constructor_input(&args).is_ok());
+        for (field, bad) in [
+            ("expected_call_hash", json!("0x00")),
+            ("announced_spec_version", json!(-1)),
+            ("announced_call_semantics", json!([])),
+        ] {
+            args[field] = bad;
+            assert!(check_constructor_input(&args).is_err(), "invalid {field}");
+            args[field] = Value::Null;
+        }
+        assert!(crate::AnyIntent::from_tool("execute_proxy_announced", args.clone()).is_ok());
+        args["announced_call_data"] = Value::Null;
+        assert!(check_constructor_input(&args).is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn saved_announcement_replays_exact_bytes_and_checks_hash_and_runtime_semantics()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let view = RecordingView::new(snapshot.clone());
+        let requests = chain.requests().len();
+        let original = build(&announced("remove_proxies", json!({})), &view, runtime).await?;
+        let inner_call = proxy::remove_proxies().compose(runtime)?;
+        let saved = decode(&inner_call, runtime)?;
+        let mut intent = announced("remove_proxies", json!({}));
+        intent.announced_call_data = Some(format!("0x{}", hex::encode(inner_call.as_bytes())));
+        intent.expected_call_hash = Some(format!("0x{}", hex::encode(inner_call.hash())));
+        intent.announced_spec_version = Some(u64::from(runtime.spec_version()));
+        intent.announced_call_semantics = Some(saved.clone());
+        let replay = build(&intent, &view, runtime).await?;
+        assert_eq!(replay.call, original.call);
+        assert!(replay.extras.is_empty());
+        assert!(intent.requires_build_for_policy());
+        intent.expected_call_hash = Some(format!("0x{}", "00".repeat(32)));
+        assert!(
+            build(&intent, &view, runtime)
+                .await
+                .expect_err("wrong hash")
+                .to_string()
+                .contains("selected announcement hash")
+        );
+        intent.expected_call_hash = None;
+        intent.announced_spec_version = Some(u64::from(runtime.spec_version()) - 1);
+        intent.announced_call_semantics = None;
+        assert!(
+            build(&intent, &view, runtime)
+                .await
+                .expect_err("missing semantics")
+                .to_string()
+                .contains("no original decoded semantics")
+        );
+        intent.announced_call_semantics = Some(json!({"call_module":"System"}));
+        assert!(
+            build(&intent, &view, runtime)
+                .await
+                .expect_err("changed semantics")
+                .to_string()
+                .contains("decodes the announced bytes differently")
+        );
+        intent.announced_call_semantics = Some(saved.clone());
+        assert_eq!(build(&intent, &view, runtime).await?.call, original.call);
+        assert!(view.touches().is_empty());
+        assert_eq!(chain.requests().len(), requests);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn saved_announcement_policy_uses_wire_amount_when_display_args_drift()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let view = RecordingView::new(snapshot.clone());
+        let transfer = crate::AnyIntent::from_tool(
+            "transfer",
+            json!({"dest_ss58": REAL, "amount_tao": "0.000000010"}),
+        )?;
+        let call = build(transfer.as_dyn(), &view, runtime).await?.call;
+        let mut intent = announced(
+            "transfer",
+            json!({
+                "dest_ss58": REAL, "amount_tao": "0.000000001",
+            }),
+        );
+        intent.announced_call_data = Some(format!("0x{}", hex::encode(call.as_bytes())));
+        let cx = BuildCx {
+            view: &view,
+            origin: OriginView::Account(ORIGIN),
+            runtime,
+            clock: &SystemClock,
+            spec: ExecuteProxyAnnounced::SPEC,
+        };
+        let safety = intent.safety_at(&cx).await?;
+        assert_eq!(safety.spend, Spend::Bounded(Balance::<Tao>::from_rao(10)));
+        let policy = rtao_tx::Policy {
+            max_spend: Some(Balance::<Tao>::from_rao(1)),
+            ..Default::default()
+        };
+        assert!(
+            policy
+                .check(&safety, None)
+                .iter()
+                .any(|message| message.contains("max_spend_tao"))
+        );
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
         Ok(())
     }
 
@@ -899,10 +1126,10 @@ mod tests {
     }
 
     #[test]
-    fn announced_and_pure_proxies_report_whether_a_rebuild_is_needed() {
+    fn announced_proxies_always_build_for_policy() {
         assert!(announced("create_pure_proxy", json!({})).requires_build_for_policy());
-        assert!(!announced("remove_proxies", json!({})).requires_build_for_policy());
-        assert!(!announced("missing-intent", json!({})).requires_build_for_policy());
+        assert!(announced("remove_proxies", json!({})).requires_build_for_policy());
+        assert!(announced("missing-intent", json!({})).requires_build_for_policy());
     }
 
     #[test]
@@ -1278,6 +1505,21 @@ mod tests {
             error.to_string(),
             "this announced payload contains or may contain an atomic batch; submit it directly, not inside another batch"
         );
+        let inner = rtao_runtime::calls::utility::batch_all(vec![
+            proxy::remove_proxies().compose(runtime)?,
+        ])
+        .compose(runtime)?;
+        let mut saved = intent;
+        saved.announced_call_data = Some(format!("0x{}", hex::encode(inner.as_bytes())));
+        assert_eq!(
+            build(&saved, &view, runtime)
+                .await?
+                .extras
+                .get("requires_direct_submission"),
+            Some(&json!(true))
+        );
+        let batch = crate::Batch::new(vec![saved.to_json()])?;
+        assert!(build(&batch, &view, runtime).await.is_err());
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
         client.close().await;
         Ok(())
