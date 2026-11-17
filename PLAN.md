@@ -1249,6 +1249,8 @@ Classes: `stricter` (rtao refuses something Python allows), `improved`, `kept` (
 
 | D-200 | Bind test intent specs by name | The 491 catalog adds four intents and shifts several numeric positions. The eighth candidate found one multisig fixture bound to another intent by slot. Other transaction and CLI fixtures also held numeric slots, including some whose tests passed with the wrong spec. A constant name lookup in `rtao-catalog` returns the authenticated spec or `None`; fixtures use it in their associated constants and fail compilation if a named intent disappears. Typed intent fixtures use their generated `IntentInterface::SPEC`. No runtime authentication, signing or reconciliation check changes | catalog identity in tests |
 
+| D-201 | Check sample blobs against the pinned tree | The ninth 491 candidate passed the earlier multisig fixture and reached `rtao-reads` sample tests. All three stopped on a frozen 490 SHA for `sdk/python/tests/harness/samples.py`, although the authenticated 491 tree and regenerated table agreed on the new blob. The CLI sample tests held the same SHA and would fail later. Both now compare the table blob with that exact path's blob record in `vendor/upstream/tree.txt`, which pin/import and extraction verify separately. A missing path or blob record fails; pin/import validates its SHA and source. Dynamic registry coverage, pending-read handling and native sample execution stay in place; the affected sample test names no longer freeze old inventory counts | authenticated sample provenance in tests |
+
 ## 9. Testing strategy
 
 ### 9.1 Layers

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Sample fixtures follow the pinned upstream tree (D-201)
+
+- Fixed: read and CLI sample tests check their generated table's source blob against the authenticated upstream tree instead of a 490-only SHA. The tests still require exact registry coverage and run implemented samples through native dispatch.
+
 ### Intent fixtures follow catalog names (D-200)
 
 - Fixed: test fixtures bind intent specs by name in constant expressions. Adding intents during runtime adoption no longer changes the identities used by transaction, neuron and CLI tests.

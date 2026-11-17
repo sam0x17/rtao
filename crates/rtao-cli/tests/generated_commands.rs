@@ -106,9 +106,19 @@ fn pending(name: &str) -> bool {
 }
 
 fn cli_samples(name: &str) -> TestResult<BTreeMap<String, Value>> {
-    let table = rtao_catalog::py::table("sdk/python/tests/harness/samples.py", name)
-        .ok_or("authenticated CLI sample table")?;
-    assert_eq!(table.blob, "8a6ded3185596b57cef116eeb602b57cbb3d6ce4");
+    const SAMPLE_PATH: &str = "sdk/python/tests/harness/samples.py";
+    let table =
+        rtao_catalog::py::table(SAMPLE_PATH, name).ok_or("authenticated CLI sample table")?;
+    let pinned = include_str!("../../../vendor/upstream/tree.txt")
+        .lines()
+        .filter_map(|entry| entry.split_once('\t'))
+        .find_map(|(record, path)| {
+            (path == SAMPLE_PATH)
+                .then(|| record.strip_prefix("100644 blob "))
+                .flatten()
+        })
+        .ok_or("samples.py missing from the pinned upstream tree")?;
+    assert_eq!(table.blob, pinned);
     let extracted = rtao_primitives::json::from_str::<Value>(table.value_json)?;
     let decoded = literal(&extracted)?;
     Ok(decoded
@@ -1049,7 +1059,8 @@ fn missing_required_values_refuse_with_input_status_before_any_connection() -> T
 // keys. Installed subprocess exits and wallet-file access are separate fixtures.
 // pyt: unit/test_cli_commands.py::test_tx_dry_run_from_sample
 #[tokio::test]
-async fn all_86_samples_run_through_actual_cli_json_dry_run_without_private_access() -> TestResult {
+async fn all_source_intent_samples_run_through_actual_cli_json_dry_run_without_private_access()
+-> TestResult {
     let samples = cli_samples("INTENT_SAMPLES")?;
     let expected = rtao_catalog::INTENTS
         .iter()
@@ -1216,7 +1227,7 @@ async fn all_86_samples_run_through_actual_cli_json_dry_run_without_private_acce
 
 // pyt: unit/test_cli_commands.py::test_query_from_sample
 #[tokio::test]
-async fn all_105_samples_parse_dispatch_and_render_actual_cli_json_queries() -> TestResult {
+async fn all_source_samples_parse_dispatch_and_render_actual_cli_json_queries() -> TestResult {
     let samples = cli_samples("READ_SAMPLES")?;
     let expected = ReadName::ALL
         .into_iter()

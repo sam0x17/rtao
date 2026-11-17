@@ -22,7 +22,16 @@ const SAMPLE_PATH: &str = "sdk/python/tests/harness/samples.py";
 fn samples() -> TestResult<BTreeMap<String, Map<String, Value>>> {
     let table = rtao_catalog::py::table(SAMPLE_PATH, "READ_SAMPLES")
         .ok_or("authenticated READ_SAMPLES table missing")?;
-    assert_eq!(table.blob, "8a6ded3185596b57cef116eeb602b57cbb3d6ce4");
+    let pinned = include_str!("../../../vendor/upstream/tree.txt")
+        .lines()
+        .filter_map(|entry| entry.split_once('\t'))
+        .find_map(|(record, path)| {
+            (path == SAMPLE_PATH)
+                .then(|| record.strip_prefix("100644 blob "))
+                .flatten()
+        })
+        .ok_or("samples.py missing from the pinned upstream tree")?;
+    assert_eq!(table.blob, pinned);
     let encoded: Value = rtao_primitives::json::from_str(table.value_json)?;
     let decoded = literal(&encoded)?;
     decoded
@@ -96,7 +105,7 @@ async fn client(state: FakeState) -> TestResult<(Client, FakeChain)> {
 // pyt: unit/test_reads_table.py::test_dispatches_at_head
 // pyt: unit/test_reads_table.py::test_dispatches_pinned_to_block
 #[tokio::test]
-async fn all_105_source_samples_dispatch_at_the_client_head_and_snapshot_90() -> TestResult {
+async fn all_source_samples_dispatch_at_the_client_head_and_snapshot_90() -> TestResult {
     let samples = samples()?;
     let (client, chain) = client(seeded_state()?).await?;
     let outcome = async {
