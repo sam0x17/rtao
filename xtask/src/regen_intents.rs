@@ -417,7 +417,54 @@ fn field_type(
     })
 }
 
+/// Convert the extractor's lossless container tags into JSON values only
+/// where their meaning is unambiguous. Keep the catalog representation intact.
+fn json_default(value: &Value) -> Result<Value> {
+    match value {
+        Value::Array(values) => Ok(Value::Array(
+            values.iter().map(json_default).collect::<Result<_>>()?,
+        )),
+        Value::Object(object) => {
+            ensure!(
+                object.len() == 1,
+                "unsupported extracted JSON default object"
+            );
+            if let Some(entries) = object.get("dict").and_then(Value::as_array) {
+                let mut result = serde_json::Map::new();
+                for entry in entries {
+                    let pair = entry
+                        .as_array()
+                        .context("dictionary default entry must be a pair")?;
+                    ensure!(pair.len() == 2, "dictionary default entry must be a pair");
+                    let key = pair[0]
+                        .as_str()
+                        .context("JSON dictionary default requires reviewed string keys")?;
+                    ensure!(
+                        !result.contains_key(key),
+                        "duplicate JSON dictionary default key {key:?}"
+                    );
+                    result.insert(key.to_owned(), json_default(&pair[1])?);
+                }
+                Ok(Value::Object(result))
+            } else if let Some(values) = object.get("tuple").and_then(Value::as_array) {
+                Ok(Value::Array(
+                    values.iter().map(json_default).collect::<Result<_>>()?,
+                ))
+            } else {
+                bail!("unsupported extracted JSON default container")
+            }
+        }
+        _ => Ok(value.clone()),
+    }
+}
+
 fn default_expr(ty: &str, value: &Value) -> Result<String> {
+    if ty == "serde_json::Value" {
+        return Ok(format!(
+            "serde_json::from_str::<serde_json::Value>({:?}).expect(\"authenticated JSON default\")",
+            json_default(value)?.to_string()
+        ));
+    }
     if value.is_null() {
         ensure!(
             ty.starts_with("Option<"),
@@ -1420,6 +1467,60 @@ mod tests {
             "rtao_primitives::Ratio::new(300.0).expect(\"authenticated finite ratio default\")"
         );
         assert!(default_expr("u64", &Value::Null).is_err());
+    }
+
+    #[test]
+    fn json_defaults_project_extractor_containers_and_generate_valid_rust() -> Result<()> {
+        // Runtime 491's emission_weights.py adds gamma: dict with
+        // default_factory=dict. Its source default remains {"dict":[]}.
+        let empty = serde_json::json!({"dict": []});
+        assert_eq!(json_default(&empty)?, serde_json::json!({}));
+        let nested = serde_json::json!({"dict": [
+            ["quote\"\n", {"tuple": [1, true, null, {"dict": []}]}],
+            ["values", ["x", 0.125]]
+        ]});
+        assert_eq!(
+            json_default(&nested)?,
+            serde_json::json!({
+                "quote\"\n": [1, true, null, {}], "values": ["x", 0.125]
+            })
+        );
+        for value in [
+            empty,
+            nested,
+            Value::Null,
+            serde_json::json!("line\n\"quoted\""),
+        ] {
+            let expression = default_expr("serde_json::Value", &value)?;
+            let source = format!("pub fn gamma() -> serde_json::Value {{ {expression} }}");
+            format_rust(&source)?;
+            let syntax = syn::parse_str::<syn::Expr>(&expression)?;
+            let syn::Expr::MethodCall(expect) = syntax else {
+                bail!("expected checked JSON parsing")
+            };
+            let syn::Expr::Call(parse) = *expect.receiver else {
+                bail!("expected JSON parser call")
+            };
+            let Some(syn::Expr::Lit(argument)) = parse.args.first() else {
+                bail!("expected literal JSON argument")
+            };
+            let syn::Lit::Str(argument) = &argument.lit else {
+                bail!("expected Rust string literal")
+            };
+            let decoded: Value = serde_json::from_str(&argument.value())?;
+            assert_eq!(decoded, json_default(&value)?);
+        }
+        for invalid in [
+            serde_json::json!({"dict": [[1, "integer key"]]}),
+            serde_json::json!({"dict": [["x", 1], ["x", 2]]}),
+            serde_json::json!({"dict": [["missing value"]]}),
+            serde_json::json!({"dict": null}),
+            serde_json::json!({"set": []}),
+            serde_json::json!({"bytes_hex": "00"}),
+        ] {
+            assert!(default_expr("serde_json::Value", &invalid).is_err());
+        }
+        Ok(())
     }
     #[test]
     fn address_arguments_retain_input_spelling_while_wire_accounts_stay_binary() {

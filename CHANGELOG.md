@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### JSON intent defaults during runtime adoption (D-195)
+
+- Fixed: generated `serde_json::Value` defaults convert the extractor's dictionary and tuple representations to JSON values before emitting Rust. Runtime 491's empty `gamma` dictionary now becomes an empty JSON object. The authenticated catalog representation is retained; unsupported containers, non-string dictionary keys and duplicate keys require review.
+
 ## 0.1.2 - 2026-11-16
 
 ### New environment names during runtime adoption (D-194)
