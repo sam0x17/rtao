@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Emission slot edits across runtime adoption (D-196)
+
+- Fixed: the CLI uses generated defaults when constructing emission-weight intents. When the catalog selects runtime 491's full-split call, slot edits include all five weights and preserve every existing gamma target/share from one pinned snapshot. Encoding still uses strict live-metadata checks. New gamma-edit inputs are rejected explicitly until their hand port is complete; they are never silently ignored. The 490 catalog retains its existing sparse-call behavior.
+
 ### JSON intent defaults during runtime adoption (D-195)
 
 - Fixed: generated `serde_json::Value` defaults convert the extractor's dictionary and tuple representations to JSON values before emitting Rust. Runtime 491's empty `gamma` dictionary now becomes an empty JSON object. The independent parity checker accepts the literal JSON parser expression and compares its decoded value against the source container representation, including dictionary keys/order and nested values. The authenticated catalog representation is retained; unsupported containers, non-string dictionary keys and duplicate keys require review.

@@ -108,6 +108,48 @@ fn intent(args: Value) -> SetSubnetEmissionWeights {
     }
 }
 
+fn expected_emission_call(
+    runtime: &rtao_runtime::RuntimeHandle,
+    uids: Vec<u16>,
+    values: Vec<u64>,
+    base: ew::Weights,
+    gamma: &[(u16, u64)],
+) -> Result<Vec<u8>> {
+    if !<SetSubnetEmissionWeights as rtao_tx::IntentInterface>::SPEC
+        .wraps
+        .contains(&("AdminUtils", "sudo_set_subnet_emission_weights_v2"))
+    {
+        return Ok(
+            admin_utils::sudo_set_subnet_emission_weights(SUBNET, uids, values)
+                .compose(runtime)?
+                .as_bytes()
+                .to_vec(),
+        );
+    }
+    let mut weights = base;
+    for (slot, value) in uids.into_iter().zip(values) {
+        weights[usize::from(slot)] = value;
+    }
+    let mut bytes = vec![
+        runtime.pallet_index("AdminUtils").unwrap(),
+        runtime
+            .call_index("AdminUtils", "sudo_set_subnet_emission_weights_v2")
+            .unwrap(),
+    ];
+    bytes.extend(SUBNET.0.to_le_bytes());
+    bytes.push(u8::try_from((5 + gamma.len()) << 2)?);
+    for (slot, value) in weights.into_iter().enumerate() {
+        bytes.push(u8::try_from(slot)?);
+        bytes.extend(value.to_le_bytes());
+    }
+    for (target, share) in gamma {
+        bytes.push(5);
+        bytes.extend(target.to_le_bytes());
+        bytes.extend(share.to_le_bytes());
+    }
+    Ok(bytes)
+}
+
 async fn plan(client: &Client, intent: &SetSubnetEmissionWeights) -> Plan {
     Executor::new(client.clone())
         .plan_dyn(intent, &PublicKeys, &PlanOptions::default())
@@ -162,12 +204,10 @@ fn intent_rejects_malformed_input() {
             .to_string();
         assert!(error.contains(expected), "{error}");
     }
-    let unchecked = SetSubnetEmissionWeights {
-        netuid: NetUid(1),
-        slots: vec![json!("owner")],
-        values: vec![json!("lots")],
-        renormalize: false,
-    };
+    let unchecked: SetSubnetEmissionWeights = serde_json::from_value(json!({
+        "netuid": 1, "slots": ["owner"], "values": ["lots"], "renormalize": false,
+    }))
+    .unwrap();
     assert!(unchecked.validate().is_err());
 }
 
@@ -401,22 +441,26 @@ async fn intent_build_sends_full_vector_when_renormalizing() -> Result<()> {
     let plan = plan(&client, &set).await;
     assert_eq!(
         plan.call().as_bytes(),
-        admin_utils::sudo_set_subnet_emission_weights(
-            SUBNET,
+        expected_emission_call(
+            &runtime,
             vec![0, 1, 2, 3, 4],
-            expected.to_vec()
-        )
-        .compose(&runtime)?
-        .as_bytes()
+            expected.to_vec(),
+            ew::default_weights(DEFAULT_OWNER),
+            &[],
+        )?
     );
     let sparse =
         intent(json!({"netuid": SUBNET.0, "slots": ["miner", "owner"], "values": [ONE / 2, 1]}));
     let plan = self::plan(&client, &sparse).await;
     assert_eq!(
         plan.call().as_bytes(),
-        admin_utils::sudo_set_subnet_emission_weights(SUBNET, vec![2, 4], vec![1, ONE / 2])
-            .compose(&runtime)?
-            .as_bytes()
+        expected_emission_call(
+            &runtime,
+            vec![2, 4],
+            vec![1, ONE / 2],
+            ew::default_weights(DEFAULT_OWNER),
+            &[],
+        )?
     );
     client.close().await;
     Ok(())
@@ -475,13 +519,13 @@ async fn intent_counts_the_gamma_shares_in_the_sum() -> Result<()> {
     assert_eq!(after, expected);
     assert_eq!(
         plan.call().as_bytes(),
-        admin_utils::sudo_set_subnet_emission_weights(
-            SUBNET,
+        expected_emission_call(
+            &runtime,
             vec![0, 1, 2, 3, 4],
-            expected.to_vec()
-        )
-        .compose(&runtime)?
-        .as_bytes()
+            expected.to_vec(),
+            gamma_weights(),
+            &[(2, gamma_share())],
+        )?
     );
 
     // A verbatim update that keeps the sum passes; one that fills 100% alone does not.

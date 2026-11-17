@@ -273,6 +273,15 @@ async fn subnet_emission_weights_sums_the_gamma_shares() {
     assert_eq!(info.gamma_share, gamma);
     assert_eq!(info.rules().gamma_share, gamma);
     assert_eq!(
+        subnets::gamma_emission_shares(&client, netuid)
+            .await
+            .unwrap(),
+        std::collections::BTreeMap::from([
+            (2, ew::parse_share("4%").unwrap()),
+            (3, gamma - ew::parse_share("4%").unwrap()),
+        ]),
+    );
+    assert_eq!(
         subnets::gamma_emission_share(&client, netuid)
             .await
             .unwrap(),
@@ -309,6 +318,34 @@ async fn subnet_emission_weights_sums_the_gamma_shares() {
         0
     );
     client.close().await;
+}
+
+#[tokio::test]
+async fn gamma_emission_shares_reject_duplicate_targets_and_total_overflow() {
+    use rtao_runtime::storage::subtensor_module as st;
+    for (shares, expected) in [
+        (
+            vec![(NetUid(2), 1u64), (NetUid(2), 2)],
+            "gamma target appears more than once",
+        ),
+        (
+            vec![(NetUid(2), u64::MAX), (NetUid(3), 1)],
+            "gamma shares exceed u64",
+        ),
+    ] {
+        let mut state = FakeState::default();
+        state
+            .seed(&st::SUBNET_GAMMA_EMISSION, (NetUid(1),), shares)
+            .unwrap();
+        let client = Client::from_rpc(RpcClient::new(FakeChain::from_state(state)), config())
+            .await
+            .unwrap();
+        let error = subnets::gamma_emission_share(&client, NetUid(1))
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains(expected), "{error}");
+        client.close().await;
+    }
 }
 
 #[test]

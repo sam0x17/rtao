@@ -1222,20 +1222,45 @@ async fn finalized_write_reads_the_stored_vector_back_at_the_inclusion_block() -
     let runtime = View::runtime(&client).await?;
     let decoded =
         rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?).to_json();
-    assert_eq!(
-        decoded["call"]["call_function"],
-        json!("sudo_set_subnet_emission_weights"),
-        "{decoded}"
-    );
-    assert_eq!(
-        decoded["call"]["call_args"],
-        json!([
-            {"name": "netuid", "type": "NetUid", "value": SUBNET.0},
-            {"name": "uids", "type": "Vec<u16>", "value": [0, 1, 2, 3, 4]},
-            {"name": "values", "type": "Vec<u64>", "value": expected},
-        ]),
-        "{decoded}"
-    );
+    if <rtao_intents::SetSubnetEmissionWeights as rtao_tx::IntentInterface>::SPEC
+        .wraps
+        .contains(&("AdminUtils", "sudo_set_subnet_emission_weights_v2"))
+    {
+        assert_eq!(
+            decoded["call"]["call_function"],
+            "sudo_set_subnet_emission_weights_v2"
+        );
+        let arguments = decoded["call"]["call_args"].as_array().ok_or("arguments")?;
+        assert_eq!(arguments.len(), 2);
+        assert_eq!(arguments[0]["name"], "netuid");
+        assert_eq!(arguments[0]["value"], SUBNET.0);
+        assert_eq!(arguments[1]["name"], "split");
+        assert_eq!(
+            arguments[1]["value"],
+            json!([
+                ["Burn", expected[0]],
+                ["Recycle", expected[1]],
+                ["Owner", expected[2]],
+                ["Validator", expected[3]],
+                ["Miner", expected[4]],
+            ]),
+        );
+    } else {
+        assert_eq!(
+            decoded["call"]["call_function"],
+            json!("sudo_set_subnet_emission_weights"),
+            "{decoded}"
+        );
+        assert_eq!(
+            decoded["call"]["call_args"],
+            json!([
+                {"name": "netuid", "type": "NetUid", "value": SUBNET.0},
+                {"name": "uids", "type": "Vec<u16>", "value": [0, 1, 2, 3, 4]},
+                {"name": "values", "type": "Vec<u64>", "value": expected},
+            ]),
+            "{decoded}"
+        );
+    }
 
     let human = run_with(&client, wallet.path(), &write, Some(&signer)).await?;
     assert_eq!(code(&human), 0, "{}", human.stderr);

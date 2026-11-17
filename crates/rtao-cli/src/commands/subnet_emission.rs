@@ -544,12 +544,14 @@ async fn submit(
     history: &mut PromptHistory,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
     reject(ctx, info, proposed)?;
-    let intent = SetSubnetEmissionWeights {
-        netuid: info.netuid,
-        slots: slots.iter().map(|slot| json!(slot)).collect(),
-        values: slots.iter().map(|slot| json!(proposed[*slot])).collect(),
-        renormalize,
-    };
+    // Apply generated defaults for fields this slot-only command does not edit.
+    let intent: SetSubnetEmissionWeights = serde_json::from_value(json!({
+        "netuid": info.netuid,
+        "slots": slots,
+        "values": slots.iter().map(|slot| proposed[*slot]).collect::<Vec<_>>(),
+        "renormalize": renormalize,
+    }))
+    .map_err(|error| CliError::failure(error.to_string()))?;
     rtao_tx::Intent::validate(&intent).map_err(|error| CliError::input(error.to_string()))?;
     let preview = ew::preview(&info.weights, proposed, &info.root_inputs());
     let review = CommandReview::new(

@@ -146,13 +146,27 @@ pub async fn gamma_emission_share<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
 ) -> Result<u64, ReadError> {
+    let shares = gamma_emission_shares(view, netuid).await?;
+    let total: u128 = shares.values().map(|share| u128::from(*share)).sum();
+    u64::try_from(total).map_err(|_| ReadError::SurfaceChanged {
+        descriptor: "SubtensorModule.SubnetGammaEmission",
+        detail: "gamma shares exceed u64".into(),
+    })
+}
+
+/// Gamma emission shares keyed by target subnet, preserving exact u64 parts.
+/// Missing storage on older runtimes means no gamma shares.
+pub async fn gamma_emission_shares<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+) -> Result<std::collections::BTreeMap<u16, u64>, ReadError> {
     const ITEM: &str = "SubtensorModule.SubnetGammaEmission";
     let runtime = view.runtime().await?;
     if runtime
         .storage_entry("SubtensorModule", "SubnetGammaEmission")
         .is_none()
     {
-        return Ok(0);
+        return Ok(Default::default());
     }
     let value = view
         .storage_dyn(
@@ -167,20 +181,28 @@ pub async fn gamma_emission_share<V: View + ?Sized>(
         detail: detail.to_owned(),
     };
     let shares = match &value {
-        JsonValue::Null => return Ok(0),
+        JsonValue::Null => return Ok(Default::default()),
         JsonValue::Array(shares) => shares,
         _ => return Err(surface("gamma shares are not a list")),
     };
-    let mut total: u128 = 0;
+    let mut result = std::collections::BTreeMap::new();
     for entry in shares {
-        let share = entry
+        let pair = entry
             .as_array()
             .filter(|pair| pair.len() == 2)
-            .and_then(|pair| pair[1].as_u64())
             .ok_or_else(|| surface("gamma share is not a (netuid, u64) pair"))?;
-        total += u128::from(share);
+        let target = pair[0]
+            .as_u64()
+            .and_then(|value| u16::try_from(value).ok())
+            .ok_or_else(|| surface("gamma target is not a netuid"))?;
+        let share = pair[1]
+            .as_u64()
+            .ok_or_else(|| surface("gamma share is not a (netuid, u64) pair"))?;
+        if result.insert(target, share).is_some() {
+            return Err(surface("gamma target appears more than once"));
+        }
     }
-    u64::try_from(total).map_err(|_| surface("gamma shares exceed u64"))
+    Ok(result)
 }
 
 /// A subnet's emission weight vector and the rule inputs that bound it.

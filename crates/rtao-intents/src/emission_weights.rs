@@ -15,7 +15,8 @@ use rtao_client::{View, ViewExt};
 use rtao_primitives::{AccountId, NetUid, emission_weights as ew, pyfmt::fmt_grouped};
 use rtao_reads::reads::subnets::{
     RootPreservationInputs, SubnetEmissionWeightsInfo, emission_weights_rate_limit_key,
-    gamma_emission_share, root_preservation_inputs, subnet_emission_weights_info,
+    gamma_emission_share, gamma_emission_shares, root_preservation_inputs,
+    subnet_emission_weights_info,
 };
 use rtao_runtime::{calls::admin_utils, storage::subtensor_module as st};
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentPreflight, PreflightCx};
@@ -87,6 +88,10 @@ fn invalid(error: ew::EmissionWeightsError) -> IntentError {
 /// one slot is named and each slot appears once. Burn and recycle may be
 /// nonzero; [`ew::validate`] checks their combined cap.
 pub fn updates(intent: &SetSubnetEmissionWeights) -> Result<Vec<(usize, u64)>, IntentError> {
+    // D-196: the regenerated 491 interface exposes gamma edits before their
+    // hand port is ready. Never silently discard them. Serialization keeps
+    // this adapter compatible with both generated interface generations.
+    reject_gamma_edits(serde_json::to_value(intent)?.get("gamma"))?;
     if intent.slots.len() != intent.values.len() {
         return Err(IntentError::Validation(format!(
             "slots and values must pair up: got {} slots and {} values",
@@ -120,6 +125,59 @@ pub fn updates(intent: &SetSubnetEmissionWeights) -> Result<Vec<(usize, u64)>, I
         .collect::<Result<Vec<_>, _>>()
         .map_err(invalid)?;
     Ok(slots.into_iter().zip(values).collect())
+}
+
+fn reject_gamma_edits(gamma: Option<&Value>) -> Result<(), IntentError> {
+    match gamma {
+        None => Ok(()),
+        Some(Value::Object(shares)) if shares.is_empty() => Ok(()),
+        _ => Err(IntentError::Validation(
+            "gamma emission edits are not implemented; existing gamma shares are preserved".into(),
+        )),
+    }
+}
+
+fn uses_split_call() -> bool {
+    <SetSubnetEmissionWeights as rtao_tx::IntentInterface>::SPEC
+        .wraps
+        .contains(&("AdminUtils", "sudo_set_subnet_emission_weights_v2"))
+}
+
+fn compose_split(
+    runtime: &rtao_runtime::RuntimeHandle,
+    netuid: NetUid,
+    weights: &ew::Weights,
+    gamma: &std::collections::BTreeMap<u16, u64>,
+) -> Result<rtao_runtime::CallBytes, IntentError> {
+    use rtao_core::codec::Value as CoreValue;
+    let mut split: Vec<CoreValue> = ["Burn", "Recycle", "Owner", "Validator", "Miner"]
+        .into_iter()
+        .zip(weights)
+        .map(|(slot, share)| {
+            CoreValue::Tuple(vec![
+                CoreValue::Str(slot.into()),
+                CoreValue::Int(i128::from(*share)),
+            ])
+        })
+        .collect();
+    split.extend(gamma.iter().map(|(target, share)| {
+        CoreValue::Tuple(vec![
+            CoreValue::record(vec![(
+                "Gamma".into(),
+                CoreValue::record(vec![("netuid".into(), CoreValue::Int(i128::from(*target)))]),
+            )]),
+            CoreValue::Int(i128::from(*share)),
+        ])
+    }));
+    Ok(rtao_runtime::compose_by_name(
+        runtime,
+        "AdminUtils",
+        "sudo_set_subnet_emission_weights_v2",
+        &CoreValue::record(vec![
+            ("netuid".into(), CoreValue::Int(i128::from(netuid.0))),
+            ("split".into(), CoreValue::List(split)),
+        ]),
+    )?)
 }
 
 /// Replace the given slots and shares with Python's normalized integers.
@@ -322,6 +380,25 @@ impl Intent for SetSubnetEmissionWeights {
     // py: sdk/python/bittensor/intents/emission_weights.py:134-162
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let updates = updates(self)?;
+        if uses_split_call() {
+            let snapshot = cx.view.pin().await?;
+            let current = subnet_emission_weights_info(&snapshot, self.netuid)
+                .await
+                .map_err(read_error)?;
+            let gamma = gamma_emission_shares(&snapshot, self.netuid)
+                .await
+                .map_err(read_error)?;
+            let total: u128 = gamma.values().map(|share| u128::from(*share)).sum();
+            let gamma_share = u64::try_from(total)
+                .map_err(|_| IntentError::Validation("gamma shares exceed u64".into()))?;
+            let weights = merged(self, &updates, current.as_ref(), gamma_share).map_err(invalid)?;
+            return Ok(Built::new(compose_split(
+                cx.runtime,
+                self.netuid,
+                &weights,
+                &gamma,
+            )?));
+        }
         let (uids, values): (Vec<u16>, Vec<u64>) = if self.renormalize {
             let snapshot = cx.view.pin().await?;
             let current = subnet_emission_weights_info(&snapshot, self.netuid)
@@ -373,5 +450,54 @@ impl Intent for SetSubnetEmissionWeights {
 
     fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
         self
+    }
+}
+
+#[cfg(test)]
+mod adoption_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn unported_gamma_edits_cannot_be_silently_ignored() {
+        assert!(reject_gamma_edits(None).is_ok());
+        assert!(reject_gamma_edits(Some(&json!({}))).is_ok());
+        for value in [json!({"3": "5%"}), json!({"3": 0}), json!([]), Value::Null] {
+            assert!(reject_gamma_edits(Some(&value)).is_err());
+        }
+    }
+
+    #[test]
+    fn split_call_preserves_all_slots_and_sorted_gamma_targets_on_491()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let runtime = rtao_runtime::RuntimeHandle::new(rtao_core::runtime::Runtime::parse(
+            include_bytes!("../../../vendor/metadata/testnet/491.v15.scale"),
+            491,
+            1,
+            42,
+        )?)?;
+        let gamma = std::collections::BTreeMap::from([(9, 17), (3, 11)]);
+        let call = compose_split(&runtime, NetUid(7), &[1, 2, 3, 4, 5], &gamma)?;
+        // Independent SCALE fixture: pallet/call, u16 netuid, compact count,
+        // five unit variants and two Gamma { netuid: u16 } variants.
+        let mut expected = vec![
+            runtime.pallet_index("AdminUtils").ok_or("pallet")?,
+            runtime
+                .call_index("AdminUtils", "sudo_set_subnet_emission_weights_v2")
+                .ok_or("call")?,
+        ];
+        expected.extend(7u16.to_le_bytes());
+        expected.push(7 << 2);
+        for index in 0u8..5 {
+            expected.push(index);
+            expected.extend(u64::from(index + 1).to_le_bytes());
+        }
+        for (target, share) in [(3u16, 11u64), (9, 17)] {
+            expected.push(5);
+            expected.extend(target.to_le_bytes());
+            expected.extend(share.to_le_bytes());
+        }
+        assert_eq!(call.as_bytes(), expected);
+        Ok(())
     }
 }
