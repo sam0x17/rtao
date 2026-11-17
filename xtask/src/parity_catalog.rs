@@ -223,6 +223,17 @@ fn default_value(expression: &syn::Expr) -> Result<Value> {
                 "generated default constructor must have one argument"
             );
             let argument = default_value(call.args.first().context("default argument absent")?)?;
+            if path == "serde_json::from_str::<serde_json::Value>" {
+                let Some(syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(source),
+                    ..
+                })) = call.args.first()
+                else {
+                    bail!("JSON default parser requires a literal string")
+                };
+                return serde_json::from_str(&source.value())
+                    .context("invalid literal JSON default");
+            }
             if path == "rtao_primitives::Amount::parse" {
                 ensure!(argument == json!("0"), "unknown native amount default");
                 return Ok(json!(0));
@@ -248,6 +259,56 @@ fn default_value(expression: &syn::Expr) -> Result<Value> {
         )),
         _ => bail!("generated default changed outside checked expression grammar"),
     }
+}
+
+/// Independently compare a generated JSON value with the lossless Python
+/// literal representation. Do not share the generator's projection code.
+fn equal_default(actual: &Value, expected: &Value, what: &str) -> Result<()> {
+    if let Some(object) = expected.as_object() {
+        ensure!(
+            object.len() == 1,
+            "{what}: unsupported extracted default object"
+        );
+        if let Some(entries) = object.get("dict").and_then(Value::as_array) {
+            let actual = actual
+                .as_object()
+                .with_context(|| format!("{what}: default must be a JSON object"))?;
+            ensure!(
+                actual.len() == entries.len(),
+                "{what}: dictionary default size differs"
+            );
+            for ((actual_key, actual_value), entry) in actual.iter().zip(entries) {
+                let pair = entry
+                    .as_array()
+                    .context("dictionary default entry is not a pair")?;
+                ensure!(pair.len() == 2, "dictionary default entry is not a pair");
+                ensure!(
+                    pair[0].as_str() == Some(actual_key),
+                    "{what}: dictionary default keys/order differ"
+                );
+                equal_default(actual_value, &pair[1], what)?;
+            }
+            return Ok(());
+        }
+        if let Some(values) = object.get("tuple").and_then(Value::as_array) {
+            return equal_default(actual, &Value::Array(values.clone()), what);
+        }
+        bail!("{what}: unsupported extracted default container");
+    }
+    if let Some(expected) = expected.as_array() {
+        let actual = actual
+            .as_array()
+            .with_context(|| format!("{what}: default must be a JSON array"))?;
+        ensure!(
+            actual.len() == expected.len(),
+            "{what}: array default size differs"
+        );
+        for (actual, expected) in actual.iter().zip(expected) {
+            equal_default(actual, expected, what)?;
+        }
+        return Ok(());
+    }
+    equal(actual, expected, what)
 }
 
 fn schema_kinds(schema: &Value) -> Result<BTreeSet<&str>> {
@@ -501,7 +562,7 @@ fn check_interfaces(file: &syn::File, defaults: &syn::File) -> Result<()> {
                     field.name
                 );
                 let key = (spec.name.to_owned(), field.name.to_owned());
-                equal(
+                equal_default(
                     default_functions
                         .get(&key)
                         .context("generated default function absent")?,
@@ -1650,6 +1711,45 @@ mod tests {
         assert!(default_value(&syn::parse_str("arbitrary_function()")?).is_err());
         Ok(())
     }
+    #[test]
+    fn json_default_parity_checks_values_without_accepting_extractor_envelopes() -> Result<()> {
+        let parse = |source: &str| -> Result<Value> {
+            default_value(&syn::parse_str(&format!(
+                "serde_json::from_str::<serde_json::Value>({source:?}).expect(\"authenticated JSON default\")"
+            ))?)
+        };
+        let empty = json!({"dict": []});
+        equal_default(&parse("{}")?, &empty, "gamma")?;
+        for changed in ["null", "[]", "{\"dict\":[]}", "{\"unexpected\":0}"] {
+            assert!(equal_default(&parse(changed)?, &empty, "gamma").is_err());
+        }
+        let expected = json!({"dict": [["z", {"tuple": [1, null, {"dict": []}]}], ["a", "line\n\"quoted\""] ]});
+        let actual = parse("{\"z\":[1,null,{}],\"a\":\"line\\n\\\"quoted\\\"\"}")?;
+        equal_default(&actual, &expected, "nested")?;
+        let mut changed = actual.clone();
+        changed["z"][0] = json!(2);
+        assert!(equal_default(&changed, &expected, "nested").is_err());
+        let reordered = parse("{\"a\":\"line\\n\\\"quoted\\\"\",\"z\":[1,null,{}]}")?;
+        assert!(equal_default(&reordered, &expected, "nested").is_err());
+        for invalid in [
+            "serde_json::from_str::<serde_json::Value>(read_environment())",
+            "serde_json::from_str::<Other>(\"{}\")",
+            "serde_json::from_slice::<serde_json::Value>(b\"{}\")",
+            "serde_json::from_str::<serde_json::Value>(\"not JSON\")",
+            "serde_json::from_str::<serde_json::Value>(Some(\"{}\"))",
+        ] {
+            assert!(default_value(&syn::parse_str(invalid)?).is_err());
+        }
+        for unsupported in [
+            json!({"set": []}),
+            json!({"dict": null}),
+            json!({"dict": [[1, 2]]}),
+        ] {
+            assert!(equal_default(&json!({"1": 2}), &unsupported, "unsupported").is_err());
+        }
+        Ok(())
+    }
+
     #[test]
     fn catalog_contracts_match_complete_pinned_records() -> Result<()> {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
