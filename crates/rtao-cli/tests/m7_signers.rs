@@ -241,7 +241,8 @@ struct Remark {
     trace: Trace,
 }
 impl IntentInterface for Remark {
-    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[2];
+    const SPEC: &'static rtao_catalog::IntentSpec =
+        rtao_catalog::intent("add_stake").expect("catalog intent");
     type Role = Coldkey;
     type Origin = Signed;
     type Output = ();

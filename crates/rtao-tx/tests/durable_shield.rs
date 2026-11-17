@@ -47,7 +47,8 @@ struct Probe {
     builds: Arc<AtomicU64>,
 }
 impl IntentInterface for Probe {
-    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[0];
+    const SPEC: &'static rtao_catalog::IntentSpec =
+        rtao_catalog::intent("add_collateral").expect("catalog intent");
     type Role = Coldkey;
     type Origin = Signed;
     type Output = Output;

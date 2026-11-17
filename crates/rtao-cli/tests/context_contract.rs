@@ -986,7 +986,8 @@ struct Preview {
     blocked: bool,
 }
 impl IntentInterface for Preview {
-    const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[2];
+    const SPEC: &'static rtao_catalog::IntentSpec =
+        rtao_catalog::intent("add_stake").expect("catalog intent");
     type Role = Coldkey;
     type Origin = Signed;
     type Output = ();

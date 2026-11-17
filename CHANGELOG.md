@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Intent fixtures follow catalog names (D-200)
+
+- Fixed: test fixtures bind intent specs by name in constant expressions. Adding intents during runtime adoption no longer changes the identities used by transaction, neuron and CLI tests.
+
 ### Canceled runtime adoption runs (D-199)
 
 - Fixed: canceling an adoption candidate no longer reports a missing evidence artifact as a new runtime failure or overwrites the existing failure issue.

@@ -965,7 +965,8 @@ mod tests {
         fail_build: bool,
     }
     impl IntentInterface for Probe {
-        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[0];
+        const SPEC: &'static rtao_catalog::IntentSpec =
+            rtao_catalog::intent("add_collateral").expect("catalog intent");
         type Role = rtao_signer::Coldkey;
         type Origin = rtao_tx::Signed;
         type Output = ();

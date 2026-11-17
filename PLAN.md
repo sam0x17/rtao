@@ -1247,6 +1247,8 @@ Classes: `stricter` (rtao refuses something Python allows), `improved`, `kept` (
 
 | D-199 | A canceled adoption has no failure verdict | A canceled candidate can leave no evidence artifact. The notify job previously ran under `always()`, interpreted its canceled adopt/push dependencies as failure, and rewrote the open issue at stage `evidence`. The notify job now runs only when the workflow is not canceled; its issue step also exits if a dependency was canceled after the job started. Failed decisions and failed candidates still notify. Cancellation does not mark a runtime adopted or close an existing failure issue | workflow notification semantics |
 
+| D-200 | Bind test intent specs by name | The 491 catalog adds four intents and shifts several numeric positions. The eighth candidate found one multisig fixture bound to another intent by slot. Other transaction and CLI fixtures also held numeric slots, including some whose tests passed with the wrong spec. A constant name lookup in `rtao-catalog` returns the authenticated spec or `None`; fixtures use it in their associated constants and fail compilation if a named intent disappears. Typed intent fixtures use their generated `IntentInterface::SPEC`. No runtime authentication, signing or reconciliation check changes | catalog identity in tests |
+
 ## 9. Testing strategy
 
 ### 9.1 Layers

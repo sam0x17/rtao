@@ -991,7 +991,8 @@ async fn tools_project_all_authenticated_schemas_into_python_manifest_fields() {
 async fn coldkey_fee_warning_precedes_failed_fee_probe_and_stays_out_of_preflight() {
     struct HotWeights;
     impl IntentInterface for HotWeights {
-        const SPEC: &'static rtao_catalog::IntentSpec = &rtao_catalog::INTENTS[75];
+        const SPEC: &'static rtao_catalog::IntentSpec =
+            rtao_catalog::intent("set_weights").expect("catalog intent");
         type Role = rtao_signer::Hotkey;
         type Origin = Signed;
         type Output = ();
