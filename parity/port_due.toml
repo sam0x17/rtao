@@ -101,14 +101,6 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/emission_weights.py"
-kind = "ported"
-from = "d6ddb11200afca73eb90e8e87ac7c7c81e4ea88d"
-to = "4bae9eaffc09442d74252cf9a39df29e0f796c0a"
-tag = "v491"
-symbols = ["bittensor.emission_weights.MAX_GAMMA", "bittensor.emission_weights.MAX_GAMMA_SHARES", "bittensor.emission_weights.MAX_ROUNDING_PARTS", "bittensor.emission_weights.Rules", "bittensor.emission_weights.Rules.gamma_targets", "bittensor.emission_weights.Rules.leased", "bittensor.emission_weights.Rules.limits", "bittensor.emission_weights.SlotShares", "bittensor.emission_weights.absorb_rounding", "bittensor.emission_weights.merge", "bittensor.emission_weights.merge_gamma", "bittensor.emission_weights.renormalize", "bittensor.emission_weights.validate", "bittensor.emission_weights.validate_gamma"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/emission_weights.py"
 kind = "ported"
 from = "575e6ec5728a0ffdea80743a4c01480673a716d9"

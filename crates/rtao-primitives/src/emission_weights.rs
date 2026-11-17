@@ -3,11 +3,9 @@
 //!
 //! A subnet's alpha emission is divided by a five-slot vector
 //! `[burn, recycle, owner, validator, miner]` whose entries are `u64` parts of
-//! `u64::MAX`, so the slots sum to exactly one. The owner or root sets it with
-//! `AdminUtils.sudo_set_subnet_emission_weights(netuid, uids, values)`, a
-//! sparse update: every `uids[i]` names a slot and `values[i]` its new share.
-//! Omitted slots keep their current value. The chain then checks the v1
-//! rules:
+//! `u64::MAX`, so the slots and gamma shares sum to exactly one. The owner or
+//! root sets the full split with `AdminUtils.sudo_set_subnet_emission_weights_v2`.
+//! The chain then checks:
 //!
 //! * `burn + recycle <= 0.33` (combined cap);
 //! * `0 <= owner <= 0.33`; lease-created subnets may not drop below the
@@ -18,7 +16,7 @@
 //!   the default validator share and the global `TaoWeight`. A set with
 //!   `V <= r` is rejected because validators would get nothing;
 //! * `miner >= 0.33`;
-//! * the five slots sum to exactly one.
+//! * the five slots and gamma shares sum to exactly one.
 //!
 //! Burn destroys alpha but still counts toward issuance; recycle removes alpha
 //! from `SubnetAlphaOut` and `TotalAlphaIssuance`.
@@ -27,7 +25,7 @@
 //! before submitting it; [`validate`](crate::emission_weights::validate) mirrors the on-chain checks and names
 //! the same error codes.
 
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, collections::BTreeMap, fmt};
 
 use num_bigint::{BigInt, BigUint, Sign};
 use num_traits::{ToPrimitive, Zero};
@@ -78,6 +76,12 @@ pub const MAX_BURN_RECYCLE: u64 = fraction(33, 100);
 pub const MAX_VALIDATOR: u64 = fraction(50, 100);
 /// Inclusive minimum miner share (33%).
 pub const MIN_MINER: u64 = fraction(33, 100);
+/// Inclusive maximum for each individual gamma share (10%).
+pub const MAX_GAMMA: u64 = fraction(10, 100);
+/// Maximum number of gamma targets in one split.
+pub const MAX_GAMMA_SHARES: usize = 16;
+/// Maximum parts of floor rounding the miner slot may absorb.
+pub const MAX_ROUNDING_PARTS: u64 = 1_000;
 
 /// Mainnet launch owner cut `11796 / 65535` scaled to u64 parts.
 ///
@@ -541,7 +545,7 @@ impl SlotLimit {
     }
 }
 
-/// Allowed range of every slot, in slot order.
+/// Allowed range of every slot and an individual gamma share, in display order.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Limits {
     /// Burn slot, up to the combined burn and recycle cap.
@@ -554,17 +558,20 @@ pub struct Limits {
     pub validator: SlotLimit,
     /// Miner slot.
     pub miner: SlotLimit,
+    /// Each gamma share.
+    pub gamma: SlotLimit,
 }
 
 impl Limits {
     /// `(slot name, limit)` pairs in slot order.
-    pub fn entries(&self) -> [(&'static str, &SlotLimit); 5] {
+    pub fn entries(&self) -> [(&'static str, &SlotLimit); 6] {
         [
             (SLOT_NAMES[BURN], &self.burn),
             (SLOT_NAMES[RECYCLE], &self.recycle),
             (SLOT_NAMES[OWNER], &self.owner),
             (SLOT_NAMES[VALIDATOR], &self.validator),
             (SLOT_NAMES[MINER], &self.miner),
+            ("gamma", &self.gamma),
         ]
     }
 }
@@ -577,7 +584,9 @@ impl Limits {
 /// unknown. `min_owner` is the lease floor, applied only to lease-created
 /// subnets. `gamma_share` is the sum of the subnet's gamma shares (runtime
 /// 489, `SubtensorModule.SubnetGammaEmission`); the five slots sum to one
-/// less it. It is zero on runtimes without gamma shares.
+/// less it. It is zero on runtimes without gamma shares. `gamma_targets`
+/// carries the known whitelist and enabled flags, and `leased` identifies
+/// a subnet whose gamma shares are currently prohibited.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Rules {
     /// Lowest accepted validator share in parts, when chain state is known.
@@ -589,7 +598,7 @@ pub struct Rules {
     /// Sum of the subnet's gamma shares in parts.
     pub gamma_share: u64,
     /// Eligible gamma targets and their enabled state; `None` when unavailable.
-    pub gamma_targets: Option<std::collections::BTreeMap<u16, bool>>,
+    pub gamma_targets: Option<BTreeMap<u16, bool>>,
     /// Whether the subnet is currently leased.
     pub leased: bool,
 }
@@ -626,6 +635,11 @@ impl Rules {
                 },
             ),
             miner: SlotLimit::new(Some(MIN_MINER), ONE, "miner incentive floor"),
+            gamma: SlotLimit::new(
+                Some(0),
+                MAX_GAMMA,
+                "per gamma share; at most 16 shares, each to another whitelisted subnet with gamma enabled; none on a leased subnet",
+            ),
         }
     }
 
@@ -728,6 +742,33 @@ pub fn merge(current: &Weights, updates: &[(usize, u64)]) -> Weights {
     merged
 }
 
+/// Put a small rounding remainder into the miner slot when the complete split
+/// is within [`MAX_ROUNDING_PARTS`] of one. Larger gaps are left for validation.
+// py: sdk/python/bittensor/emission_weights.py:319-327
+pub fn absorb_rounding(weights: &[u64], gamma_share: u64) -> Result<Weights, EmissionWeightsError> {
+    let mut out = normalize_weights(weights)?;
+    let sum: i128 = out.iter().map(|value| i128::from(*value)).sum();
+    let gap = i128::from(ONE) - i128::from(gamma_share) - sum;
+    let lower = -i128::from(MAX_ROUNDING_PARTS.min(out[MINER]));
+    if (lower..=i128::from(MAX_ROUNDING_PARTS)).contains(&gap) {
+        out[MINER] = u64::try_from(i128::from(out[MINER]) + gap)
+            .map_err(|_| EmissionWeightsError::new("rounded miner share is outside u64"))?;
+    }
+    Ok(out)
+}
+
+/// Merge gamma shares by target; a zero update removes the target.
+// py: sdk/python/bittensor/emission_weights.py:330-333
+pub fn merge_gamma(
+    current: &BTreeMap<u16, u64>,
+    updates: &BTreeMap<u16, u64>,
+) -> BTreeMap<u16, u64> {
+    let mut merged = current.clone();
+    merged.extend(updates.iter().map(|(target, share)| (*target, *share)));
+    merged.retain(|_, share| *share != 0);
+    merged
+}
+
 // py: sdk/python/bittensor/emission_weights.py:298-339
 /// Pin the `fixed` slots and rescale the other adjustable slots to sum to one.
 ///
@@ -785,7 +826,8 @@ pub fn renormalize_with_gamma(
         out[slot] = value;
     }
     if free.is_empty() {
-        if remaining != 0 {
+        out = absorb_rounding(&out, gamma_share)?;
+        if out.iter().map(|part| u128::from(*part)).sum::<u128>() + gamma != u128::from(ONE) {
             return Err(EmissionWeightsError::new(format!(
                 "all adjustable slots are pinned but they{} sum to {}, not 100%",
                 and_gamma(gamma_share),
@@ -892,11 +934,72 @@ pub fn validate(weights: &Weights, rules: &Rules) -> Vec<Violation> {
         push(
             "EmissionWeightsDoNotSumToOne",
             format!(
-                "the five slots{} sum to {} ({total} parts), not exactly 100% ({ONE} parts); renormalise another slot in the same call (`btcli subnets emission set-value` does this for you)",
+                "the five slots{} sum to {} ({total} parts), not exactly 100% ({ONE} parts); renormalize another slot in the same call (`btcli subnets emission set-value` does this for you)",
                 and_gamma(rules.gamma_share),
                 format_share(total, 6)
             ),
         );
+    }
+    found
+}
+
+/// Gamma share violations in the same order as Python and the chain's v2 rules.
+/// Unknown target state skips whitelist and enabled checks while retaining
+/// self-target, cap, count and lease checks.
+// py: sdk/python/bittensor/emission_weights.py:445-508
+pub fn validate_gamma(netuid: u16, shares: &BTreeMap<u16, u64>, rules: &Rules) -> Vec<Violation> {
+    let mut found = Vec::new();
+    for (&target, &share) in shares {
+        if target == netuid {
+            found.push(Violation {
+                error: "InvalidValue",
+                message: format!(
+                    "gamma:{target} names this subnet; a gamma share must name another subnet"
+                ),
+            });
+        } else if let Some(targets) = &rules.gamma_targets {
+            match targets.get(&target) {
+                None => found.push(Violation {
+                    error: "GammaEmissionTargetNotWhitelisted",
+                    message: format!(
+                        "subnet {target} is not whitelisted for gamma emission, so a split cannot name it; set gamma:{target} to 0 (`--gamma {target}=0` on `btcli subnets emission set`) or ask root to whitelist it"
+                    ),
+                }),
+                Some(false) => found.push(Violation {
+                    error: "GammaDisabled",
+                    message: format!(
+                        "subnet {target} has gamma disabled, so a split cannot name it; set gamma:{target} to 0 (`--gamma {target}=0` on `btcli subnets emission set`) or wait for its owner to enable it"
+                    ),
+                }),
+                Some(true) => {}
+            }
+        }
+        if share > MAX_GAMMA {
+            found.push(Violation {
+                error: "GammaEmissionAboveMaximum",
+                message: format!(
+                    "gamma:{target} is {}; each gamma share may be at most {}",
+                    format_share(share, 2),
+                    format_share(MAX_GAMMA, 2)
+                ),
+            });
+        }
+    }
+    if shares.len() > MAX_GAMMA_SHARES {
+        found.push(Violation {
+            error: "TooManyGammaShares",
+            message: format!(
+                "{} gamma shares; a subnet may have at most {MAX_GAMMA_SHARES}",
+                shares.len()
+            ),
+        });
+    }
+    if !shares.is_empty() && rules.leased {
+        found.push(Violation {
+            error: "GammaEmissionNotSettableOnLeasedSubnet",
+            message: "this subnet is leased, so it cannot have gamma shares until the lease ends"
+                .into(),
+        });
     }
     found
 }

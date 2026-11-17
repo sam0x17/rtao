@@ -2,9 +2,12 @@
 //! Pure emission weight rules, parsing, renormalisation and previews.
 #![allow(clippy::unwrap_used)] // Test failures identify unexpected fixture values.
 
+use std::collections::BTreeMap;
+
 use rtao_primitives::emission_weights::{
-    self as ew, BURN, DEFAULT_OWNER, MAX_BURN_RECYCLE, MAX_OWNER, MAX_VALIDATOR, MIN_MINER, MINER,
-    ONE, OWNER, RECYCLE, RootInputs, Rules, ShareInput, VALIDATOR, Weights,
+    self as ew, BURN, DEFAULT_OWNER, MAX_BURN_RECYCLE, MAX_GAMMA, MAX_GAMMA_SHARES, MAX_OWNER,
+    MAX_ROUNDING_PARTS, MAX_VALIDATOR, MIN_MINER, MINER, ONE, OWNER, RECYCLE, RootInputs, Rules,
+    ShareInput, VALIDATOR, Weights,
 };
 use serde_json::json;
 
@@ -43,6 +46,9 @@ fn constants_match_chain() {
     assert_eq!(u128::from(MAX_BURN_RECYCLE), one * 33 / 100);
     assert_eq!(u128::from(MAX_VALIDATOR), one * 50 / 100);
     assert_eq!(u128::from(MIN_MINER), one * 33 / 100);
+    assert_eq!(u128::from(MAX_GAMMA), one * 10 / 100);
+    assert_eq!(MAX_GAMMA_SHARES, 16);
+    assert_eq!(MAX_ROUNDING_PARTS, 1_000);
     assert_eq!(u128::from(DEFAULT_OWNER), 11796 * one / 65535);
     let weights = default();
     assert_eq!(weights.iter().map(|w| u128::from(*w)).sum::<u128>(), one);
@@ -209,6 +215,94 @@ fn merge_keeps_omitted_slots_including_burn_and_recycle() {
         ew::merge(&current, &[(VALIDATOR, 1), (MINER, 2)]),
         [7, 9, 10, 1, 2]
     );
+}
+
+#[test]
+fn gamma_merge_and_bounded_rounding_match_python() {
+    let five = share("5%");
+    assert_eq!(
+        ew::merge_gamma(
+            &BTreeMap::from([(3, five), (5, five)]),
+            &BTreeMap::from([(5, 0), (2, 1)])
+        ),
+        BTreeMap::from([(2, 1), (3, five)])
+    );
+    let mut short = default();
+    short[MINER] -= MAX_ROUNDING_PARTS;
+    assert_eq!(ew::absorb_rounding(&short, 0).unwrap(), default());
+    short[MINER] -= 1;
+    assert_eq!(ew::absorb_rounding(&short, 0).unwrap(), short);
+    let mut over = default();
+    over[MINER] += MAX_ROUNDING_PARTS;
+    assert_eq!(ew::absorb_rounding(&over, 0).unwrap(), default());
+    over[MINER] += 1;
+    assert_eq!(ew::absorb_rounding(&over, 0).unwrap(), over);
+    let mut pinned = default();
+    pinned[MINER] -= 1;
+    let fixed = pinned.iter().copied().enumerate().collect::<Vec<_>>();
+    assert_eq!(ew::renormalize(&default(), &fixed).unwrap(), default());
+}
+
+// pyt: unit/test_emission_weights.py::test_validate_gamma_names_each_rule
+#[test]
+fn validate_gamma_names_each_rule() {
+    let five = share("5%");
+    let rules = Rules {
+        gamma_targets: Some(BTreeMap::from([(2, true), (3, false)])),
+        ..Rules::default()
+    };
+    let errors = |shares: BTreeMap<u16, u64>, rules: &Rules| {
+        ew::validate_gamma(1, &shares, rules)
+            .into_iter()
+            .map(|violation| violation.error)
+            .collect::<Vec<_>>()
+    };
+    assert!(errors(BTreeMap::from([(2, five)]), &rules).is_empty());
+    assert!(errors(BTreeMap::from([(2, MAX_GAMMA)]), &rules).is_empty());
+    assert_eq!(
+        errors(BTreeMap::from([(1, five)]), &rules),
+        ["InvalidValue"]
+    );
+    assert_eq!(
+        errors(BTreeMap::from([(9, five)]), &rules),
+        ["GammaEmissionTargetNotWhitelisted"]
+    );
+    assert_eq!(
+        errors(BTreeMap::from([(3, five)]), &rules),
+        ["GammaDisabled"]
+    );
+    assert_eq!(
+        errors(BTreeMap::from([(2, MAX_GAMMA + 1)]), &rules),
+        ["GammaEmissionAboveMaximum"]
+    );
+    let many = (2..=2 + u16::try_from(MAX_GAMMA_SHARES).unwrap())
+        .map(|target| (target, 1))
+        .collect();
+    assert_eq!(errors(many, &Rules::default()), ["TooManyGammaShares"]);
+    let leased = Rules {
+        gamma_targets: Some(BTreeMap::from([(2, true)])),
+        leased: true,
+        ..Rules::default()
+    };
+    assert_eq!(
+        errors(BTreeMap::from([(2, five)]), &leased),
+        ["GammaEmissionNotSettableOnLeasedSubnet"]
+    );
+    let violations = ew::validate_gamma(
+        1,
+        &BTreeMap::from([(1, MAX_GAMMA + 1), (3, five), (9, five)]),
+        &rules,
+    );
+    assert_eq!(
+        violations.iter().map(|v| v.error).collect::<Vec<_>>(),
+        [
+            "InvalidValue",
+            "GammaEmissionAboveMaximum",
+            "GammaDisabled",
+            "GammaEmissionTargetNotWhitelisted",
+        ]
+    );
+    assert!(violations[3].message.contains("set gamma:9 to 0"));
 }
 
 #[test]
@@ -406,7 +500,7 @@ fn validate_accepts_default_and_names_each_rule() {
     let sum = ew::validate(&[0, 0, 0, ONE / 2, ONE / 2], &rules);
     assert_eq!(
         sum[0].to_string(),
-        "EmissionWeightsDoNotSumToOne: the five slots sum to 100.000000% (18446744073709551614 parts), not exactly 100% (18446744073709551615 parts); renormalise another slot in the same call (`btcli subnets emission set-value` does this for you)"
+        "EmissionWeightsDoNotSumToOne: the five slots sum to 100.000000% (18446744073709551614 parts), not exactly 100% (18446744073709551615 parts); renormalize another slot in the same call (`btcli subnets emission set-value` does this for you)"
     );
 }
 
@@ -543,13 +637,14 @@ fn rules_limits_and_table_cover_every_slot() {
     let limits = rules.limits();
     assert_keys_in_order(
         &serde_json::to_string(&limits).unwrap(),
-        &["burn", "recycle", "owner", "validator", "miner"],
+        &["burn", "recycle", "owner", "validator", "miner", "gamma"],
     );
     assert_eq!(limits.owner.min_parts, Some(DEFAULT_OWNER));
     assert!(limits.owner.why.contains("lease"));
     close(limits.validator.min.unwrap(), 0.022, 1e-12);
     assert_eq!(limits.validator.max_parts, MAX_VALIDATOR);
     assert_eq!(limits.miner.max_parts, ONE);
+    assert_eq!(limits.gamma.max_parts, MAX_GAMMA);
     let rows = |rules: &Rules| -> std::collections::BTreeMap<&'static str, String> {
         rules
             .table()
@@ -564,6 +659,7 @@ fn rules_limits_and_table_cover_every_slot() {
     assert_eq!(table["owner"], "18.00% to 33.00%");
     assert_eq!(table["validator"], "2.2000% to 50.0000%");
     assert_eq!(table["miner"], ">= 33.00%");
+    assert_eq!(table["gamma"], "0.00% to 10.00%");
     assert_eq!(table["sum"], "= 100%");
     assert_eq!(limits.burn.max_parts, MAX_BURN_RECYCLE);
     let table = rows(&Rules::default());
