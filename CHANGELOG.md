@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Coldkey swap policy snapshot on runtime 491 (D-204)
+
+- Fixed: `coldkey_swap_announcement` reads the V2 policy snapshot when the catalog and queried runtime provide it. All three storage reads use one pinned block. The result distinguishes an older catalog without the field, a legacy announcement without a snapshot, and an explicit `false` or `true` policy.
+
 ### Remaining test inventory follows the catalog (D-202)
 
 - Fixed: the transaction tool manifest and read coverage tests follow the generated catalog counts.

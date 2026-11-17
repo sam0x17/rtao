@@ -43,6 +43,11 @@ fn seed() -> FakeState {
             vec![json!(COLD)],
             json!([123, format!("0x{}", "ab".repeat(32))]),
         ),
+        (
+            "ColdkeySwapV2PolicySnapshots",
+            vec![json!(COLD)],
+            json!(false),
+        ),
         ("ColdkeySwapDisputes", vec![json!(COLD)], json!(99)),
         ("TxRateLimit", vec![], json!(u64::MAX)),
         ("Owner", vec![json!(HOT)], json!(COLD)),
@@ -156,10 +161,18 @@ async fn call<V: View + ?Sized>(view: &V, name: ReadName, block: i64) -> Result<
 fn expected(name: ReadName) -> BTreeSet<(ReadKind, String, String)> {
     use ReadKind::{Constant, RuntimeApi, Storage};
     let hits = match name {
-        ReadName::ColdkeySwapAnnouncement => vec![
-            (Storage, "SubtensorModule", "ColdkeySwapAnnouncements"),
-            (Storage, "SubtensorModule", "ColdkeySwapDisputes"),
-        ],
+        ReadName::ColdkeySwapAnnouncement => {
+            let mut hits = vec![
+                (Storage, "SubtensorModule", "ColdkeySwapAnnouncements"),
+                (Storage, "SubtensorModule", "ColdkeySwapDisputes"),
+            ];
+            if name.spec().hits.iter().any(|hit| {
+                hit.container == "SubtensorModule" && hit.name == "ColdkeySwapV2PolicySnapshots"
+            }) {
+                hits.push((Storage, "SubtensorModule", "ColdkeySwapV2PolicySnapshots"));
+            }
+            hits
+        }
         ReadName::ExistentialDeposit => vec![(Constant, "Balances", "ExistentialDeposit")],
         ReadName::Multisig => vec![(Storage, "Multisig", "Multisigs")],
         ReadName::BlockInfo => vec![(Storage, "Timestamp", "Now")],
@@ -298,6 +311,15 @@ async fn swap_dispute_truthiness_and_absence_match_python() {
             .unwrap();
         assert_eq!(value.execute_block, Some(123));
         assert_eq!(value.new_coldkey_hash, Some(format!("0x{CALL_HASH}")));
+        let policy_in_catalog = ReadName::ColdkeySwapAnnouncement
+            .spec()
+            .hits
+            .iter()
+            .any(|hit| hit.name == "ColdkeySwapV2PolicySnapshots");
+        assert_eq!(
+            value.import_source_policies,
+            policy_in_catalog.then_some(Some(false))
+        );
         assert_eq!(value.disputed, dispute.is_some_and(|block| block != 0));
         assert_eq!(value.dispute_block, dispute.filter(|block| *block != 0));
         assert_eq!(value.recovery_locked, dispute == Some(0));
@@ -339,7 +361,66 @@ async fn recovery_lock_without_an_announcement_matches_python() {
         let value = reads::coldkey_swap_announcement(&client, OTHER)
             .await
             .unwrap();
+        let policy_in_catalog = ReadName::ColdkeySwapAnnouncement
+            .spec()
+            .hits
+            .iter()
+            .any(|hit| hit.name == "ColdkeySwapV2PolicySnapshots");
+        let expected = expected.map(|mut value| {
+            if policy_in_catalog {
+                value["import_source_policies"] = Value::Null;
+            }
+            value
+        });
         assert_eq!(value.map(|value| json!(value)), expected);
+        client.close().await;
+    }
+}
+
+#[tokio::test]
+async fn v2_policy_snapshot_keeps_false_true_and_legacy_absence_distinct() {
+    let policy_in_catalog = ReadName::ColdkeySwapAnnouncement
+        .spec()
+        .hits
+        .iter()
+        .any(|hit| hit.name == "ColdkeySwapV2PolicySnapshots");
+    for policy in [Some(false), Some(true), None] {
+        let mut state = seed();
+        if let Some(policy) = policy {
+            state
+                .seed_python(
+                    "SubtensorModule",
+                    "ColdkeySwapV2PolicySnapshots",
+                    &[json!(COLD)],
+                    json!(policy),
+                )
+                .unwrap();
+        } else {
+            let entry = state
+                .runtime
+                .storage_entry("SubtensorModule", "ColdkeySwapV2PolicySnapshots")
+                .unwrap();
+            let key = state
+                .runtime
+                .storage_key(entry, &[rtao_core::codec::Value::Str(COLD.to_string())])
+                .unwrap();
+            state.seed_encoded(key, None);
+        }
+        let (client, _) = setup_client(state).await;
+        let value = reads::coldkey_swap_announcement(&client, COLD)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            value.import_source_policies,
+            policy_in_catalog.then_some(policy)
+        );
+        let json = json!(value);
+        if policy_in_catalog {
+            assert_eq!(json["import_source_policies"], json!(policy));
+        } else {
+            assert!(json.get("import_source_policies").is_none());
+        }
         client.close().await;
     }
 }

@@ -13,7 +13,7 @@ use rtao_runtime::{constants, models::MultisigTimepoint, storage as st};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 
-use crate::{ReadError, commitments};
+use crate::{ReadError, ReadName, commitments};
 
 fn surface(descriptor: &'static str, detail: impl Into<String>) -> ReadError {
     ReadError::SurfaceChanged {
@@ -32,6 +32,11 @@ pub struct ColdkeySwapAnnouncement {
     /// `announce_coldkey_swap_v2` commit to the destination and its policy,
     /// not to the bare key hash. `None` without an announcement.
     pub new_coldkey_hash: Option<String>,
+    /// The V2 announcement's decision to import the source auto-stake policy.
+    /// The outer option is absent for catalogs before this read was added;
+    /// `Some(None)` is a legacy announcement without a policy snapshot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub import_source_policies: Option<Option<bool>>,
     /// Whether the chain records a nonzero dispute block.
     pub disputed: bool,
     /// Dispute block; zero has the same absent meaning as Python's false value.
@@ -42,18 +47,44 @@ pub struct ColdkeySwapAnnouncement {
     pub recovery_locked: bool,
 }
 
-/// Read an announcement and dispute together at one block (D-002).
-// py: sdk/python/bittensor/reads/accounts.py:77-100
+/// Read an announcement, dispute and available V2 policy at one block (D-002, D-204).
+// py: sdk/python/bittensor/reads/accounts.py:104-142 @ be3a11b1a5300bb58d6fbad3c629e4a926bb2f44
 pub async fn coldkey_swap_announcement<V: View + ?Sized>(
     view: &V,
     coldkey_ss58: AccountId,
 ) -> Result<Option<ColdkeySwapAnnouncement>, ReadError> {
-    let (announcement, dispute) = view
-        .fetch((
-            st::subtensor_module::COLDKEY_SWAP_ANNOUNCEMENTS.at((coldkey_ss58,)),
-            st::subtensor_module::COLDKEY_SWAP_DISPUTES.at((coldkey_ss58,)),
-        ))
-        .await?;
+    let snapshot = view.pin().await?;
+    let policy_in_catalog = ReadName::ColdkeySwapAnnouncement
+        .spec()
+        .hits
+        .iter()
+        .any(|hit| {
+            hit.container == "SubtensorModule" && hit.name == "ColdkeySwapV2PolicySnapshots"
+        });
+    let policy_in_runtime = policy_in_catalog
+        && snapshot
+            .runtime()
+            .await?
+            .storage_entry("SubtensorModule", "ColdkeySwapV2PolicySnapshots")
+            .is_some();
+    let (announcement, dispute, import_source_policies) = if policy_in_runtime {
+        let (announcement, dispute, policy) = snapshot
+            .fetch((
+                st::subtensor_module::COLDKEY_SWAP_ANNOUNCEMENTS.at((coldkey_ss58,)),
+                st::subtensor_module::COLDKEY_SWAP_DISPUTES.at((coldkey_ss58,)),
+                st::subtensor_module::COLDKEY_SWAP_V2_POLICY_SNAPSHOTS.at((coldkey_ss58,)),
+            ))
+            .await?;
+        (announcement, dispute, Some(policy))
+    } else {
+        let (announcement, dispute) = snapshot
+            .fetch((
+                st::subtensor_module::COLDKEY_SWAP_ANNOUNCEMENTS.at((coldkey_ss58,)),
+                st::subtensor_module::COLDKEY_SWAP_DISPUTES.at((coldkey_ss58,)),
+            ))
+            .await?;
+        (announcement, dispute, policy_in_catalog.then_some(None))
+    };
     let recovery_locked = dispute == Some(0);
     if announcement.is_none() && !recovery_locked {
         return Ok(None);
@@ -65,6 +96,7 @@ pub async fn coldkey_swap_announcement<V: View + ?Sized>(
             .map(|(execute_block, _)| *execute_block),
         new_coldkey_hash: announcement
             .map(|(_, new_coldkey_hash)| format!("0x{}", hex::encode(new_coldkey_hash.0))),
+        import_source_policies,
         disputed: dispute_block.is_some(),
         dispute_block,
         recovery_locked,
