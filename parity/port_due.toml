@@ -5,14 +5,6 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "pallets/subtensor/src/utils/misc.rs"
-kind = "ported"
-from = "17cbe4581ef163e886a06ba0771341e8956c87dd"
-to = "f3c9483919a66fc27dfa1438b53cae0cf9f174f1"
-tag = "v491"
-symbols = []
-
-[[file]]
 py = "sdk/bittensor-core-py/pyproject.toml"
 kind = "oracle-only"
 from = "c11c08784adfcdd8b859814dbf94ac6224717fa2"

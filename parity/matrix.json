@@ -8492,7 +8492,7 @@
           "crates/rtao-neuron/src/weights.rs (LastUpdate fallback and activity-cutoff alarm)",
           "vendor/upstream/extracted/owner_map.json (authenticated helper bodies and selected getter storage linkage)"
         ],
-        "synced_blob": "17cbe4581ef163e886a06ba0771341e8956c87dd"
+        "synced_blob": "f3c9483919a66fc27dfa1438b53cae0cf9f174f1"
       },
       {
         "kind": "ported",
