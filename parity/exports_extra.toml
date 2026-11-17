@@ -2048,28 +2048,28 @@ pinning_tests = [
 
 [[export]]
 python = "bittensor.intents.AnnounceProxyCall"
-home = "pending: new public export at v491"
-reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::AnnounceProxyCall"
+reason = "Public typed proxy intent reexport (feature proxy). D-206 checks its registry construction, hash validation, call bytes, summary and deposit warning."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v491 adoption"
+pinning_tests = ["rtao_intents::proxy::tests::proxy_preflight_defaults_roundtrip_and_exact_warnings", "rtao_intents::proxy::tests::announcement_hash_inputs_require_exact_blake2_256_bytes"]
 
 [[export]]
 python = "bittensor.intents.RejectProxyAnnouncement"
-home = "pending: new public export at v491"
-reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::RejectProxyAnnouncement"
+reason = "Public typed proxy intent reexport (feature proxy). D-206 checks its registry construction, hash validation, call bytes and summary."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v491 adoption"
+pinning_tests = ["rtao_intents::proxy::tests::proxy_preflight_defaults_roundtrip_and_exact_warnings", "rtao_intents::proxy::tests::announcement_hash_inputs_require_exact_blake2_256_bytes"]
 
 [[export]]
 python = "bittensor.intents.RemoveProxyAnnouncement"
-home = "pending: new public export at v491"
-reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::RemoveProxyAnnouncement"
+reason = "Public typed proxy intent reexport (feature proxy). D-206 checks its registry construction, hash validation, call bytes and summary."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v491 adoption"
+pinning_tests = ["rtao_intents::proxy::tests::proxy_preflight_defaults_roundtrip_and_exact_warnings", "rtao_intents::proxy::tests::announcement_hash_inputs_require_exact_blake2_256_bytes"]
 
 [[export]]
 python = "bittensor.intents.SetSubnetGammaEmissionWhitelisted"
-home = "pending: new public export at v491"
-reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::SetSubnetGammaEmissionWhitelisted"
+reason = "Public typed root intent reexport (feature root). D-207 checks its registry construction, call bytes, summaries and all-subnet effect."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v491 adoption"
+pinning_tests = ["rtao_intents::root::tests::gamma_whitelist_matches_python_and_encodes_inner_call"]

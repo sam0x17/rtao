@@ -990,6 +990,15 @@ mod tests {
 
     #[test]
     fn announcement_hash_inputs_require_exact_blake2_256_bytes() {
+        assert_eq!(AnnounceProxyCall::SPEC.name, "announce_proxy_call");
+        assert_eq!(
+            RemoveProxyAnnouncement::SPEC.name,
+            "remove_proxy_announcement"
+        );
+        assert_eq!(
+            RejectProxyAnnouncement::SPEC.name,
+            "reject_proxy_announcement"
+        );
         for (op, address) in [
             ("announce_proxy_call", "real_ss58"),
             ("remove_proxy_announcement", "real_ss58"),

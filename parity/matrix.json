@@ -7253,7 +7253,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AnnounceProxyCall",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7523,7 +7523,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RejectProxyAnnouncement",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7541,7 +7541,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.RemoveProxyAnnouncement",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7697,7 +7697,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetSubnetGammaEmissionWhitelisted",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -10881,7 +10881,7 @@
         "rust": [
           "`rtao_intents` crate root"
         ],
-        "synced_blob": "9db3e6b1fb2d2e88bfd027bec9020457e1d1de5a"
+        "synced_blob": "b1bdea507b1c758a3a60eff94dfe1c54b1906a34"
       },
       {
         "kind": "ported",
@@ -11289,7 +11289,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "0e0432be5438baff1d199b74b364f8ffb1e5b451"
+        "synced_blob": "ab71193b884fb41f5ce22b8dfa7871e9edbf33c6"
       },
       {
         "kind": "ported",

@@ -2104,8 +2104,8 @@ notes = "v482 source mapping 2026-10-22: Only subnet emission-enabled help chang
 py = "sdk/python/bittensor/intents/__init__.py"
 rs = ["`rtao_intents` crate root"]
 kind = "n/a"
-synced_blob = "9db3e6b1fb2d2e88bfd027bec9020457e1d1de5a"
-synced_tag = "v490"
+synced_blob = "b1bdea507b1c758a3a60eff94dfe1c54b1906a34"
+synced_tag = "v491"
 milestone = "—"
 notes = "Source reconciliation 2026-10-15: retained source blob authenticated against tree.txt. Python package/re-export/import-registration glue. Rust Cargo modules, feature-gated facade exports and generated intent/read registries replace import mechanics; the separate public export gate owns named API completeness. No Python import side effects are needed. Spec 481 reconciliation 2026-10-18: exports SetSubnetEmissionWeights and SetRejectStakingHotkeyGrowth, re-exported from the generated rtao_intents interfaces (emission_weights and staking features). v482 source identity 2026-10-22: exact old/new upstream tree, Git blob and pinned artifact SHA256 match; see this source's row in parity/v482-sources.json. No provenance-associated extracted fragment exists for this row; only exact source identity is carried forward, with normal producer/generator checks where applicable. Prior declared scope is retained; this carry-forward does not approve changed native consumers or establish runtime/oracle execution. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 2026-11-07 (D-137): re-exports SetSubnetEmissionWeights, the seven gamma intents, the four limit-order intents, SetService and SetRejectStakingHotkeyGrowth, all present in the generated rtao_intents registry and crate root."
 
@@ -2410,8 +2410,8 @@ notes = "v484 source reconciliation: Add generated subnet_state/subnet_states re
 py = "sdk/python/bittensor/namespaces.pyi"
 rs = ["none needed"]
 kind = "n/a"
-synced_blob = "0e0432be5438baff1d199b74b364f8ffb1e5b451"
-synced_tag = "v490"
+synced_blob = "ab71193b884fb41f5ce22b8dfa7871e9edbf33c6"
+synced_tag = "v491"
 milestone = "—"
 notes = "v484 source reconciliation: Add generated subnet_state/subnet_states reads and curated state/states aliases, including blocking facade. State type is explicit in reviewed read_types; 105 methods have implemented dispatch, with no pending behavior. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: stub-only additions for gamma reads and services."
 

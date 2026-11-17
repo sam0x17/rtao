@@ -109,14 +109,6 @@ tag = "v491"
 symbols = ["bittensor.emission_weights.MAX_GAMMA", "bittensor.emission_weights.MAX_GAMMA_SHARES", "bittensor.emission_weights.MAX_ROUNDING_PARTS", "bittensor.emission_weights.Rules", "bittensor.emission_weights.Rules.gamma_targets", "bittensor.emission_weights.Rules.leased", "bittensor.emission_weights.Rules.limits", "bittensor.emission_weights.SlotShares", "bittensor.emission_weights.absorb_rounding", "bittensor.emission_weights.merge", "bittensor.emission_weights.merge_gamma", "bittensor.emission_weights.renormalize", "bittensor.emission_weights.validate", "bittensor.emission_weights.validate_gamma"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/__init__.py"
-kind = "n/a"
-from = "9db3e6b1fb2d2e88bfd027bec9020457e1d1de5a"
-to = "b1bdea507b1c758a3a60eff94dfe1c54b1906a34"
-tag = "v491"
-symbols = ["bittensor.intents.AddProxy", "bittensor.intents.AnnounceProxyCall", "bittensor.intents.CreatePureProxy", "bittensor.intents.ExecuteProxyAnnounced", "bittensor.intents.KillPureProxy", "bittensor.intents.PROXY_TYPES", "bittensor.intents.RejectProxyAnnouncement", "bittensor.intents.RemoveProxies", "bittensor.intents.RemoveProxy", "bittensor.intents.RemoveProxyAnnouncement", "bittensor.intents.SetRootClaimThreshold", "bittensor.intents.SetSubnetEmissionEnabled", "bittensor.intents.SetSubnetGammaEmissionWhitelisted", "bittensor.intents.__all__"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/emission_weights.py"
 kind = "ported"
 from = "575e6ec5728a0ffdea80743a4c01480673a716d9"
@@ -131,14 +123,6 @@ from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
 to = "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3"
 tag = "v491"
 symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
-
-[[file]]
-py = "sdk/python/bittensor/namespaces.pyi"
-kind = "n/a"
-from = "0e0432be5438baff1d199b74b364f8ffb1e5b451"
-to = "ab71193b884fb41f5ce22b8dfa7871e9edbf33c6"
-tag = "v491"
-symbols = []
 
 [[file]]
 py = "sdk/python/bittensor/reads/subnets.py"
