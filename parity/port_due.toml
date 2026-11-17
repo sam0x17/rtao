@@ -117,14 +117,6 @@ tag = "v491"
 symbols = ["bittensor.intents.AddProxy", "bittensor.intents.AnnounceProxyCall", "bittensor.intents.CreatePureProxy", "bittensor.intents.ExecuteProxyAnnounced", "bittensor.intents.KillPureProxy", "bittensor.intents.PROXY_TYPES", "bittensor.intents.RejectProxyAnnouncement", "bittensor.intents.RemoveProxies", "bittensor.intents.RemoveProxy", "bittensor.intents.RemoveProxyAnnouncement", "bittensor.intents.SetRootClaimThreshold", "bittensor.intents.SetSubnetEmissionEnabled", "bittensor.intents.SetSubnetGammaEmissionWhitelisted", "bittensor.intents.__all__"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/batch.py"
-kind = "ported"
-from = "2200235b75b4d2457b9b554b269afa080aeceaa2"
-to = "42465794f5f27077b356427dac8c46a16187f590"
-tag = "v491"
-symbols = ["bittensor.intents.batch.Batch", "bittensor.intents.batch.Batch.build"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/emission_weights.py"
 kind = "ported"
 from = "575e6ec5728a0ffdea80743a4c01480673a716d9"

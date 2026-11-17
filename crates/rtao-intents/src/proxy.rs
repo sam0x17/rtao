@@ -3,7 +3,7 @@
 
 use rtao_client::{DynView, View, ViewExt};
 use rtao_primitives::{IntoCoreValue, NetUid, Spend};
-use rtao_runtime::{Call, calls::proxy};
+use rtao_runtime::{Call, CallBytes, RuntimeHandle, calls::proxy};
 use rtao_signer::SignerRole;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentInterface, IntentSafety, PreflightCx};
 use serde_json::Value;
@@ -62,6 +62,79 @@ pub fn check_proxy_type(proxy_type: &str) -> Result<&str, IntentError> {
 /// account, for example when preserving a pure account's existing grants.
 #[doc(alias = "bittensor.intents.proxy.HOTKEY_PROXY_TYPES")]
 pub const HOTKEY_PROXY_TYPES: [&str; 2] = ["Validate", "Weights"];
+
+// Proxy dispatch reports a failed inner call as an event. An enclosing
+// batch_all can therefore commit its later calls even when an announced
+// atomic batch fails. Inspect the already composed call, including wrappers
+// that change the dispatch origin, before allowing it into another batch.
+fn announced_call_requires_direct(call: &CallBytes, runtime: &RuntimeHandle) -> bool {
+    let decoded = runtime
+        .core()
+        .decode_spec(&rtao_core::runtime::TypeSpec::Call, call.as_bytes(), true)
+        .map(|value| rtao_core::codec::value::to_corpus_json(&value));
+    decoded.map_or(true, |value| {
+        contains_atomic_batch(&value, 0).unwrap_or(true)
+    })
+}
+
+fn contains_atomic_batch(call: &Value, depth: usize) -> Option<bool> {
+    if depth >= 32 {
+        return None;
+    }
+    let pallet = call.get("call_module")?.as_str()?;
+    let function = call.get("call_function")?.as_str()?;
+    if pallet.is_empty() || function.is_empty() {
+        return None;
+    }
+    if matches!(
+        (pallet, function),
+        ("Utility", "batch_all") | ("Crowdloan", "finalize")
+    ) {
+        return Some(true);
+    }
+    let single = matches!(
+        (pallet, function),
+        ("Proxy", "proxy" | "proxy_announced")
+            | (
+                "Multisig",
+                "as_multi" | "as_multi_safe" | "as_multi_threshold_1" | "as_multi_threshold_1_safe"
+            )
+            | (
+                "Utility",
+                "as_derivative"
+                    | "as_safe_derivative"
+                    | "as_protected_derivative"
+                    | "dispatch_as"
+                    | "dispatch_as_fallible"
+                    | "with_weight"
+            )
+            | ("Sudo", "sudo" | "sudo_unchecked_weight" | "sudo_as")
+    );
+    let fields = call.get("call_args")?.as_array()?;
+    let arg = |name: &str| -> Option<&Value> {
+        fields
+            .iter()
+            .find(|field| field.get("name").and_then(Value::as_str) == Some(name))?
+            .get("value")
+    };
+    if single {
+        return contains_atomic_batch(arg("call")?, depth + 1);
+    }
+    if (pallet, function) == ("Utility", "if_else") {
+        return Some(
+            contains_atomic_batch(arg("main")?, depth + 1)?
+                || contains_atomic_batch(arg("fallback")?, depth + 1)?,
+        );
+    }
+    if pallet == "Utility" && matches!(function, "batch" | "force_batch") {
+        for child in arg("calls")?.as_array()? {
+            if contains_atomic_batch(child, depth + 1)? {
+                return Some(true);
+            }
+        }
+    }
+    Some(false)
+}
 
 /// Key that signs add/remove for `proxy_type`: the hotkey for hotkey-scoped types.
 #[doc(alias = "bittensor.intents.proxy.proxy_grant_signer")]
@@ -440,6 +513,10 @@ impl Intent for ExecuteProxyAnnounced {
         )
         .await?;
         let inner_call = built.call;
+        let mut extras = built.extras;
+        if announced_call_requires_direct(&inner_call, cx.runtime) {
+            extras.insert("requires_direct_submission".into(), Value::Bool(true));
+        }
         let nested_stamps = rtao_runtime::nested_call_stamps(&inner_call);
         // Keep this field dynamic until the checked core encoder sees it:
         // unlike the delegation constructors, Python has no __post_init__
@@ -459,7 +536,7 @@ impl Intent for ExecuteProxyAnnounced {
         );
         Ok(Built {
             call: call.compose(cx.runtime)?,
-            extras: built.extras,
+            extras,
         })
     }
 
@@ -510,6 +587,75 @@ mod tests {
             .decode_spec(&rtao_core::runtime::TypeSpec::Call, call.as_bytes(), true)
             .map_err(rtao_core::CoreError::from)?;
         Ok(rtao_core::codec::value::to_corpus_json(&decoded))
+    }
+
+    #[test]
+    fn announced_batch_inspection_follows_dispatch_wrappers_and_refuses_unknown_calls() {
+        let leaf = json!({"call_module":"System","call_function":"remark","call_args":[]});
+        let atomic = json!({"call_module":"Utility","call_function":"batch_all","call_args":[]});
+        let wrap = |module: &str, function: &str, name: &str, child: Value| {
+            json!({
+                "call_module": module, "call_function": function,
+                "call_args": [{"name": name, "value": child}],
+            })
+        };
+        assert_eq!(contains_atomic_batch(&leaf, 0), Some(false));
+        assert_eq!(contains_atomic_batch(&atomic, 0), Some(true));
+        assert_eq!(
+            contains_atomic_batch(&wrap("Sudo", "sudo", "call", atomic.clone()), 0),
+            Some(true)
+        );
+        assert_eq!(
+            contains_atomic_batch(&wrap("Multisig", "as_multi", "call", atomic.clone()), 0),
+            Some(true)
+        );
+        assert_eq!(
+            contains_atomic_batch(
+                &wrap(
+                    "Utility",
+                    "batch",
+                    "calls",
+                    json!([leaf.clone(), atomic.clone()])
+                ),
+                0
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            contains_atomic_batch(
+                &wrap("Utility", "force_batch", "calls", json!([leaf.clone()])),
+                0
+            ),
+            Some(false)
+        );
+        assert_eq!(
+            contains_atomic_batch(
+                &json!({
+                    "call_module":"Utility", "call_function":"if_else",
+                    "call_args":[{"name":"main","value":leaf},{"name":"fallback","value":atomic}],
+                }),
+                0
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            contains_atomic_batch(
+                &json!({"call_module":"Crowdloan","call_function":"finalize","call_args":[]}),
+                0
+            ),
+            Some(true)
+        );
+        assert_eq!(
+            contains_atomic_batch(&wrap("Proxy", "proxy", "call", Value::Null), 0),
+            None
+        );
+        assert_eq!(
+            contains_atomic_batch(
+                &json!({"call_module":"Utility","call_function":"batch","call_args":[]}),
+                0
+            ),
+            None
+        );
     }
 
     async fn build(
@@ -1101,6 +1247,37 @@ mod tests {
         );
         assert!(view.touches().is_empty());
         assert_eq!(chain.requests().len(), requests);
+        assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[cfg(feature = "batch")]
+    #[tokio::test]
+    async fn announced_atomic_batch_is_directly_buildable_but_refused_as_batch_child()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let view = RecordingView::new(snapshot.clone());
+        let intent = announced(
+            "batch",
+            json!({
+                "intents": [{"op":"remove_proxies"}],
+            }),
+        );
+        let built = build(&intent, &view, runtime).await?;
+        assert_eq!(
+            built.extras.get("requires_direct_submission"),
+            Some(&json!(true))
+        );
+        let batch = crate::Batch::new(vec![intent.to_json()])?;
+        let error = build(&batch, &view, runtime)
+            .await
+            .expect_err("announced batch nested in batch");
+        assert_eq!(
+            error.to_string(),
+            "this announced payload contains or may contain an atomic batch; submit it directly, not inside another batch"
+        );
         assert!(chain.mutate_state(|state| state.submissions.is_empty()));
         client.close().await;
         Ok(())

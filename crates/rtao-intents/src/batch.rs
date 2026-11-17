@@ -213,6 +213,15 @@ async fn build_children<V: View + ?Sized>(
                 "this guarded account payment must be submitted directly, not inside a batch",
             ));
         }
+        if built
+            .extras
+            .get("requires_direct_submission")
+            .is_some_and(truthy)
+        {
+            return Err(IntentError::validation(
+                "this announced payload contains or may contain an atomic batch; submit it directly, not inside another batch",
+            ));
+        }
         let (child_calls, registration) = rtao_tx::hashed::recipient_registration_calls(
             &rtao_tx::hashed::RecipientCx {
                 view: &borrowed as &dyn DynView,
