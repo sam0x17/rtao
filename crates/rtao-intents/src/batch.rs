@@ -771,10 +771,15 @@ mod tests {
             json!({"op":"add_proxy","delegate_ss58":DESTINATION.to_string()}),
             json!({"op":"transfer","dest_ss58":DESTINATION.to_string(),"amount_tao":"0.000000123"}),
         ])?;
-        assert_eq!(
-            batch.intents[0],
-            json!({"op":"add_proxy","delegate_ss58":DESTINATION.to_string(),"proxy_type":"Staking","delay":0})
-        );
+        let mut expected_proxy = json!({"op":"add_proxy","delegate_ss58":DESTINATION.to_string(),"proxy_type":"Staking","delay":0});
+        if crate::AddProxy::SPEC
+            .fields
+            .iter()
+            .any(|field| field.name == "from_hotkey")
+        {
+            expected_proxy["from_hotkey"] = Value::Null;
+        }
+        assert_eq!(batch.intents[0], expected_proxy);
         assert_eq!(batch.intents[1]["keep_alive"], true);
         assert_eq!(batch.intents[1]["amount_tao"], "0.000000123");
         let parsed = crate::AnyIntent::from_tool("batch", batch.to_json())?;

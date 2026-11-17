@@ -344,6 +344,13 @@ fn all_86_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip() {
             if field.annotation == Some("Money") {
                 continue;
             }
+            if spec.name == "set_subnet_emission_weights" && field.name == "gamma" {
+                // The catalog keeps the extractor's lossless dictionary tag;
+                // the generated JSON default is the projected object (D-195).
+                assert_eq!(expected, json!({"dict":[]}));
+                assert_eq!(json[field.name], json!({}));
+                continue;
+            }
             assert_eq!(
                 json[field.name], expected,
                 "{}.{} default",

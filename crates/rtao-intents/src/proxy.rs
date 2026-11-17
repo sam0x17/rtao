@@ -574,7 +574,12 @@ mod tests {
                     "announced_call_semantics" => json!({}),
                     _ => json!("0x00"),
                 };
-                let typed: ExecuteProxyAnnounced = serde_json::from_value(args.clone())?;
+                let mut typed_args = args.clone();
+                typed_args
+                    .as_object_mut()
+                    .expect("announcement tool JSON is an object")
+                    .remove("op");
+                let typed: ExecuteProxyAnnounced = serde_json::from_value(typed_args)?;
                 assert!(
                     typed.validate().is_err(),
                     "typed mutation must retain {field}"

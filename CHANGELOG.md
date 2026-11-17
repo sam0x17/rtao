@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Adoption tests and fixture locks (D-198)
+
+- Fixed: intent tests account for generated `from_hotkey` and JSON gamma defaults, and distinguish a tool's `op` tag from typed announcement arguments. The registry and typed checks still reject supplied saved-announcement pins.
+- Fixed: fuzz, TLS and validator probe fixture lockfiles use the workspace's 0.1.2 crate versions for locked checks.
+
 ### Proxy defaults and announcement pins during adoption (D-197)
 
 - Fixed: proxy test constructors use generated defaults across the 491 field additions. `add_proxy` honors the new explicit hotkey/coldkey selection, including `false`, and its warning follows the selected signer. Saved-announcement bytes, hashes, runtime versions and semantics are explicitly refused until their hand port is complete, including empty or zero-valued pins. They cannot be silently discarded while rebuilding a call. Adoption now runs every intent feature's tests.
