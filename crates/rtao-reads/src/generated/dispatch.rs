@@ -1007,6 +1007,21 @@ pub async fn dispatch(
                 detail: error.to_string(),
             })
         }
+        ReadName::ProxyAnnouncements => {
+            let args: super::interfaces::ProxyAnnouncementsParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::proxy_announcements(view, args.delegate_ss58).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
         ReadName::QuoteMintGamma => {
             let args: super::interfaces::QuoteMintGammaParams =
                 serde_json::from_value(Value::Object(params)).map_err(|error| {
@@ -1410,6 +1425,22 @@ pub async fn dispatch(
                 })?;
             let _ = &args;
             let value = super::interfaces::subnet_emission_weights(view, args.netuid).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::SubnetGammaEmissionWhitelisted => {
+            let args: super::interfaces::SubnetGammaEmissionWhitelistedParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value =
+                super::interfaces::subnet_gamma_emission_whitelisted(view, args.netuid).await?;
             serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
                 descriptor: "read result",
                 detail: error.to_string(),

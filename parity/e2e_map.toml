@@ -560,3 +560,6 @@ pending = "M9"
 
 [tests.test_gamma_lifecycle]
 pending = "M9"
+
+[tests."pyt:e2e/test_protected_cli.py::test_cli_protected_migration_cancel_execute_and_rotate"]
+pending = "M9"

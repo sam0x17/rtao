@@ -5,9 +5,9 @@
       "format": 1,
       "provenance": {
         "blob": "1ea92db94aeee66cd7c78e6b8d5c88725453272b",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/_generated/errors.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "ERRORS": {
@@ -7448,9 +7448,9 @@
       "format": 1,
       "provenance": {
         "blob": "1b9adfbb52f1dcd6e8a1b5ec16d63f52be89dc23",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/_transport/extrinsics.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "MAX_SHIELDED_CIPHERTEXT_BYTES": {
@@ -7464,9 +7464,9 @@
       "format": 1,
       "provenance": {
         "blob": "76101e5247da8356118e4bb179aadf77b2f14c34",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/_transport/runtime.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "_DISK_CACHE_MAX_FILES": {
@@ -7502,9 +7502,9 @@
       "format": 1,
       "provenance": {
         "blob": "4c33d256550a45a951e9c75c6e3b74b7dd0fa0d3",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/_transport/utils/receipt.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "_NESTED_RESULT_EVENTS": {
@@ -7575,9 +7575,9 @@
       "format": 1,
       "provenance": {
         "blob": "cf591495eef97141ca0ffc53155898b8e8f2cb4b",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/basket_index_data.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "BASELINES": {
@@ -9875,9 +9875,9 @@
       "format": 1,
       "provenance": {
         "blob": "4c4a26ae8ca1be99c9ee834c7fb6184c89d888b8",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/config.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "DEFAULT_ADDRESSES_PATH": {
@@ -10052,9 +10052,9 @@
       "format": 1,
       "provenance": {
         "blob": "01f24577d207390720efe950b1f77735560474ca",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/error_map.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "CUSTOM_TRANSACTION_ERRORS": {
@@ -12559,9 +12559,9 @@
       "format": 1,
       "provenance": {
         "blob": "e9ee94d16ddb1b89bf94dd94ec63f1484b5d06d7",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/evm/networks.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "EVM_NETWORKS": {
@@ -12645,9 +12645,9 @@
       "format": 1,
       "provenance": {
         "blob": "ce5b43be2cb6c1477b970858bb9992bff348855e",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/evm/precompiles.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "CALLER_ROLES": {
@@ -13180,9 +13180,9 @@
       "format": 1,
       "provenance": {
         "blob": "ea6547dfb106fa26bf3a3dc5d2613e5170068b91",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/executor.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "_SHIELDED_FINALITY_RPC_RETRIES": {
@@ -13212,9 +13212,9 @@
       "format": 1,
       "provenance": {
         "blob": "63ba35b88b039dfe547b29f30561c90dec09967d",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/fee_filters.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "COLDKEY_FEE_WARNING": {
@@ -13338,9 +13338,9 @@
       "format": 1,
       "provenance": {
         "blob": "772977590e33f80c932eefa3611dbac6e425b3da",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/hyperparams.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "FIXED128_ONE": {
@@ -14892,9 +14892,9 @@
       "format": 1,
       "provenance": {
         "blob": "f45a39a4852703d52d91776ffbc216ed5b9a5dbd",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/_money.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "_FALLBACK_AMOUNT_UNITS": {
@@ -15097,9 +15097,9 @@
       "format": 1,
       "provenance": {
         "blob": "ab08e652c1c01e15f157bfcf1b7ca00bf820788c",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/association.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "AssociateEvmKey.block_number": {
@@ -15189,9 +15189,9 @@
       "format": 1,
       "provenance": {
         "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/base.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "Intent.all_amount_fields": {
@@ -15238,10 +15238,10 @@
     "sdk/python/bittensor/intents/batch.py": {
       "format": 1,
       "provenance": {
-        "blob": "2200235b75b4d2457b9b554b269afa080aeceaa2",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "42465794f5f27077b356427dac8c46a16187f590",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/batch.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "Batch.intents": {
@@ -15276,9 +15276,9 @@
       "format": 1,
       "provenance": {
         "blob": "42392f29c930b80fc79c6c7d8a216a0ad01d5b93",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/children.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "DecreaseTake.hotkey_ss58": {
@@ -15486,37 +15486,37 @@
     "sdk/python/bittensor/intents/coldkey.py": {
       "format": 1,
       "provenance": {
-        "blob": "d2882ffce64baa07576b6a0d0dafbeeb815b98aa",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "3b54511c6ff5e6ac7e9155cb676968007c901110",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/coldkey.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "AnnounceColdkeySwap.hashed_descriptor": {
-          "end_line": 69,
-          "line": 66,
+          "end_line": 70,
+          "line": 67,
           "value": null
         },
         "AnnounceColdkeySwap.new_coldkey_ss58": {
-          "end_line": 65,
-          "line": 60,
+          "end_line": 66,
+          "line": 61,
           "value": {
             "required": true
           }
         },
         "AnnounceColdkeySwap.op": {
-          "end_line": 56,
-          "line": 56,
+          "end_line": 57,
+          "line": 57,
           "value": "announce_coldkey_swap"
         },
         "AnnounceColdkeySwap.signer": {
-          "end_line": 57,
-          "line": 57,
+          "end_line": 58,
+          "line": 58,
           "value": "coldkey"
         },
         "AnnounceColdkeySwap.wraps": {
-          "end_line": 58,
-          "line": 58,
+          "end_line": 59,
+          "line": 59,
           "value": {
             "tuple": [
               {
@@ -15529,18 +15529,18 @@
           }
         },
         "ClearColdkeySwapAnnouncement.op": {
-          "end_line": 148,
-          "line": 148,
+          "end_line": 149,
+          "line": 149,
           "value": "clear_coldkey_swap_announcement"
         },
         "ClearColdkeySwapAnnouncement.signer": {
-          "end_line": 149,
-          "line": 149,
+          "end_line": 150,
+          "line": 150,
           "value": "coldkey"
         },
         "ClearColdkeySwapAnnouncement.wraps": {
-          "end_line": 150,
-          "line": 150,
+          "end_line": 151,
+          "line": 151,
           "value": {
             "tuple": [
               {
@@ -15553,18 +15553,18 @@
           }
         },
         "DisputeColdkeySwap.op": {
-          "end_line": 176,
-          "line": 176,
+          "end_line": 177,
+          "line": 177,
           "value": "dispute_coldkey_swap"
         },
         "DisputeColdkeySwap.signer": {
-          "end_line": 177,
-          "line": 177,
+          "end_line": 178,
+          "line": 178,
           "value": "coldkey"
         },
         "DisputeColdkeySwap.wraps": {
-          "end_line": 178,
-          "line": 178,
+          "end_line": 179,
+          "line": 179,
           "value": {
             "tuple": [
               {
@@ -15577,18 +15577,18 @@
           }
         },
         "ReleaseOwnColdkeySwapDestinationReservation.op": {
-          "end_line": 203,
-          "line": 203,
+          "end_line": 204,
+          "line": 204,
           "value": "release_own_coldkey_swap_destination_reservation"
         },
         "ReleaseOwnColdkeySwapDestinationReservation.signer": {
-          "end_line": 204,
-          "line": 204,
+          "end_line": 205,
+          "line": 205,
           "value": "coldkey"
         },
         "ReleaseOwnColdkeySwapDestinationReservation.wraps": {
-          "end_line": 205,
-          "line": 205,
+          "end_line": 206,
+          "line": 206,
           "value": {
             "tuple": [
               {
@@ -15601,25 +15601,25 @@
           }
         },
         "SwapColdkeyAnnounced.new_coldkey_ss58": {
-          "end_line": 112,
-          "line": 107,
+          "end_line": 113,
+          "line": 108,
           "value": {
             "required": true
           }
         },
         "SwapColdkeyAnnounced.op": {
-          "end_line": 103,
-          "line": 103,
+          "end_line": 104,
+          "line": 104,
           "value": "swap_coldkey_announced"
         },
         "SwapColdkeyAnnounced.signer": {
-          "end_line": 104,
-          "line": 104,
+          "end_line": 105,
+          "line": 105,
           "value": "coldkey"
         },
         "SwapColdkeyAnnounced.wraps": {
-          "end_line": 105,
-          "line": 105,
+          "end_line": 106,
+          "line": 106,
           "value": {
             "tuple": [
               {
@@ -15637,9 +15637,9 @@
       "format": 1,
       "provenance": {
         "blob": "08fb440799bf16dbfb3552133512a7dfaa54db4c",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/collateral.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "AddCollateral.all_amount_fields": {
@@ -15758,9 +15758,9 @@
       "format": 1,
       "provenance": {
         "blob": "2ad3b7c537e42f77d421c2275ddf4893f1981506",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/crowdloan.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "ContributeCrowdloan.all_amount_fields": {
@@ -16130,67 +16130,74 @@
     "sdk/python/bittensor/intents/emission_weights.py": {
       "format": 1,
       "provenance": {
-        "blob": "575e6ec5728a0ffdea80743a4c01480673a716d9",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/emission_weights.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
+        "SetSubnetEmissionWeights.gamma": {
+          "end_line": 134,
+          "line": 134,
+          "value": {
+            "dict": []
+          }
+        },
         "SetSubnetEmissionWeights.netuid": {
-          "end_line": 113,
-          "line": 113,
+          "end_line": 130,
+          "line": 130,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.op": {
-          "end_line": 107,
-          "line": 107,
+          "end_line": 124,
+          "line": 124,
           "value": "set_subnet_emission_weights"
         },
         "SetSubnetEmissionWeights.origin": {
-          "end_line": 109,
-          "line": 109,
+          "end_line": 126,
+          "line": 126,
           "value": "subnet_owner"
         },
         "SetSubnetEmissionWeights.renormalize": {
-          "end_line": 116,
-          "line": 116,
+          "end_line": 133,
+          "line": 133,
           "value": false
         },
         "SetSubnetEmissionWeights.signer": {
-          "end_line": 108,
-          "line": 108,
+          "end_line": 125,
+          "line": 125,
           "value": "coldkey"
         },
         "SetSubnetEmissionWeights.slots": {
-          "end_line": 114,
-          "line": 114,
+          "end_line": 131,
+          "line": 131,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.values": {
-          "end_line": 115,
-          "line": 115,
+          "end_line": 132,
+          "line": 132,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.verify": {
-          "end_line": 110,
-          "line": 110,
+          "end_line": 127,
+          "line": 127,
           "value": "subnet_emission_weights"
         },
         "SetSubnetEmissionWeights.wraps": {
-          "end_line": 111,
-          "line": 111,
+          "end_line": 128,
+          "line": 128,
           "value": {
             "tuple": [
               {
                 "tuple": [
                   "AdminUtils",
-                  "sudo_set_subnet_emission_weights"
+                  "sudo_set_subnet_emission_weights_v2"
                 ]
               }
             ]
@@ -16202,9 +16209,9 @@
       "format": 1,
       "provenance": {
         "blob": "c6b3ea2027049a41c8ff00eba419637e0e3929bc",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/evm.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "EvmWithdraw.all_amount_fields": {
@@ -16306,9 +16313,9 @@
       "format": 1,
       "provenance": {
         "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "CloseGammaDeposit.hotkey_ss58": {
@@ -16706,9 +16713,9 @@
       "format": 1,
       "provenance": {
         "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/governance.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "SetMechanismCount.mechanism_count": {
@@ -16947,9 +16954,9 @@
       "format": 1,
       "provenance": {
         "blob": "898812ed48595a20cb343a80297728d759b5cf2e",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/hyperparameters.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "OWNER_HYPERPARAMETERS": {
@@ -17540,9 +17547,9 @@
       "format": 1,
       "provenance": {
         "blob": "a4a2167fcbb2db93d649935c32705e5d6612b1e9",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/identity.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "SetIdentity.additional": {
@@ -17690,9 +17697,9 @@
       "format": 1,
       "provenance": {
         "blob": "c1bf79b7bb6a5ebcec925010679de8b87f700115",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/leasing.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "RegisterLeasedNetwork.emissions_share": {
@@ -17773,9 +17780,9 @@
       "format": 1,
       "provenance": {
         "blob": "9a3d299c1f5938a89bf37e27162279c8e9222329",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/limit_orders.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "AuthorizeOrder.op": {
@@ -17906,9 +17913,9 @@
       "format": 1,
       "provenance": {
         "blob": "05c03b46d80f556a6bbc08b963f15248e69c19d2",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/lock.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "LockStake.all_amount_fields": {
@@ -18076,9 +18083,9 @@
       "format": 1,
       "provenance": {
         "blob": "70dd6b22c6ee4788fa96e628eb33eff586dcc22a",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/multisig.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "MultisigApprove.account_mode": {
@@ -18366,42 +18373,47 @@
     "sdk/python/bittensor/intents/proxy.py": {
       "format": 1,
       "provenance": {
-        "blob": "bdbf035ee7db391e1b6b0ce9e70b27966c97de18",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/proxy.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "AddProxy.delay": {
-          "end_line": 110,
-          "line": 110,
+          "end_line": 113,
+          "line": 113,
           "value": 0
         },
         "AddProxy.delegate_ss58": {
-          "end_line": 108,
-          "line": 106,
+          "end_line": 111,
+          "line": 109,
           "value": {
             "required": true
           }
         },
+        "AddProxy.from_hotkey": {
+          "end_line": 121,
+          "line": 114,
+          "value": null
+        },
         "AddProxy.op": {
-          "end_line": 102,
-          "line": 102,
+          "end_line": 105,
+          "line": 105,
           "value": "add_proxy"
         },
         "AddProxy.proxy_type": {
-          "end_line": 109,
-          "line": 109,
+          "end_line": 112,
+          "line": 112,
           "value": "Staking"
         },
         "AddProxy.signer": {
-          "end_line": 103,
-          "line": 103,
+          "end_line": 106,
+          "line": 106,
           "value": "coldkey"
         },
         "AddProxy.wraps": {
-          "end_line": 104,
-          "line": 104,
+          "end_line": 107,
+          "line": 107,
           "value": {
             "tuple": [
               {
@@ -18413,39 +18425,77 @@
             ]
           }
         },
+        "AnnounceProxyCall.call_hash": {
+          "end_line": 423,
+          "line": 418,
+          "value": {
+            "required": true
+          }
+        },
+        "AnnounceProxyCall.op": {
+          "end_line": 411,
+          "line": 411,
+          "value": "announce_proxy_call"
+        },
+        "AnnounceProxyCall.real_ss58": {
+          "end_line": 417,
+          "line": 415,
+          "value": {
+            "required": true
+          }
+        },
+        "AnnounceProxyCall.signer": {
+          "end_line": 412,
+          "line": 412,
+          "value": "coldkey"
+        },
+        "AnnounceProxyCall.wraps": {
+          "end_line": 413,
+          "line": 413,
+          "value": {
+            "tuple": [
+              {
+                "tuple": [
+                  "Proxy",
+                  "announce"
+                ]
+              }
+            ]
+          }
+        },
         "CreatePureProxy.account_mode": {
-          "end_line": 254,
-          "line": 251,
+          "end_line": 271,
+          "line": 268,
           "value": null
         },
         "CreatePureProxy.delay": {
-          "end_line": 243,
-          "line": 243,
+          "end_line": 260,
+          "line": 260,
           "value": 0
         },
         "CreatePureProxy.index": {
-          "end_line": 250,
-          "line": 244,
+          "end_line": 267,
+          "line": 261,
           "value": 0
         },
         "CreatePureProxy.op": {
-          "end_line": 234,
-          "line": 234,
+          "end_line": 251,
+          "line": 251,
           "value": "create_pure_proxy"
         },
         "CreatePureProxy.proxy_type": {
-          "end_line": 242,
-          "line": 242,
+          "end_line": 259,
+          "line": 259,
           "value": "Staking"
         },
         "CreatePureProxy.signer": {
-          "end_line": 235,
-          "line": 235,
+          "end_line": 252,
+          "line": 252,
           "value": "coldkey"
         },
         "CreatePureProxy.wraps": {
-          "end_line": 240,
-          "line": 236,
+          "end_line": 257,
+          "line": 253,
           "value": {
             "tuple": [
               {
@@ -18469,52 +18519,72 @@
             ]
           }
         },
+        "ExecuteProxyAnnounced.announced_call_data": {
+          "end_line": 635,
+          "line": 627,
+          "value": null
+        },
+        "ExecuteProxyAnnounced.announced_call_semantics": {
+          "end_line": 650,
+          "line": 646,
+          "value": null
+        },
+        "ExecuteProxyAnnounced.announced_spec_version": {
+          "end_line": 645,
+          "line": 641,
+          "value": null
+        },
         "ExecuteProxyAnnounced.delegate_ss58": {
-          "end_line": 399,
-          "line": 399,
+          "end_line": 607,
+          "line": 607,
           "value": {
             "required": true
           }
         },
+        "ExecuteProxyAnnounced.expected_call_hash": {
+          "end_line": 640,
+          "line": 636,
+          "value": null
+        },
         "ExecuteProxyAnnounced.force_proxy_type": {
-          "end_line": 415,
-          "line": 409,
+          "end_line": 623,
+          "line": 617,
           "value": null
         },
         "ExecuteProxyAnnounced.inner_args": {
-          "end_line": 408,
-          "line": 406,
+          "end_line": 616,
+          "line": 614,
           "value": {
             "required": true
           }
         },
         "ExecuteProxyAnnounced.inner_op": {
-          "end_line": 405,
-          "line": 403,
+          "end_line": 613,
+          "line": 611,
           "value": {
             "required": true
           }
         },
         "ExecuteProxyAnnounced.op": {
-          "end_line": 395,
-          "line": 395,
+          "end_line": 603,
+          "line": 603,
           "value": "execute_proxy_announced"
         },
         "ExecuteProxyAnnounced.real_ss58": {
-          "end_line": 402,
-          "line": 400,
+          "end_line": 610,
+          "line": 608,
           "value": {
             "required": true
           }
         },
         "ExecuteProxyAnnounced.signer": {
-          "end_line": 396,
-          "line": 396,
+          "end_line": 604,
+          "line": 604,
           "value": "coldkey"
         },
         "ExecuteProxyAnnounced.wraps": {
-          "end_line": 397,
-          "line": 397,
+          "end_line": 605,
+          "line": 605,
           "value": {
             "tuple": [
               {
@@ -18527,50 +18597,50 @@
           }
         },
         "KillPureProxy.account_mode": {
-          "end_line": 353,
-          "line": 351,
+          "end_line": 370,
+          "line": 368,
           "value": "legacy"
         },
         "KillPureProxy.ext_index": {
-          "end_line": 350,
-          "line": 347,
+          "end_line": 367,
+          "line": 364,
           "value": 0
         },
         "KillPureProxy.height": {
-          "end_line": 346,
-          "line": 344,
+          "end_line": 363,
+          "line": 361,
           "value": 0
         },
         "KillPureProxy.index": {
-          "end_line": 343,
-          "line": 341,
+          "end_line": 360,
+          "line": 358,
           "value": 0
         },
         "KillPureProxy.op": {
-          "end_line": 332,
-          "line": 332,
+          "end_line": 349,
+          "line": 349,
           "value": "kill_pure_proxy"
         },
         "KillPureProxy.proxy_type": {
-          "end_line": 340,
-          "line": 337,
+          "end_line": 357,
+          "line": 354,
           "value": "Staking"
         },
         "KillPureProxy.signer": {
-          "end_line": 333,
-          "line": 333,
+          "end_line": 350,
+          "line": 350,
           "value": "coldkey"
         },
         "KillPureProxy.spawner_ss58": {
-          "end_line": 336,
-          "line": 336,
+          "end_line": 353,
+          "line": 353,
           "value": {
             "required": true
           }
         },
         "KillPureProxy.wraps": {
-          "end_line": 334,
-          "line": 334,
+          "end_line": 351,
+          "line": 351,
           "value": {
             "tuple": [
               {
@@ -18619,24 +18689,62 @@
             ]
           }
         },
+        "RejectProxyAnnouncement.call_hash": {
+          "end_line": 490,
+          "line": 488,
+          "value": {
+            "required": true
+          }
+        },
+        "RejectProxyAnnouncement.delegate_ss58": {
+          "end_line": 487,
+          "line": 487,
+          "value": {
+            "required": true
+          }
+        },
+        "RejectProxyAnnouncement.op": {
+          "end_line": 483,
+          "line": 483,
+          "value": "reject_proxy_announcement"
+        },
+        "RejectProxyAnnouncement.signer": {
+          "end_line": 484,
+          "line": 484,
+          "value": "coldkey"
+        },
+        "RejectProxyAnnouncement.wraps": {
+          "end_line": 485,
+          "line": 485,
+          "value": {
+            "tuple": [
+              {
+                "tuple": [
+                  "Proxy",
+                  "reject_announcement"
+                ]
+              }
+            ]
+          }
+        },
         "RemoveProxies.from_hotkey": {
-          "end_line": 204,
-          "line": 201,
+          "end_line": 221,
+          "line": 218,
           "value": false
         },
         "RemoveProxies.op": {
-          "end_line": 197,
-          "line": 197,
+          "end_line": 214,
+          "line": 214,
           "value": "remove_proxies"
         },
         "RemoveProxies.signer": {
-          "end_line": 198,
-          "line": 198,
+          "end_line": 215,
+          "line": 215,
           "value": "coldkey"
         },
         "RemoveProxies.wraps": {
-          "end_line": 199,
-          "line": 199,
+          "end_line": 216,
+          "line": 216,
           "value": {
             "tuple": [
               {
@@ -18649,41 +18757,79 @@
           }
         },
         "RemoveProxy.delay": {
-          "end_line": 167,
-          "line": 164,
+          "end_line": 184,
+          "line": 181,
           "value": 0
         },
         "RemoveProxy.delegate_ss58": {
-          "end_line": 159,
-          "line": 159,
+          "end_line": 176,
+          "line": 176,
           "value": {
             "required": true
           }
         },
         "RemoveProxy.op": {
-          "end_line": 155,
-          "line": 155,
+          "end_line": 172,
+          "line": 172,
           "value": "remove_proxy"
         },
         "RemoveProxy.proxy_type": {
-          "end_line": 163,
-          "line": 160,
+          "end_line": 180,
+          "line": 177,
           "value": "Staking"
         },
         "RemoveProxy.signer": {
-          "end_line": 156,
-          "line": 156,
+          "end_line": 173,
+          "line": 173,
           "value": "coldkey"
         },
         "RemoveProxy.wraps": {
-          "end_line": 157,
-          "line": 157,
+          "end_line": 174,
+          "line": 174,
           "value": {
             "tuple": [
               {
                 "tuple": [
                   "Proxy",
                   "remove_proxy"
+                ]
+              }
+            ]
+          }
+        },
+        "RemoveProxyAnnouncement.call_hash": {
+          "end_line": 460,
+          "line": 458,
+          "value": {
+            "required": true
+          }
+        },
+        "RemoveProxyAnnouncement.op": {
+          "end_line": 451,
+          "line": 451,
+          "value": "remove_proxy_announcement"
+        },
+        "RemoveProxyAnnouncement.real_ss58": {
+          "end_line": 457,
+          "line": 455,
+          "value": {
+            "required": true
+          }
+        },
+        "RemoveProxyAnnouncement.signer": {
+          "end_line": 452,
+          "line": 452,
+          "value": "coldkey"
+        },
+        "RemoveProxyAnnouncement.wraps": {
+          "end_line": 453,
+          "line": 453,
+          "value": {
+            "tuple": [
+              {
+                "tuple": [
+                  "Proxy",
+                  "remove_announcement"
                 ]
               }
             ]
@@ -18695,9 +18841,9 @@
       "format": 1,
       "provenance": {
         "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/registration.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "BurnedRegister.hotkey_ss58": {
@@ -19035,42 +19181,42 @@
     "sdk/python/bittensor/intents/root.py": {
       "format": 1,
       "provenance": {
-        "blob": "1e7d78e639d650b602620fe387a1912a731d3ceb",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "90293d19d3b80a8e195262916b22ab9f4769240d",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/root.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "SetRootClaimThreshold.op": {
-          "end_line": 109,
-          "line": 109,
+          "end_line": 150,
+          "line": 150,
           "value": "set_root_claim_threshold"
         },
         "SetRootClaimThreshold.origin": {
-          "end_line": 111,
-          "line": 111,
+          "end_line": 152,
+          "line": 152,
           "value": "root"
         },
         "SetRootClaimThreshold.signer": {
-          "end_line": 110,
-          "line": 110,
+          "end_line": 151,
+          "line": 151,
           "value": "coldkey"
         },
         "SetRootClaimThreshold.threshold": {
-          "end_line": 123,
-          "line": 118,
+          "end_line": 164,
+          "line": 159,
           "value": {
             "required": true
           }
         },
         "SetRootClaimThreshold.verify": {
-          "end_line": 112,
-          "line": 112,
+          "end_line": 153,
+          "line": 153,
           "value": "root_claim_threshold"
         },
         "SetRootClaimThreshold.wraps": {
-          "end_line": 116,
-          "line": 113,
+          "end_line": 157,
+          "line": 154,
           "value": {
             "tuple": [
               {
@@ -19141,6 +19287,60 @@
               }
             ]
           }
+        },
+        "SetSubnetGammaEmissionWhitelisted.netuid": {
+          "end_line": 111,
+          "line": 111,
+          "value": {
+            "required": true
+          }
+        },
+        "SetSubnetGammaEmissionWhitelisted.op": {
+          "end_line": 102,
+          "line": 102,
+          "value": "set_subnet_gamma_emission_whitelisted"
+        },
+        "SetSubnetGammaEmissionWhitelisted.origin": {
+          "end_line": 104,
+          "line": 104,
+          "value": "root"
+        },
+        "SetSubnetGammaEmissionWhitelisted.signer": {
+          "end_line": 103,
+          "line": 103,
+          "value": "coldkey"
+        },
+        "SetSubnetGammaEmissionWhitelisted.verify": {
+          "end_line": 105,
+          "line": 105,
+          "value": "subnet_gamma_emission_whitelisted"
+        },
+        "SetSubnetGammaEmissionWhitelisted.whitelisted": {
+          "end_line": 114,
+          "line": 112,
+          "value": {
+            "required": true
+          }
+        },
+        "SetSubnetGammaEmissionWhitelisted.wraps": {
+          "end_line": 109,
+          "line": 106,
+          "value": {
+            "tuple": [
+              {
+                "tuple": [
+                  "AdminUtils",
+                  "sudo_set_subnet_gamma_emission_whitelisted"
+                ]
+              },
+              {
+                "tuple": [
+                  "Sudo",
+                  "sudo"
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -19148,9 +19348,9 @@
       "format": 1,
       "provenance": {
         "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/serving.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "ResetAxon.netuid": {
@@ -19405,9 +19605,9 @@
       "format": 1,
       "provenance": {
         "blob": "ebbef6a1d24c000b5d4a0b003addfba8a8d1e0b8",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/staking.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "AddStake.all_amount_fields": {
@@ -20443,9 +20643,9 @@
       "format": 1,
       "provenance": {
         "blob": "89321c66fae0860b180ba4aef88d888aa158e48f",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/transfer.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "Transfer.all_amount_fields": {
@@ -20564,9 +20764,9 @@
       "format": 1,
       "provenance": {
         "blob": "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/intents/weights.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "CommitWeights.commit_reveal_version": {
@@ -20755,9 +20955,9 @@
       "format": 1,
       "provenance": {
         "blob": "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/multisig.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "_FEE_ALLOWANCE_RAO": {
@@ -20771,9 +20971,9 @@
       "format": 1,
       "provenance": {
         "blob": "8f2d33830bea92232ef7173adad3105a553f9d9d",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/bittensor/result.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "EXPLANATIONS": {
@@ -21271,10 +21471,10 @@
     "sdk/python/codegen/check.py": {
       "format": 1,
       "provenance": {
-        "blob": "fac2fe36e23a0b85e3cac1d33fd76af910dbd4d0",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "57643fd8cbe752abd403f695b9dab4d95e29c95f",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/codegen/check.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "COVERED_PALLETS": {
@@ -21300,7 +21500,7 @@
           }
         },
         "RAW_ONLY": {
-          "end_line": 330,
+          "end_line": 325,
           "line": 75,
           "value": {
             "dict": [
@@ -21449,11 +21649,8 @@
                 "Proxy",
                 {
                   "set": [
-                    "announce",
                     "poke_deposit",
                     "proxy",
-                    "reject_announcement",
-                    "remove_announcement",
                     "set_real_pays_fee"
                   ]
                 }
@@ -21521,8 +21718,7 @@
                     "sudo_set_sn_owner_hotkey",
                     "sudo_set_stake_threshold",
                     "sudo_set_start_call_delay",
-                    "sudo_set_subnet_emission_weights_v2",
-                    "sudo_set_subnet_gamma_emission_whitelisted",
+                    "sudo_set_subnet_emission_weights",
                     "sudo_set_subnet_limit",
                     "sudo_set_subnet_moving_alpha",
                     "sudo_set_subnet_owner_cut",
@@ -21566,15 +21762,15 @@
     "sdk/python/tests/harness/fake_substrate.py": {
       "format": 1,
       "provenance": {
-        "blob": "4329667aadf3ebeb3b88809b7adcfc47e3915aef",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "2bfd28bfc246f0397aae2cf955d42d7fbdb3a6d3",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/tests/harness/fake_substrate.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "DEFAULT_CONSTANTS": {
-          "end_line": 70,
-          "line": 64,
+          "end_line": 71,
+          "line": 65,
           "value": {
             "dict": [
               [
@@ -21626,8 +21822,8 @@
           }
         },
         "DEFAULT_RUNTIME": {
-          "end_line": 84,
-          "line": 75,
+          "end_line": 85,
+          "line": 76,
           "value": {
             "dict": [
               [
@@ -21721,7 +21917,7 @@
           }
         },
         "DEFAULT_STORAGE": {
-          "end_line": 62,
+          "end_line": 63,
           "line": 39,
           "value": {
             "dict": [
@@ -21908,6 +22104,15 @@
               [
                 {
                   "tuple": [
+                    "SubtensorModule",
+                    "SubnetGammaEmissionWhitelisted"
+                  ]
+                },
+                false
+              ],
+              [
+                {
+                  "tuple": [
                     "System",
                     "Account"
                   ]
@@ -21949,8 +22154,8 @@
           }
         },
         "GENESIS_HASH": {
-          "end_line": 86,
-          "line": 86,
+          "end_line": 87,
+          "line": 87,
           "value": "0x0000000000000000000000000000000000000000000000000000000000000000"
         }
       }
@@ -21958,10 +22163,10 @@
     "sdk/python/tests/harness/samples.py": {
       "format": 1,
       "provenance": {
-        "blob": "8a6ded3185596b57cef116eeb602b57cbb3d6ce4",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "blob": "b78c54da9605a5fdd1d2b6b038469ee82465b9b8",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/tests/harness/samples.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "ALICE": {
@@ -21985,7 +22190,7 @@
           "value": "5CS3j9wEaMEt5tpEkF17ZVY8DCkLjrmkj3LxGnKzodS4ccoM"
         },
         "INTENT_SAMPLES": {
-          "end_line": 416,
+          "end_line": 431,
           "line": 65,
           "value": {
             "dict": [
@@ -22622,6 +22827,51 @@
                 }
               ],
               [
+                "announce_proxy_call",
+                {
+                  "dict": [
+                    [
+                      "real_ss58",
+                      "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+                    ],
+                    [
+                      "call_hash",
+                      "0xabababababababababababababababababababababababababababababababab"
+                    ]
+                  ]
+                }
+              ],
+              [
+                "remove_proxy_announcement",
+                {
+                  "dict": [
+                    [
+                      "real_ss58",
+                      "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+                    ],
+                    [
+                      "call_hash",
+                      "0xabababababababababababababababababababababababababababababababab"
+                    ]
+                  ]
+                }
+              ],
+              [
+                "reject_proxy_announcement",
+                {
+                  "dict": [
+                    [
+                      "delegate_ss58",
+                      "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+                    ],
+                    [
+                      "call_hash",
+                      "0xabababababababababababababababababababababababababababababababab"
+                    ]
+                  ]
+                }
+              ],
+              [
                 "execute_proxy_announced",
                 {
                   "dict": [
@@ -22939,6 +23189,21 @@
                     ],
                     [
                       "enabled",
+                      true
+                    ]
+                  ]
+                }
+              ],
+              [
+                "set_subnet_gamma_emission_whitelisted",
+                {
+                  "dict": [
+                    [
+                      "netuid",
+                      1
+                    ],
+                    [
+                      "whitelisted",
                       true
                     ]
                   ]
@@ -24020,8 +24285,8 @@
           }
         },
         "READ_SAMPLES": {
-          "end_line": 379,
-          "line": 267,
+          "end_line": 394,
+          "line": 280,
           "value": {
             "dict": [
               [
@@ -24797,6 +25062,17 @@
                 }
               ],
               [
+                "proxy_announcements",
+                {
+                  "dict": [
+                    [
+                      "delegate_ss58",
+                      "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+                    ]
+                  ]
+                }
+              ],
+              [
                 "quote_stake",
                 {
                   "dict": [
@@ -25066,6 +25342,17 @@
                 }
               ],
               [
+                "subnet_gamma_emission_whitelisted",
+                {
+                  "dict": [
+                    [
+                      "netuid",
+                      1
+                    ]
+                  ]
+                }
+              ],
+              [
                 "subnet_emission_weights",
                 {
                   "dict": [
@@ -25263,9 +25550,9 @@
       "format": 1,
       "provenance": {
         "blob": "0705e3c90e593202712a08d9ec9ed21a82d622a3",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/tests/unit/test_cli_null_pruning.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "test_invalid_requests_never_submit.parametrize": {
@@ -25540,9 +25827,9 @@
       "format": 1,
       "provenance": {
         "blob": "47ecc619720512a599ed8107f947f2dbee7d71f8",
-        "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
+        "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
         "path": "sdk/python/tests/unit/test_rpc.py",
-        "tag": "v490"
+        "tag": "v491"
       },
       "values": {
         "test_provider_defined_code_without_policy_contract_is_not_terminal.parametrize": {

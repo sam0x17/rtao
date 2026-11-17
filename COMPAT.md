@@ -3,7 +3,7 @@
 
 | rtao | core tag (commit) | parity tag (Python source version) | validated spec range | btauth | interop target |
 |---|---|---|---|---|---|
-| 0.1.2 | v490 (`d967d13588834f4f5aaa8ef4c8fc1a865d581462`) | v490 (11.3.3.dev0) | None recorded | btauth/1 | `bittensor` @ v490 (`d967d13588834f4f5aaa8ef4c8fc1a865d581462`) |
+| 0.1.2 | v490 (`d967d13588834f4f5aaa8ef4c8fc1a865d581462`) | v491 (11.3.4.dev0) | None recorded | btauth/1 | `bittensor` @ v491 (`be3a11b1a5300bb58d6fbad3c629e4a926bb2f44`) |
 
 No PyPI release has been verified from the pinned Python commit. The Python version above is the source project version.
 
@@ -31,6 +31,8 @@ No runtime range has passed the required drift, e2e and interop validation. Clie
 | finney | 488 | `0x0cb6e583fc4bf8c0c7ed52543a35bcd65f66db0477f0b51a52cfd7aa6cb05fbc` | v16 | [440944](vendor/metadata/finney/488.v16.scale) | `69d82bd790299c3eecc3dd4888cbc6591253fce424634f267618c1d06ad5c2ed` | `0x38c031962e03097fa478ba9e883cb4381ad036d0a7127c6054456883f15c7510` |
 | finney | 490 | `0x1ef113be08c24b7c3910d59406a64367166fc32082b26011a796322bf161d3aa` | v15 | [440700](vendor/metadata/finney/490.v15.scale) | `cfe0d09fbe6fbf8817e59e1da39e05b00c4424712c3d8c652db803d4d3e344b7` | `0xbdeddd02b10112e29b4af3f85aaedbb600eb44f764b37d24b0f650a966e87542` |
 | finney | 490 | `0x1ef113be08c24b7c3910d59406a64367166fc32082b26011a796322bf161d3aa` | v16 | [444782](vendor/metadata/finney/490.v16.scale) | `3b867adf538802d458490b2027c7f8df58d5eff7b2b7e83b2da84348be6a0aed` | `0x050f9f9dbddb2799db864d98f86ac3a1ac64421ebf58e8c34cbfb0d96c870d2e` |
+| finney | 491 | `0xbfe6f502e525a43ee3e18b146b0170bfcbf60af6f20657ca85b1326c4edd104f` | v15 | [440467](vendor/metadata/finney/491.v15.scale) | `ba8cc38444a60f34d80b27db56ad9ac331b7f84ddc36444191258cb7c1989b08` | `0x73cfa33d5f8f74fcdb76445291a1300890b602b3ed277d987d5c335482b748a0` |
+| finney | 491 | `0xbfe6f502e525a43ee3e18b146b0170bfcbf60af6f20657ca85b1326c4edd104f` | v16 | [444547](vendor/metadata/finney/491.v16.scale) | `5ef5a1af766a9fd409bd4e1a439fd69bea790d246f342d8f1140a643c738b922` | `0x0006d53d9d0b1401f58af54f84a972f058cf3c819b68a287d1ec945a819414b5` |
 
 Runtime metadata hashes use BLAKE2b with a 256-bit output over the complete raw metadata blob, including its SCALE prefix and version byte. SHA-256 verifies the stored file. These hashes are independent of structural surface hashes and the runtime's transaction metadata commitment. [compat.json](compat.json) records the hash kind and each input's chain, code hash and source provenance.
 
@@ -40,11 +42,11 @@ Image repository: `ghcr.io/raofoundation/subtensor-localnet`.
 
 | role | tag | digest |
 |---|---|---|
-| pinned | `v490` | `sha256:b97bef3b67315697276c7138becb86a79ad6f195771d41501ef403b6c9587259` |
-| mainnet | `mainnet` | `sha256:b97bef3b67315697276c7138becb86a79ad6f195771d41501ef403b6c9587259` |
-| testnet | `testnet` | `sha256:11532947fc7b9237aedd61d7d65f3f43971b8ec3c5db4b2b578acdb20adc3b68` |
+| pinned | `v491` | `sha256:5880e9463c6bba59fde88f59f57d29c9138d1fedff4dc3c817a7b8771c0263d2` |
+| mainnet | `mainnet` | `sha256:5880e9463c6bba59fde88f59f57d29c9138d1fedff4dc3c817a7b8771c0263d2` |
+| testnet | `testnet` | `sha256:d96b3f0dda7be0740a2635eed483abbba8c52d6872d75038e77b972ed5103712` |
 | devnet | `devnet` | `sha256:e95c044c8ed51a5848cd22da449f3922f9d775f7c84003517e116aeb5cd731f1` |
-| main | `main` | `sha256:4aaa0dcf58f53c0d13ec84f261b62c1c77df17b72e0f523d224c131f9aef0332` |
+| main | `main` | `sha256:4668adf69408d98c2e5a46414adc2d56912f3bf1cc2611ac1df255e4a5b6c68f` |
 
 ## Measured build weight
 
@@ -57,6 +59,6 @@ Distinct package identities reached through normal and build edges, excluding de
 | `aarch64-apple-darwin` | `miner` | 371 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 | `aarch64-apple-darwin` | `owner` | 424 | true | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 
-Measured on `x86_64-unknown-linux-gnu` with `rustc 1.100.0 (0ef1bc386 2026-11-09)`, source `f9b2bd483752171d37f08596bff6293cf66b0f0c` with dependency changes in the working tree; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
+Measured on `x86_64-unknown-linux-gnu` with `rustc 1.100.0 (0ef1bc386 2026-11-09)`, source `c792c98b2e93378d48b00771cc25a481355591c4` with dependency changes in the working tree; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
 
 Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. Validation evidence comes from `pr-gates` with `validate_compat=true` and is adopted with `ci/compat/adopt.sh`. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).

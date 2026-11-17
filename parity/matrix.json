@@ -4,7 +4,7 @@
     "hosted-scenario-source": 7,
     "intent-plan": 72,
     "not-required": 20,
-    "pending": 59,
+    "pending": 60,
     "read-fixture": 6
   },
   "families": {
@@ -5289,6 +5289,17 @@
         "oracle": "unverified",
         "rtao": "pending",
         "test": null
+      },
+      {
+        "evidence": {
+          "runtime": "unverified",
+          "runtime_limits": [],
+          "scope": "pending"
+        },
+        "name": "pyt:e2e/test_protected_cli.py::test_cli_protected_migration_cancel_execute_and_rotate",
+        "oracle": "unverified",
+        "rtao": "pending",
+        "test": null
       }
     ],
     "environment": [
@@ -5494,6 +5505,20 @@
         "name": "TERM_PROGRAM",
         "oracle": "unverified",
         "rtao": "divergence"
+      },
+      {
+        "consumer": null,
+        "divergence": "ENV-ADOPTION-PENDING-BTCLI_PROTECTED_PATH",
+        "name": "BTCLI_PROTECTED_PATH",
+        "oracle": "unverified",
+        "rtao": "pending"
+      },
+      {
+        "consumer": null,
+        "divergence": "ENV-ADOPTION-PENDING-BTCLI_PROXY_ANNOUNCEMENTS_PATH",
+        "name": "BTCLI_PROXY_ANNOUNCEMENTS_PATH",
+        "oracle": "unverified",
+        "rtao": "pending"
       }
     ],
     "exports": [
@@ -6033,6 +6058,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.AnnounceProxyCall",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.AssociateEvmKey",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
@@ -6273,6 +6304,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.RejectProxyAnnouncement",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.ReleaseOwnColdkeySwapDestinationReservation",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
@@ -6286,6 +6323,12 @@
       {
         "oracle": "unverified",
         "python": "bittensor.RemoveProxy",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.RemoveProxyAnnouncement",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
       },
@@ -6436,6 +6479,12 @@
       {
         "oracle": "unverified",
         "python": "bittensor.SetSubnetEmissionWeights",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.SetSubnetGammaEmissionWhitelisted",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
       },
@@ -7203,6 +7252,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.intents.AnnounceProxyCall",
+        "rtao": "pending",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.intents.AssociateEvmKey",
         "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
@@ -7467,6 +7522,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.intents.RejectProxyAnnouncement",
+        "rtao": "pending",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.intents.RemoveProxies",
         "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
@@ -7475,6 +7536,12 @@
         "oracle": "unverified",
         "python": "bittensor.intents.RemoveProxy",
         "rtao": "decision",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.intents.RemoveProxyAnnouncement",
+        "rtao": "pending",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7625,6 +7692,12 @@
         "oracle": "unverified",
         "python": "bittensor.intents.SetSubnetEmissionWeights",
         "rtao": "decision",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.intents.SetSubnetGammaEmissionWhitelisted",
+        "rtao": "pending",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -9085,7 +9158,7 @@
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "39bfa12b63e06a5478e8a21ffc10e205d7f49aa3"
+        "synced_blob": "2aca9357fdd0a11050c3b0209bf45936deb5c13e"
       },
       {
         "kind": "n/a",
@@ -10233,7 +10306,7 @@
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "bed9e0fab0cfbbdb2ad5e7444c15f864c7604c70"
+        "synced_blob": "1643bc5d23090a433f2d62d619c1d1f73495d92b"
       },
       {
         "kind": "generated",
@@ -11691,7 +11764,7 @@
           "rtao_catalog::py::PYTHON_TABLES",
           "xtask/src/parity_catalog.rs"
         ],
-        "synced_blob": "fac2fe36e23a0b85e3cac1d33fd76af910dbd4d0"
+        "synced_blob": "57643fd8cbe752abd403f695b9dab4d95e29c95f"
       },
       {
         "kind": "n/a",
@@ -11768,7 +11841,7 @@
         "rust": [
           "xtask/src/compat.rs"
         ],
-        "synced_blob": "044adbfa236ebd5d6ee34cf5af2e27a10978bf42"
+        "synced_blob": "7b3d4c8e2ba26577501aca51e2a279a13891dc7d"
       },
       {
         "kind": "oracle-only",
@@ -11903,7 +11976,7 @@
         "rust": [
           "rtao_testkit::fakes::FakeState"
         ],
-        "synced_blob": "4329667aadf3ebeb3b88809b7adcfc47e3915aef"
+        "synced_blob": "2bfd28bfc246f0397aae2cf955d42d7fbdb3a6d3"
       },
       {
         "kind": "extracted",
@@ -11917,7 +11990,7 @@
           "crates/rtao-intents/tests/intent_plans.rs",
           "crates/rtao-reads/tests/catalog_samples.rs"
         ],
-        "synced_blob": "8a6ded3185596b57cef116eeb602b57cbb3d6ce4"
+        "synced_blob": "b78c54da9605a5fdd1d2b6b038469ee82465b9b8"
       },
       {
         "kind": "n/a",
@@ -12386,7 +12459,7 @@
           "vendor/upstream/catalog/errors.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "3fe63308dc1ae0a9d391b717a86b3fa634bef89e"
+        "synced_blob": "85927c07b6ee2d7f33b02d3344116225cc3da08c"
       },
       {
         "kind": "vendored",
@@ -12398,7 +12471,7 @@
           "vendor/upstream/catalog/intents.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "cfd9a9daaddc21a019f2f1ded3c8792089e4bcb8"
+        "synced_blob": "74fa6800c91677bd5107773dcb86c1d6fc1f4ea4"
       },
       {
         "kind": "vendored",
@@ -12410,7 +12483,7 @@
           "vendor/upstream/catalog/reads.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "33e785e549879f37abc42a0b97ec1bc0b4396081"
+        "synced_blob": "62c284d7f1a18878a3f960598f8ad74678f952e3"
       },
       {
         "kind": "extracted",
@@ -13550,6 +13623,303 @@
           "crates/rtao-client/tests/snapshot.rs::storage_exists_tells_a_stored_default_from_a_missing_key"
         ],
         "synced_blob": "209e01e78f9f8b46884e55db151999712f2e7d74"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/bittensor/cli/protected.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/bittensor/protected_account.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/bittensor/protected_funding.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/bittensor/proxy_announcements.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/e2e/test_protected_cli.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_announced_batch_safety.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_announced_execution_policy.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_announcement_cancel.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_account.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_authority_regressions.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_dispatch_regressions.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_funding.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_pending_lifecycle.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_preparation.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_preview_routing.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_reconciliation_regressions.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_revocation_ordering.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_rotation_binding.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_saved_hash.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_settings_guards.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_setup_resume.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_setup_v2.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_show_hash_match.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_store_scoping.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_protected_timing_regressions.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_proxy_explicit_origin.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_subnet_convictions.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v491, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
       }
     ],
     "intents": [
@@ -13582,6 +13952,12 @@
         "oracle": "missing",
         "python_class": "AnnounceColdkeySwap",
         "rtao": "implemented"
+      },
+      {
+        "name": "announce_proxy_call",
+        "oracle": "missing",
+        "python_class": "AnnounceProxyCall",
+        "rtao": "pending"
       },
       {
         "name": "associate_evm_key",
@@ -13824,6 +14200,12 @@
         "rtao": "implemented"
       },
       {
+        "name": "reject_proxy_announcement",
+        "oracle": "missing",
+        "python_class": "RejectProxyAnnouncement",
+        "rtao": "pending"
+      },
+      {
         "name": "release_own_coldkey_swap_destination_reservation",
         "oracle": "missing",
         "python_class": "ReleaseOwnColdkeySwapDestinationReservation",
@@ -13840,6 +14222,12 @@
         "oracle": "missing",
         "python_class": "RemoveProxy",
         "rtao": "implemented"
+      },
+      {
+        "name": "remove_proxy_announcement",
+        "oracle": "missing",
+        "python_class": "RemoveProxyAnnouncement",
+        "rtao": "pending"
       },
       {
         "name": "remove_stake",
@@ -13990,6 +14378,12 @@
         "oracle": "missing",
         "python_class": "SetSubnetEmissionWeights",
         "rtao": "implemented"
+      },
+      {
+        "name": "set_subnet_gamma_emission_whitelisted",
+        "oracle": "missing",
+        "python_class": "SetSubnetGammaEmissionWhitelisted",
+        "rtao": "pending"
       },
       {
         "name": "set_subnet_identity",
@@ -14464,6 +14858,11 @@
         "rtao": "implemented"
       },
       {
+        "name": "proxy_announcements",
+        "oracle": "missing",
+        "rtao": "pending"
+      },
+      {
         "name": "quote_mint_gamma",
         "oracle": "missing",
         "rtao": "implemented"
@@ -14592,6 +14991,11 @@
         "name": "subnet_emission_weights",
         "oracle": "missing",
         "rtao": "implemented"
+      },
+      {
+        "name": "subnet_gamma_emission_whitelisted",
+        "oracle": "missing",
+        "rtao": "pending"
       },
       {
         "name": "subnet_hyperparameters",
@@ -14793,8 +15197,8 @@
     ]
   },
   "pin": {
-    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
-    "tag": "v490"
+    "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+    "tag": "v491"
   },
   "schema": 1,
   "status_semantics": {

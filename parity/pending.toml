@@ -1,5 +1,5 @@
 # Operations awaiting behavior ports. The set only shrinks, except that a
 # parity pin bump adds operations new to the upstream catalog (D-128).
-intents = []
+intents = ["announce_proxy_call", "reject_proxy_announcement", "remove_proxy_announcement", "set_subnet_gamma_emission_whitelisted"]
 
-reads = []
+reads = ["proxy_announcements", "subnet_gamma_emission_whitelisted"]

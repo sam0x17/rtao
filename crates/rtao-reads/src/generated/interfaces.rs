@@ -331,7 +331,7 @@ pub struct ColdkeySwapAnnouncementParams {
     #[doc = "Coldkey whose pending swap announcement to check."]
     pub coldkey_ss58: rtao_primitives::AccountId,
 }
-#[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending."]
+#[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`import_source_policies` is the V2 policy snapshot committed with the\ndestination: True or False for V2, None for a legacy announcement. The hash,\nsnapshot and dispute state are read at the same block.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending."]
 #[doc(alias = "bittensor.reads.coldkey_swap_announcement")]
 pub async fn coldkey_swap_announcement<V: rtao_client::View + ?Sized>(
     view: &V,
@@ -1030,6 +1030,23 @@ pub async fn proxies<V: rtao_client::View + ?Sized>(
 ) -> Result<crate::reads::owner::ProxyDelegations, crate::ReadError> {
     crate::reads::owner::proxies(view, coldkey_ss58).await
 }
+#[doc = "Typed parameters for `proxy_announcements`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProxyAnnouncementsParams {
+    #[doc = "Delegate whose pending Proxy.announce entries to list (announcements are keyed by the announcing delegate)."]
+    pub delegate_ss58: rtao_primitives::AccountId,
+}
+#[doc = "Pending delayed-proxy announcements made by a delegate, plus reserved deposit."]
+#[doc(alias = "bittensor.reads.proxy_announcements")]
+pub async fn proxy_announcements<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _delegate_ss58: rtao_primitives::AccountId,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::ProxyAnnouncements,
+    ))
+}
 #[doc = "Typed parameters for `quote_mint_gamma`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -1460,6 +1477,24 @@ pub async fn subnet_emission_weights<V: rtao_client::View + ?Sized>(
     netuid: rtao_primitives::NetUid,
 ) -> Result<Option<crate::reads::subnets::SubnetEmissionWeights>, crate::ReadError> {
     crate::reads::subnets::subnet_emission_weights(view, netuid).await
+}
+#[doc = "Typed parameters for `subnet_gamma_emission_whitelisted`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SubnetGammaEmissionWhitelistedParams {
+    #[doc = "Subnet to query."]
+    #[serde(default = "super::defaults::subnet_gamma_emission_whitelisted::netuid")]
+    pub netuid: Option<rtao_primitives::NetUid>,
+}
+#[doc = "Root-controlled gamma emission whitelist flag for a subnet (1 = whitelisted); other subnets' gamma shares may name it only while it is set (see the set_subnet_gamma_emission_whitelisted intent)."]
+#[doc(alias = "bittensor.reads.subnet_gamma_emission_whitelisted")]
+pub async fn subnet_gamma_emission_whitelisted<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: Option<rtao_primitives::NetUid>,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::SubnetGammaEmissionWhitelisted,
+    ))
 }
 #[doc = "Typed parameters for `subnet_hyperparameters`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

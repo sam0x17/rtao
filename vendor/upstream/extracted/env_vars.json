@@ -25,8 +25,14 @@
     "BTCLI_MULTISIG_CACHE": [
       23
     ],
+    "BTCLI_PROTECTED_PATH": [
+      32
+    ],
     "BTCLI_PROXIES_PATH": [
       20
+    ],
+    "BTCLI_PROXY_ANNOUNCEMENTS_PATH": [
+      33
     ],
     "BTCLI_SUBNET_NAMES_CACHE": [
       24
@@ -38,7 +44,7 @@
       8
     ],
     "BT_CHAIN_ENDPOINT": [
-      32
+      34
     ],
     "BT_EVM_ENDPOINT": [
       27
@@ -60,8 +66,8 @@
     ],
     "BT_PW_*": [
       31,
-      33,
-      36
+      35,
+      38
     ],
     "BT_RETRY_FOREVER": [
       9
@@ -78,11 +84,11 @@
     ],
     "BT_WALLET_PASSWORD": [
       26,
-      34
+      36
     ],
     "BT_WALLET_PASSWORD_FILE": [
       1,
-      35
+      37
     ],
     "BT_WALLET_PATH": [
       12
@@ -121,12 +127,12 @@
       "default": {
         "kind": "literal",
         "source": {
-          "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-          "end_byte": 7933,
-          "end_line": 258,
-          "line": 258,
+          "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+          "end_byte": 8615,
+          "end_line": 280,
+          "line": 280,
           "path": "sdk/python/bittensor/cli/globals.py",
-          "start_byte": 7929
+          "start_byte": 8611
         },
         "value": null
       },
@@ -134,12 +140,12 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_WALLET_PASSWORD_FILE",
       "source": {
-        "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-        "end_byte": 8139,
-        "end_line": 263,
-        "line": 257,
+        "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+        "end_byte": 8821,
+        "end_line": 285,
+        "line": 279,
         "path": "sdk/python/bittensor/cli/globals.py",
-        "start_byte": 7903
+        "start_byte": 8585
       },
       "truthy_fallback": null
     },
@@ -148,12 +154,12 @@
       "default": {
         "kind": "literal",
         "source": {
-          "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-          "end_byte": 10077,
-          "end_line": 335,
-          "line": 335,
+          "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+          "end_byte": 10759,
+          "end_line": 357,
+          "line": 357,
           "path": "sdk/python/bittensor/cli/globals.py",
-          "start_byte": 10073
+          "start_byte": 10755
         },
         "value": null
       },
@@ -161,12 +167,12 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_SIGNER_ADDRESS",
       "source": {
-        "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-        "end_byte": 10491,
-        "end_line": 343,
-        "line": 334,
+        "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+        "end_byte": 11173,
+        "end_line": 365,
+        "line": 356,
         "path": "sdk/python/bittensor/cli/globals.py",
-        "start_byte": 10047
+        "start_byte": 10729
       },
       "truthy_fallback": null
     },
@@ -175,12 +181,12 @@
       "default": {
         "kind": "literal",
         "source": {
-          "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-          "end_byte": 10970,
-          "end_line": 363,
-          "line": 363,
+          "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+          "end_byte": 11652,
+          "end_line": 385,
+          "line": 385,
           "path": "sdk/python/bittensor/cli/globals.py",
-          "start_byte": 10966
+          "start_byte": 11648
         },
         "value": null
       },
@@ -188,12 +194,12 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_EXTENSION_BROWSER",
       "source": {
-        "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-        "end_byte": 11186,
-        "end_line": 368,
-        "line": 362,
+        "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+        "end_byte": 11868,
+        "end_line": 390,
+        "line": 384,
         "path": "sdk/python/bittensor/cli/globals.py",
-        "start_byte": 10940
+        "start_byte": 11622
       },
       "truthy_fallback": null
     },
@@ -202,12 +208,12 @@
       "default": {
         "kind": "literal",
         "source": {
-          "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-          "end_byte": 11294,
-          "end_line": 374,
-          "line": 374,
+          "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+          "end_byte": 11976,
+          "end_line": 396,
+          "line": 396,
           "path": "sdk/python/bittensor/cli/globals.py",
-          "start_byte": 11290
+          "start_byte": 11972
         },
         "value": null
       },
@@ -215,12 +221,12 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_EXTENSION_BRIDGE",
       "source": {
-        "blob": "759bb059868b44dc147a31dc3f8a957522ae930e",
-        "end_byte": 11478,
-        "end_line": 379,
-        "line": 373,
+        "blob": "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f",
+        "end_byte": 12160,
+        "end_line": 401,
+        "line": 395,
         "path": "sdk/python/bittensor/cli/globals.py",
-        "start_byte": 11264
+        "start_byte": 11946
       },
       "truthy_fallback": null
     },
@@ -257,7 +263,7 @@
         "fallback": {
           "kind": "literal",
           "source": {
-            "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+            "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
             "end_byte": 5665,
             "end_line": 160,
             "line": 160,
@@ -277,7 +283,7 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
           "end_byte": 5666,
           "end_line": 160,
           "line": 160,
@@ -289,7 +295,7 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_NETWORK",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
         "end_byte": 5855,
         "end_line": 166,
         "line": 159,
@@ -316,7 +322,7 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
           "end_byte": 5955,
           "end_line": 168,
           "line": 168,
@@ -328,7 +334,7 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_FALLBACK_ENDPOINTS",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
         "end_byte": 6236,
         "end_line": 174,
         "line": 167,
@@ -355,7 +361,7 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
           "end_byte": 6334,
           "end_line": 176,
           "line": 176,
@@ -367,7 +373,7 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_ARCHIVE_ENDPOINTS",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
         "end_byte": 6629,
         "end_line": 182,
         "line": 175,
@@ -382,7 +388,7 @@
         "fallback": {
           "kind": "literal",
           "source": {
-            "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+            "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
             "end_byte": 6716,
             "end_line": 184,
             "line": 184,
@@ -402,7 +408,7 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
           "end_byte": 6717,
           "end_line": 184,
           "line": 184,
@@ -414,7 +420,7 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_RETRY_FOREVER",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
         "end_byte": 6920,
         "end_line": 189,
         "line": 183,
@@ -429,7 +435,7 @@
         "fallback": {
           "kind": "literal",
           "source": {
-            "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+            "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
             "end_byte": 7001,
             "end_line": 191,
             "line": 191,
@@ -449,7 +455,7 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
           "end_byte": 7002,
           "end_line": 191,
           "line": 191,
@@ -461,7 +467,7 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_WALLET",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
         "end_byte": 7156,
         "end_line": 197,
         "line": 190,
@@ -476,7 +482,7 @@
         "fallback": {
           "kind": "literal",
           "source": {
-            "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+            "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
             "end_byte": 7244,
             "end_line": 199,
             "line": 199,
@@ -496,7 +502,7 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
           "end_byte": 7245,
           "end_line": 199,
           "line": 199,
@@ -508,7 +514,7 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_WALLET_HOTKEY",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
         "end_byte": 7423,
         "end_line": 205,
         "line": 198,
@@ -523,7 +529,7 @@
         "fallback": {
           "kind": "resolved",
           "source": {
-            "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+            "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
             "end_byte": 7527,
             "end_line": 207,
             "line": 207,
@@ -549,7 +555,7 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
           "end_byte": 7528,
           "end_line": 207,
           "line": 207,
@@ -561,7 +567,7 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_WALLET_PATH",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
         "end_byte": 7675,
         "end_line": 212,
         "line": 206,
@@ -575,12 +581,12 @@
       "default": {
         "kind": "literal",
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
-          "end_byte": 9830,
-          "end_line": 272,
-          "line": 272,
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
+          "end_byte": 10291,
+          "end_line": 284,
+          "line": 284,
           "path": "sdk/python/bittensor/cli/main.py",
-          "start_byte": 9826
+          "start_byte": 10287
         },
         "value": null
       },
@@ -588,12 +594,12 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_SIGNER_ADDRESS",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
-        "end_byte": 10226,
-        "end_line": 280,
-        "line": 271,
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
+        "end_byte": 10687,
+        "end_line": 292,
+        "line": 283,
         "path": "sdk/python/bittensor/cli/main.py",
-        "start_byte": 9804
+        "start_byte": 10265
       },
       "truthy_fallback": null
     },
@@ -615,24 +621,24 @@
           "start_byte": 4694
         },
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
-          "end_byte": 10552,
-          "end_line": 288,
-          "line": 288,
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
+          "end_byte": 11013,
+          "end_line": 300,
+          "line": 300,
           "path": "sdk/python/bittensor/cli/main.py",
-          "start_byte": 10517
+          "start_byte": 10978
         }
       },
       "empty_value": "treated_as_unset_by_click",
       "missing_value": "uses_parameter_default",
       "name": "BT_EXTENSION_BROWSER",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
-        "end_byte": 10750,
-        "end_line": 293,
-        "line": 287,
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
+        "end_byte": 11211,
+        "end_line": 305,
+        "line": 299,
         "path": "sdk/python/bittensor/cli/main.py",
-        "start_byte": 10495
+        "start_byte": 10956
       },
       "truthy_fallback": null
     },
@@ -641,12 +647,12 @@
       "default": {
         "kind": "literal",
         "source": {
-          "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
-          "end_byte": 10820,
-          "end_line": 295,
-          "line": 295,
+          "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
+          "end_byte": 11281,
+          "end_line": 307,
+          "line": 307,
           "path": "sdk/python/bittensor/cli/main.py",
-          "start_byte": 10816
+          "start_byte": 11277
         },
         "value": null
       },
@@ -654,12 +660,12 @@
       "missing_value": "uses_parameter_default",
       "name": "BT_EXTENSION_BRIDGE",
       "source": {
-        "blob": "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b",
-        "end_byte": 10986,
-        "end_line": 300,
-        "line": 294,
+        "blob": "cf477ba00be56c81497e3159178a2975498bde6f",
+        "end_byte": 11447,
+        "end_line": 312,
+        "line": 306,
         "path": "sdk/python/bittensor/cli/main.py",
-        "start_byte": 10794
+        "start_byte": 11255
       },
       "truthy_fallback": null
     },
@@ -672,7 +678,7 @@
       "missing_value": "returns_default_or_none",
       "name": "TERM_PROGRAM",
       "source": {
-        "blob": "21c53bb40fa8cba2edde7851087bc8ac23a0f93b",
+        "blob": "d488940b2cfec05fc35c6c2aeefbf6f4c2578066",
         "end_byte": 11909,
         "end_line": 303,
         "line": 303,
@@ -1302,6 +1308,100 @@
       },
       "empty_value": "returned_unchanged",
       "missing_value": "returns_default_or_none",
+      "name": "BTCLI_PROTECTED_PATH",
+      "source": {
+        "blob": "10aa4ea6581925581c9fbe935a1fc40efbc3cda7",
+        "end_byte": 5060,
+        "end_line": 131,
+        "line": 131,
+        "path": "sdk/python/bittensor/protected_account.py",
+        "start_byte": 5027
+      },
+      "truthy_fallback": {
+        "condition": "missing_or_empty",
+        "source": {
+          "blob": "10aa4ea6581925581c9fbe935a1fc40efbc3cda7",
+          "end_byte": 5086,
+          "end_line": 131,
+          "line": 131,
+          "path": "sdk/python/bittensor/protected_account.py",
+          "start_byte": 5027
+        },
+        "values": [
+          {
+            "kind": "resolved",
+            "source": {
+              "blob": "10aa4ea6581925581c9fbe935a1fc40efbc3cda7",
+              "end_byte": 5086,
+              "end_line": 131,
+              "line": 131,
+              "path": "sdk/python/bittensor/protected_account.py",
+              "start_byte": 5064
+            },
+            "value": {
+              "home_relative": [
+                ".bittensor",
+                "btcli_protected.json"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "api": "os.getenv",
+      "default": {
+        "kind": "missing"
+      },
+      "empty_value": "returned_unchanged",
+      "missing_value": "returns_default_or_none",
+      "name": "BTCLI_PROXY_ANNOUNCEMENTS_PATH",
+      "source": {
+        "blob": "4f7f2395d3d99705e810ab595b0de6be7b69f537",
+        "end_byte": 1352,
+        "end_line": 39,
+        "line": 39,
+        "path": "sdk/python/bittensor/proxy_announcements.py",
+        "start_byte": 1309
+      },
+      "truthy_fallback": {
+        "condition": "missing_or_empty",
+        "source": {
+          "blob": "4f7f2395d3d99705e810ab595b0de6be7b69f537",
+          "end_byte": 1382,
+          "end_line": 39,
+          "line": 39,
+          "path": "sdk/python/bittensor/proxy_announcements.py",
+          "start_byte": 1309
+        },
+        "values": [
+          {
+            "kind": "resolved",
+            "source": {
+              "blob": "4f7f2395d3d99705e810ab595b0de6be7b69f537",
+              "end_byte": 1382,
+              "end_line": 39,
+              "line": 39,
+              "path": "sdk/python/bittensor/proxy_announcements.py",
+              "start_byte": 1356
+            },
+            "value": {
+              "home_relative": [
+                ".bittensor",
+                "btcli_proxy_announcements.json"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "api": "os.getenv",
+      "default": {
+        "kind": "missing"
+      },
+      "empty_value": "returned_unchanged",
+      "missing_value": "returns_default_or_none",
       "name": "BT_CHAIN_ENDPOINT",
       "source": {
         "blob": "06abeb57ac889d85eeaf6456f97a48463726e4d7",
@@ -1474,17 +1574,17 @@
   ],
   "parity": {
     "consumers": 28,
-    "divergences": 1,
+    "divergences": 3,
     "path": "parity/env.toml",
-    "pending": 0,
+    "pending": 2,
     "status": "matches"
   },
   "provenance": {
-    "commit": "d967d13588834f4f5aaa8ef4c8fc1a865d581462",
-    "tag": "v490"
+    "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+    "tag": "v491"
   },
   "scope": {
-    "authenticated_modules": 214,
+    "authenticated_modules": 218,
     "root": "sdk/python/bittensor/"
   }
 }

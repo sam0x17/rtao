@@ -187,7 +187,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
-    #[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending."]
+    #[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`import_source_policies` is the V2 policy snapshot committed with the\ndestination: True or False for V2, None for a legacy announcement. The hash,\nsnapshot and dispute state are read at the same block.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending."]
     pub async fn coldkey_swap_announcement(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
@@ -576,6 +576,15 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
         super::interfaces::proxies(self.view, coldkey_ss58).await
     }
 }
+impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
+    #[doc = "Pending delayed-proxy announcements made by a delegate, plus reserved deposit."]
+    pub async fn proxy_announcements(
+        &self,
+        delegate_ss58: rtao_primitives::AccountId,
+    ) -> Result<serde_json::Value, crate::ReadError> {
+        super::interfaces::proxy_announcements(self.view, delegate_ss58).await
+    }
+}
 impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
     #[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
     pub async fn quote_mint_gamma(
@@ -826,6 +835,15 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
         netuid: rtao_primitives::NetUid,
     ) -> Result<Option<crate::reads::subnets::SubnetEmissionWeights>, crate::ReadError> {
         super::interfaces::subnet_emission_weights(self.view, netuid).await
+    }
+}
+impl<V: rtao_client::View + ?Sized> super::namespaces::Hyperparameters<'_, V> {
+    #[doc = "Root-controlled gamma emission whitelist flag for a subnet (1 = whitelisted); other subnets' gamma shares may name it only while it is set (see the set_subnet_gamma_emission_whitelisted intent)."]
+    pub async fn subnet_gamma_emission_whitelisted(
+        &self,
+        netuid: rtao_primitives::NetUid,
+    ) -> Result<serde_json::Value, crate::ReadError> {
+        super::interfaces::subnet_gamma_emission_whitelisted(self.view, Some(netuid)).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {

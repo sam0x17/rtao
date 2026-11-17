@@ -168,7 +168,7 @@ pub struct ReadSpec {
     pub pinning: Pinning,
 }
 /// Every read's complete authenticated metadata, in catalog order.
-pub static READ_SPECS: [ReadSpec; 111] = [
+pub static READ_SPECS: [ReadSpec; 113] = [
     ReadSpec {
         name: "accepts_locked_alpha",
         summary: "Whether a coldkey accepts incoming locked alpha transfers.",
@@ -704,7 +704,7 @@ pub static READ_SPECS: [ReadSpec; 111] = [
     ReadSpec {
         name: "coldkey_swap_announcement",
         summary: "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.",
-        description: "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending.",
+        description: "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`import_source_policies` is the V2 policy snapshot committed with the\ndestination: True or False for V2, None for a legacy announcement. The hash,\nsnapshot and dispute state are read at the same block.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending.",
         params: &[ParamSpec {
             name: "coldkey_ss58",
             json_type: JsonType::String,
@@ -726,6 +726,11 @@ pub static READ_SPECS: [ReadSpec; 111] = [
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
                 name: "ColdkeySwapDisputes",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "ColdkeySwapV2PolicySnapshots",
             },
         ],
         render: None,
@@ -1885,6 +1890,29 @@ pub static READ_SPECS: [ReadSpec; 111] = [
         pinning: Pinning::Single,
     },
     ReadSpec {
+        name: "proxy_announcements",
+        summary: "Pending delayed-proxy announcements made by a delegate, plus reserved deposit.",
+        description: "Pending delayed-proxy announcements made by a delegate, plus reserved deposit.",
+        params: &[ParamSpec {
+            name: "delegate_ss58",
+            json_type: JsonType::String,
+            doc: "Delegate whose pending Proxy.announce entries to list (announcements are keyed by the announcing delegate).",
+            required: true,
+            default: None,
+            own_key: false,
+        }],
+        category: Category::Balances,
+        namespace: "balances",
+        docs_url: "/docs/query/proxy-announcements",
+        hits: &[Hit {
+            kind: HitKind::Storage,
+            container: "Proxy",
+            name: "Announcements",
+        }],
+        render: None,
+        pinning: Pinning::Single,
+    },
+    ReadSpec {
         name: "quote_mint_gamma",
         summary: "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.",
         description: "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma.",
@@ -2730,11 +2758,6 @@ pub static READ_SPECS: [ReadSpec; 111] = [
             Hit {
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
-                name: "DecayingOwnerLock",
-            },
-            Hit {
-                kind: HitKind::Storage,
-                container: "SubtensorModule",
                 name: "HotkeyLock",
             },
             Hit {
@@ -2746,11 +2769,6 @@ pub static READ_SPECS: [ReadSpec; 111] = [
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
                 name: "NetworkRegisteredAt",
-            },
-            Hit {
-                kind: HitKind::Storage,
-                container: "SubtensorModule",
-                name: "OwnerLock",
             },
             Hit {
                 kind: HitKind::Storage,
@@ -2843,7 +2861,22 @@ pub static READ_SPECS: [ReadSpec; 111] = [
             Hit {
                 kind: HitKind::Storage,
                 container: "SubtensorModule",
+                name: "SubnetGammaEmissionWhitelisted",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetGammaEnabled",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
                 name: "SubnetTAO",
+            },
+            Hit {
+                kind: HitKind::Storage,
+                container: "SubtensorModule",
+                name: "SubnetUidToLeaseId",
             },
             Hit {
                 kind: HitKind::Storage,
@@ -2858,6 +2891,29 @@ pub static READ_SPECS: [ReadSpec; 111] = [
         ],
         render: None,
         pinning: Pinning::Pinned,
+    },
+    ReadSpec {
+        name: "subnet_gamma_emission_whitelisted",
+        summary: "Root-controlled gamma emission whitelist flag for a subnet (1 = whitelisted); other subnets' gamma shares may name it only while it is set (see the set_subnet_gamma_emission_whitelisted intent).",
+        description: "Root-controlled gamma emission whitelist flag for a subnet (1 = whitelisted); other subnets' gamma shares may name it only while it is set (see the set_subnet_gamma_emission_whitelisted intent).",
+        params: &[ParamSpec {
+            name: "netuid",
+            json_type: JsonType::Integer,
+            doc: "Subnet to query.",
+            required: true,
+            default: Some("null"),
+            own_key: false,
+        }],
+        category: Category::Hyperparameters,
+        namespace: "hyperparameters",
+        docs_url: "/docs/query/subnet-gamma-emission-whitelisted",
+        hits: &[Hit {
+            kind: HitKind::Storage,
+            container: "SubtensorModule",
+            name: "SubnetGammaEmissionWhitelisted",
+        }],
+        render: None,
+        pinning: Pinning::Single,
     },
     ReadSpec {
         name: "subnet_hyperparameters",

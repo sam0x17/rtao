@@ -485,7 +485,7 @@ impl SyncLocks<'_> {
     }
 }
 impl SyncBalances<'_> {
-    #[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending."]
+    #[doc = "A coldkey's swap state (execute block, new-key hash, dispute, recovery lock), or None.\n\nThis is the `swap-check` status: `ColdkeySwapAnnouncements` stores the block\nat which the swap becomes executable and the BlakeTwo256 hash committed to.\n`import_source_policies` is the V2 policy snapshot committed with the\ndestination: True or False for V2, None for a legacy announcement. The hash,\nsnapshot and dispute state are read at the same block.\n`recovery_locked` is true after root `reset_coldkey_swap_keep_locked` (stored\ndispute block 0): the coldkey can only make swap calls until a successful swap or\na full reset, even when no announcement is pending."]
     pub fn coldkey_swap_announcement(
         &self,
         coldkey_ss58: rtao_primitives::AccountId,
@@ -948,6 +948,17 @@ impl SyncBalances<'_> {
         })
     }
 }
+impl SyncBalances<'_> {
+    #[doc = "Pending delayed-proxy announcements made by a delegate, plus reserved deposit."]
+    pub fn proxy_announcements(
+        &self,
+        delegate_ss58: rtao_primitives::AccountId,
+    ) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::proxy_announcements(&view, delegate_ss58).await
+        })
+    }
+}
 impl SyncGamma<'_> {
     #[doc = "The alpha burned, its TAO value, and the gamma `mint_gamma` would mint now.\n\nRaises the chain error that stops the mint, such as `TaoUsdPriceUnavailable`\nwhen the TAO/USD price is missing or stale, or `AmountTooLow` below 0.1 gamma."]
     pub fn quote_mint_gamma(
@@ -1255,6 +1266,21 @@ impl SyncSubnets<'_> {
     ) -> Result<Option<rtao_reads::reads::subnets::SubnetEmissionWeights>, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::subnet_emission_weights(&view, netuid).await
+        })
+    }
+}
+impl SyncHyperparameters<'_> {
+    #[doc = "Root-controlled gamma emission whitelist flag for a subnet (1 = whitelisted); other subnets' gamma shares may name it only while it is set (see the set_subnet_gamma_emission_whitelisted intent)."]
+    pub fn subnet_gamma_emission_whitelisted(
+        &self,
+        netuid: rtao_primitives::NetUid,
+    ) -> Result<serde_json::Value, super::Error> {
+        self.view.with_view(move |view| async move {
+            rtao_reads::generated::interfaces::subnet_gamma_emission_whitelisted(
+                &view,
+                Some(netuid),
+            )
+            .await
         })
     }
 }

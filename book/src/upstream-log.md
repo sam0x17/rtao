@@ -347,6 +347,16 @@ of the parity pin `v490` (D-127, D-136), carrying the reviewed core patch to
 fork revision `d7fd8762625a93b9837cde28d496b0819a976f0e`. The parity pin and the runtime are unchanged.
 Workflow run: <https://github.com/sam0x17/rtao/actions/runs/42930134628>.
 
+## 2026-11-17: Finney runtime 491 adopted automatically
+
+The hosted runtime-adopt workflow observed Finney finalize spec 491 at block
+9524430 (`0x52fc66595803bcdacfea615cdab26c2588b4eae531aac4d24f37a9f9788a8b04`), `:code` `0x4201278656a17aff924ca24123c8e5866d569a84a7150bb0372bc7078fc6173c`, confirmed it from 4 public
+endpoints (release wasm: matches), and advanced parity from spec 490 to
+`v491` (`be3a11b1a5300bb58d6fbad3c629e4a926bb2f44`, pin source `v491`). Metadata drift is `breaking`. The
+porting report lists 65 changed watched sources: 0 auto-blessed,
+9 re-derived and checked. 28 hand port(s) remain due and are listed in `parity/port_due.toml` (`pallets/subtensor/src/utils/misc.rs`, `sdk/bittensor-core-py/pyproject.toml`, `sdk/python/bittensor/cli/commands/proxy.py`, `sdk/python/bittensor/cli/commands/subnet_emission.py`, `sdk/python/bittensor/cli/commands/subnets.py`, `sdk/python/bittensor/cli/commands/wallet.py`, `sdk/python/bittensor/cli/context.py`, `sdk/python/bittensor/cli/globals.py`, `sdk/python/bittensor/cli/main.py`, `sdk/python/bittensor/cli/multisig_helpers.py`, `sdk/python/bittensor/cli/output.py`, `sdk/python/bittensor/cli/root_helpers.py`, `sdk/python/bittensor/cli/stake_exit.py`, `sdk/python/bittensor/cli/stake_picker.py`, `sdk/python/bittensor/cli/tx.py`, `sdk/python/bittensor/emission_weights.py`, `sdk/python/bittensor/intents/__init__.py`, `sdk/python/bittensor/intents/batch.py`, `sdk/python/bittensor/intents/coldkey.py`, `sdk/python/bittensor/intents/emission_weights.py`, `sdk/python/bittensor/intents/proxy.py`, `sdk/python/bittensor/intents/root.py`, `sdk/python/bittensor/namespaces.pyi`, `sdk/python/bittensor/reads/accounts.py`, `sdk/python/bittensor/reads/hyperparameters.py`, `sdk/python/bittensor/reads/locks.py`, `sdk/python/bittensor/reads/subnets.py`, `sdk/python/tests/unit/test_emission_weights.py`); strict parity names them until they are ported and blessed. Core and its patch are unchanged. The validated range
+is unchanged. Workflow run: <https://github.com/sam0x17/rtao/actions/runs/44031502234>.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

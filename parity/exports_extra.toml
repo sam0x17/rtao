@@ -2045,3 +2045,31 @@ pinning_tests = [
   "rtao_intents::intent_plans::all_86_catalog_operations_plan_with_fake_chain",
   "rtao_intents::gamma::calls_carry_chain_units",
 ]
+
+[[export]]
+python = "bittensor.intents.AnnounceProxyCall"
+home = "pending: new public export at v491"
+reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v491 adoption"
+
+[[export]]
+python = "bittensor.intents.RejectProxyAnnouncement"
+home = "pending: new public export at v491"
+reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v491 adoption"
+
+[[export]]
+python = "bittensor.intents.RemoveProxyAnnouncement"
+home = "pending: new public export at v491"
+reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v491 adoption"
+
+[[export]]
+python = "bittensor.intents.SetSubnetGammaEmissionWhitelisted"
+home = "pending: new public export at v491"
+reason = "Added by the v491 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v491 adoption"

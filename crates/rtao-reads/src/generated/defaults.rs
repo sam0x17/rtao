@@ -168,6 +168,8 @@ pub mod parents {}
 pub mod pending_children {}
 /// Extracted defaults for `proxies`.
 pub mod proxies {}
+/// Extracted defaults for `proxy_announcements`.
+pub mod proxy_announcements {}
 /// Extracted defaults for `quote_mint_gamma`.
 pub mod quote_mint_gamma {}
 /// Extracted defaults for `quote_mint_gamma_with_stake`.
@@ -230,6 +232,13 @@ pub mod subnet_emission_enabled {
 }
 /// Extracted defaults for `subnet_emission_weights`.
 pub mod subnet_emission_weights {}
+/// Extracted defaults for `subnet_gamma_emission_whitelisted`.
+pub mod subnet_gamma_emission_whitelisted {
+    /// Authenticated default for `netuid`.
+    pub fn netuid() -> Option<rtao_primitives::NetUid> {
+        None
+    }
+}
 /// Extracted defaults for `subnet_hyperparameters`.
 pub mod subnet_hyperparameters {}
 /// Extracted defaults for `subnet_identity`.
