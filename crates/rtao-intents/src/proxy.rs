@@ -2,7 +2,7 @@
 //! Proxy delegation, keyless accounts and announced-call dispatch.
 
 use rtao_client::{DynView, View, ViewExt};
-use rtao_primitives::{IntoCoreValue, NetUid, Spend};
+use rtao_primitives::{H256, IntoCoreValue, NetUid, Spend, Ss58Address};
 use rtao_runtime::{Call, CallBytes, RuntimeHandle, calls::proxy};
 use rtao_signer::SignerRole;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentInterface, IntentSafety, PreflightCx};
@@ -10,7 +10,8 @@ use serde_json::Value;
 use smallvec::SmallVec;
 
 pub use crate::{
-    AddProxy, CreatePureProxy, ExecuteProxyAnnounced, KillPureProxy, RemoveProxies, RemoveProxy,
+    AddProxy, AnnounceProxyCall, CreatePureProxy, ExecuteProxyAnnounced, KillPureProxy,
+    RejectProxyAnnouncement, RemoveProxies, RemoveProxy, RemoveProxyAnnouncement,
 };
 
 /// Runtime proxy type names, in the Python choice and on-chain variant order.
@@ -286,6 +287,33 @@ fn include_saved_wire_safety(declared: &mut IntentSafety, wire: IntentSafety) {
     declared.mev_shield_required |= wire.mev_shield_required;
 }
 
+/// Compose an intent exactly as a real account's future announced proxy call,
+/// returning its call bytes, Blake2-256 hash and build extras.
+#[doc(alias = "bittensor.intents.proxy.compose_announceable_call")]
+pub async fn compose_announceable_call<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    intent: &dyn rtao_tx::DynIntent,
+    real: &Ss58Address,
+) -> Result<(Built, String), IntentError> {
+    let borrowed = cx.view;
+    let nested_cx = BuildCx {
+        view: &borrowed as &dyn DynView,
+        origin: cx.origin,
+        runtime: cx.runtime,
+        clock: cx.clock,
+        spec: intent.spec(),
+    };
+    let built = rtao_tx::compose_nested_intent_call(
+        &nested_cx,
+        intent,
+        rtao_tx::OriginView::Account(real.account()),
+        "announced proxy",
+    )
+    .await?;
+    let hash = format!("0x{}", hex::encode(built.call.hash()));
+    Ok((built, hash))
+}
+
 fn add_proxy_signer(
     proxy_type: &str,
     from_hotkey: Option<&Value>,
@@ -297,6 +325,110 @@ fn add_proxy_signer(
         _ => Err(IntentError::validation(
             "from_hotkey must be a boolean or null",
         )),
+    }
+}
+
+fn proxy_call_hash(value: &str) -> Result<H256, IntentError> {
+    let digits = value
+        .strip_prefix("0x")
+        .ok_or_else(|| IntentError::validation("call_hash must be 0x-prefixed Blake2-256 hex"))?;
+    let bytes = hex::decode(digits)
+        .map_err(|_| IntentError::validation("call_hash must be 0x-prefixed Blake2-256 hex"))?;
+    let hash = <[u8; 32]>::try_from(bytes.as_slice())
+        .map_err(|_| IntentError::validation("call_hash must be 0x-prefixed Blake2-256 hex"))?;
+    Ok(H256(hash))
+}
+
+fn short_hash(value: &str) -> String {
+    let chars = value.chars().collect::<Vec<_>>();
+    if chars.len() <= 18 {
+        value.to_owned()
+    } else {
+        format!(
+            "{}…{}",
+            chars[..10].iter().collect::<String>(),
+            chars[chars.len() - 6..].iter().collect::<String>()
+        )
+    }
+}
+
+impl Intent for AnnounceProxyCall {
+    fn summary(&self) -> String {
+        format!(
+            "announce proxy call {} for {}",
+            short_hash(&self.call_hash),
+            self.real_ss58
+        )
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        self.validate()?;
+        let real = rtao_core::DynValue::new((&self.real_ss58).into_core_value());
+        Ok(Built::new(
+            proxy::announce(real, proxy_call_hash(&self.call_hash)?).compose(cx.runtime)?,
+        ))
+    }
+
+    async fn warnings<V: View + ?Sized>(
+        &self,
+        _cx: &PreflightCx<'_, V>,
+    ) -> Result<Vec<String>, IntentError> {
+        Ok(vec![
+            "reserves an announcement deposit from the signer (returned on execute, remove, or reject)".into(),
+        ])
+    }
+
+    fn validate(&self) -> Result<(), IntentError> {
+        proxy_call_hash(&self.call_hash)?;
+        Ok(())
+    }
+}
+
+impl Intent for RemoveProxyAnnouncement {
+    fn summary(&self) -> String {
+        format!(
+            "remove announcement {} for {}",
+            short_hash(&self.call_hash),
+            self.real_ss58
+        )
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        self.validate()?;
+        let real = rtao_core::DynValue::new((&self.real_ss58).into_core_value());
+        Ok(Built::new(
+            proxy::remove_announcement(real, proxy_call_hash(&self.call_hash)?)
+                .compose(cx.runtime)?,
+        ))
+    }
+
+    fn validate(&self) -> Result<(), IntentError> {
+        proxy_call_hash(&self.call_hash)?;
+        Ok(())
+    }
+}
+
+impl Intent for RejectProxyAnnouncement {
+    fn summary(&self) -> String {
+        format!(
+            "reject announcement {} from {}",
+            short_hash(&self.call_hash),
+            self.delegate_ss58
+        )
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        self.validate()?;
+        let delegate = rtao_core::DynValue::new((&self.delegate_ss58).into_core_value());
+        Ok(Built::new(
+            proxy::reject_announcement(delegate, proxy_call_hash(&self.call_hash)?)
+                .compose(cx.runtime)?,
+        ))
+    }
+
+    fn validate(&self) -> Result<(), IntentError> {
+        proxy_call_hash(&self.call_hash)?;
+        Ok(())
     }
 }
 
@@ -621,27 +753,15 @@ impl Intent for ExecuteProxyAnnounced {
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         self.validate()?;
         let inner = crate::AnyIntent::from_tool(&self.inner_op, self.inner_args.clone())?;
-        let borrowed = cx.view;
-        let outer_cx = BuildCx {
-            view: &borrowed as &dyn DynView,
-            origin: cx.origin,
-            runtime: cx.runtime,
-            clock: cx.clock,
-            spec: Self::SPEC,
-        };
         // The announced call dispatches as the real account: compose it as a
         // direct submission from that account would be (its sudo wrapper and
         // adapters included) and keep its extras for the enclosing dispatch.
         let built = if let Some(call) = self.saved_call(cx.runtime)? {
             Built::new(call)
         } else {
-            rtao_tx::compose_nested_intent_call(
-                &outer_cx,
-                inner.as_dyn(),
-                rtao_tx::OriginView::Account(self.real_ss58.account()),
-                "announced proxy",
-            )
-            .await?
+            compose_announceable_call(cx, inner.as_dyn(), &self.real_ss58)
+                .await?
+                .0
         };
         let inner_call = built.call;
         let mut extras = built.extras;
@@ -866,6 +986,25 @@ mod tests {
         args["announced_call_data"] = Value::Null;
         assert!(check_constructor_input(&args).is_ok());
         Ok(())
+    }
+
+    #[test]
+    fn announcement_hash_inputs_require_exact_blake2_256_bytes() {
+        for (op, address) in [
+            ("announce_proxy_call", "real_ss58"),
+            ("remove_proxy_announcement", "real_ss58"),
+            ("reject_proxy_announcement", "delegate_ss58"),
+        ] {
+            for bad in ["", "abcd", "0x", "0x00", "0xgg", "éééééééééééééééééééé"]
+            {
+                let args = json!({address: REAL, "call_hash": bad});
+                assert!(
+                    crate::AnyIntent::from_tool(op, args).is_err(),
+                    "{op}: {bad}"
+                );
+            }
+        }
+        assert_eq!(short_hash("éééééééééééééééééééé"), "éééééééééé…éééééé");
     }
 
     #[tokio::test]
@@ -1369,10 +1508,44 @@ mod tests {
                 format!("execute announced remove_proxies as {REAL} via {DELEGATE}"),
                 vec![],
             ),
+            (
+                "announce_proxy_call",
+                json!({"real_ss58":REAL,"call_hash":format!("0x{}", "ab".repeat(32))}),
+                format!("announce proxy call 0xabababab…ababab for {REAL}"),
+                vec![
+                    "reserves an announcement deposit from the signer (returned on execute, remove, or reject)",
+                ],
+            ),
+            (
+                "remove_proxy_announcement",
+                json!({"real_ss58":REAL,"call_hash":format!("0x{}", "ab".repeat(32))}),
+                format!("remove announcement 0xabababab…ababab for {REAL}"),
+                vec![],
+            ),
+            (
+                "reject_proxy_announcement",
+                json!({"delegate_ss58":DELEGATE,"call_hash":format!("0x{}", "ab".repeat(32))}),
+                format!("reject announcement 0xabababab…ababab from {DELEGATE}"),
+                vec![],
+            ),
         ] {
             let intent = crate::AnyIntent::from_tool(op, args)?;
             let dynamic = intent.as_dyn();
             let built = build(dynamic, &view, runtime).await?;
+            if let Some(function) = match op {
+                "announce_proxy_call" => Some("announce"),
+                "remove_proxy_announcement" => Some("remove_announcement"),
+                "reject_proxy_announcement" => Some("reject_announcement"),
+                _ => None,
+            } {
+                let call = decode(&built.call, runtime)?;
+                assert_eq!(call["call_module"], "Proxy");
+                assert_eq!(call["call_function"], function);
+                assert_eq!(
+                    call["call_args"][1]["value"],
+                    format!("0x{}", "ab".repeat(32))
+                );
+            }
             let preview = dynamic
                 .preflight_dyn(&PreflightCx {
                     view: &view as &dyn DynView,
@@ -1466,6 +1639,21 @@ mod tests {
         // proxy wrapper or substituting the outer real address as nested input.
         let nested = announced("remove_proxies", json!({}));
         let outer = announced("execute_proxy_announced", nested.to_json());
+        let inner = crate::AnyIntent::from_tool("remove_proxies", json!({}))?;
+        let (composed, hash) = compose_announceable_call(
+            &BuildCx {
+                view: &view,
+                origin: OriginView::Account(ORIGIN),
+                runtime,
+                clock: &SystemClock,
+                spec: ExecuteProxyAnnounced::SPEC,
+            },
+            inner.as_dyn(),
+            &nested.real_ss58,
+        )
+        .await?;
+        assert_eq!(composed.call, proxy::remove_proxies().compose(runtime)?);
+        assert_eq!(hash, format!("0x{}", hex::encode(composed.call.hash())));
         let inner_built = build(&nested, &view, runtime).await?;
         let outer_built = build(&outer, &view, runtime).await?;
         assert_eq!(

@@ -45,9 +45,9 @@ InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:true,i
 #[cfg(not(feature="coldkey"))]
 InterfaceMetadata{name:"announce_coldkey_swap",feature:"coldkey",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"announce_proxy_call",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::AnnounceProxyCall>()),role:Some(std::any::type_name::<<super::interfaces::AnnounceProxyCall as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AnnounceProxyCall as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"announce_proxy_call",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AnnounceProxyCall>()),role:Some(std::any::type_name::<<super::interfaces::AnnounceProxyCall as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AnnounceProxyCall as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"announce_proxy_call",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"announce_proxy_call",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "association")]
 InterfaceMetadata{name:"associate_evm_key",feature:"association",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::AssociateEvmKey>()),role:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::AssociateEvmKey as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="association"))]
@@ -209,9 +209,9 @@ InterfaceMetadata{name:"register_subnet",feature:"registration",compiled:true,im
 #[cfg(not(feature="registration"))]
 InterfaceMetadata{name:"register_subnet",feature:"registration",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"reject_proxy_announcement",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::RejectProxyAnnouncement>()),role:Some(std::any::type_name::<<super::interfaces::RejectProxyAnnouncement as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RejectProxyAnnouncement as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"reject_proxy_announcement",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::RejectProxyAnnouncement>()),role:Some(std::any::type_name::<<super::interfaces::RejectProxyAnnouncement as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RejectProxyAnnouncement as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"reject_proxy_announcement",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"reject_proxy_announcement",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "coldkey")]
 InterfaceMetadata{name:"release_own_coldkey_swap_destination_reservation",feature:"coldkey",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::ReleaseOwnColdkeySwapDestinationReservation>()),role:Some(std::any::type_name::<<super::interfaces::ReleaseOwnColdkeySwapDestinationReservation as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::ReleaseOwnColdkeySwapDestinationReservation as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="coldkey"))]
@@ -225,9 +225,9 @@ InterfaceMetadata{name:"remove_proxy",feature:"proxy",compiled:true,implemented:
 #[cfg(not(feature="proxy"))]
 InterfaceMetadata{name:"remove_proxy",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "proxy")]
-InterfaceMetadata{name:"remove_proxy_announcement",feature:"proxy",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::RemoveProxyAnnouncement>()),role:Some(std::any::type_name::<<super::interfaces::RemoveProxyAnnouncement as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveProxyAnnouncement as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"remove_proxy_announcement",feature:"proxy",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::RemoveProxyAnnouncement>()),role:Some(std::any::type_name::<<super::interfaces::RemoveProxyAnnouncement as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveProxyAnnouncement as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="proxy"))]
-InterfaceMetadata{name:"remove_proxy_announcement",feature:"proxy",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"remove_proxy_announcement",feature:"proxy",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "staking")]
 InterfaceMetadata{name:"remove_stake",feature:"staking",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::RemoveStake>()),role:Some(std::any::type_name::<<super::interfaces::RemoveStake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::RemoveStake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="staking"))]

@@ -13957,7 +13957,7 @@
         "name": "announce_proxy_call",
         "oracle": "missing",
         "python_class": "AnnounceProxyCall",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "associate_evm_key",
@@ -14203,7 +14203,7 @@
         "name": "reject_proxy_announcement",
         "oracle": "missing",
         "python_class": "RejectProxyAnnouncement",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "release_own_coldkey_swap_destination_reservation",
@@ -14227,7 +14227,7 @@
         "name": "remove_proxy_announcement",
         "oracle": "missing",
         "python_class": "RemoveProxyAnnouncement",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "remove_stake",
