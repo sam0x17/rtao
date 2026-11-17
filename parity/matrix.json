@@ -11452,7 +11452,7 @@
           "rtao_reads::reads::owner::most_convicted_hotkey",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "40115bfe96fec8bda42351d18fbe3477e342ec25"
+        "synced_blob": "7a1a26c5777153d8004baa46c1b361dc85fda4db"
       },
       {
         "kind": "ported",
