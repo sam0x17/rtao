@@ -419,7 +419,9 @@ jobs:
 
   notify:
     needs: [decide, adopt, push, forks-plan, forks-publish, forks-record, forks-push]
-    if: always() && !(github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != ''))
+    if: >-
+      !cancelled()
+      && !(github.event_name == 'workflow_dispatch' && (inputs.dry_run || inputs.simulate != ''))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -451,6 +453,12 @@ jobs:
           PUSHED: ${{ needs.push.result }}
           SUPERSEDED: ${{ needs.push.outputs.superseded }}
         run: |
+          # A cancellation can arrive after this job starts. It has no
+          # candidate verdict to report as an adoption failure.
+          if [ "$DECIDED" = cancelled ] || [ "$ADOPTED" = cancelled ] || [ "$PUSHED" = cancelled ]; then
+            echo 'runtime adoption was cancelled; no failure notification'
+            exit 0
+          fi
           decision="$RUNNER_TEMP/decision/decision.json"
           if [ "$DECIDED" != success ] || [ ! -f "$decision" ]; then
             # The decision itself failed: report it under a fixed id.

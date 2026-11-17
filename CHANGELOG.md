@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Canceled runtime adoption runs (D-199)
+
+- Fixed: canceling an adoption candidate no longer reports a missing evidence artifact as a new runtime failure or overwrites the existing failure issue.
+
 ### Adoption tests and fixture locks (D-198)
 
 - Fixed: intent tests account for generated `from_hotkey` and JSON gamma defaults, distinguish a tool's `op` tag from typed announcement arguments, and cover the generated catalog and sample plans without freezing 490's intent and read counts. The registry and typed checks still reject supplied saved-announcement pins.
