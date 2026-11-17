@@ -157,14 +157,6 @@ tag = "v491"
 symbols = []
 
 [[file]]
-py = "sdk/python/bittensor/reads/accounts.py"
-kind = "ported"
-from = "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9"
-to = "665adc2de520915afb8c48b6236116313c31b944"
-tag = "v491"
-symbols = ["bittensor.reads.accounts.StorageFunctionNotFound", "bittensor.reads.accounts.coldkey_swap_announcement", "bittensor.reads.accounts.proxy_announcements"]
-
-[[file]]
 py = "sdk/python/bittensor/reads/subnets.py"
 kind = "ported"
 from = "e0ad1d9bf1214133b6d4166caced12436fea37ba"

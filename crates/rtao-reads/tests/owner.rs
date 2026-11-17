@@ -5,8 +5,10 @@
 use std::collections::BTreeSet;
 
 use rtao_client::{BlockRef, Client, ClientConfig, Network, ViewExt};
-use rtao_primitives::{AccountId, NetUid};
-use rtao_reads::{ReadName, dispatch, reads::owner};
+use rtao_core::{DynValue, codec::Value as CoreValue};
+use rtao_primitives::{AccountId, IntoCoreValue, NetUid, TaoBalance};
+use rtao_reads::{Namespaces, ReadName, dispatch, reads::owner};
+use rtao_runtime::storage as st;
 use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
 use serde_json::{Map, Value, json};
 
@@ -929,6 +931,62 @@ async fn m5_proxies_keep_model_fields_chain_order_and_native_deposit() {
     assert!(result.proxies.is_empty());
     assert_eq!(result.deposit.rao, u64::MAX);
     assert!(result.deposit.symbol.is_none());
+    client.close().await;
+}
+
+#[tokio::test]
+async fn proxy_announcements_use_delegate_key_and_keep_order_deposit_and_dispatch() {
+    let mut state = FakeState::default();
+    state
+        .seed(
+            &st::proxy::ANNOUNCEMENTS,
+            (COLD,),
+            (
+                vec![
+                    DynValue::new(CoreValue::record(vec![
+                        ("real".into(), HOT.into_core_value()),
+                        ("call_hash".into(), CoreValue::hex(&[0xab; 32])),
+                        ("height".into(), 17u32.into_core_value()),
+                    ])),
+                    DynValue::new(CoreValue::record(vec![
+                        ("real".into(), OTHER.into_core_value()),
+                        ("call_hash".into(), CoreValue::hex(&[0xcd; 32])),
+                        ("height".into(), 18u32.into_core_value()),
+                    ])),
+                ],
+                TaoBalance(1_000_000_000),
+            ),
+        )
+        .unwrap();
+    let (client, _) = client(state).await;
+    let expected = json!({
+        "announcements": [
+            {"real": HOT, "call_hash": format!("0x{}", "ab".repeat(32)), "height": 17},
+            {"real": OTHER, "call_hash": format!("0x{}", "cd".repeat(32)), "height": 18}
+        ],
+        "deposit": "τ1.000000000"
+    });
+    assert_eq!(
+        json!(owner::proxy_announcements(&client, COLD).await.unwrap()),
+        expected
+    );
+    assert_eq!(
+        json!(client.balances().proxy_announcements(COLD).await.unwrap()),
+        expected
+    );
+    assert_eq!(
+        dispatch(
+            &client,
+            ReadName::ProxyAnnouncements,
+            &params(json!({"delegate_ss58": COLD}))
+        )
+        .await
+        .unwrap(),
+        expected
+    );
+    let empty = owner::proxy_announcements(&client, HOT).await.unwrap();
+    assert!(empty.announcements.is_empty());
+    assert_eq!(empty.deposit.rao, 0);
     client.close().await;
 }
 

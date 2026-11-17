@@ -778,7 +778,7 @@ impl ReadName {
             Self::Parents => true,
             Self::PendingChildren => true,
             Self::Proxies => true,
-            Self::ProxyAnnouncements => false,
+            Self::ProxyAnnouncements => true,
             Self::QuoteMintGamma => true,
             Self::QuoteMintGammaWithStake => true,
             Self::QuoteStake => true,
@@ -1216,10 +1216,10 @@ impl ReadName {
                 output_type_name: std::any::type_name::<crate::reads::owner::ProxyDelegations>(),
             },
             Self::ProxyAnnouncements => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ProxyAnnouncementsParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<crate::reads::owner::ProxyAnnouncements>(),
             },
             Self::QuoteMintGamma => ReadInterfaceMetadata {
                 implemented: true,

@@ -953,7 +953,7 @@ impl SyncBalances<'_> {
     pub fn proxy_announcements(
         &self,
         delegate_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<rtao_reads::reads::owner::ProxyAnnouncements, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::proxy_announcements(&view, delegate_ss58).await
         })

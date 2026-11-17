@@ -581,7 +581,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
     pub async fn proxy_announcements(
         &self,
         delegate_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<crate::reads::owner::ProxyAnnouncements, crate::ReadError> {
         super::interfaces::proxy_announcements(self.view, delegate_ss58).await
     }
 }

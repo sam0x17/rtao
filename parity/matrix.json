@@ -11337,7 +11337,7 @@
           "rtao_reads::reads::m6_accounts::{existential_deposit, coldkey_swap_announcement, multisig}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "74dc9239a15b6edb97c0c124bb9c9eee2b217cc9"
+        "synced_blob": "665adc2de520915afb8c48b6236116313c31b944"
       },
       {
         "kind": "ported",
@@ -14860,7 +14860,7 @@
       {
         "name": "proxy_announcements",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "quote_mint_gamma",

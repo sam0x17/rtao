@@ -1040,12 +1040,10 @@ pub struct ProxyAnnouncementsParams {
 #[doc = "Pending delayed-proxy announcements made by a delegate, plus reserved deposit."]
 #[doc(alias = "bittensor.reads.proxy_announcements")]
 pub async fn proxy_announcements<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _delegate_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ProxyAnnouncements,
-    ))
+    view: &V,
+    delegate_ss58: rtao_primitives::AccountId,
+) -> Result<crate::reads::owner::ProxyAnnouncements, crate::ReadError> {
+    crate::reads::owner::proxy_announcements(view, delegate_ss58).await
 }
 #[doc = "Typed parameters for `quote_mint_gamma`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

@@ -110,6 +110,77 @@ pub async fn proxies<V: View + ?Sized>(
     })
 }
 
+/// One delayed proxy announcement in the chain's stored order.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProxyAnnouncement {
+    /// Account on whose behalf the announced call would execute.
+    pub real: AccountId,
+    /// Announced call hash as 0x-prefixed hexadecimal.
+    pub call_hash: String,
+    /// Block at which the delegate announced the call.
+    pub height: u32,
+}
+
+/// Pending announcements keyed by the announcing delegate, with its reserved deposit.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProxyAnnouncements {
+    /// Pending calls in the runtime's stored order.
+    pub announcements: Vec<ProxyAnnouncement>,
+    /// Deposit reserved for this delegate's announcements, denominated in TAO.
+    pub deposit: DynBalance,
+}
+
+/// Read a delegate's delayed proxy announcements and reserved deposit.
+// py: sdk/python/bittensor/reads/accounts.py:72-98
+pub async fn proxy_announcements<V: View + ?Sized>(
+    view: &V,
+    delegate_ss58: AccountId,
+) -> Result<ProxyAnnouncements, ReadError> {
+    let (pending, deposit) = view
+        .storage(&st::proxy::ANNOUNCEMENTS, (delegate_ss58,))
+        .await?;
+    let announcements = pending
+        .into_iter()
+        .map(|item| {
+            let item = item.as_core();
+            let real = item.field("real").ok_or_else(|| {
+                surface("Proxy.Announcements", "announcement has no real account")
+            })?;
+            let real = if let Some(address) = real.as_str() {
+                address.parse().map_err(|_| {
+                    surface("Proxy.Announcements", "real is not a valid account address")
+                })?
+            } else {
+                real.value_bytes()
+                    .and_then(|bytes| <[u8; 32]>::try_from(bytes).ok())
+                    .map(AccountId)
+                    .ok_or_else(|| {
+                        surface("Proxy.Announcements", "real is not a 32-byte account")
+                    })?
+            };
+            let call_hash = item
+                .field("call_hash")
+                .and_then(ValueExt::value_bytes)
+                .and_then(|bytes| <[u8; 32]>::try_from(bytes).ok())
+                .ok_or_else(|| surface("Proxy.Announcements", "call_hash is not 32 bytes"))?;
+            let height = item
+                .field("height")
+                .and_then(rtao_core::value_ext::as_u128)
+                .and_then(|height| u32::try_from(height).ok())
+                .ok_or_else(|| surface("Proxy.Announcements", "height is not a u32 block"))?;
+            Ok(ProxyAnnouncement {
+                real,
+                call_hash: format!("0x{}", hex::encode(call_hash)),
+                height,
+            })
+        })
+        .collect::<Result<Vec<_>, ReadError>>()?;
+    Ok(ProxyAnnouncements {
+        announcements,
+        deposit: DynBalance::from_rao(deposit.0, NetUid::ROOT),
+    })
+}
+
 /// Next MEV-shield public key as 0x hex; absent or empty keys yield `None`.
 // py: sdk/python/bittensor/reads/chain.py:63-67
 pub async fn mev_shield_next_key<V: View + ?Sized>(view: &V) -> Result<Option<String>, ReadError> {
