@@ -58,7 +58,8 @@ pub fn check_proxy_type(proxy_type: &str) -> Result<&str, IntentError> {
 /// Proxy types whose calls are hotkey-signed (weights, serving, commitments,
 /// EVM association), so the real account is the validator hotkey.
 ///
-/// A coldkey grant of these types could dispatch nothing useful.
+/// An explicit add-proxy signer override may select a coldkey or proxied
+/// account, for example when preserving a pure account's existing grants.
 #[doc(alias = "bittensor.intents.proxy.HOTKEY_PROXY_TYPES")]
 pub const HOTKEY_PROXY_TYPES: [&str; 2] = ["Validate", "Weights"];
 
@@ -74,15 +75,51 @@ pub fn proxy_grant_signer(proxy_type: &str) -> SignerRole {
 
 /// Bound nested arguments before generated serde conversion clones them.
 pub(crate) fn check_constructor_input(args: &Value) -> Result<(), IntentError> {
+    reject_saved_announcement(args)?;
     if let Some(inner_args) = args.get("inner_args") {
         crate::arguments::check_nested_json(inner_args)?;
     }
     Ok(())
 }
 
+// D-197: regeneration exposes saved announcement fields before their hand
+// port. Rebuilding the inner call must never discard an exact-byte pin.
+fn reject_saved_announcement(args: &Value) -> Result<(), IntentError> {
+    for field in [
+        "announced_call_data",
+        "expected_call_hash",
+        "announced_spec_version",
+        "announced_call_semantics",
+    ] {
+        if args.get(field).is_some_and(|value| !value.is_null()) {
+            return Err(IntentError::validation(format!(
+                "{field} is not implemented for saved proxy announcements; the supplied commitment cannot be ignored"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn add_proxy_signer(
+    proxy_type: &str,
+    from_hotkey: Option<&Value>,
+) -> Result<SignerRole, IntentError> {
+    match from_hotkey {
+        None | Some(Value::Null) => Ok(proxy_grant_signer(proxy_type)),
+        Some(Value::Bool(true)) => Ok(SignerRole::Hotkey),
+        Some(Value::Bool(false)) => Ok(SignerRole::Coldkey),
+        _ => Err(IntentError::validation(
+            "from_hotkey must be a boolean or null",
+        )),
+    }
+}
+
 impl Intent for AddProxy {
     fn signer_role(&self) -> Result<SignerRole, IntentError> {
-        Ok(proxy_grant_signer(&self.proxy_type))
+        add_proxy_signer(
+            &self.proxy_type,
+            serde_json::to_value(self)?.get("from_hotkey"),
+        )
     }
 
     fn summary(&self) -> String {
@@ -108,7 +145,7 @@ impl Intent for AddProxy {
                 "an Any proxy can do everything this account can, including transfers; prefer a narrower proxy type".into(),
             );
         }
-        if proxy_grant_signer(&self.proxy_type) == SignerRole::Hotkey {
+        if self.signer_role()? == SignerRole::Hotkey {
             warnings.push(format!(
                 "{} acts for the hotkey: the hotkey signs this grant and needs free TAO for the deposit and fee",
                 self.proxy_type
@@ -119,6 +156,7 @@ impl Intent for AddProxy {
 
     fn validate(&self) -> Result<(), IntentError> {
         check_proxy_type(&self.proxy_type)?;
+        self.signer_role()?;
         Ok(())
     }
 }
@@ -432,6 +470,7 @@ impl Intent for ExecuteProxyAnnounced {
 
     fn validate(&self) -> Result<(), IntentError> {
         crate::arguments::check_nested_json(&self.inner_args)?;
+        reject_saved_announcement(&serde_json::to_value(self)?)?;
         // Python deliberately does not call check_proxy_type for this intent.
         // The nested registry checks its argument shape during build; runtime
         // composition validates force_proxy_type after that nested build.
@@ -490,13 +529,13 @@ mod tests {
     }
 
     fn announced(inner_op: &str, inner_args: Value) -> ExecuteProxyAnnounced {
-        ExecuteProxyAnnounced {
-            delegate_ss58: DELEGATE.into(),
-            real_ss58: REAL.into(),
-            inner_op: inner_op.into(),
-            inner_args,
-            force_proxy_type: None,
-        }
+        serde_json::from_value(json!({
+            "delegate_ss58": DELEGATE,
+            "real_ss58": REAL,
+            "inner_op": inner_op,
+            "inner_args": inner_args,
+        }))
+        .expect("announced proxy defaults")
     }
 
     fn pure(account_mode: Option<&str>) -> CreatePureProxy {
@@ -506,6 +545,76 @@ mod tests {
             index: 0,
             account_mode: account_mode.map(str::to_owned),
         }
+    }
+
+    #[test]
+    fn saved_announcement_pins_are_refused_before_rebuilding() -> anyhow::Result<()> {
+        for (field, value) in [
+            ("announced_call_data", json!("0x0000")),
+            ("expected_call_hash", json!("0x00")),
+            ("announced_spec_version", json!(0)),
+            ("announced_call_semantics", json!({})),
+        ] {
+            let mut args = announced("remove_proxies", json!({})).to_json();
+            // Every explicit non-null pin is refused, including falsey values.
+            for value in [value, json!(false), json!(0), json!(""), json!({})] {
+                args[field] = value;
+                assert!(check_constructor_input(&args).is_err(), "{field}");
+                assert!(
+                    crate::AnyIntent::from_tool("execute_proxy_announced", args.clone()).is_err()
+                );
+            }
+            if ExecuteProxyAnnounced::SPEC
+                .fields
+                .iter()
+                .any(|f| f.name == field)
+            {
+                args[field] = match field {
+                    "announced_spec_version" => json!(0),
+                    "announced_call_semantics" => json!({}),
+                    _ => json!("0x00"),
+                };
+                let typed: ExecuteProxyAnnounced = serde_json::from_value(args.clone())?;
+                assert!(
+                    typed.validate().is_err(),
+                    "typed mutation must retain {field}"
+                );
+            }
+            args[field] = Value::Null;
+            assert!(check_constructor_input(&args).is_ok());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn add_proxy_signer_override_preserves_explicit_false() -> anyhow::Result<()> {
+        for name in PROXY_TYPES {
+            assert_eq!(add_proxy_signer(name, None)?, proxy_grant_signer(name));
+            assert_eq!(
+                add_proxy_signer(name, Some(&Value::Null))?,
+                proxy_grant_signer(name)
+            );
+            for (value, role) in [(false, SignerRole::Coldkey), (true, SignerRole::Hotkey)] {
+                assert_eq!(add_proxy_signer(name, Some(&json!(value)))?, role);
+                if AddProxy::SPEC
+                    .fields
+                    .iter()
+                    .any(|f| f.name == "from_hotkey")
+                {
+                    let intent = crate::AnyIntent::from_tool(
+                        "add_proxy",
+                        json!({
+                            "delegate_ss58": DELEGATE, "proxy_type": name, "from_hotkey": value,
+                        }),
+                    )?;
+                    assert_eq!(intent.as_dyn().signer_role_dyn()?, role);
+                }
+            }
+        }
+        for value in [json!(0), json!("false"), json!([]), json!({})] {
+            assert!(add_proxy_signer("Staking", Some(&value)).is_err());
+        }
+        Ok(())
     }
 
     #[tokio::test]
@@ -674,11 +783,11 @@ mod tests {
         // The independent byte layout follows pallet-proxy's call indices and
         // common/src/proxy.rs's implicit SCALE variant indices, not the builders.
         for (variant, name) in (0u8..).zip(PROXY_TYPES) {
-            let add = AddProxy {
-                delegate_ss58: DELEGATE.into(),
-                proxy_type: name.into(),
-                delay: u32::MAX,
-            };
+            let add: AddProxy = serde_json::from_value(json!({
+                "delegate_ss58": DELEGATE,
+                "proxy_type": name,
+                "delay": u32::MAX,
+            }))?;
             let remove = RemoveProxy {
                 delegate_ss58: DELEGATE.into(),
                 proxy_type: name.into(),
@@ -786,11 +895,11 @@ mod tests {
         }
         for prefix in [0, 2, 42, 110] {
             let spelling = DELEGATE.to_ss58(prefix);
-            let intent = AddProxy {
-                delegate_ss58: spelling.parse()?,
-                proxy_type: "Staking".into(),
-                delay: 0,
-            };
+            let intent: AddProxy = serde_json::from_value(json!({
+                "delegate_ss58": spelling,
+                "proxy_type": "Staking",
+                "delay": 0,
+            }))?;
             assert_eq!(
                 intent.summary(),
                 format!("add Staking proxy {spelling} (delay 0)")
@@ -1022,11 +1131,11 @@ mod tests {
             assert_eq!(create.as_dyn().signer_role_dyn()?, SignerRole::Coldkey);
         }
         for name in HOTKEY_PROXY_TYPES {
-            let add = AddProxy {
-                delegate_ss58: DELEGATE.into(),
-                proxy_type: name.into(),
-                delay: 0,
-            };
+            let add: AddProxy = serde_json::from_value(json!({
+                "delegate_ss58": DELEGATE,
+                "proxy_type": name,
+                "delay": 0,
+            }))?;
             let built = build(&add, &view, runtime).await?;
             let preview = add
                 .preflight_dyn(&PreflightCx {

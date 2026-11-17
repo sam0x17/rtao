@@ -867,7 +867,7 @@ adopt() {
       stage_done
       stage tests
       cargo test --locked -p rtao-runtime -p rtao-reads -p rtao-intents -p rtao-client \
-        --features rtao-intents/emission_weights,rtao-intents/staking
+        --features rtao-intents/all
       # D-196: exercise the regenerated interface through CLI planning,
       # signing and finalized read-back, including the full-split v2 call.
       cargo test --locked -p rtao-cli --test subnet_emission_commands

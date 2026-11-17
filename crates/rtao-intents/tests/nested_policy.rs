@@ -1076,13 +1076,12 @@ async fn public_child_mutation_is_revalidated_and_invalid_children_fail_before_r
         executor.execute_dyn(&multisig, &keys, &opts).await,
         Err(TxError::Policy(_))
     ));
-    let mut announced = ExecuteProxyAnnounced {
-        delegate_ss58: OTHER.into(),
-        real_ss58: DEST.into(),
-        inner_op: "transfer".into(),
-        inner_args: benign.clone(),
-        force_proxy_type: None,
-    };
+    let mut announced: ExecuteProxyAnnounced = serde_json::from_value(json!({
+        "delegate_ss58": OTHER,
+        "real_ss58": DEST,
+        "inner_op": "transfer",
+        "inner_args": benign,
+    }))?;
     let mut batch = Batch::new(vec![threshold_one(benign)])?;
     for invalid in [
         Value::Null,

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Proxy defaults and announcement pins during adoption (D-197)
+
+- Fixed: proxy test constructors use generated defaults across the 491 field additions. `add_proxy` honors the new explicit hotkey/coldkey selection, including `false`, and its warning follows the selected signer. Saved-announcement bytes, hashes, runtime versions and semantics are explicitly refused until their hand port is complete, including empty or zero-valued pins. They cannot be silently discarded while rebuilding a call. Adoption now runs every intent feature's tests.
+
 ### Emission slot edits across runtime adoption (D-196)
 
 - Fixed: the CLI uses generated defaults when constructing emission-weight intents. When the catalog selects runtime 491's full-split call, slot edits include all five weights and preserve every existing gamma target/share from one pinned snapshot. Encoding still uses strict live-metadata checks. New gamma-edit inputs are rejected explicitly until their hand port is complete; they are never silently ignored. The 490 catalog retains its existing sparse-call behavior.
