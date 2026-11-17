@@ -295,6 +295,8 @@ impl SetSubnetEmissionWeights {
             min_owner: ew::DEFAULT_OWNER,
             created_via_lease: inputs.current.created_via_lease,
             gamma_share: inputs.gamma_share,
+            gamma_targets: None,
+            leased: false,
         };
         let mut blocks: Vec<String> = ew::validate(&after, &rules)
             .iter()

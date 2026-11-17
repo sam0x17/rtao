@@ -137,6 +137,14 @@ async fn subnet_emission_weights_decodes_the_runtime_payload_and_live_root_input
     let client = Client::from_rpc(RpcClient::new(chain.clone()), config())
         .await
         .unwrap();
+    let requests = chain.requests().len();
+    assert_eq!(
+        subnets::subnet_emission_weights(&client, NetUid::ROOT)
+            .await
+            .unwrap(),
+        None
+    );
+    assert_eq!(chain.requests().len(), requests);
     let info = subnets::subnet_emission_weights(&client, netuid)
         .await
         .unwrap()
@@ -263,6 +271,26 @@ async fn subnet_emission_weights_sums_the_gamma_shares() {
             ],
         )
         .unwrap();
+    for (target, whitelisted, enabled) in [
+        (NetUid(2), true, true),
+        (NetUid(3), true, true),
+        (NetUid(4), true, false),
+        (NetUid(5), false, true),
+    ] {
+        state
+            .seed(
+                &st::SUBNET_GAMMA_EMISSION_WHITELISTED,
+                (target,),
+                whitelisted,
+            )
+            .unwrap();
+        state
+            .seed(&st::SUBNET_GAMMA_ENABLED, (target,), enabled)
+            .unwrap();
+    }
+    state
+        .seed_typed("SubtensorModule", "SubnetUidToLeaseId", (netuid,), 7u32)
+        .unwrap();
     let client = Client::from_rpc(RpcClient::new(FakeChain::from_state(state)), config())
         .await
         .unwrap();
@@ -272,6 +300,33 @@ async fn subnet_emission_weights_sums_the_gamma_shares() {
         .unwrap();
     assert_eq!(info.gamma_share, gamma);
     assert_eq!(info.rules().gamma_share, gamma);
+    assert_eq!(
+        info.gamma_shares,
+        std::collections::BTreeMap::from([
+            (2, ew::parse_share("4%").unwrap()),
+            (3, gamma - ew::parse_share("4%").unwrap()),
+        ])
+    );
+    assert_eq!(
+        info.gamma_targets,
+        Some(std::collections::BTreeMap::from([
+            (2, true),
+            (3, true),
+            (4, false),
+        ]))
+    );
+    assert_eq!(info.rules().gamma_targets, info.gamma_targets);
+    assert!(info.leased && info.rules().leased);
+    let record = serde_json::to_value(&info).unwrap();
+    assert_eq!(
+        record["gamma_shares"]["2"],
+        json!(ew::parse_share("4%").unwrap())
+    );
+    assert_eq!(
+        record["gamma_targets"],
+        json!({"2":true,"3":true,"4":false})
+    );
+    assert_eq!(record["leased"], true);
     assert_eq!(
         subnets::gamma_emission_shares(&client, netuid)
             .await
@@ -316,6 +371,10 @@ async fn subnet_emission_weights_sums_the_gamma_shares() {
             .await
             .unwrap(),
         0
+    );
+    assert_eq!(
+        subnets::gamma_emission_targets(&client).await.unwrap(),
+        None
     );
     client.close().await;
 }

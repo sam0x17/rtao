@@ -578,7 +578,7 @@ impl Limits {
 /// subnets. `gamma_share` is the sum of the subnet's gamma shares (runtime
 /// 489, `SubtensorModule.SubnetGammaEmission`); the five slots sum to one
 /// less it. It is zero on runtimes without gamma shares.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Rules {
     /// Lowest accepted validator share in parts, when chain state is known.
     pub min_validator: Option<u64>,
@@ -588,6 +588,10 @@ pub struct Rules {
     pub created_via_lease: bool,
     /// Sum of the subnet's gamma shares in parts.
     pub gamma_share: u64,
+    /// Eligible gamma targets and their enabled state; `None` when unavailable.
+    pub gamma_targets: Option<std::collections::BTreeMap<u16, bool>>,
+    /// Whether the subnet is currently leased.
+    pub leased: bool,
 }
 
 const BURN_RECYCLE_WHY: &str = "burn + recycle together may be at most 33%; burn destroys alpha (still counts toward issuance), recycle removes it from issuance";

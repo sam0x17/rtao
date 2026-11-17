@@ -2,7 +2,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/base.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Subnet catalog reads over pinned client views.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use futures::TryStreamExt;
 use num_traits::ToPrimitive;
@@ -205,6 +205,46 @@ pub async fn gamma_emission_shares<V: View + ?Sized>(
     Ok(result)
 }
 
+/// Whitelisted gamma targets and whether gamma is enabled at each target.
+/// `None` means the queried runtime predates the two target maps.
+// py: sdk/python/bittensor/reads/subnets.py:322-332
+pub async fn gamma_emission_targets<V: View + ?Sized>(
+    view: &V,
+) -> Result<Option<BTreeMap<u16, bool>>, ReadError> {
+    let runtime = view.runtime().await?;
+    if runtime
+        .storage_entry("SubtensorModule", "SubnetGammaEmissionWhitelisted")
+        .is_none()
+        || runtime
+            .storage_entry("SubtensorModule", "SubnetGammaEnabled")
+            .is_none()
+    {
+        return Ok(None);
+    }
+    let (whitelisted, enabled) = futures::try_join!(
+        view.storage_iter(&st::subtensor_module::SUBNET_GAMMA_EMISSION_WHITELISTED, ())
+            .try_collect::<Vec<_>>(),
+        view.storage_iter(&st::subtensor_module::SUBNET_GAMMA_ENABLED, ())
+            .try_collect::<Vec<_>>(),
+    )?;
+    let enabled: BTreeSet<_> = enabled
+        .into_iter()
+        .filter_map(|(keys, value)| value.then_some(keys))
+        .map(|keys| super::m6_root::subnet_key(&keys, "SubtensorModule.SubnetGammaEnabled"))
+        .collect::<Result<_, _>>()?;
+    let mut targets = BTreeMap::new();
+    for (keys, value) in whitelisted {
+        if value {
+            let netuid = super::m6_root::subnet_key(
+                &keys,
+                "SubtensorModule.SubnetGammaEmissionWhitelisted",
+            )?;
+            targets.insert(netuid.get(), enabled.contains(&netuid));
+        }
+    }
+    Ok(Some(targets))
+}
+
 /// A subnet's emission weight vector and the rule inputs that bound it.
 ///
 /// Shares are u64 parts of `u64::MAX`; `shares` carries the same values as
@@ -238,6 +278,12 @@ pub struct SubnetEmissionWeights {
     /// Sum of the subnet's gamma shares in parts (zero before runtime 489);
     /// the five slots sum to one less it.
     pub gamma_share: u64,
+    /// Gamma shares by target netuid in exact parts.
+    pub gamma_shares: BTreeMap<u16, u64>,
+    /// Whitelisted gamma targets and their enabled state, or unavailable on older runtimes.
+    pub gamma_targets: Option<BTreeMap<u16, bool>>,
+    /// Whether this subnet is leased now.
+    pub leased: bool,
     /// Global `TaoWeight` as a 0..1 float.
     pub global_tao_weight: f64,
     /// Whether the subnet was created through a lease.
@@ -272,6 +318,8 @@ impl SubnetEmissionWeights {
             min_owner: ew::DEFAULT_OWNER,
             created_via_lease: self.created_via_lease,
             gamma_share: self.gamma_share,
+            gamma_targets: self.gamma_targets.clone(),
+            leased: self.leased,
         }
     }
 
@@ -392,12 +440,39 @@ pub async fn subnet_emission_weights<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
 ) -> Result<Option<SubnetEmissionWeights>, ReadError> {
+    if netuid == NetUid::ROOT {
+        return Ok(None);
+    }
     let snapshot = view.pin().await?;
     let Some(info) = subnet_emission_weights_info(&snapshot, netuid).await? else {
         return Ok(None);
     };
     let inputs = root_preservation_inputs(&snapshot, netuid).await?;
-    let gamma_share = gamma_emission_share(&snapshot, netuid).await?;
+    let gamma_shares = gamma_emission_shares(&snapshot, netuid).await?;
+    let gamma_share = u64::try_from(
+        gamma_shares
+            .values()
+            .map(|share| u128::from(*share))
+            .sum::<u128>(),
+    )
+    .map_err(|_| ReadError::SurfaceChanged {
+        descriptor: "SubtensorModule.SubnetGammaEmission",
+        detail: "gamma shares exceed u64".into(),
+    })?;
+    let gamma_targets = gamma_emission_targets(&snapshot).await?;
+    let leased = if snapshot
+        .block()
+        .runtime
+        .storage_entry("SubtensorModule", "SubnetUidToLeaseId")
+        .is_some()
+    {
+        snapshot
+            .storage(&st::subtensor_module::SUBNET_UID_TO_LEASE_ID, (netuid,))
+            .await?
+            .is_some()
+    } else {
+        false
+    };
     let last_change = snapshot
         .storage(
             &st::subtensor_module::LAST_RATE_LIMITED_BLOCK,
@@ -417,6 +492,9 @@ pub async fn subnet_emission_weights<V: View + ?Sized>(
         validator: info.validator,
         miner: info.miner,
         gamma_share,
+        gamma_shares,
+        gamma_targets,
+        leased,
         global_tao_weight: inputs.global_tao_weight,
         created_via_lease: info.created_via_lease,
         root_tao: inputs.root_tao,

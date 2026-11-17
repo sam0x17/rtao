@@ -11518,7 +11518,7 @@
           "rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "e0ad1d9bf1214133b6d4166caced12436fea37ba"
+        "synced_blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4"
       },
       {
         "kind": "ported",
