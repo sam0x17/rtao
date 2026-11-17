@@ -33,18 +33,19 @@ use crate::{
     output::{DiagnosticContext, KvSection, ReviewSection},
     prompt::PromptHistory,
 };
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use rtao_client::{BlockRef, Client, Inclusion};
 use rtao_intents::SetSubnetEmissionWeights;
 use rtao_primitives::{H256, NetUid, emission_weights as ew, pyfmt::fmt_grouped};
 use rtao_reads::reads::subnets::{SubnetEmissionWeights, subnet_emission_weights};
 use rtao_tx::ExtrinsicResult;
 use serde_json::{Value, json};
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
 const EXIT_CODES: &str = "Exit codes: 0 done, including a read-back skipped with its reason; 1 subnet missing, change blocked right now, rejected by the chain, or the vector read back at the finalized inclusion block differs from the one the extrinsic applied; 2 invalid input or a vector the chain's rules would reject.";
 const NETUID_HELP: &str = "Numeric identifier of the subnet.";
-const SLOT_HELP: &str = "Slot to change: burn, recycle, owner, validator or miner.";
+const SLOT_HELP: &str = "Slot to change: burn, recycle, owner, validator, miner or gamma:N (the gamma share to subnet N). Other gamma shares are kept.";
+const GAMMA_HELP: &str = "Gamma share to subnet N as N=SHARE (3=5%); 0 removes it. Repeatable. Gamma shares not named are kept.";
 const SHARE_HELP: &str = "A percentage (41%), a 0..1 fraction (0.41), or raw u64 parts.";
 
 fn show_hint(netuid: NetUid) -> String {
@@ -64,6 +65,12 @@ fn error_slot(error: &str) -> Option<&'static str> {
             Some("validator")
         }
         "MinerEmissionBelowMinimum" => Some("miner"),
+        "InvalidValue"
+        | "GammaEmissionTargetNotWhitelisted"
+        | "GammaDisabled"
+        | "GammaEmissionAboveMaximum"
+        | "TooManyGammaShares"
+        | "GammaEmissionNotSettableOnLeasedSubnet" => Some("gamma"),
         _ => None,
     }
 }
@@ -89,10 +96,10 @@ fn optional_share_arg(id: &'static str, help: String) -> Arg {
 pub fn command() -> Command {
     Command::new("emission")
         .about(
-            "Subnet emission weights: how a subnet splits its alpha emission between burn, recycle, the owner, validators and miners.",
+            "Subnet emission weights: how a subnet splits its alpha emission between burn, recycle, the owner, validators, miners and gamma shares to other subnets.",
         )
         .long_about(format!(
-            "Subnet emission weights: how a subnet splits its alpha emission between burn, recycle, the owner, validators and miners.\n\nOnly the subnet owner coldkey can change the vector, once every 50,400 blocks (about 7 days) per subnet. Root is paid its baseline share of emission off the top of the validator slot every block, whatever the subnet sets. Burn + recycle together may be at most 33%. Add --dry-run to any write to preview the before/after vector and what root and validators keep; --json for machine-readable output. A write prints its receipt at inclusion, then waits up to 3 minutes for that block to finalize, reads the stored vector back there and checks it equals the vector the extrinsic applied; if finality does not arrive in time or the read fails, the read-back is skipped with the reason. With --json the receipt and the {{\"readback\": ...}} result are two documents.\n\n{EXIT_CODES}\n\nGuide: {}/guides/subnets",
+            "Subnet emission weights: how a subnet splits its alpha emission between burn, recycle, the owner, validators, miners and gamma shares to other subnets.\n\nOnly the subnet owner coldkey can change the vector, once every 50,400 blocks (about 7 days) per subnet. Root is paid its baseline share of emission off the top of the validator slot every block, whatever the subnet sets. Burn + recycle together may be at most 33%. Add --dry-run to any write to preview the before/after vector and what root and validators keep; --json for machine-readable output. A write prints its receipt at inclusion, then waits up to 3 minutes for that block to finalize, reads the stored vector back there and checks it equals the vector the extrinsic applied; if finality does not arrive in time or the read fails, the read-back is skipped with the reason. With --json the receipt and the {{\"readback\": ...}} result are two documents.\n\n{EXIT_CODES}\n\nGuide: {}/guides/subnets",
             rtao_catalog::py::DOCS_URL
         ))
         .subcommand_required(true)
@@ -100,28 +107,30 @@ pub fn command() -> Command {
         .subcommand(with_globals(
             Command::new("show")
                 .about("Show the emission split, what root keeps, the allowed ranges and the next change window.")
-                .after_help("Example: rtao subnets emission show --netuid 4\n\nJSON fields: netuid, block, weights (u64 parts), shares (0..1), gamma_share (parts), global_tao_weight, root_share, baseline_root_share, validator_share_after_root, root_capped, root_tao, alpha_issuance (rao), min_validator (parts), created_via_lease, limits{slot: min, max, min_parts, max_parts, why}, rate_limit{limit_blocks, last_change_block, next_allowed_block, blocks_until_allowed, owner_can_change_now}.")
+                .after_help("Example: rtao subnets emission show --netuid 4\n\nJSON fields: netuid, block, weights (u64 parts), shares (0..1), gamma_share (parts), gamma_shares{netuid: parts}, gamma_targets{netuid: gamma enabled}, global_tao_weight, root_share, baseline_root_share, validator_share_after_root, root_capped, root_tao, alpha_issuance (rao), min_validator (parts), created_via_lease, leased, limits{slot or gamma: min, max, min_parts, max_parts, why}, rate_limit{limit_blocks, last_change_block, next_allowed_block, blocks_until_allowed, owner_can_change_now}.")
                 .arg(netuid_arg()),
             Tier::Read,
         ))
         .subcommand(with_globals(
             Command::new("set")
-                .about("Set the full emission split in one go.")
-                .long_about("Set the full emission split in one go.\n\nBurn + recycle together may be at most 33%. Root stakers always keep their baseline share: it is paid off the top of the validator slot every block, so the validator share must stay above it (a share at or below the baseline is rejected) and alpha validators share what is left.")
-                .after_help(format!("Example: rtao subnets emission set --netuid 4 --owner 18% --validator 20% --miner 62% --dry-run\nExample with burn: rtao subnets emission set --netuid 4 --burn 5% --owner 10% --validator 40% --miner 45%\n\n{EXIT_CODES}"))
+                .about("Set all five slots in one go; gamma shares not named are kept.")
+                .long_about("Set all five slots in one go; gamma shares not named are kept.\n\nBurn + recycle together may be at most 33%. Root stakers always keep their baseline share: it is paid off the top of the validator slot every block, so the validator share must stay above it (a share at or below the baseline is rejected) and alpha validators share what is left.")
+                .after_help(format!("Example: rtao subnets emission set --netuid 4 --owner 18% --validator 20% --miner 62% --dry-run\nExample with burn: rtao subnets emission set --netuid 4 --burn 5% --owner 10% --validator 40% --miner 45%\nExample with gamma: rtao subnets emission set --netuid 4 --owner 18% --validator 31% --miner 46% --gamma 3=5%\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("owner", format!("Owner share. {SHARE_HELP}")))
                 .arg(text_arg("validator", format!("Validator share. {SHARE_HELP}")))
                 .arg(text_arg("miner", format!("Miner share. {SHARE_HELP}")))
                 .arg(optional_share_arg("burn", format!("Burn share (default 0). {SHARE_HELP}")))
-                .arg(optional_share_arg("recycle", format!("Recycle share (default 0). {SHARE_HELP}"))),
+                .arg(optional_share_arg("recycle", format!("Recycle share (default 0). {SHARE_HELP}")))
+                .arg(Arg::new("gamma").long("gamma").action(ArgAction::Append).help(GAMMA_HELP))
+                .arg(Arg::new("no-gamma").long("no-gamma").action(ArgAction::SetTrue).help("Remove every gamma share not named with --gamma.")),
             Tier::Tx,
         ))
         .subcommand(with_globals(
             Command::new("set-value")
                 .about("Set one slot; the other slots are rescaled to fill the rest.")
                 .long_about("Set one slot; the other slots are rescaled to fill the rest.\n\nThe untouched slots keep their ratio: lowering owner from 18% to 10% hands the 8% to the other non-zero slots in their current proportions.")
-                .after_help(format!("Example: rtao subnets emission set-value --netuid 4 --slot validator --value 20% --dry-run\n\n{EXIT_CODES}"))
+                .after_help(format!("Example: rtao subnets emission set-value --netuid 4 --slot validator --value 20% --dry-run\nExample with gamma: rtao subnets emission set-value --netuid 4 --slot gamma:3 --value 5%\n\n{EXIT_CODES}"))
                 .arg(netuid_arg())
                 .arg(text_arg("slot", SLOT_HELP.into()))
                 .arg(text_arg("value", format!("New share for the slot. {SHARE_HELP}"))),
@@ -158,6 +167,8 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
             "miner",
             "burn",
             "recycle",
+            "gamma",
+            "no-gamma",
         ]),
         Some("set-value") => Ok(vec!["netuid", "slot", "value"]),
         Some("increase" | "decrease") => Ok(vec!["netuid", "slot", "by"]),
@@ -187,6 +198,10 @@ pub enum Request {
         validator: String,
         /// Miner share text.
         miner: String,
+        /// Repeatable target=share gamma edits.
+        gamma: Vec<String>,
+        /// Remove every existing gamma share not named by `gamma`.
+        no_gamma: bool,
     },
     /// Set one slot and rescale the others.
     SetValue {
@@ -236,6 +251,11 @@ impl Request {
                 owner: text("owner")?,
                 validator: text("validator")?,
                 miner: text("miner")?,
+                gamma: leaf
+                    .get_many::<String>("gamma")
+                    .map(|values| values.cloned().collect())
+                    .unwrap_or_default(),
+                no_gamma: leaf.get_flag("no-gamma"),
             },
             "set-value" => Self::SetValue {
                 netuid,
@@ -318,6 +338,8 @@ pub fn record(info: &SubnetEmissionWeights) -> Value {
         "weights": info.weights,
         "shares": info.shares,
         "gamma_share": info.gamma_share,
+        "gamma_shares": info.gamma_shares,
+        "gamma_targets": info.gamma_targets,
         "global_tao_weight": info.global_tao_weight,
         "root_share": info.root_share,
         "baseline_root_share": info.baseline_root_share,
@@ -327,6 +349,7 @@ pub fn record(info: &SubnetEmissionWeights) -> Value {
         "alpha_issuance": info.alpha_issuance,
         "min_validator": info.min_validator,
         "created_via_lease": info.created_via_lease,
+        "leased": info.leased,
         "limits": info.rules().limits(),
         "rate_limit": info.rate_limit(),
     })
@@ -413,8 +436,92 @@ fn parse_share(ctx: &AppContext, raw: &str, flag: &str) -> Result<u64, CliError>
 }
 
 // py: sdk/python/bittensor/cli/commands/subnet_emission.py:132-137
-fn parse_slot(ctx: &AppContext, raw: &str) -> Result<usize, CliError> {
-    ew::slot_index(raw).map_err(|error| report(ctx, 2, &error.to_string(), None, Some(SLOT_HELP)))
+#[derive(Clone, Copy)]
+enum Slot {
+    Vector(usize),
+    Gamma(u16),
+}
+
+fn target_uid(text: &str) -> Option<u16> {
+    if !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit()) {
+        text.parse().ok()
+    } else {
+        None
+    }
+}
+
+fn parse_slot(ctx: &AppContext, raw: &str) -> Result<Slot, CliError> {
+    if let Some((kind, target)) = raw.split_once(':')
+        && kind.eq_ignore_ascii_case("gamma")
+    {
+        return target_uid(target).map(Slot::Gamma).ok_or_else(|| {
+            report(
+                ctx,
+                2,
+                &format!("invalid value for `--slot`: {raw:?}"),
+                None,
+                Some(SLOT_HELP),
+            )
+        });
+    }
+    ew::slot_index(raw)
+        .map(Slot::Vector)
+        .map_err(|error| report(ctx, 2, &error.to_string(), None, Some(SLOT_HELP)))
+}
+
+fn slot_share(info: &SubnetEmissionWeights, slot: Slot) -> (String, u64) {
+    match slot {
+        Slot::Vector(index) => (ew::SLOT_NAMES[index].into(), info.weights[index]),
+        Slot::Gamma(target) => (
+            format!("gamma:{target}"),
+            info.gamma_shares.get(&target).copied().unwrap_or(0),
+        ),
+    }
+}
+
+fn parse_gamma(ctx: &AppContext, raw: &[String]) -> Result<BTreeMap<u16, u64>, CliError> {
+    let mut shares = BTreeMap::new();
+    for item in raw {
+        let Some((target, share)) = item.split_once('=') else {
+            return Err(report(
+                ctx,
+                2,
+                &format!("invalid value for `--gamma`: {item:?}"),
+                None,
+                Some(GAMMA_HELP),
+            ));
+        };
+        let target = target_uid(target).ok_or_else(|| {
+            report(
+                ctx,
+                2,
+                &format!("invalid value for `--gamma`: {item:?}"),
+                None,
+                Some(GAMMA_HELP),
+            )
+        })?;
+        if shares.contains_key(&target) {
+            return Err(report(
+                ctx,
+                2,
+                &format!("`--gamma` names subnet {target} more than once"),
+                None,
+                None,
+            ));
+        }
+        shares.insert(target, parse_share(ctx, share, "--gamma")?);
+    }
+    Ok(shares)
+}
+
+fn gamma_total(shares: &BTreeMap<u16, u64>) -> Result<u64, CliError> {
+    u64::try_from(
+        shares
+            .values()
+            .map(|share| u128::from(*share))
+            .sum::<u128>(),
+    )
+    .map_err(|_| CliError::input("gamma shares exceed 100%"))
 }
 
 // py: sdk/python/bittensor/cli/commands/subnet_emission.py:140-169
@@ -422,9 +529,12 @@ fn reject(
     ctx: &AppContext,
     info: &SubnetEmissionWeights,
     proposed: &ew::Weights,
+    gamma_after: &BTreeMap<u16, u64>,
 ) -> Result<(), CliError> {
-    let rules = info.rules();
-    let violations = ew::validate(proposed, &rules);
+    let mut rules = info.rules();
+    rules.gamma_share = gamma_total(gamma_after)?;
+    let mut violations = ew::validate(proposed, &rules);
+    violations.extend(ew::validate_gamma(info.netuid.0, gamma_after, &rules));
     if violations.is_empty() {
         return Ok(());
     }
@@ -476,7 +586,11 @@ fn reject(
 
 // py: sdk/python/bittensor/cli/commands/subnet_emission.py:172-214
 /// Review-card rows: each moving slot, what root keeps, what validators are left.
-pub fn card(info: &SubnetEmissionWeights, preview: &ew::Preview) -> Vec<(String, Value)> {
+pub fn card(
+    info: &SubnetEmissionWeights,
+    preview: &ew::Preview,
+    gamma_after: &BTreeMap<u16, u64>,
+) -> Vec<(String, Value)> {
     let (before, after) = (&preview.before.weights, &preview.after.weights);
     let mut rows = Vec::new();
     for slot in ew::ADJUSTABLE_SLOTS {
@@ -488,6 +602,31 @@ pub fn card(info: &SubnetEmissionWeights, preview: &ew::Preview) -> Vec<(String,
             value = format!("{} -> {value}", ew::format_share(before[slot], 2));
         }
         rows.push((ew::SLOT_NAMES[slot].to_owned(), json!(value)));
+    }
+    for target in info
+        .gamma_shares
+        .keys()
+        .chain(gamma_after.keys())
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>()
+    {
+        let old = info.gamma_shares.get(&target).copied().unwrap_or(0);
+        let new = gamma_after.get(&target).copied().unwrap_or(0);
+        let mut value = ew::format_share(new, 2);
+        if old != new {
+            value = format!("{} -> {value}", ew::format_share(old, 2));
+        }
+        rows.push((format!("gamma:{target}"), json!(value)));
+    }
+    if info
+        .gamma_shares
+        .keys()
+        .any(|target| !gamma_after.contains_key(target))
+    {
+        rows.push((
+            "removed gamma shares".into(),
+            json!("their unconverted alpha goes to the miners"),
+        ));
     }
     let root = &preview.root;
     rows.push((
@@ -539,17 +678,20 @@ async fn submit(
     proposed: &ew::Weights,
     slots: &[usize],
     renormalize: bool,
+    gamma: &BTreeMap<u16, u64>,
     options: SubmissionOptions<'_>,
     external: Option<&dyn ExternalSignerFactory>,
     history: &mut PromptHistory,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
-    reject(ctx, info, proposed)?;
+    let gamma_after = ew::merge_gamma(&info.gamma_shares, gamma);
+    reject(ctx, info, proposed, &gamma_after)?;
     // Apply generated defaults for fields this slot-only command does not edit.
     let intent: SetSubnetEmissionWeights = serde_json::from_value(json!({
         "netuid": info.netuid,
         "slots": slots,
         "values": slots.iter().map(|slot| proposed[*slot]).collect::<Vec<_>>(),
         "renormalize": renormalize,
+        "gamma": gamma,
     }))
     .map_err(|error| CliError::failure(error.to_string()))?;
     rtao_tx::Intent::validate(&intent).map_err(|error| CliError::input(error.to_string()))?;
@@ -559,7 +701,7 @@ async fn submit(
         rtao_tx::Intent::summary(&intent),
         vec![ReviewSection {
             title: "Emission weights".into(),
-            rows: card(info, &preview),
+            rows: card(info, &preview, &gamma_after),
         }],
     );
     // The receipt is rendered at inclusion, as in Python; the read-back then
@@ -581,7 +723,16 @@ async fn submit(
         // A preview or a declined confirmation submitted nothing.
         None => Ok(None),
         Some(receipt) => {
-            read_back(ctx, client, info.netuid, proposed, receipt, finality_wait).await
+            read_back(
+                ctx,
+                client,
+                info.netuid,
+                proposed,
+                &gamma_after,
+                receipt,
+                finality_wait,
+            )
+            .await
         }
     }
 }
@@ -699,14 +850,25 @@ async fn stored_at(
 pub fn readback_record(
     previewed: &ew::Weights,
     applied: Option<&ew::Weights>,
+    submitted_gamma: &BTreeMap<u16, u64>,
     stored: &SubnetEmissionWeights,
     block_hash: H256,
 ) -> Value {
     let submitted = applied.unwrap_or(previewed);
-    let differs: Vec<&str> = (0..ew::SLOT_NAMES.len())
+    let mut differs: Vec<String> = (0..ew::SLOT_NAMES.len())
         .filter(|slot| submitted[*slot] != stored.weights[*slot])
-        .map(|slot| ew::SLOT_NAMES[slot])
+        .map(|slot| ew::SLOT_NAMES[slot].to_owned())
         .collect();
+    for target in submitted_gamma
+        .keys()
+        .chain(stored.gamma_shares.keys())
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>()
+    {
+        if submitted_gamma.get(&target) != stored.gamma_shares.get(&target) {
+            differs.push(format!("gamma:{target}"));
+        }
+    }
     json!({
         "status": if differs.is_empty() { "match" } else { "mismatch" },
         "matches": differs.is_empty(),
@@ -719,6 +881,8 @@ pub fn readback_record(
         "base_changed": applied.is_some_and(|applied| applied != previewed),
         "stored": stored.weights,
         "stored_shares": stored.shares,
+        "submitted_gamma": submitted_gamma,
+        "stored_gamma": stored.gamma_shares,
         "differs": differs,
     })
 }
@@ -758,6 +922,7 @@ async fn read_back(
     client: &Client,
     netuid: NetUid,
     previewed: &ew::Weights,
+    gamma_after: &BTreeMap<u16, u64>,
     receipt: ExtrinsicResult,
     finality_wait: Duration,
 ) -> Result<Option<ExtrinsicResult>, CliError> {
@@ -788,8 +953,9 @@ async fn read_back(
     };
     let applied = applied_weights(&receipt, netuid);
     let submitted = applied.unwrap_or(*previewed);
-    let record = readback_record(previewed, applied.as_ref(), &stored, block);
+    let record = readback_record(previewed, applied.as_ref(), gamma_after, &stored, block);
     let matches = record["matches"] == json!(true);
+    let gamma_mismatch = stored.gamma_shares != *gamma_after;
     let mut vector = Vec::new();
     for slot in ew::ADJUSTABLE_SLOTS {
         let parts = stored.weights[slot];
@@ -803,8 +969,28 @@ async fn read_back(
             Some(note),
         ));
     }
+    for target in gamma_after
+        .keys()
+        .chain(stored.gamma_shares.keys())
+        .copied()
+        .collect::<std::collections::BTreeSet<_>>()
+    {
+        let stored_share = stored.gamma_shares.get(&target).copied().unwrap_or(0);
+        let submitted_share = gamma_after.get(&target).copied().unwrap_or(0);
+        let mut note = format!("{stored_share} parts");
+        if stored_share != submitted_share {
+            note.push_str(&format!("; submitted {submitted_share} parts"));
+        }
+        vector.push((
+            format!("gamma:{target}"),
+            ew::format_share(stored_share, 4),
+            Some(note),
+        ));
+    }
     let result = if matches {
         "matches the submitted vector exactly"
+    } else if gamma_mismatch {
+        "differs from the submitted emission split"
     } else {
         "differs from the submitted vector"
     };
@@ -870,7 +1056,8 @@ async fn read_back(
         ctx,
         1,
         &format!(
-            "the emission vector stored on subnet {netuid} at finalized block {} differs from the one submitted ({differs})",
+            "the emission {} stored on subnet {netuid} at finalized block {} differs from the one submitted ({differs})",
+            if gamma_mismatch { "split" } else { "vector" },
             fmt_grouped(u128::from(stored.block))
         ),
         Some(if applied.is_some() {
@@ -885,13 +1072,25 @@ async fn read_back(
 }
 
 // py: sdk/python/bittensor/cli/commands/subnet_emission.py:243-251
+type Renormalized = (ew::Weights, Vec<usize>, BTreeMap<u16, u64>);
+
 fn renormalized(
     ctx: &AppContext,
     info: &SubnetEmissionWeights,
-    slot: usize,
+    slot: Slot,
     parts: u64,
-) -> Result<ew::Weights, CliError> {
-    ew::renormalize_with_gamma(&info.weights, &[(slot, parts)], info.gamma_share).map_err(|error| {
+) -> Result<Renormalized, CliError> {
+    let fixed = match slot {
+        Slot::Vector(index) => vec![(index, parts)],
+        Slot::Gamma(_) => Vec::new(),
+    };
+    let gamma = match slot {
+        Slot::Vector(_) => BTreeMap::new(),
+        Slot::Gamma(target) => BTreeMap::from([(target, parts)]),
+    };
+    let after = ew::merge_gamma(&info.gamma_shares, &gamma);
+    let total = gamma_total(&after)?;
+    let weights = ew::renormalize_with_gamma(&info.weights, &fixed, total).map_err(|error| {
         report(
             ctx,
             2,
@@ -899,7 +1098,12 @@ fn renormalized(
             None,
             Some(&show_hint(info.netuid)),
         )
-    })
+    })?;
+    Ok((
+        weights,
+        fixed.iter().map(|(slot, _)| *slot).collect(),
+        gamma,
+    ))
 }
 
 // py: sdk/python/bittensor/cli/commands/subnet_emission.py:254-328
@@ -911,6 +1115,27 @@ fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> 
             ew::SLOT_NAMES[slot].to_owned(),
             ew::format_share(info.weights[slot], 2),
             Some(format!("{} parts", info.weights[slot])),
+        ));
+    }
+    for (&target, &share) in &info.gamma_shares {
+        let note = match info
+            .gamma_targets
+            .as_ref()
+            .and_then(|targets| targets.get(&target))
+        {
+            Some(true) => format!("{share} parts"),
+            Some(false) => format!(
+                "{share} parts; subnet {target} has gamma disabled, so every change must remove it (--gamma {target}=0)"
+            ),
+            None if info.gamma_targets.is_some() => format!(
+                "{share} parts; subnet {target} is not whitelisted for gamma emission, so every change must remove it (--gamma {target}=0)"
+            ),
+            None => format!("{share} parts; gamma target state unavailable at this runtime"),
+        };
+        vector.push((
+            format!("gamma:{target}"),
+            ew::format_share(share, 2),
+            Some(note),
         ));
     }
     let (next_value, next_note) = next_change(&info.rate_limit());
@@ -964,9 +1189,9 @@ fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> 
         ),
     ];
     let table = ranges(&info.rules());
-    let allowed = ew::SLOT_NAMES
+    let mut allowed: Vec<(String, String, Option<String>)> = ew::SLOT_NAMES
         .into_iter()
-        .chain(["burn+recycle", "sum"])
+        .chain(["burn+recycle", "gamma", "sum"])
         .filter_map(|name| {
             table
                 .iter()
@@ -974,6 +1199,35 @@ fn show(ctx: &AppContext, info: &SubnetEmissionWeights) -> Result<(), CliError> 
                 .map(|(name, rule, why)| ((*name).to_owned(), rule.clone(), Some(why.clone())))
         })
         .collect();
+    let targets = info
+        .gamma_targets
+        .as_ref()
+        .map(|targets| {
+            targets
+                .iter()
+                .filter(|(target, _)| **target != netuid.0)
+                .map(|(target, enabled)| {
+                    if *enabled {
+                        target.to_string()
+                    } else {
+                        format!("{target} (gamma disabled)")
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
+        .unwrap_or_default();
+    allowed.push((
+        "gamma targets".into(),
+        if info.leased {
+            "none: this subnet is leased".into()
+        } else if targets.is_empty() {
+            "none".into()
+        } else {
+            targets
+        },
+        Some("the subnets root whitelisted for gamma emission".into()),
+    ));
     ctx.output
         .kv_sections(
             Some(&format!("subnet {netuid} emission weights")),
@@ -1022,6 +1276,8 @@ pub async fn execute(
             owner,
             validator,
             miner,
+            gamma,
+            no_gamma,
         } => {
             let info = fetch(ctx, client, *netuid, BlockRef::Best).await?;
             let burn = parse_share(ctx, burn, "--burn")?;
@@ -1029,43 +1285,60 @@ pub async fn execute(
             let owner = parse_share(ctx, owner, "--owner")?;
             let validator = parse_share(ctx, validator, "--validator")?;
             let miner = parse_share(ctx, miner, "--miner")?;
-            // The subnet's gamma shares count toward the sum (runtime 489).
-            let total = [burn, recycle, owner, validator, miner, info.gamma_share]
-                .into_iter()
-                .map(u128::from)
-                .sum::<u128>();
-            let gap = i128::from(ew::ONE) - i128::try_from(total).unwrap_or(i128::MAX);
-            let miner = if gap != 0 && gap.abs() <= 1_000 {
-                // Decimal shares rarely hit u64::MAX exactly; the miner slot
-                // soaks up the dust.
-                u64::try_from(i128::from(miner) + gap).map_err(|_| {
-                    report(
-                        ctx,
-                        2,
-                        "the miner share cannot absorb the rounding dust",
-                        None,
-                        None,
-                    )
-                })?
-            } else if gap != 0 {
+            let mut gamma_changes = if *no_gamma {
+                info.gamma_shares
+                    .keys()
+                    .map(|target| (*target, 0))
+                    .collect::<BTreeMap<_, _>>()
+            } else {
+                BTreeMap::new()
+            };
+            gamma_changes.extend(parse_gamma(ctx, gamma)?);
+            let gamma_after = ew::merge_gamma(&info.gamma_shares, &gamma_changes);
+            let gamma_share = gamma_total(&gamma_after)?;
+            let proposed =
+                ew::absorb_rounding(&[burn, recycle, owner, validator, miner], gamma_share)
+                    .map_err(|error| report(ctx, 2, &error.to_string(), None, None))?;
+            let total = proposed
+                .iter()
+                .map(|share| u128::from(*share))
+                .sum::<u128>()
+                + u128::from(gamma_share);
+            if total != u128::from(ew::ONE) {
+                let mut help =
+                    "give all shares, or use set-value to move one slot and rescale the rest"
+                        .to_owned();
+                if info
+                    .gamma_shares
+                    .keys()
+                    .any(|target| !gamma_changes.contains_key(target))
+                {
+                    help.push_str("; gamma shares not named are kept (--no-gamma removes them)");
+                }
                 return Err(report(
                     ctx,
                     2,
                     &format!(
                         "burn + recycle + owner + validator + miner{} must add up to 100%, not {}",
-                        ew::and_gamma(info.gamma_share),
+                        ew::and_gamma(gamma_share),
                         ew::format_share(total, 4)
                     ),
                     None,
-                    Some("give all shares, or use set-value to move one slot and rescale the rest"),
+                    Some(&help),
                 ));
-            } else {
-                miner
-            };
-            let proposed = [burn, recycle, owner, validator, miner];
+            }
             let slots: Vec<usize> = (0..ew::SLOT_NAMES.len()).collect();
             submit(
-                ctx, client, &info, &proposed, &slots, false, options, external, history,
+                ctx,
+                client,
+                &info,
+                &proposed,
+                &slots,
+                false,
+                &gamma_changes,
+                options,
+                external,
+                history,
             )
             .await
         }
@@ -1078,17 +1351,9 @@ pub async fn execute(
             let info = fetch(ctx, client, *netuid, BlockRef::Best).await?;
             let slot = parse_slot(ctx, slot)?;
             let parts = parse_share(ctx, value, "--value")?;
-            let proposed = renormalized(ctx, &info, slot, parts)?;
+            let (proposed, slots, gamma) = renormalized(ctx, &info, slot, parts)?;
             submit(
-                ctx,
-                client,
-                &info,
-                &proposed,
-                &[slot],
-                true,
-                options,
-                external,
-                history,
+                ctx, client, &info, &proposed, &slots, true, &gamma, options, external, history,
             )
             .await
         }
@@ -1102,7 +1367,7 @@ pub async fn execute(
             let info = fetch(ctx, client, *netuid, BlockRef::Best).await?;
             let slot = parse_slot(ctx, slot)?;
             let delta = parse_share(ctx, by, "--by")?;
-            let current = info.weights[slot];
+            let (name, current) = slot_share(&info, slot);
             let parts = if *increase {
                 current.saturating_add(delta)
             } else if delta > current {
@@ -1111,7 +1376,7 @@ pub async fn execute(
                     2,
                     &format!(
                         "{} is only {}; cannot take {} from it",
-                        ew::SLOT_NAMES[slot],
+                        name,
                         ew::format_share(current, 2),
                         ew::format_share(delta, 2)
                     ),
@@ -1121,17 +1386,9 @@ pub async fn execute(
             } else {
                 current - delta
             };
-            let proposed = renormalized(ctx, &info, slot, parts)?;
+            let (proposed, slots, gamma) = renormalized(ctx, &info, slot, parts)?;
             submit(
-                ctx,
-                client,
-                &info,
-                &proposed,
-                &[slot],
-                true,
-                options,
-                external,
-                history,
+                ctx, client, &info, &proposed, &slots, true, &gamma, options, external, history,
             )
             .await
         }

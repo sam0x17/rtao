@@ -9752,7 +9752,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/subnet_emission.rs"
         ],
-        "synced_blob": "1413d585052ca18f7a7c69792dbd28f748b7e86e"
+        "synced_blob": "1a3276f0839f0dd6687e556e6a3a35d5f00c3cba"
       },
       {
         "kind": "ported",

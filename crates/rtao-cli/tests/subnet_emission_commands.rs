@@ -246,12 +246,14 @@ fn netuid() -> String {
     SUBNET.0.to_string()
 }
 
-const SHOW_FIELDS: [&str; 16] = [
+const SHOW_FIELDS: [&str; 19] = [
     "netuid",
     "block",
     "weights",
     "shares",
     "gamma_share",
+    "gamma_shares",
+    "gamma_targets",
     "global_tao_weight",
     "root_share",
     "baseline_root_share",
@@ -261,6 +263,7 @@ const SHOW_FIELDS: [&str; 16] = [
     "alpha_issuance",
     "min_validator",
     "created_via_lease",
+    "leased",
     "limits",
     "rate_limit",
 ];
@@ -650,6 +653,8 @@ async fn gamma_shares_count_in_the_sum() -> TestResult {
         (SUBNET,),
         vec![(NetUid(2), gamma)],
     )?;
+    state.seed(&st::SUBNET_GAMMA_EMISSION_WHITELISTED, (NetUid(2),), true)?;
+    state.seed(&st::SUBNET_GAMMA_ENABLED, (NetUid(2),), true)?;
     let wallet = wallet()?;
     let (client, _) = client(state).await?;
     let netuid = netuid();
@@ -751,6 +756,298 @@ async fn gamma_shares_count_in_the_sum() -> TestResult {
         "{}",
         short.stderr
     );
+    Ok(())
+}
+
+fn gamma_state() -> Result<FakeState, Box<dyn std::error::Error>> {
+    let gamma = ew::parse_share("10%")?;
+    let mut weights = ew::default_weights(DEFAULT_OWNER);
+    weights[ew::VALIDATOR] -= gamma;
+    let mut state = state()?;
+    state.seed_runtime(
+        "SubnetInfoRuntimeApi",
+        "get_subnet_emission_weights",
+        emission_info(weights),
+    )?;
+    state.seed(
+        &st::SUBNET_GAMMA_EMISSION,
+        (SUBNET,),
+        vec![(NetUid(2), gamma)],
+    )?;
+    for target in [NetUid(2), NetUid(3)] {
+        state.seed(&st::SUBNET_GAMMA_EMISSION_WHITELISTED, (target,), true)?;
+        state.seed(&st::SUBNET_GAMMA_ENABLED, (target,), true)?;
+    }
+    Ok(state)
+}
+
+#[tokio::test]
+async fn cli_sets_and_removes_gamma_shares() -> TestResult {
+    let wallet = wallet()?;
+    let (client, _) = client(gamma_state()?).await?;
+    let netuid = netuid();
+    let shown = run(
+        &client,
+        wallet.path(),
+        &["--json", "subnets", "emission", "show", "--netuid", &netuid],
+    )
+    .await?;
+    assert_eq!(code(&shown), 0, "{}", shown.stderr);
+    let record: Value = serde_json::from_str(&shown.stdout)?;
+    assert_eq!(
+        record["gamma_shares"],
+        json!({"2": ew::parse_share("10%")?})
+    );
+    assert_eq!(record["gamma_targets"], json!({"2": true, "3": true}));
+    assert_eq!(record["leased"], false);
+
+    let add = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "set",
+            "--netuid",
+            &netuid,
+            "--owner",
+            "18%",
+            "--validator",
+            "31%",
+            "--miner",
+            "36%",
+            "--gamma",
+            "3=5%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&add), 0, "{}", add.stderr);
+    let plan: Value = serde_json::from_str(&add.stdout)?;
+    assert_eq!(plan["args"]["gamma"], json!({"3": ew::parse_share("5%")?}));
+    assert_eq!(
+        plan["preview"]["gamma"]["after"],
+        json!({"2": ew::parse_share("10%")?, "3": ew::parse_share("5%")?})
+    );
+
+    let clear = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "set",
+            "--netuid",
+            &netuid,
+            "--owner",
+            "18%",
+            "--validator",
+            "41%",
+            "--miner",
+            "41%",
+            "--no-gamma",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&clear), 0, "{}", clear.stderr);
+    let plan: Value = serde_json::from_str(&clear.stdout)?;
+    assert_eq!(plan["args"]["gamma"], json!({"2": 0}));
+    assert_eq!(plan["preview"]["gamma"]["after"], json!({}));
+
+    let value = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "set-value",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "gamma:3",
+            "--value",
+            "5%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&value), 0, "{}", value.stderr);
+    let plan: Value = serde_json::from_str(&value.stdout)?;
+    assert_eq!(plan["args"]["slots"], json!([]));
+    assert_eq!(plan["args"]["gamma"], json!({"3": ew::parse_share("5%")?}));
+
+    let decrease = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "decrease",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "gamma:2",
+            "--by",
+            "10%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&decrease), 0, "{}", decrease.stderr);
+    let plan: Value = serde_json::from_str(&decrease.stdout)?;
+    assert_eq!(plan["args"]["gamma"], json!({"2": 0}));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn cli_rejects_invalid_gamma_edits_before_signing() -> TestResult {
+    let wallet = wallet()?;
+    let (client, chain) = client(gamma_state()?).await?;
+    let netuid = netuid();
+    let duplicate = run(
+        &client,
+        wallet.path(),
+        &[
+            "subnets",
+            "emission",
+            "set",
+            "--netuid",
+            &netuid,
+            "--owner",
+            "18%",
+            "--validator",
+            "31%",
+            "--miner",
+            "36%",
+            "--gamma",
+            "3=5%",
+            "--gamma",
+            "03=5%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&duplicate), 2);
+    assert!(duplicate.stderr.contains("more than once"));
+    let signed = run(
+        &client,
+        wallet.path(),
+        &[
+            "subnets",
+            "emission",
+            "set-value",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "gamma:+3",
+            "--value",
+            "5%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&signed), 2);
+    assert!(signed.stderr.contains("invalid value for `--slot`"));
+    let over = run(
+        &client,
+        wallet.path(),
+        &[
+            "subnets", "emission", "increase", "--netuid", &netuid, "--slot", "gamma:2", "--by",
+            "1%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&over), 2);
+    assert!(
+        over.stderr.contains("GammaEmissionAboveMaximum"),
+        "{}",
+        over.stderr
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn cli_names_gamma_target_and_lease_rules() -> TestResult {
+    let wallet = wallet()?;
+    let (client, chain) = client(gamma_state()?).await?;
+    let netuid = netuid();
+    chain.mutate_state(|state| state.seed(&st::SUBNET_GAMMA_ENABLED, (NetUid(3),), false))?;
+    let add = [
+        "subnets",
+        "emission",
+        "set-value",
+        "--netuid",
+        &netuid,
+        "--slot",
+        "gamma:3",
+        "--value",
+        "5%",
+    ];
+    let disabled = run(&client, wallet.path(), &add).await?;
+    assert_eq!(code(&disabled), 2);
+    assert!(
+        disabled.stderr.contains("GammaDisabled"),
+        "{}",
+        disabled.stderr
+    );
+    chain.mutate_state(|state| {
+        state.seed(&st::SUBNET_GAMMA_EMISSION_WHITELISTED, (NetUid(3),), false)
+    })?;
+    let unlisted = run(&client, wallet.path(), &add).await?;
+    assert_eq!(code(&unlisted), 2);
+    assert!(
+        unlisted
+            .stderr
+            .contains("GammaEmissionTargetNotWhitelisted"),
+        "{}",
+        unlisted.stderr
+    );
+    chain.mutate_state(|state| {
+        state.seed_typed("SubtensorModule", "SubnetUidToLeaseId", (SUBNET,), 7u32)
+    })?;
+    let leased = run(&client, wallet.path(), &add).await?;
+    assert_eq!(code(&leased), 2);
+    assert!(
+        leased
+            .stderr
+            .contains("GammaEmissionNotSettableOnLeasedSubnet"),
+        "{}",
+        leased.stderr
+    );
+    assert!(chain.mutate_state(|state| state.submissions.is_empty()));
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn readback_detects_gamma_mismatch_with_identical_vector() -> TestResult {
+    let (client, _) = client(gamma_state()?).await?;
+    let view = client.at(rtao_client::BlockRef::Best).await?;
+    let stored = rtao_reads::reads::subnets::subnet_emission_weights(&view, SUBNET)
+        .await?
+        .ok_or("emission vector")?;
+    let submitted_gamma = std::collections::BTreeMap::new();
+    let record = rtao_cli::commands::subnet_emission::readback_record(
+        &stored.weights,
+        None,
+        &submitted_gamma,
+        &stored,
+        rtao_primitives::H256([0; 32]),
+    );
+    assert_eq!(record["matches"], false);
+    assert_eq!(record["differs"], json!(["gamma:2"]));
+    assert_eq!(record["submitted_gamma"], json!({}));
+    assert_eq!(
+        record["stored_gamma"],
+        json!({"2": ew::parse_share("10%")?})
+    );
+    client.close().await;
     Ok(())
 }
 

@@ -13,14 +13,6 @@ tag = "v491"
 symbols = ["bittensor.cli.commands.proxy.app", "bittensor.cli.commands.proxy.cancel_announcement", "bittensor.cli.commands.proxy.execute_announced", "bittensor.cli.commands.proxy.fund_controller", "bittensor.cli.commands.proxy.protect_account", "bittensor.cli.commands.proxy.rotate_controller", "bittensor.cli.commands.proxy.run_cancel", "bittensor.cli.commands.proxy.run_execute_protected", "bittensor.cli.commands.proxy.run_fund", "bittensor.cli.commands.proxy.run_protect", "bittensor.cli.commands.proxy.run_rotate", "bittensor.cli.commands.proxy.run_rotate_finalize", "bittensor.cli.commands.proxy.run_show", "bittensor.cli.commands.proxy.show_protected"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/subnet_emission.py"
-kind = "ported"
-from = "1413d585052ca18f7a7c69792dbd28f748b7e86e"
-to = "1a3276f0839f0dd6687e556e6a3a35d5f00c3cba"
-tag = "v491"
-symbols = ["bittensor.cli.commands.subnet_emission._ERROR_SLOT", "bittensor.cli.commands.subnet_emission._GAMMA_HELP", "bittensor.cli.commands.subnet_emission._SLOT_HELP", "bittensor.cli.commands.subnet_emission._card", "bittensor.cli.commands.subnet_emission._gamma_note", "bittensor.cli.commands.subnet_emission._parse_gamma", "bittensor.cli.commands.subnet_emission._parse_slot", "bittensor.cli.commands.subnet_emission._record", "bittensor.cli.commands.subnet_emission._reject", "bittensor.cli.commands.subnet_emission._renormalized_submit", "bittensor.cli.commands.subnet_emission._slot_share", "bittensor.cli.commands.subnet_emission._submit", "bittensor.cli.commands.subnet_emission.app", "bittensor.cli.commands.subnet_emission.decrease", "bittensor.cli.commands.subnet_emission.increase", "bittensor.cli.commands.subnet_emission.replace", "bittensor.cli.commands.subnet_emission.set_value", "bittensor.cli.commands.subnet_emission.set_weights", "bittensor.cli.commands.subnet_emission.show"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/subnets.py"
 kind = "ported"
 from = "b875a85679360670e6425eac88ab830f9994fed8"
