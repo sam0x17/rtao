@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Remaining test inventory follows the catalog (D-202)
+
+- Fixed: the transaction tool manifest and read coverage tests follow the generated catalog counts. Intent and CLI integration test names no longer name the old catalog size.
+
 ### Sample fixtures follow the pinned upstream tree (D-201)
 
 - Fixed: read and CLI sample tests check their generated table's source blob against the authenticated upstream tree instead of a 490-only SHA. The tests still require exact registry coverage and run implemented samples through native dispatch.

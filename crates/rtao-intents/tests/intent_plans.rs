@@ -529,7 +529,7 @@ fn pending(name: &str) -> bool {
 #[tokio::test]
 // pyt: unit/test_intents_table.py::test_every_intent_has_a_sample
 // pyt: unit/test_intents_table.py::test_composes_and_plans_offline
-async fn all_86_catalog_operations_plan_with_fake_chain() -> Result<()> {
+async fn all_catalog_operations_plan_with_fake_chain() -> Result<()> {
     let samples = samples()?;
     let expected: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
     ensure!(
@@ -554,7 +554,7 @@ async fn all_86_catalog_operations_plan_with_fake_chain() -> Result<()> {
     }
     ensure!(
         failures.is_empty(),
-        "all-86 planning failures:\n{}",
+        "catalog planning failures:\n{}",
         failures.join("\n")
     );
     Ok(())
@@ -562,7 +562,7 @@ async fn all_86_catalog_operations_plan_with_fake_chain() -> Result<()> {
 
 #[tokio::test]
 // pyt: unit/test_intents_table.py::TestPolicyEnforcement::test_spend_cap_blocks_every_spending_intent
-async fn all_86_sample_plans_enforce_declared_spend_caps_without_private_access() -> Result<()> {
+async fn all_sample_plans_enforce_declared_spend_caps_without_private_access() -> Result<()> {
     let samples = samples()?;
     let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
     ensure!(
@@ -646,7 +646,7 @@ async fn all_86_sample_plans_enforce_declared_spend_caps_without_private_access(
 
 #[tokio::test]
 // pyt: unit/test_intents_table.py::TestPolicyEnforcement::test_netuid_allowlist
-async fn all_86_sample_plans_enforce_subnet_allowlists_without_private_access() -> Result<()> {
+async fn all_sample_plans_enforce_subnet_allowlists_without_private_access() -> Result<()> {
     let samples = samples()?;
     let names: BTreeSet<_> = INTENTS.iter().map(|spec| spec.name).collect();
     ensure!(

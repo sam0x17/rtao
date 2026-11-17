@@ -304,7 +304,7 @@ fn command_parsers_require_values_show_help_and_accept_global_overrides() -> Tes
 }
 
 #[test]
-fn tools_json_equals_python_on_upstream_fields_for_all_86_ops() -> TestResult {
+fn tools_json_equals_python_on_upstream_fields_for_all_catalog_ops() -> TestResult {
     let payload = catalog::tools_payload(&[])?;
     let rows = payload.as_array().ok_or("catalog array")?;
     assert_eq!(rows.len(), rtao_catalog::INTENTS.len());
