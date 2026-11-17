@@ -101,14 +101,6 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/emission_weights.py"
-kind = "ported"
-from = "575e6ec5728a0ffdea80743a4c01480673a716d9"
-to = "06b1d7d749969b1fad313e938e63d0c14ec8db6f"
-tag = "v491"
-symbols = ["bittensor.intents.emission_weights.GAMMA_HELP", "bittensor.intents.emission_weights.RENORMALIZE_HELP", "bittensor.intents.emission_weights.SLOTS_HELP", "bittensor.intents.emission_weights.SetSubnetEmissionWeights", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.__post_init__", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._call", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._current", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._effect_lines", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._gamma_rules", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._gamma_share", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._gamma_shares", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._inputs", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._merged", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._rules", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.build", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.gamma", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.preflight", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.summary", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.touches_netuids", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.wraps", "bittensor.intents.emission_weights._gamma_text", "bittensor.intents.emission_weights.emission_weights_rate_limit_key", "bittensor.intents.emission_weights.gamma_emission_share", "bittensor.intents.emission_weights.gamma_emission_shares", "bittensor.intents.emission_weights.gamma_emission_targets", "bittensor.intents.emission_weights.root_preservation_inputs"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/proxy.py"
 kind = "ported"
 from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"

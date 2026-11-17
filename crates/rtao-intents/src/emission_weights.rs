@@ -3,9 +3,8 @@
 //!
 //! Each subnet carries a five-slot vector `[burn, recycle, owner, validator,
 //! miner]` of `u64 / u64::MAX` shares. The subnet owner (or root) changes it
-//! with `AdminUtils.sudo_set_subnet_emission_weights`, a sparse update: name
-//! the slots being changed and their new shares; omitted slots keep their
-//! current value. The chain enforces the rules
+//! with `AdminUtils.sudo_set_subnet_emission_weights_v2`, replacing the whole
+//! split, including gamma shares. The chain enforces the rules
 //! in [`rtao_primitives::emission_weights`] and rate-limits owners to one
 //! change per week per subnet (root is exempt; the first change on a subnet is
 //! always allowed). Read the current vector and its bounds with the
@@ -15,12 +14,13 @@ use rtao_client::{View, ViewExt};
 use rtao_primitives::{AccountId, NetUid, emission_weights as ew, pyfmt::fmt_grouped};
 use rtao_reads::reads::subnets::{
     RootPreservationInputs, SubnetEmissionWeightsInfo, emission_weights_rate_limit_key,
-    gamma_emission_share, gamma_emission_shares, root_preservation_inputs,
+    gamma_emission_shares, gamma_emission_targets, root_preservation_inputs,
     subnet_emission_weights_info,
 };
-use rtao_runtime::{calls::admin_utils, storage::subtensor_module as st};
+use rtao_runtime::storage::subtensor_module as st;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentPreflight, PreflightCx};
 use serde_json::Value;
+use std::collections::BTreeMap;
 
 pub use crate::SetSubnetEmissionWeights;
 
@@ -39,6 +39,15 @@ fn vector_text(weights: &ew::Weights) -> String {
         })
         .collect::<Vec<_>>()
         .join(" / ")
+}
+
+fn gamma_text(shares: &BTreeMap<u16, u64>) -> String {
+    let text = shares
+        .iter()
+        .map(|(target, share)| format!("gamma:{target} {}", ew::format_share(*share, 2)))
+        .collect::<Vec<_>>()
+        .join(" / ");
+    if text.is_empty() { "none".into() } else { text }
 }
 
 fn pct(value: f64) -> String {
@@ -84,14 +93,11 @@ fn invalid(error: ew::EmissionWeightsError) -> IntentError {
 // py: sdk/python/bittensor/intents/emission_weights.py:118-132
 /// Normalized `(slot, parts)` updates, in the order given.
 ///
-/// Mirrors Python's constructor checks: slots and values pair up, at least
-/// one slot is named and each slot appears once. Burn and recycle may be
+/// Mirrors Python's constructor checks: slots and values pair up and each
+/// slot appears once. Burn and recycle may be
 /// nonzero; [`ew::validate`] checks their combined cap.
 pub fn updates(intent: &SetSubnetEmissionWeights) -> Result<Vec<(usize, u64)>, IntentError> {
-    // D-196: the regenerated 491 interface exposes gamma edits before their
-    // hand port is ready. Never silently discard them. Serialization keeps
-    // this adapter compatible with both generated interface generations.
-    reject_gamma_edits(serde_json::to_value(intent)?.get("gamma"))?;
+    let gamma = gamma_updates(intent)?;
     if intent.slots.len() != intent.values.len() {
         return Err(IntentError::Validation(format!(
             "slots and values must pair up: got {} slots and {} values",
@@ -99,9 +105,9 @@ pub fn updates(intent: &SetSubnetEmissionWeights) -> Result<Vec<(usize, u64)>, I
             intent.values.len()
         )));
     }
-    if intent.slots.is_empty() {
+    if intent.slots.is_empty() && gamma.is_empty() {
         return Err(IntentError::Validation(
-            "name at least one slot to set".into(),
+            "name at least one slot or gamma share to set".into(),
         ));
     }
     let slots = intent
@@ -127,20 +133,32 @@ pub fn updates(intent: &SetSubnetEmissionWeights) -> Result<Vec<(usize, u64)>, I
     Ok(slots.into_iter().zip(values).collect())
 }
 
-fn reject_gamma_edits(gamma: Option<&Value>) -> Result<(), IntentError> {
-    match gamma {
-        None => Ok(()),
-        Some(Value::Object(shares)) if shares.is_empty() => Ok(()),
-        _ => Err(IntentError::Validation(
-            "gamma emission edits are not implemented; existing gamma shares are preserved".into(),
-        )),
+fn gamma_updates(intent: &SetSubnetEmissionWeights) -> Result<BTreeMap<u16, u64>, IntentError> {
+    let Value::Object(shares) = &intent.gamma else {
+        return Err(IntentError::Validation(
+            "gamma must be an object of target shares".into(),
+        ));
+    };
+    let mut parsed = BTreeMap::new();
+    for (target, share) in shares {
+        if target.is_empty() || !target.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err(IntentError::Validation(format!(
+                "gamma target {target:?} is not a netuid"
+            )));
+        }
+        let netuid = target.parse::<u16>().map_err(|_| {
+            IntentError::Validation(format!("gamma target {target:?} is not a netuid"))
+        })?;
+        if parsed
+            .insert(netuid, ew::parse_share_json(share).map_err(invalid)?)
+            .is_some()
+        {
+            return Err(IntentError::Validation(
+                "each gamma target may appear at most once".into(),
+            ));
+        }
     }
-}
-
-fn uses_split_call() -> bool {
-    <SetSubnetEmissionWeights as rtao_tx::IntentInterface>::SPEC
-        .wraps
-        .contains(&("AdminUtils", "sudo_set_subnet_emission_weights_v2"))
+    Ok(parsed)
 }
 
 fn compose_split(
@@ -188,6 +206,7 @@ pub(crate) fn canonicalize(intent: &mut SetSubnetEmissionWeights) -> Result<(), 
         .iter()
         .map(|(_, value)| Value::from(*value))
         .collect();
+    intent.gamma = serde_json::to_value(gamma_updates(intent)?)?;
     Ok(())
 }
 
@@ -205,7 +224,7 @@ fn merged(
     if intent.renormalize {
         ew::renormalize_with_gamma(&base, updates, gamma_share)
     } else {
-        Ok(ew::merge(&base, updates))
+        ew::absorb_rounding(&ew::merge(&base, updates), gamma_share)
     }
 }
 
@@ -216,12 +235,23 @@ struct Inputs {
     last_change_block: u64,
     block: u64,
     owner: Option<AccountId>,
-    /// Sum of the subnet's gamma shares (zero before runtime 489).
+    gamma_before: BTreeMap<u16, u64>,
+    gamma_after: BTreeMap<u16, u64>,
+    gamma_targets: Option<BTreeMap<u16, bool>>,
+    leased: bool,
+    /// Sum of the updated gamma shares.
     gamma_share: u64,
 }
 
 // py: sdk/python/bittensor/intents/emission_weights.py:164-199
-async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inputs>, IntentError> {
+async fn inputs<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+    gamma_edits: &BTreeMap<u16, u64>,
+) -> Result<Option<Inputs>, IntentError> {
+    if netuid == NetUid::ROOT {
+        return Ok(None);
+    }
     let snapshot = view.pin().await?;
     let Some(current) = subnet_emission_weights_info(&snapshot, netuid)
         .await
@@ -232,9 +262,27 @@ async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inp
     let root = root_preservation_inputs(&snapshot, netuid)
         .await
         .map_err(read_error)?;
-    let gamma_share = gamma_emission_share(&snapshot, netuid)
+    let gamma_before = gamma_emission_shares(&snapshot, netuid)
         .await
         .map_err(read_error)?;
+    let gamma_after = ew::merge_gamma(&gamma_before, gamma_edits);
+    let gamma_share = gamma_total(&gamma_after)?;
+    let gamma_targets = gamma_emission_targets(&snapshot)
+        .await
+        .map_err(read_error)?;
+    let leased = if snapshot
+        .block()
+        .runtime
+        .storage_entry("SubtensorModule", "SubnetUidToLeaseId")
+        .is_some()
+    {
+        snapshot
+            .storage(&st::SUBNET_UID_TO_LEASE_ID, (netuid,))
+            .await?
+            .is_some()
+    } else {
+        false
+    };
     let (last_change_block, owner) = snapshot
         .fetch((
             st::LAST_RATE_LIMITED_BLOCK.at((emission_weights_rate_limit_key(netuid),)),
@@ -247,8 +295,17 @@ async fn inputs<V: View + ?Sized>(view: &V, netuid: NetUid) -> Result<Option<Inp
         last_change_block,
         block: snapshot.block().number,
         owner: owner.get().copied(),
+        gamma_before,
+        gamma_after,
+        gamma_targets,
+        leased,
         gamma_share,
     }))
+}
+
+fn gamma_total(shares: &BTreeMap<u16, u64>) -> Result<u64, IntentError> {
+    let total: u128 = shares.values().map(|share| u128::from(*share)).sum();
+    u64::try_from(total).map_err(|_| IntentError::Validation("gamma shares exceed u64".into()))
 }
 
 impl SetSubnetEmissionWeights {
@@ -258,11 +315,12 @@ impl SetSubnetEmissionWeights {
         cx: &PreflightCx<'_, V>,
     ) -> Result<IntentPreflight, IntentError> {
         let summary = self.summary();
-        let Some(inputs) = inputs(cx.view, self.netuid).await? else {
+        let gamma_edits = gamma_updates(self)?;
+        let Some(inputs) = inputs(cx.view, self.netuid, &gamma_edits).await? else {
             return Ok(IntentPreflight {
                 effects: vec![summary],
                 blocks: vec![format!(
-                    "subnet {} does not exist (the root subnet has no emission vector)",
+                    "subnet {} does not exist or has no emission vector",
                     self.netuid
                 )],
                 ..Default::default()
@@ -295,13 +353,30 @@ impl SetSubnetEmissionWeights {
             min_owner: ew::DEFAULT_OWNER,
             created_via_lease: inputs.current.created_via_lease,
             gamma_share: inputs.gamma_share,
-            gamma_targets: None,
-            leased: false,
+            gamma_targets: inputs.gamma_targets.clone(),
+            leased: inputs.leased,
         };
         let mut blocks: Vec<String> = ew::validate(&after, &rules)
             .iter()
             .map(ToString::to_string)
             .collect();
+        blocks.extend(
+            ew::validate_gamma(self.netuid.0, &inputs.gamma_after, &rules)
+                .iter()
+                .map(ToString::to_string),
+        );
+        let shown = compose_split(cx.runtime, self.netuid, &after, &inputs.gamma_after)?;
+        if !cx
+            .call
+            .as_bytes()
+            .windows(shown.as_bytes().len())
+            .any(|part| part == shown.as_bytes())
+        {
+            blocks.push(format!(
+                "the emission split of subnet {} changed after this call was built, so the call no longer matches this preview; prepare it again",
+                self.netuid
+            ));
+        }
         if let Some(owner) = inputs.owner
             && cx.dispatch_origin != owner
         {
@@ -326,11 +401,18 @@ impl SetSubnetEmissionWeights {
         }
         preview.rate_limit = Some(rate);
         preview.limits = Some(rules.limits());
-        let effects = self.effect_lines(&preview);
-        let preview = match serde_json::to_value(&preview)? {
+        let effects = self.effect_lines(&preview, &inputs.gamma_before, &inputs.gamma_after);
+        let mut preview = match serde_json::to_value(&preview)? {
             Value::Object(preview) => preview,
             _ => serde_json::Map::new(),
         };
+        preview.insert(
+            "gamma".into(),
+            serde_json::json!({
+                "before": inputs.gamma_before,
+                "after": inputs.gamma_after,
+            }),
+        );
         Ok(IntentPreflight {
             effects,
             blocks,
@@ -340,89 +422,110 @@ impl SetSubnetEmissionWeights {
     }
 
     // py: sdk/python/bittensor/intents/emission_weights.py:262-271
-    fn effect_lines(&self, preview: &ew::Preview) -> Vec<String> {
+    fn effect_lines(
+        &self,
+        preview: &ew::Preview,
+        gamma_before: &BTreeMap<u16, u64>,
+        gamma_after: &BTreeMap<u16, u64>,
+    ) -> Vec<String> {
         let (before, after) = (&preview.before.weights, &preview.after.weights);
-        vec![
+        let mut lines = vec![
             self.summary(),
             if preview.changed.is_empty() {
                 format!("vector: {} (unchanged)", vector_text(before))
             } else {
                 format!("vector: {} -> {}", vector_text(before), vector_text(after))
             },
-            root_line(&preview.root),
-        ]
+        ];
+        if gamma_before != gamma_after {
+            lines.push(format!(
+                "gamma shares: {} -> {}",
+                gamma_text(gamma_before),
+                gamma_text(gamma_after)
+            ));
+            if gamma_before
+                .keys()
+                .any(|target| !gamma_after.contains_key(target))
+            {
+                lines.push(
+                    "removed gamma shares: their unconverted alpha goes to the miners".into(),
+                );
+            }
+        }
+        lines.push(root_line(&preview.root));
+        lines
     }
 }
 
 impl Intent for SetSubnetEmissionWeights {
     // py: sdk/python/bittensor/intents/emission_weights.py:279-285
     fn summary(&self) -> String {
-        let parts = match updates(self) {
+        let mut parts = match updates(self) {
             Ok(updates) => updates
                 .iter()
                 .map(|(slot, value)| {
                     format!("{}={}", ew::SLOT_NAMES[*slot], ew::format_share(*value, 2))
                 })
-                .collect::<Vec<_>>()
-                .join(", "),
+                .collect::<Vec<_>>(),
             // Invalid programmatic values are rejected by validate before execution.
-            Err(_) => String::new(),
+            Err(_) => Vec::new(),
         };
-        let mode = if self.renormalize {
+        if let Ok(gamma) = gamma_updates(self) {
+            parts.extend(
+                gamma.iter().map(|(target, share)| {
+                    format!("gamma:{target}={}", ew::format_share(*share, 2))
+                }),
+            );
+        }
+        let mode = if self.renormalize && self.slots.len() < ew::SLOT_NAMES.len() {
             " (renormalizing the rest)"
         } else {
             ""
         };
         format!(
-            "set emission weights on netuid {}: {parts}{mode}",
-            self.netuid
+            "set emission weights on netuid {}: {}{mode}",
+            self.netuid,
+            parts.join(", ")
         )
+    }
+
+    fn touches_netuids(&self) -> smallvec::SmallVec<[NetUid; 2]> {
+        let mut touched = smallvec::smallvec![self.netuid];
+        if let Ok(gamma) = gamma_updates(self) {
+            touched.extend(
+                gamma
+                    .keys()
+                    .copied()
+                    .map(NetUid)
+                    .filter(|target| *target != self.netuid),
+            );
+        }
+        touched
     }
 
     // py: sdk/python/bittensor/intents/emission_weights.py:134-162
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let updates = updates(self)?;
-        if uses_split_call() {
-            let snapshot = cx.view.pin().await?;
-            let current = subnet_emission_weights_info(&snapshot, self.netuid)
-                .await
-                .map_err(read_error)?;
-            let gamma = gamma_emission_shares(&snapshot, self.netuid)
-                .await
-                .map_err(read_error)?;
-            let total: u128 = gamma.values().map(|share| u128::from(*share)).sum();
-            let gamma_share = u64::try_from(total)
-                .map_err(|_| IntentError::Validation("gamma shares exceed u64".into()))?;
-            let weights = merged(self, &updates, current.as_ref(), gamma_share).map_err(invalid)?;
-            return Ok(Built::new(compose_split(
-                cx.runtime,
-                self.netuid,
-                &weights,
-                &gamma,
-            )?));
-        }
-        let (uids, values): (Vec<u16>, Vec<u64>) = if self.renormalize {
-            let snapshot = cx.view.pin().await?;
-            let current = subnet_emission_weights_info(&snapshot, self.netuid)
-                .await
-                .map_err(read_error)?;
-            let gamma_share = gamma_emission_share(&snapshot, self.netuid)
-                .await
-                .map_err(read_error)?;
-            let merged = merged(self, &updates, current.as_ref(), gamma_share).map_err(invalid)?;
-            ((0..5).collect(), merged.to_vec())
+        let snapshot = cx.view.pin().await?;
+        let current = if self.netuid == NetUid::ROOT {
+            None
         } else {
-            let mut sorted = updates;
-            sorted.sort_unstable_by_key(|(slot, _)| *slot);
-            sorted
-                .into_iter()
-                .map(|(slot, value)| (slot as u16, value))
-                .unzip()
+            subnet_emission_weights_info(&snapshot, self.netuid)
+                .await
+                .map_err(read_error)?
         };
-        Ok(Built::new(
-            admin_utils::sudo_set_subnet_emission_weights(self.netuid, uids, values)
-                .compose(cx.runtime)?,
-        ))
+        let before = gamma_emission_shares(&snapshot, self.netuid)
+            .await
+            .map_err(read_error)?;
+        let gamma = ew::merge_gamma(&before, &gamma_updates(self)?);
+        let weights =
+            merged(self, &updates, current.as_ref(), gamma_total(&gamma)?).map_err(invalid)?;
+        Ok(Built::new(compose_split(
+            cx.runtime,
+            self.netuid,
+            &weights,
+            &gamma,
+        )?))
     }
 
     async fn effects<V: View + ?Sized>(
@@ -461,12 +564,39 @@ mod adoption_tests {
     use serde_json::json;
 
     #[test]
-    fn unported_gamma_edits_cannot_be_silently_ignored() {
-        assert!(reject_gamma_edits(None).is_ok());
-        assert!(reject_gamma_edits(Some(&json!({}))).is_ok());
-        for value in [json!({"3": "5%"}), json!({"3": 0}), json!([]), Value::Null] {
-            assert!(reject_gamma_edits(Some(&value)).is_err());
-        }
+    fn gamma_updates_normalize_targets_and_preserve_zero_removals() {
+        let mut intent: SetSubnetEmissionWeights = serde_json::from_value(json!({
+            "netuid": 1, "slots": [], "values": [], "gamma": {"03": "5%", "2": 0}
+        }))
+        .unwrap();
+        canonicalize(&mut intent).unwrap();
+        assert_eq!(
+            intent.gamma,
+            json!({"2": 0, "3": ew::parse_share("5%").unwrap()})
+        );
+        assert!(intent.summary().contains("gamma:2=0.00%, gamma:3=5.00%"));
+        let duplicate: SetSubnetEmissionWeights = serde_json::from_value(json!({
+            "netuid": 1, "slots": [], "values": [], "gamma": {"03": "5%", "3": "1%"}
+        }))
+        .unwrap();
+        assert!(
+            duplicate
+                .validate()
+                .unwrap_err()
+                .to_string()
+                .contains("at most once")
+        );
+        let bad_with_slot: SetSubnetEmissionWeights = serde_json::from_value(json!({
+            "netuid": 1, "slots": ["owner"], "values": ["10%"], "gamma": {"-1": "5%"}
+        }))
+        .unwrap();
+        assert!(
+            bad_with_slot
+                .validate()
+                .unwrap_err()
+                .to_string()
+                .contains("not a netuid")
+        );
     }
 
     #[test]

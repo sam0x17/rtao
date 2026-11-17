@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, clippy::panic)] // Assertions must fail when fake-chain fixtures are invalid.
 
 use anyhow::Result;
-use rtao_client::{Client, ClientConfig, Network};
+use rtao_client::{BlockRef, Client, ClientConfig, Network};
 use rtao_intents::{AnyIntent, SetRejectStakingHotkeyGrowth, SetSubnetEmissionWeights};
 use rtao_primitives::{
     AccountId, AlphaBalance, DefaultAccount, NetUid, TaoBalance,
@@ -24,7 +24,7 @@ use rtao_testkit::{
     },
     rpc::RpcClient,
 };
-use rtao_tx::{Executor, Intent, Plan, PlanOptions};
+use rtao_tx::{Executor, Intent, IntentInterface, Plan, PlanOptions, PreflightCx, SystemClock};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
@@ -424,6 +424,21 @@ async fn intent_plan_names_a_missing_subnet() -> Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn intent_plan_rejects_root_even_when_runtime_answers() -> Result<()> {
+    let (client, _) = client(state()?).await?;
+    let set = intent(json!({
+        "netuid": 0, "slots": ["owner"], "values": ["10%"], "renormalize": true
+    }));
+    let plan = self::plan(&client, &set).await;
+    assert_eq!(
+        plan.violations,
+        ["subnet 0 does not exist or has no emission vector"]
+    );
+    client.close().await;
+    Ok(())
+}
+
 // pyt: unit/test_emission_weights.py::test_intent_build_sends_full_vector_when_renormalizing
 #[tokio::test]
 async fn intent_build_sends_full_vector_when_renormalizing() -> Result<()> {
@@ -490,6 +505,14 @@ fn seed_gamma_share(state: &mut FakeState) -> Result<()> {
         (SUBNET,),
         vec![(NetUid(2), gamma_share())],
     )?;
+    state.seed(&st::SUBNET_GAMMA_EMISSION_WHITELISTED, (NetUid(2),), true)?;
+    state.seed(&st::SUBNET_GAMMA_ENABLED, (NetUid(2),), true)?;
+    Ok(())
+}
+
+fn seed_gamma_target(state: &mut FakeState, target: NetUid, enabled: bool) -> Result<()> {
+    state.seed(&st::SUBNET_GAMMA_EMISSION_WHITELISTED, (target,), true)?;
+    state.seed(&st::SUBNET_GAMMA_ENABLED, (target,), enabled)?;
     Ok(())
 }
 
@@ -554,6 +577,119 @@ async fn intent_counts_the_gamma_shares_in_the_sum() -> Result<()> {
         plan.violations[0].contains("and the gamma shares (10.00%)"),
         "{}",
         plan.violations[0]
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn intent_adds_and_removes_gamma_shares_in_the_full_split() -> Result<()> {
+    let mut state = state()?;
+    seed_gamma_share(&mut state)?;
+    seed_gamma_target(&mut state, NetUid(3), true)?;
+    let (client, fake) = client(state).await?;
+    let runtime = client.refresh_runtime().await?;
+    let add = intent(json!({
+        "netuid": SUBNET.0, "slots": [], "values": [], "renormalize": true,
+        "gamma": {"3": "5%"}
+    }));
+    assert_eq!(add.touches_netuids().as_slice(), &[SUBNET, NetUid(3)]);
+    let plan = self::plan(&client, &add).await;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    let weights: ew::Weights = serde_json::from_value(plan.preview["after"]["weights"].clone())?;
+    assert_eq!(
+        total(&weights),
+        u128::from(ONE - gamma_share() - share("5%"))
+    );
+    assert_eq!(plan.preview["gamma"]["before"], json!({"2": gamma_share()}));
+    assert_eq!(
+        plan.preview["gamma"]["after"],
+        json!({"2": gamma_share(), "3": share("5%")})
+    );
+    assert_eq!(
+        plan.call().as_bytes(),
+        expected_emission_call(
+            &runtime,
+            (0..5).collect(),
+            weights.to_vec(),
+            gamma_weights(),
+            &[(2, gamma_share()), (3, share("5%"))],
+        )?
+    );
+    let remove = intent(json!({
+        "netuid": SUBNET.0, "slots": [], "values": [], "renormalize": true,
+        "gamma": {"2": 0}
+    }));
+    let plan = self::plan(&client, &remove).await;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    assert_eq!(plan.preview["gamma"]["after"], json!({}));
+    assert!(plan.effects.iter().any(|line| {
+        line.contains("removed gamma shares: their unconverted alpha goes to the miners")
+    }));
+    assert_eq!(
+        plan.call().as_bytes(),
+        expected_emission_call(
+            &runtime,
+            (0..5).collect(),
+            serde_json::from_value::<ew::Weights>(plan.preview["after"]["weights"].clone())?
+                .to_vec(),
+            gamma_weights(),
+            &[],
+        )?
+    );
+    fake.mutate_state(|state| {
+        state
+            .seed(&st::SUBNET_GAMMA_ENABLED, (NetUid(2),), false)
+            .unwrap();
+    });
+    let plan = self::plan(&client, &add).await;
+    assert!(
+        plan.violations
+            .iter()
+            .any(|line| line.contains("GammaDisabled"))
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn intent_preflight_rejects_a_split_changed_after_build() -> Result<()> {
+    let (client, fake) = client(state()?).await?;
+    let set = intent(json!({
+        "netuid": SUBNET.0, "slots": ["owner"], "values": ["10%"], "renormalize": true
+    }));
+    let plan = self::plan(&client, &set).await;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    let mut changed = ew::default_weights(DEFAULT_OWNER);
+    changed[ew::VALIDATOR] -= share("1%");
+    changed[ew::MINER] += share("1%");
+    let mut info = emission_weights_info(SUBNET);
+    info["weights"] = json!(changed);
+    info["validator"] = json!(changed[ew::VALIDATOR]);
+    fake.mutate_state(|state| {
+        state
+            .seed_runtime("SubnetInfoRuntimeApi", "get_subnet_emission_weights", info)
+            .unwrap();
+    });
+    let snapshot = client.at(BlockRef::Finalized).await?;
+    let runtime = client.refresh_runtime().await?;
+    let preview = set
+        .preflight(&PreflightCx {
+            view: &snapshot,
+            runtime: &runtime,
+            clock: &SystemClock,
+            spec: SetSubnetEmissionWeights::SPEC,
+            client: &client,
+            dispatch_origin: COLD,
+            fee_payer: COLD,
+            call: plan.call(),
+        })
+        .await?;
+    assert_eq!(
+        preview.blocks,
+        [format!(
+            "the emission split of subnet {SUBNET} changed after this call was built, so the call no longer matches this preview; prepare it again"
+        )]
     );
     client.close().await;
     Ok(())
