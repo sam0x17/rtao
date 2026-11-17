@@ -4,7 +4,9 @@
 //!
 //! Announcing publishes the cleartext destination through
 //! `announce_coldkey_swap_v2`, which the chain validates and reserves before
-//! charging the swap cost. The legacy hash-only `announce_coldkey_swap`
+//! charging the swap cost. The chain commits both the destination and its
+//! policy-import eligibility at announcement time; the client does not compute
+//! that commitment. The legacy hash-only `announce_coldkey_swap`
 //! extrinsic stays raw-only for callers that must keep the destination secret.
 
 use rtao_client::View;

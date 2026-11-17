@@ -149,14 +149,6 @@ tag = "v491"
 symbols = ["bittensor.intents.batch.Batch", "bittensor.intents.batch.Batch.build"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/coldkey.py"
-kind = "ported"
-from = "d2882ffce64baa07576b6a0d0dafbeeb815b98aa"
-to = "3b54511c6ff5e6ac7e9155cb676968007c901110"
-tag = "v491"
-symbols = []
-
-[[file]]
 py = "sdk/python/bittensor/intents/emission_weights.py"
 kind = "ported"
 from = "575e6ec5728a0ffdea80743a4c01480673a716d9"

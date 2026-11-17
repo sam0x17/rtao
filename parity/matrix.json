@@ -10962,7 +10962,7 @@
         "rust": [
           "`rtao_intents::coldkey` (feature `coldkey`)"
         ],
-        "synced_blob": "d2882ffce64baa07576b6a0d0dafbeeb815b98aa"
+        "synced_blob": "3b54511c6ff5e6ac7e9155cb676968007c901110"
       },
       {
         "kind": "ported",
