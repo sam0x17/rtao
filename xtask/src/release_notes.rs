@@ -70,7 +70,7 @@ pub(crate) fn render(root: &Path, tag: &str) -> Result<String> {
             field("rev")?
         ));
     }
-    output.push_str("\nCLI archives, when attached, come from the operator-run macOS lane (Apple ARM; Intel cross-built and checked through Rosetta) and its signed local record (D-121). Linux archives and GitHub build attestations wait for the deferred release workflow; build Linux binaries from crates.io.\n");
+    output.push_str("\nCLI archives, when attached, come from the operator-run macOS lane (Apple ARM; Intel cross-built and checked through Rosetta) and its unsigned local build record (D-121). Linux archives and GitHub build attestations wait for the deferred release workflow; build Linux binaries from crates.io.\n");
     let curated_path = root.join("docs/releases").join(format!("{tag}.md"));
     let curated = fs::read_to_string(&curated_path).with_context(|| {
         format!(
