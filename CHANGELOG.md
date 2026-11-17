@@ -4,7 +4,7 @@
 
 ### Adoption tests and fixture locks (D-198)
 
-- Fixed: intent tests account for generated `from_hotkey` and JSON gamma defaults, distinguish a tool's `op` tag from typed announcement arguments, and cover every generated catalog entry without freezing the count at 490. The registry and typed checks still reject supplied saved-announcement pins.
+- Fixed: intent tests account for generated `from_hotkey` and JSON gamma defaults, distinguish a tool's `op` tag from typed announcement arguments, and cover the generated catalog and sample plans without freezing 490's intent and read counts. The registry and typed checks still reject supplied saved-announcement pins.
 - Fixed: fuzz, TLS and validator probe fixture lockfiles use the workspace's 0.1.2 crate versions for locked checks.
 
 ### Proxy defaults and announcement pins during adoption (D-197)

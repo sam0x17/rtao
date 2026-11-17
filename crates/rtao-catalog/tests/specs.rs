@@ -16,8 +16,6 @@ fn every_intent_and_read_retains_its_complete_catalog_record() -> Result {
         serde_json::from_str(include_str!("../../../vendor/upstream/catalog/reads.json"))?;
     let intent_rows = intents.as_array().ok_or("intent catalog is not an array")?;
     let read_rows = reads.as_array().ok_or("read catalog is not an array")?;
-    assert_eq!(INTENTS.len(), 98);
-    assert_eq!(READS.len(), 111);
     assert_eq!(INTENTS.len(), intent_rows.len());
     assert_eq!(READS.len(), read_rows.len());
     let mut intent_names = BTreeSet::new();
