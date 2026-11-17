@@ -10060,7 +10060,7 @@
           "crates/rtao-cli/src/commands/schema.rs",
           "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "633ce1c94de7b26f1466426801811bc8b4bcc8bf"
+        "synced_blob": "fb6ed4e78335dc2b1fe95611406f5059df6ebccc"
       },
       {
         "kind": "ported",

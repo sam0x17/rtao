@@ -86,7 +86,7 @@ fn field(
         .to_owned();
     if !query {
         if annotation_base == "dict" || annotation_base.starts_with("dict[") {
-            kind = "json".into();
+            kind = "object".into();
         } else if annotation_base == "list" || annotation_base.starts_with("list[") {
             kind = "array".into();
         } else if annotation_base == "int | float | str" {
@@ -428,12 +428,27 @@ pub fn coerce(field: &Field, raw: &str) -> Result<Value, CliError> {
         "json" => rtao_primitives::json::from_str(raw)
             .map_err(|error| CliError::input(format!("invalid JSON: {error}"))),
         "object" => {
-            let value: Value = rtao_primitives::json::from_str(raw)
-                .map_err(|e| CliError::input(format!("invalid JSON: {e}")))?;
+            let value: Value = rtao_primitives::json::from_str(raw).map_err(|error| {
+                if field.query {
+                    CliError::input(format!("invalid JSON: {error}"))
+                } else {
+                    CliError::input(format!(
+                        "expected a JSON object, not {}",
+                        rtao_primitives::pyfmt::string_repr(raw)
+                    ))
+                }
+            })?;
             if value.is_object() {
                 Ok(value)
             } else {
-                Err(CliError::input("expected a JSON object"))
+                Err(CliError::input(if field.query {
+                    "expected a JSON object".to_owned()
+                } else {
+                    format!(
+                        "expected a JSON object, not {}",
+                        rtao_primitives::pyfmt::string_repr(raw)
+                    )
+                }))
             }
         }
         "array" => {

@@ -868,6 +868,35 @@ fn tx_lists_match_python_csv_and_json_list_rules_and_keep_integer_digits() -> Te
 }
 
 #[test]
+fn generated_tx_dictionary_option_requires_a_json_object() -> TestResult {
+    let spec = rtao_catalog::INTENTS
+        .iter()
+        .find(|spec| spec.name == "authorize_order")
+        .ok_or("authorize_order")?;
+    let fields = schema::intent_fields(spec)?;
+    let order = fields
+        .iter()
+        .find(|field| field.name == "order")
+        .ok_or("order")?;
+    assert_eq!(order.kind, "object");
+    assert_eq!(
+        schema::coerce(order, r#"{"quantity":2}"#)?,
+        json!({"quantity":2})
+    );
+    for raw in ["[]", "null", "1", "not-json"] {
+        let error = schema::coerce(order, raw).expect_err(raw);
+        assert_eq!(
+            error.message,
+            format!(
+                "expected a JSON object, not {}",
+                rtao_primitives::pyfmt::string_repr(raw)
+            )
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn parser_aliases_boolean_twins_defaults_and_leaf_globals_use_the_real_schema() -> TestResult {
     let parsed = tree()?.try_get_matches_from([
         "rtao",

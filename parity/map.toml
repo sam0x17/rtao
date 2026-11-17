@@ -1461,10 +1461,10 @@ rs = [
   "crates/rtao-cli/src/commands/generated.rs",
 ]
 kind = "ported"
-synced_blob = "633ce1c94de7b26f1466426801811bc8b4bcc8bf"
-synced_tag = "v490"
+synced_blob = "fb6ed4e78335dc2b1fe95611406f5059df6ebccc"
+synced_tag = "v491"
 milestone = "M4–M5"
-notes = "v484 source reconciliation: Python now omits factory-backed defaults so construction evaluates a fresh value. Native schema already parses immutable extracted JSON and clones defaults per invocation. Test the actual claim_root factory field and parser; catalog CLI fixtures retain CSV/JSON list parsing and both command spellings. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-137, D-159): list[dict] fields are documented as a JSON list, amount_gamma takes the bare --amount alias, own-key fields follow falls_back_to_wallet (D-137); intent construction errors exit 2."
+notes = "v484 source reconciliation: Python now omits factory-backed defaults so construction evaluates a fresh value. Native schema already parses immutable extracted JSON and clones defaults per invocation. Test the actual claim_root factory field and parser; catalog CLI fixtures retain CSV/JSON list parsing and both command spellings. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-137, D-159): list[dict] fields are documented as a JSON list, amount_gamma takes the bare --amount alias, own-key fields follow falls_back_to_wallet (D-137); intent construction errors exit 2. v491: generated transaction dict options require a JSON object; malformed or scalar/list JSON gets an input error naming the option before intent construction. Query dicts keep their existing diagnostics."
 
 [[file]]
 py = "sdk/python/bittensor/cli/upgrade_helpers.py"

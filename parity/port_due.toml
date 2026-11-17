@@ -109,14 +109,6 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/tx.py"
-kind = "ported"
-from = "633ce1c94de7b26f1466426801811bc8b4bcc8bf"
-to = "fb6ed4e78335dc2b1fe95611406f5059df6ebccc"
-tag = "v491"
-symbols = ["bittensor.cli.tx._coerce", "bittensor.cli.tx._make_command"]
-
-[[file]]
 py = "sdk/python/bittensor/emission_weights.py"
 kind = "ported"
 from = "d6ddb11200afca73eb90e8e87ac7c7c81e4ea88d"
