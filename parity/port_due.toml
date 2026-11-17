@@ -197,14 +197,6 @@ tag = "v491"
 symbols = ["bittensor.reads.accounts.StorageFunctionNotFound", "bittensor.reads.accounts.coldkey_swap_announcement", "bittensor.reads.accounts.proxy_announcements"]
 
 [[file]]
-py = "sdk/python/bittensor/reads/hyperparameters.py"
-kind = "ported"
-from = "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b"
-to = "3070a2a32afa65bfb81f09a5128557a83e9fff95"
-tag = "v491"
-symbols = []
-
-[[file]]
 py = "sdk/python/bittensor/reads/locks.py"
 kind = "ported"
 from = "40115bfe96fec8bda42351d18fbe3477e342ec25"

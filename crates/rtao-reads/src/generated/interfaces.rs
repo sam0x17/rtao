@@ -1489,12 +1489,17 @@ pub struct SubnetGammaEmissionWhitelistedParams {
 #[doc = "Root-controlled gamma emission whitelist flag for a subnet (1 = whitelisted); other subnets' gamma shares may name it only while it is set (see the set_subnet_gamma_emission_whitelisted intent)."]
 #[doc(alias = "bittensor.reads.subnet_gamma_emission_whitelisted")]
 pub async fn subnet_gamma_emission_whitelisted<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: Option<rtao_primitives::NetUid>,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::SubnetGammaEmissionWhitelisted,
-    ))
+    view: &V,
+    netuid: Option<rtao_primitives::NetUid>,
+) -> Result<u8, crate::ReadError> {
+    crate::reads::owner::subnet_gamma_emission_whitelisted(
+        view,
+        netuid.ok_or_else(|| crate::ReadError::InvalidParam {
+            name: "netuid".into(),
+            reason: "required chain key is null".into(),
+        })?,
+    )
+    .await
 }
 #[doc = "Typed parameters for `subnet_hyperparameters`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

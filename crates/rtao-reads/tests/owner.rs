@@ -45,6 +45,16 @@ fn seed() -> FakeState {
         ("MaxDelegateTake", vec![], json!(65535)),
         ("Difficulty", vec![json!(1)], json!(u64::MAX)),
         ("SubnetEmissionEnabled", vec![json!(1)], json!(true)),
+        (
+            "SubnetGammaEmissionWhitelisted",
+            vec![json!(1)],
+            json!(true),
+        ),
+        (
+            "SubnetGammaEmissionWhitelisted",
+            vec![json!(2)],
+            json!(false),
+        ),
         ("Burn", vec![json!(1)], json!(1234567890)),
         ("MechanismEmissionSplit", vec![json!(1)], json!([8, 2, 6])),
         (
@@ -424,6 +434,22 @@ async fn owner_scalar_identity_epoch_and_hyperparameter_projections_match_python
             .await
             .unwrap(),
         1
+    );
+    assert_eq!(
+        owner::subnet_gamma_emission_whitelisted(&client, NetUid(1))
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        dispatch(
+            &client,
+            ReadName::SubnetGammaEmissionWhitelisted,
+            &params(json!({"netuid": 2})),
+        )
+        .await
+        .unwrap(),
+        json!(0)
     );
     assert_eq!(
         owner::burn(&client, NetUid(1)).await.unwrap().rao,

@@ -805,7 +805,7 @@ impl ReadName {
             Self::SubnetConvictions => true,
             Self::SubnetEmissionEnabled => true,
             Self::SubnetEmissionWeights => true,
-            Self::SubnetGammaEmissionWhitelisted => false,
+            Self::SubnetGammaEmissionWhitelisted => true,
             Self::SubnetHyperparameters => true,
             Self::SubnetIdentity => true,
             Self::SubnetNames => true,
@@ -1400,11 +1400,11 @@ impl ReadName {
                 >(),
             },
             Self::SubnetGammaEmissionWhitelisted => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<
                     super::interfaces::SubnetGammaEmissionWhitelistedParams,
                 >(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<u8>(),
             },
             Self::SubnetHyperparameters => ReadInterfaceMetadata {
                 implemented: true,

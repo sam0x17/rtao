@@ -2498,12 +2498,12 @@ notes = "Source reconciliation 2026-10-15: all five reads compared with the exac
 
 [[file]]
 py = "sdk/python/bittensor/reads/hyperparameters.py"
-rs = ["rtao_reads::generated::interfaces::{weights_rate_limit, difficulty, min_allowed_weights, max_weight_limit, immunity_period, reveal_period, subnet_emission_enabled}","rtao_reads::reads::hyperparameters","rtao_reads::reads::owner::{difficulty, subnet_emission_enabled}"]
+rs = ["rtao_reads::generated::interfaces::{weights_rate_limit, difficulty, min_allowed_weights, max_weight_limit, immunity_period, reveal_period, subnet_emission_enabled, subnet_gamma_emission_whitelisted}","rtao_reads::reads::hyperparameters","rtao_reads::reads::owner::{difficulty, subnet_emission_enabled, subnet_gamma_emission_whitelisted}"]
 kind = "ported"
-synced_blob = "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b"
-synced_tag = "v490"
+synced_blob = "3070a2a32afa65bfb81f09a5128557a83e9fff95"
+synced_tag = "v491"
 milestone = "M2–M4"
-notes = "v482 source mapping 2026-10-22: Only subnet_emission_enabled read help changes to new registrations starting enabled. Storage hit and parameter signatures remain unchanged under normal extraction. Consumers: crates/rtao-reads/src/generated/interfaces.rs; rtao_catalog::READS. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "v482 source mapping 2026-10-22: Only subnet_emission_enabled read help changes to new registrations starting enabled. Storage hit and parameter signatures remain unchanged under normal extraction. Consumers: crates/rtao-reads/src/generated/interfaces.rs; rtao_catalog::READS. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v491 port 2026-11-17: subnet_gamma_emission_whitelisted reads the pinned SubtensorModule bool descriptor for the requested netuid and returns the Python scalar integer 0 or 1; focused fake-chain assertions cover both values and catalog dispatch. No live oracle claim."
 
 [[file]]
 py = "sdk/python/bittensor/reads/identity.py"

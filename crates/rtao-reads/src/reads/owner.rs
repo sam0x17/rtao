@@ -288,6 +288,20 @@ pub async fn subnet_emission_enabled<V: View + ?Sized>(
     ))
 }
 
+/// Root-controlled gamma whitelist flag as Python's scalar integer `0` or `1`.
+pub async fn subnet_gamma_emission_whitelisted<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+) -> Result<u8, ReadError> {
+    Ok(u8::from(
+        view.storage(
+            &st::subtensor_module::SUBNET_GAMMA_EMISSION_WHITELISTED,
+            (netuid,),
+        )
+        .await?,
+    ))
+}
+
 /// Render an identity record with its byte fields decoded to text.
 pub fn normalize_identity<T: models::ToDynamic>(record: T) -> Result<JsonValue, ReadError> {
     let mut record = DynValue::new(record.to_dynamic()).to_json();

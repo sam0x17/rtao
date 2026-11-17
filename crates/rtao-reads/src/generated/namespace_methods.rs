@@ -842,7 +842,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Hyperparameters<'_, V> {
     pub async fn subnet_gamma_emission_whitelisted(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<u8, crate::ReadError> {
         super::interfaces::subnet_gamma_emission_whitelisted(self.view, Some(netuid)).await
     }
 }

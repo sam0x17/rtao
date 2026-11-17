@@ -1274,7 +1274,7 @@ impl SyncHyperparameters<'_> {
     pub fn subnet_gamma_emission_whitelisted(
         &self,
         netuid: rtao_primitives::NetUid,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<u8, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::subnet_gamma_emission_whitelisted(
                 &view,

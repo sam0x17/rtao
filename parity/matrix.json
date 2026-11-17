@@ -11410,11 +11410,11 @@
         "python": "sdk/python/bittensor/reads/hyperparameters.py",
         "rtao": "reconciled",
         "rust": [
-          "rtao_reads::generated::interfaces::{weights_rate_limit, difficulty, min_allowed_weights, max_weight_limit, immunity_period, reveal_period, subnet_emission_enabled}",
+          "rtao_reads::generated::interfaces::{weights_rate_limit, difficulty, min_allowed_weights, max_weight_limit, immunity_period, reveal_period, subnet_emission_enabled, subnet_gamma_emission_whitelisted}",
           "rtao_reads::reads::hyperparameters",
-          "rtao_reads::reads::owner::{difficulty, subnet_emission_enabled}"
+          "rtao_reads::reads::owner::{difficulty, subnet_emission_enabled, subnet_gamma_emission_whitelisted}"
         ],
-        "synced_blob": "6cfab16d8cea3df4bbdbe8b4118b4dd477548a4b"
+        "synced_blob": "3070a2a32afa65bfb81f09a5128557a83e9fff95"
       },
       {
         "kind": "ported",
@@ -14995,7 +14995,7 @@
       {
         "name": "subnet_gamma_emission_whitelisted",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "subnet_hyperparameters",
