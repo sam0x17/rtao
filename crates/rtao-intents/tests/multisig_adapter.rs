@@ -91,9 +91,8 @@ impl ProbeKind for Hot {
 #[derive(Clone)]
 struct RootCall;
 impl ProbeKind for RootCall {
-    // The wrapper test below guards this authenticated catalog position;
-    // enabling the public M5 intent feature is unnecessary for this fixture.
-    const SPEC: &'static IntentSpec = &rtao_catalog::INTENTS[71];
+    const SPEC: &'static IntentSpec =
+        <rtao_intents::SetSubnetEmissionEnabled as IntentInterface>::SPEC;
     type Role = Coldkey;
     type Origin = Root;
 }
