@@ -4,7 +4,11 @@
 
 ### Remaining test inventory follows the catalog (D-202)
 
-- Fixed: the transaction tool manifest and read coverage tests follow the generated catalog counts. Intent and CLI integration test names no longer name the old catalog size.
+- Fixed: the transaction tool manifest and read coverage tests follow the generated catalog counts.
+
+### Keep mapped test identities during adoption (D-203)
+
+- Fixed: the parity export, divergence and e2e mappings keep their existing test identities while catalog coverage assertions follow generated inventory.
 
 ### Sample fixtures follow the pinned upstream tree (D-201)
 
