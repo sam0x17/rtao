@@ -276,6 +276,38 @@ where
 mod tests {}
 "###;
 
+fn replace_reviewed(source: String, old: &str, new: &str, count: usize) -> Result<String> {
+    ensure!(
+        source.matches(old).count() == count,
+        "reviewed payment-policy shape changed"
+    );
+    Ok(source.replace(old, new))
+}
+
+/// The v492 wrapper reserves Operational priority for the actual sudo key.
+/// Keep both reviewed shapes until a network activates v492: Finney still
+/// extracts the v491 rule while the upstream branch can be checked early.
+fn expected_v492() -> Result<String> {
+    let expected = replace_reviewed(
+        EXPECTED.to_owned(),
+        "T: Config + pallet_proxy::Config + pallet_utility::Config + pallet_subtensor::Config,",
+        "T: Config + pallet_proxy::Config + pallet_utility::Config + pallet_subtensor::Config + pallet_sudo::Config,",
+        2,
+    )?;
+    let expected = replace_reviewed(
+        expected,
+        "        pallet_subtensor::Pallet::<T>::maybe_coldkey_for_hotkey(signer)\n    }\n}\nimpl<",
+        "        pallet_subtensor::Pallet::<T>::maybe_coldkey_for_hotkey(signer)\n    }\n    fn is_sudo_signer(origin: &RuntimeOriginOf<T>) -> bool {\n        let Some(signer) = origin.as_system_origin_signer() else {\n            return false;\n        };\n        pallet_sudo::Key::<T>::get().is_some_and(|key| &key == signer)\n    }\n}\nimpl<",
+        1,
+    )?;
+    replace_reviewed(
+        expected,
+        "                DispatchClass::Normal => NORMAL_DISPATCH_BASE_PRIORITY,\n                DispatchClass::Mandatory => NORMAL_DISPATCH_BASE_PRIORITY,\n                DispatchClass::Operational => OPERATIONAL_DISPATCH_PRIORITY,",
+        "                DispatchClass::Operational if Self::is_sudo_signer(&origin) => { OPERATIONAL_DISPATCH_PRIORITY }\n                DispatchClass::Normal | DispatchClass::Mandatory | DispatchClass::Operational => { NORMAL_DISPATCH_BASE_PRIORITY }",
+        1,
+    )
+}
+
 fn implementation_header(item: &ItemImpl) -> String {
     let mut header = item.clone();
     header.items.clear();
@@ -327,9 +359,7 @@ fn production_context(file: &syn::File) -> Result<Vec<String>> {
         .collect()
 }
 
-fn values(source: &str) -> Result<Value> {
-    let file = syn::parse_file(source)?;
-    let expected = syn::parse_file(EXPECTED)?;
+fn validate_reviewed_shape(file: &syn::File, expected: &syn::File) -> Result<()> {
     for implementation in file.items.iter().filter_map(|item| match item {
         Item::Impl(item) => Some(item),
         _ => None,
@@ -381,8 +411,22 @@ fn values(source: &str) -> Result<Value> {
             );
         }
     }
+    Ok(())
+}
+
+fn values(source: &str) -> Result<Value> {
+    let file = syn::parse_file(source)?;
+    let v491 = syn::parse_file(EXPECTED)?;
+    let v492 = syn::parse_file(&expected_v492()?)?;
+    let priority = if validate_reviewed_shape(&file, &v491).is_ok() {
+        json!("OPERATIONAL_DISPATCH_PRIORITY")
+    } else {
+        validate_reviewed_shape(&file, &v492)?;
+        json!({"sudo_key":"OPERATIONAL_DISPATCH_PRIORITY",
+               "other_signer":"NORMAL_DISPATCH_BASE_PRIORITY"})
+    };
     Ok(json!({
-        "priority": {"Normal":"NORMAL_DISPATCH_BASE_PRIORITY", "Mandatory":"NORMAL_DISPATCH_BASE_PRIORITY", "Operational":"OPERATIONAL_DISPATCH_PRIORITY", "tip_increases_priority":false},
+        "priority": {"Normal":"NORMAL_DISPATCH_BASE_PRIORITY", "Mandatory":"NORMAL_DISPATCH_BASE_PRIORITY", "Operational":priority, "tip_increases_priority":false},
         "payer_precedence":["proxy_real_pays_fee_opt_in", "allowlisted_hotkey_owner", "signer"],
         "proxy": {"call":"Proxy.proxy", "proxy_announced":false, "maximum_layers":3, "outer_opt_in_required":true, "every_hop_opt_in_required":true, "payer":"deepest consecutively opted-in real", "batch_calls":["Utility.batch", "Utility.batch_all", "Utility.force_batch"], "batch_nonempty":true, "batch_position":"final level only; items are never descended", "batch_members":"all direct proxies with the same real and shared opt-in"},
         "tip": {"payer_override":0, "no_payer_override":"signer_selected"},
@@ -418,6 +462,7 @@ mod tests {
         let projected = values(&source()?)?;
         ensure!(projected["priority"]["tip_increases_priority"] == false);
         ensure!(projected["priority"]["Normal"] == projected["priority"]["Mandatory"]);
+        ensure!(projected["priority"]["Operational"] == "OPERATIONAL_DISPATCH_PRIORITY");
         ensure!(
             projected["payer_precedence"]
                 == json!([
@@ -431,6 +476,34 @@ mod tests {
         ensure!(projected["proxy"]["maximum_layers"] == 3);
         ensure!(projected["proxy"]["every_hop_opt_in_required"] == true);
         ensure!(projected["proxy"]["batch_nonempty"] == true);
+        Ok(())
+    }
+
+    #[test]
+    fn reviewed_v492_priority_requires_the_sudo_key() -> Result<()> {
+        let source = expected_v492()?;
+        let projected = values(&source)?;
+        ensure!(
+            projected["priority"]["Operational"]
+                == json!({"sudo_key":"OPERATIONAL_DISPATCH_PRIORITY",
+                          "other_signer":"NORMAL_DISPATCH_BASE_PRIORITY"})
+        );
+        let changed = source.replace(
+            "pallet_sudo::Key::<T>::get().is_some_and(|key| &key == signer)",
+            "pallet_sudo::Key::<T>::get().is_none_or(|key| &key == signer)",
+        );
+        ensure!(changed != source && values(&changed).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn supplied_upcoming_payment_source_matches_reviewed_shape() -> Result<()> {
+        let Some(path) = std::env::var_os("RTAO_UPCOMING_PAYMENT_SOURCE") else {
+            return Ok(());
+        };
+        let source = std::fs::read_to_string(path)?;
+        let projected = values(&source)?;
+        ensure!(projected["priority"]["Operational"].is_object());
         Ok(())
     }
 
