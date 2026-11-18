@@ -241,6 +241,28 @@ fn gamma_merge_and_bounded_rounding_match_python() {
     pinned[MINER] -= 1;
     let fixed = pinned.iter().copied().enumerate().collect::<Vec<_>>();
     assert_eq!(ew::renormalize(&default(), &fixed).unwrap(), default());
+    let floored = [0, 0, share("18%"), share("41%"), share("41%")];
+    assert_eq!(
+        floored.iter().map(|part| u128::from(*part)).sum::<u128>(),
+        u128::from(ONE - 1)
+    );
+    let rounded = ew::absorb_rounding(&floored, 0).unwrap();
+    assert_eq!(rounded[MINER], floored[MINER] + 1);
+    let gamma = share("10%");
+    let with_gamma = [0, 0, share("18%"), share("31%"), share("41%")];
+    assert_eq!(
+        ew::absorb_rounding(&with_gamma, gamma)
+            .unwrap()
+            .iter()
+            .map(|part| u128::from(*part))
+            .sum::<u128>()
+            + u128::from(gamma),
+        u128::from(ONE)
+    );
+    assert_eq!(
+        ew::absorb_rounding(&[0, 0, ONE, 5, 5], 0).unwrap(),
+        [0, 0, ONE, 5, 5]
+    );
 }
 
 // pyt: unit/test_emission_weights.py::test_validate_gamma_names_each_rule
@@ -645,6 +667,7 @@ fn rules_limits_and_table_cover_every_slot() {
     assert_eq!(limits.validator.max_parts, MAX_VALIDATOR);
     assert_eq!(limits.miner.max_parts, ONE);
     assert_eq!(limits.gamma.max_parts, MAX_GAMMA);
+    assert!(limits.gamma.why.contains("at most 16"));
     let rows = |rules: &Rules| -> std::collections::BTreeMap<&'static str, String> {
         rules
             .table()

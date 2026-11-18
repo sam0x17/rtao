@@ -465,6 +465,26 @@ async fn show_missing_subnet_exits_1() -> TestResult {
     Ok(())
 }
 
+#[tokio::test]
+async fn show_root_subnet_exits_1_even_when_runtime_answers() -> TestResult {
+    let wallet = wallet()?;
+    let (client, _) = client(state()?).await?;
+    let shown = run(
+        &client,
+        wallet.path(),
+        &["--json", "subnets", "emission", "show", "--netuid", "0"],
+    )
+    .await?;
+    assert_eq!(code(&shown), 1);
+    let error: Value = serde_json::from_str(&shown.stderr)?;
+    assert_eq!(
+        error["error"],
+        "subnet 0 does not exist or has no emission vector"
+    );
+    client.close().await;
+    Ok(())
+}
+
 // pyt: unit/test_emission_weights.py::test_cli_set_value_dry_run_renormalizes
 // pyt: unit/test_emission_weights.py::test_cli_increase_and_decrease_dry_run
 // pyt: unit/test_emission_weights.py::test_cli_set_full_vector_dry_run
@@ -756,6 +776,7 @@ async fn gamma_shares_count_in_the_sum() -> TestResult {
         "{}",
         short.stderr
     );
+    assert!(short.stderr.contains("--no-gamma removes them"));
     Ok(())
 }
 
@@ -774,9 +795,9 @@ fn gamma_state() -> Result<FakeState, Box<dyn std::error::Error>> {
         (SUBNET,),
         vec![(NetUid(2), gamma)],
     )?;
-    for target in [NetUid(2), NetUid(3)] {
+    for (target, enabled) in [(NetUid(2), true), (NetUid(3), true), (NetUid(4), false)] {
         state.seed(&st::SUBNET_GAMMA_EMISSION_WHITELISTED, (target,), true)?;
-        state.seed(&st::SUBNET_GAMMA_ENABLED, (target,), true)?;
+        state.seed(&st::SUBNET_GAMMA_ENABLED, (target,), enabled)?;
     }
     Ok(state)
 }
@@ -798,8 +819,25 @@ async fn cli_sets_and_removes_gamma_shares() -> TestResult {
         record["gamma_shares"],
         json!({"2": ew::parse_share("10%")?})
     );
-    assert_eq!(record["gamma_targets"], json!({"2": true, "3": true}));
+    assert_eq!(
+        record["gamma_targets"],
+        json!({"2": true, "3": true, "4": false})
+    );
     assert_eq!(record["leased"], false);
+    let human = run(
+        &client,
+        wallet.path(),
+        &["subnets", "emission", "show", "--netuid", &netuid],
+    )
+    .await?;
+    assert_eq!(code(&human), 0, "{}", human.stderr);
+    for needle in [
+        "gamma:2  10.00%",
+        "gamma  0.00% to 10.00%",
+        "gamma targets  2, 3, 4 (gamma disabled)",
+    ] {
+        assert!(human.stdout.contains(needle), "{needle}: {}", human.stdout);
+    }
 
     let add = run(
         &client,
@@ -831,6 +869,31 @@ async fn cli_sets_and_removes_gamma_shares() -> TestResult {
         json!({"2": ew::parse_share("10%")?, "3": ew::parse_share("5%")?})
     );
 
+    let increase = run(
+        &client,
+        wallet.path(),
+        &[
+            "--json",
+            "--dry-run",
+            "subnets",
+            "emission",
+            "increase",
+            "--netuid",
+            &netuid,
+            "--slot",
+            "gamma:3",
+            "--by",
+            "5%",
+        ],
+    )
+    .await?;
+    assert_eq!(code(&increase), 0, "{}", increase.stderr);
+    let plan: Value = serde_json::from_str(&increase.stdout)?;
+    assert_eq!(
+        plan["preview"]["gamma"]["after"],
+        json!({"2": ew::parse_share("10%")?, "3": ew::parse_share("5%")?})
+    );
+
     let clear = run(
         &client,
         wallet.path(),
@@ -856,6 +919,27 @@ async fn cli_sets_and_removes_gamma_shares() -> TestResult {
     let plan: Value = serde_json::from_str(&clear.stdout)?;
     assert_eq!(plan["args"]["gamma"], json!({"2": 0}));
     assert_eq!(plan["preview"]["gamma"]["after"], json!({}));
+    let view = client.at(rtao_client::BlockRef::Best).await?;
+    let info = rtao_reads::reads::subnets::subnet_emission_weights(&view, SUBNET)
+        .await?
+        .ok_or("emission vector")?;
+    let after: ew::Weights = serde_json::from_value(plan["preview"]["after"]["weights"].clone())?;
+    let review = rtao_cli::commands::subnet_emission::card(
+        &info,
+        &ew::preview(&info.weights, &after, &info.root_inputs()),
+        &std::collections::BTreeMap::new(),
+    );
+    assert!(
+        review
+            .iter()
+            .any(|(name, value)| name == "gamma:2" && value == "10.00% -> 0.00%")
+    );
+    assert!(
+        review
+            .iter()
+            .any(|(name, value)| name == "removed gamma shares"
+                && value == "their unconverted alpha goes to the miners")
+    );
 
     let value = run(
         &client,
@@ -934,6 +1018,50 @@ async fn cli_rejects_invalid_gamma_edits_before_signing() -> TestResult {
     .await?;
     assert_eq!(code(&duplicate), 2);
     assert!(duplicate.stderr.contains("more than once"));
+    for item in ["3", "x=5%"] {
+        let invalid = run(
+            &client,
+            wallet.path(),
+            &[
+                "subnets",
+                "emission",
+                "set",
+                "--netuid",
+                &netuid,
+                "--owner",
+                "18%",
+                "--validator",
+                "31%",
+                "--miner",
+                "36%",
+                "--gamma",
+                item,
+            ],
+        )
+        .await?;
+        assert_eq!(code(&invalid), 2);
+        assert!(invalid.stderr.contains("invalid value for `--gamma`"));
+    }
+    for slot in ["gamma:x", "gamma"] {
+        let invalid = run(
+            &client,
+            wallet.path(),
+            &[
+                "subnets",
+                "emission",
+                "set-value",
+                "--netuid",
+                &netuid,
+                "--slot",
+                slot,
+                "--value",
+                "5%",
+            ],
+        )
+        .await?;
+        assert_eq!(code(&invalid), 2);
+        assert!(invalid.stderr.contains("invalid value for `--slot`"));
+    }
     let signed = run(
         &client,
         wallet.path(),
@@ -1020,6 +1148,33 @@ async fn cli_names_gamma_target_and_lease_rules() -> TestResult {
         "{}",
         leased.stderr
     );
+    chain.mutate_state(|state| state.seed(&st::SUBNET_GAMMA_ENABLED, (NetUid(2),), false))?;
+    let shown = run(
+        &client,
+        wallet.path(),
+        &["subnets", "emission", "show", "--netuid", &netuid],
+    )
+    .await?;
+    assert!(
+        shown
+            .stdout
+            .contains("subnet 2 has gamma disabled, so every change must remove it (--gamma 2=0)")
+    );
+    assert!(
+        shown
+            .stdout
+            .contains("gamma targets  none: this subnet is leased")
+    );
+    chain.mutate_state(|state| {
+        state.seed(&st::SUBNET_GAMMA_EMISSION_WHITELISTED, (NetUid(2),), false)
+    })?;
+    let shown = run(
+        &client,
+        wallet.path(),
+        &["subnets", "emission", "show", "--netuid", &netuid],
+    )
+    .await?;
+    assert!(shown.stdout.contains("subnet 2 is not whitelisted for gamma emission, so every change must remove it (--gamma 2=0)"));
     assert!(chain.mutate_state(|state| state.submissions.is_empty()));
     client.close().await;
     Ok(())
@@ -1369,6 +1524,8 @@ struct Landed {
     stored: ew::Weights,
     /// Fail every emission read once the extrinsic is included.
     fail_reads: bool,
+    /// Remove the source subnet's gamma entries in the inclusion block.
+    clear_gamma: bool,
 }
 
 /// Inclusion blocks of the writes, as (number, hash).
@@ -1396,6 +1553,29 @@ fn land_on_submit(state: &mut FakeState, landed: Landed) -> Inclusions {
         let Some(hash) = state.block_hash(number) else {
             return Reply::error(-32602, "no inclusion block", None);
         };
+        if landed.clear_gamma {
+            let Some(info) = state
+                .runtime
+                .storage_entry("SubtensorModule", "SubnetGammaEmission")
+            else {
+                return Reply::error(-32602, "gamma storage absent", None);
+            };
+            let key = match state.runtime.storage_key(
+                info,
+                &[rtao_core::codec::Value::Uint(u128::from(SUBNET.0))],
+            ) {
+                Ok(key) => key,
+                Err(error) => return Reply::error(-32602, error.to_string(), None),
+            };
+            let value = match state.runtime.encode_spec(
+                &rtao_core::runtime::TypeSpec::Id(info.value_type),
+                &rtao_core::codec::Value::List(Vec::new()),
+            ) {
+                Ok(value) => value,
+                Err(error) => return Reply::error(-32602, error.to_string(), None),
+            };
+            state.seed_at(hash.clone(), key, Some(value));
+        }
         if let Err(error) = state.seed_runtime_at(
             hash.clone(),
             "SubnetInfoRuntimeApi",
@@ -1427,6 +1607,7 @@ fn landed(applied: ew::Weights) -> Landed {
         applied: Some(applied),
         stored: applied,
         fail_reads: false,
+        clear_gamma: false,
     }
 }
 
@@ -1588,6 +1769,78 @@ async fn finalized_write_reads_the_stored_vector_back_at_the_inclusion_block() -
     Ok(())
 }
 
+// pyt: unit/test_emission_weights.py::test_cli_sets_gamma_shares
+#[tokio::test]
+async fn finalized_gamma_removal_submits_only_five_slots_and_reads_back() -> TestResult {
+    let wallet = wallet()?;
+    let signer = Factory::new()?;
+    let gamma = ew::parse_share("10%")?;
+    let mut before = ew::default_weights(DEFAULT_OWNER);
+    before[ew::VALIDATOR] -= gamma;
+    let expected = ew::renormalize_with_gamma(&before, &[], 0)?;
+    let mut state = gamma_state()?;
+    state.seed(
+        &st::SUBNET_OWNER,
+        (SUBNET,),
+        DefaultAccount::from(signer.account()),
+    )?;
+    let inclusions = land_on_submit(
+        &mut state,
+        Landed {
+            clear_gamma: true,
+            ..landed(expected)
+        },
+    );
+    let (client, chain) = client(state).await?;
+    let netuid = netuid();
+    let write = [
+        "--yes",
+        "--no-mev-shield",
+        "subnets",
+        "emission",
+        "set-value",
+        "--netuid",
+        &netuid,
+        "--slot",
+        "gamma:2",
+        "--value",
+        "0",
+    ];
+    let written = run_with(&client, wallet.path(), &json_args(&write), Some(&signer)).await?;
+    assert_eq!(code(&written), 0, "{}", written.stderr);
+    let documents = documents(&written.stdout)?;
+    assert_eq!(documents.len(), 2, "{}", written.stdout);
+    assert_eq!(documents[0]["success"], json!(true));
+    assert_eq!(documents[1]["readback"]["status"], "match");
+    assert_eq!(documents[1]["readback"]["submitted"], json!(expected));
+    assert_eq!(documents[1]["readback"]["submitted_gamma"], json!({}));
+    assert_eq!(documents[1]["readback"]["stored_gamma"], json!({}));
+    let (included, _) = last_inclusion(&inclusions)?;
+    assert_eq!(documents[1]["readback"]["block"], json!(included));
+
+    let submissions = chain.mutate_state(|state| state.submissions.clone());
+    assert_eq!(submissions.len(), 1);
+    let runtime = View::runtime(&client).await?;
+    let decoded =
+        rtao_core::DynValue::new(runtime.core().decode_extrinsic(&submissions[0], true)?).to_json();
+    assert_eq!(
+        decoded["call"]["call_function"],
+        "sudo_set_subnet_emission_weights_v2"
+    );
+    assert_eq!(
+        decoded["call"]["call_args"][1]["value"],
+        json!([
+            ["Burn", expected[0]],
+            ["Recycle", expected[1]],
+            ["Owner", expected[2]],
+            ["Validator", expected[3]],
+            ["Miner", expected[4]],
+        ])
+    );
+    client.close().await;
+    Ok(())
+}
+
 #[tokio::test]
 async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> TestResult {
     let wallet = wallet()?;
@@ -1602,6 +1855,7 @@ async fn read_back_mismatch_after_finality_exits_1_and_names_the_slots() -> Test
             applied: Some(submitted),
             stored,
             fail_reads: false,
+            clear_gamma: false,
         },
     );
     let (client, chain) = client(state).await?;
@@ -1715,6 +1969,7 @@ async fn read_back_compares_with_the_applied_event_and_reports_a_base_change_apa
                 applied: None,
                 stored,
                 fail_reads: false,
+                clear_gamma: false,
             },
         );
         let (client, _) = crate::client(state).await?;

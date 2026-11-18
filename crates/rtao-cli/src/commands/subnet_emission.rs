@@ -451,9 +451,8 @@ fn target_uid(text: &str) -> Option<u16> {
 }
 
 fn parse_slot(ctx: &AppContext, raw: &str) -> Result<Slot, CliError> {
-    if let Some((kind, target)) = raw.split_once(':')
-        && kind.eq_ignore_ascii_case("gamma")
-    {
+    let (kind, target) = raw.split_once(':').unwrap_or((raw, ""));
+    if kind.eq_ignore_ascii_case("gamma") {
         return target_uid(target).map(Slot::Gamma).ok_or_else(|| {
             report(
                 ctx,

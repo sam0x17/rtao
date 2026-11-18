@@ -193,6 +193,22 @@ fn intent_rejects_malformed_input() {
         ),
         (json!({"slots": ["gamma"], "values": [1]}), "slots are"),
         (
+            json!({"slots": [], "values": [], "gamma": {"x": "5%"}}),
+            "not a netuid",
+        ),
+        (
+            json!({"slots": [], "values": [], "gamma": {"70000": "5%"}}),
+            "not a netuid",
+        ),
+        (
+            json!({"slots": [], "values": [], "gamma": {"3.7": "5%"}}),
+            "not a netuid",
+        ),
+        (
+            json!({"slots": [], "values": [], "gamma": {"03": "5%", "3": "1%"}}),
+            "at most once",
+        ),
+        (
             json!({"slots": ["owner"], "values": [true]}),
             "not a boolean",
         ),
@@ -481,6 +497,27 @@ async fn intent_build_sends_full_vector_when_renormalizing() -> Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn intent_accepts_full_percentages_with_or_without_renormalization() -> Result<()> {
+    let (client, _) = client(state()?).await?;
+    for renormalize in [false, true] {
+        let set = intent(json!({
+            "netuid": SUBNET.0,
+            "slots": ["burn", "recycle", "owner", "validator", "miner"],
+            "values": ["0", "0", "18%", "41%", "41%"],
+            "renormalize": renormalize,
+        }));
+        assert!(!set.summary().contains("renormalizing"));
+        let plan = self::plan(&client, &set).await;
+        assert!(plan.ok(), "{:?}", plan.violations);
+        let weights: ew::Weights =
+            serde_json::from_value(plan.preview["after"]["weights"].clone())?;
+        assert_eq!(total(&weights), u128::from(ONE));
+    }
+    client.close().await;
+    Ok(())
+}
+
 /// The fixture subnet after its owner gave 10% of its emission, from the
 /// validator slot, to subnet 2's gamma.
 fn gamma_share() -> u64 {
@@ -594,6 +631,15 @@ async fn intent_adds_and_removes_gamma_shares_in_the_full_split() -> Result<()> 
         "gamma": {"3": "5%"}
     }));
     assert_eq!(add.touches_netuids().as_slice(), &[SUBNET, NetUid(3)]);
+    let mut self_args = json!({
+        "netuid": SUBNET.0, "slots": [], "values": [], "gamma": {"3": "1%"}
+    });
+    self_args["gamma"][SUBNET.0.to_string()] = json!("5%");
+    let self_target = intent(self_args);
+    assert_eq!(
+        self_target.touches_netuids().as_slice(),
+        &[SUBNET, NetUid(3)]
+    );
     let plan = self::plan(&client, &add).await;
     assert!(plan.ok(), "{:?}", plan.violations);
     let weights: ew::Weights = serde_json::from_value(plan.preview["after"]["weights"].clone())?;

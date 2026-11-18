@@ -3,6 +3,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Generated parser and SDK dispatch exercised with authenticated FakeChain state.
 
 use rtao_cli::{
@@ -891,6 +892,23 @@ fn generated_tx_dictionary_option_requires_a_json_object() -> TestResult {
                 "expected a JSON object, not {}",
                 rtao_primitives::pyfmt::string_repr(raw)
             )
+        );
+    }
+    let emission = rtao_catalog::INTENTS
+        .iter()
+        .find(|spec| spec.name == "set_subnet_emission_weights")
+        .ok_or("set_subnet_emission_weights")?;
+    let gamma = schema::intent_fields(emission)?
+        .into_iter()
+        .find(|field| field.name == "gamma")
+        .ok_or("gamma")?;
+    assert_eq!(gamma.kind, "object");
+    for raw in ["3=5%", "3"] {
+        assert!(
+            schema::coerce(&gamma, raw)
+                .expect_err(raw)
+                .message
+                .contains("expected a JSON object")
         );
     }
     Ok(())
