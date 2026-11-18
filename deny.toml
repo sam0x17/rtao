@@ -21,6 +21,29 @@ name = "webpki-root-certs"
 version = "=1.0.10"
 allow = ["CDLA-Permissive-2.0"]
 
+# The pinned upstream hashed-account implementation uses these four
+# FN-DSA crates under the OSI-approved Unlicense. Scope the allowance to
+# their present versions rather than changing the workspace-wide list.
+[[licenses.exceptions]]
+name = "fn-dsa-comm"
+version = "=0.3.0"
+allow = ["Unlicense"]
+
+[[licenses.exceptions]]
+name = "fn-dsa-kgen"
+version = "=0.3.0"
+allow = ["Unlicense"]
+
+[[licenses.exceptions]]
+name = "fn-dsa-sign"
+version = "=0.3.0"
+allow = ["Unlicense"]
+
+[[licenses.exceptions]]
+name = "fn-dsa-vrfy"
+version = "=0.3.0"
+allow = ["Unlicense"]
+
 # v478 omits these crates' license fields. Both are covered by the monorepo's
 # Apache-2.0 LICENSE; procedural-fork retains its Parity Apache-2.0 headers.
 # cargo-deny verifies the actual license bytes before accepting the expression.
