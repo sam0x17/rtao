@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testnet runtime 492 recorded automatically
+
+- Testnet finalized spec 492 (`:code` `0x22786f72f280dc968f38a10627c085eaf3ea530dd3a1621a4776882851ac3d8e`) at block 8475271; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `surface-unchanged`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/44423431350)). No upstream source is recorded: upstream has published no v492 release. The parity pin is unchanged.
+
 ### Finney runtime 491 adopted automatically
 
 - The parity pin moves from spec 490 to v491 (`be3a11b1a5300bb58d6fbad3c629e4a926bb2f44`, pinned as `v491`), the runtime Finney finalized at block 9524430 with `:code` `0x4201278656a17aff924ca24123c8e5866d569a84a7150bb0372bc7078fc6173c`.

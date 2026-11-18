@@ -10,7 +10,7 @@
         "cargo": "cargo 1.100.0 (3acc79c0c 2026-11-05)",
         "compiler": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1794897447,
+        "measured_unix_seconds": 1795046025,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -515,7 +515,7 @@
               "rtao-wallet v0.1.2 ($WORKSPACE/crates/rtao-wallet)",
               "rustc-hex v2.1.0",
               "rustc_version v0.4.1",
-              "rustix v1.1.5",
+              "rustix v1.1.6",
               "rustls v0.23.46",
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
@@ -898,7 +898,7 @@
               "rtao-wallet v0.1.2 ($WORKSPACE/crates/rtao-wallet)",
               "rustc-hex v2.1.0",
               "rustc_version v0.4.1",
-              "rustix v1.1.5",
+              "rustix v1.1.6",
               "rustls v0.23.46",
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
@@ -1024,7 +1024,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "d21b9fcbb41bc513513af1fb4a9cb0bdf89245ba963496af46ef45979eb90a6b",
+            "feature_graph_sha256": "17b75c613695d685e611c36c8553635275017fd31c051d0e4940bef9c0e6696e",
             "features": [
               "owner"
             ],
@@ -1321,7 +1321,7 @@
               "rtao-wallet v0.1.2 ($WORKSPACE/crates/rtao-wallet)",
               "rustc-hex v2.1.0",
               "rustc_version v0.4.1",
-              "rustix v1.1.5",
+              "rustix v1.1.6",
               "rustls v0.23.46",
               "rustls-native-certs v0.8.5",
               "rustls-pki-types v1.15.1",
@@ -1463,7 +1463,7 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "38229467eff7cc60231cb0cfd7eb8d92b59d3f8fa1a2893fc0e6ea950fd41ad4",
+            "Cargo.lock": "bf3f6cc58d0b3752cedc9960dd8f220a3ac96c08b941073387752d5edddd998e",
             "Cargo.toml": "1304b7ccc2e47e38689057e81d2a7792f57a0f6d0d273492f0b08712de05bdb3",
             "crates/rtao-arena/Cargo.toml": "b65a3acbbcd90d186c46e3db776336665a38fea5b2cbac7a6cccf8f2ae1833ea",
             "crates/rtao-btauth/Cargo.toml": "650c1ccaa7c178499fb6c63aa3da6a21c03fbeec578c244ba176dc8b7c5a4a5f",
@@ -1475,7 +1475,7 @@
             "crates/rtao-core-ext/Cargo.toml": "9a75b7fdabfb231773cfd47bd5321b532792f152eeebf4a499a1e5db48b0660c",
             "crates/rtao-core/Cargo.toml": "98e3907f3bb2c863df3f85fd88986f7b018d9ca8a7cee1dbb11c8fd88d5b7c92",
             "crates/rtao-evm/Cargo.toml": "354679114a4e7f64173c2002578afe27db8f9d69cb8399d4b016e2a9aa26a8d0",
-            "crates/rtao-intents/Cargo.toml": "84979f518331f6f893e3f1a58182f80951dbb323c5c55f1518227b5c41f29eda",
+            "crates/rtao-intents/Cargo.toml": "0973e9f8b2844a2b58a1a8e2f9b5f9328a4af6557d39caafff3eaab6a04caea4",
             "crates/rtao-jsonrpc/Cargo.toml": "5e209298b63e25aecc68752bd5d2d96f363e9c9caea2832ca5f2e2c71b67a2dd",
             "crates/rtao-metagraph/Cargo.toml": "9d0dec27ab2fcf5d3819d24a8cbc30f9d2e3a2e678d56ec44deb97fe463e03aa",
             "crates/rtao-neuron/Cargo.toml": "e1cc44b1b98e30b3bdf81a7971cd2eb141030b5d7fb053b426c32f81427eccda",
@@ -1492,13 +1492,13 @@
             "upstream.toml": "b4db3648a419e29ec529a7b57b2fa66225621f430301e91ce3daa9e81c60b6d7",
             "xtask/Cargo.toml": "3c4df51eadf75d7d87340251b4bdfc52d31c3ec0bda7c8861cf4a7f01c36b890"
           },
-          "dependency_inputs_sha256": "6c00cdab9667fa7fd515e3c575344b9dca16bc5e48afab361655cde251367243",
+          "dependency_inputs_sha256": "1f7494853f55acb8d4acf0bc011c373597c18bc59eb6a1321bb16c9db59779d4",
           "dirty": true,
-          "head_commit": "c792c98b2e93378d48b00771cc25a481355591c4"
+          "head_commit": "24b7f095767a7a459f51ade0ca70c826003391fe"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "9c5ebdb86e4132c5604b27fac6b1315f60047004ae45aef90c0e2f1ccf393c0a"
+      "sha256": "4aea4ddf46cb10496fd9b348fd3b6038c248878331604af2ef7056dd023b5187"
     }
   ],
   "core": {
