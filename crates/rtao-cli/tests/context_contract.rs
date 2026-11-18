@@ -1809,7 +1809,7 @@ fn configured_proxy_truthiness_and_self_sentinel_preserve_dispatch_identity() ->
         assert_eq!(ctx.dispatch_proxy(None)?, None);
     }
     ctx.config.insert("proxy_for".into(), json!("self"));
-    assert_eq!(ctx.dispatch_proxy(None)?, Some(account));
+    assert_eq!(ctx.dispatch_proxy(None)?, None);
     assert_eq!(ctx.dispatch_proxy(Some("self"))?, None);
     assert!(ctx.dispatch_proxy(Some("")).is_err());
     ctx.config.insert("proxy_for".into(), json!(true));

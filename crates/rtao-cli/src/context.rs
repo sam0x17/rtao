@@ -238,6 +238,9 @@ impl AppContext {
                     return Ok(None);
                 };
                 let configured = crate::globals::config_string(configured);
+                if configured == "self" {
+                    return Ok(None);
+                }
                 self.output.message(&format!("dispatching via configured proxy_for {} — pass `--proxy-for self` to sign directly",rtao_primitives::pyfmt::string_repr(&configured))).map_err(|e|CliError::failure(e.to_string()))?;
                 self.resolve_address("proxy_for", Some(&configured))
             }
