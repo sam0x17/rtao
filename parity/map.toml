@@ -1395,10 +1395,10 @@ notes = "Source reconciliation 2026-10-16: complete authenticated 392-line modul
 py = "sdk/python/bittensor/cli/output.py"
 rs = ["crates/rtao-cli/src/output.rs", "rtao_cli::commands specialized human renderers"]
 kind = "ported"
-synced_blob = "21c53bb40fa8cba2edde7851087bc8ac23a0f93b"
-synced_tag = "v490"
+synced_blob = "d488940b2cfec05fc35c6c2aeefbf6f4c2578066"
+synced_tag = "v491"
 milestone = "M4–M8"
-notes = "v484 source reconciliation: Subnet listing adds state and pool-emission columns before price/emission/flow/burn. Native renderer retains the existing terminal presentation decision and matching JSON fields. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-159): record_rows (review card and receipt rows), wallet_detail and the wallet tree's address lines (receiving address first, Account ID (SS58), Address info by registration status, one Type row per key). Rich styling, explorer links and the full-width tree render have no rtao equivalent: rtao's plain text lines are not cropped."
+notes = "v484 source reconciliation: Subnet listing adds state and pool-emission columns before price/emission/flow/burn. Native renderer retains the existing terminal presentation decision and matching JSON fields. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-159): record_rows (review card and receipt rows), wallet_detail and the wallet tree's address lines (receiving address first, Account ID (SS58), Address info by registration status, one Type row per key). Rich styling, explorer links and the full-width tree render have no rtao equivalent: rtao's plain text lines are not cropped. v491 (D-213): protected multisig followups show the inner summary or operation and call hash in human output; JSON keeps the original followup. The native generic detail also retains its nested record. The upstream change is display-only; it does not qualify the separate protected-call producer or execution path."
 
 [[file]]
 py = "sdk/python/bittensor/cli/prompt.py"

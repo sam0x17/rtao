@@ -1524,6 +1524,38 @@ fn pending_multisigs_keep_structured_commands_members_and_unique_decode_guidance
 }
 
 #[test]
+fn protected_multisig_followup_names_inner_call_and_preserves_machine_data() -> TestResult {
+    for (summary, expected_call) in [
+        ("stake for protected account", "stake for protected account"),
+        ("", "proxy.execute_announced"),
+    ] {
+        let followup = json!({
+            "status":"pending",
+            "protected_inner":{
+                "summary":summary,
+                "op":"proxy.execute_announced",
+                "call_hash":"0x1234"
+            }
+        });
+        let (human, sink) = capture(false, false);
+        human.multisig_followup(&followup)?;
+        let rendered = sink.text(Stream::Stdout)?;
+        assert!(rendered.contains("protected call"), "{rendered}");
+        assert!(rendered.contains(expected_call), "{rendered}");
+        assert!(rendered.contains("protected hash"), "{rendered}");
+        assert!(rendered.contains("0x1234"), "{rendered}");
+
+        let (machine, sink) = capture(true, false);
+        machine.multisig_followup(&followup)?;
+        assert_eq!(
+            serde_json::from_str::<Value>(&sink.text(Stream::Stdout)?)?,
+            json!({"multisig_followup":followup})
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn review_card_values_and_cross_stage_alignment_preserve_semantic_payloads() -> TestResult {
     let long = json!(["日".repeat(170)]);
     let sections = vec![

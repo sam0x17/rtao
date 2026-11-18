@@ -1926,7 +1926,24 @@ impl Output {
         if self.options.json_mode {
             self.json(Stream::Stdout, &json!({"multisig_followup":followup}))
         } else {
-            self.render("multisig_followup", followup)?;
+            let mut human = followup.clone();
+            if let Some(inner) = followup.get("protected_inner").and_then(Value::as_object)
+                && let Some(fields) = human.as_object_mut()
+            {
+                let call = inner
+                    .get("summary")
+                    .and_then(Value::as_str)
+                    .filter(|summary| !summary.is_empty())
+                    .map(|summary| Value::String(summary.to_owned()))
+                    .or_else(|| inner.get("op").cloned());
+                if let Some(call) = call {
+                    fields.insert("protected call".into(), call);
+                }
+                if let Some(hash) = inner.get("call_hash").filter(|value| !value.is_null()) {
+                    fields.insert("protected hash".into(), hash.clone());
+                }
+            }
+            self.render("multisig_followup", &human)?;
             self.co_signer_guidance(followup)
         }
     }

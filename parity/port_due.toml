@@ -61,14 +61,6 @@ tag = "v491"
 symbols = ["bittensor.cli.multisig_helpers._PROXY_ANNOUNCEMENT_FEE_PAYER_OPS", "bittensor.cli.multisig_helpers.announcement_cancel_completed", "bittensor.cli.multisig_helpers.build_pending_followup", "bittensor.cli.multisig_helpers.multisig_approval_only", "bittensor.cli.multisig_helpers.wrap_intent_for_multisig_wallet"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/output.py"
-kind = "ported"
-from = "21c53bb40fa8cba2edde7851087bc8ac23a0f93b"
-to = "d488940b2cfec05fc35c6c2aeefbf6f4c2578066"
-tag = "v491"
-symbols = ["bittensor.cli.output.Output", "bittensor.cli.output.Output.multisig_followup"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/root_helpers.py"
 kind = "ported"
 from = "4a40b8ea4dca212bb35a97f78056998c5a4d68fb"

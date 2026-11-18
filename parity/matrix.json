@@ -9975,7 +9975,7 @@
           "crates/rtao-cli/src/output.rs",
           "rtao_cli::commands specialized human renderers"
         ],
-        "synced_blob": "21c53bb40fa8cba2edde7851087bc8ac23a0f93b"
+        "synced_blob": "d488940b2cfec05fc35c6c2aeefbf6f4c2578066"
       },
       {
         "kind": "ported",
