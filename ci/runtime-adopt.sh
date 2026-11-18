@@ -1898,7 +1898,7 @@ next_state() {
 # Open, refresh or close the informational issue for hand ports that an
 # adoption left due. Never alerts: the runtime itself is adopted.
 notify_port_due() {
-  local file=$1 number body rows
+  local file=$1 number body rows title current_title
   number=$(open_issue "$port_due_marker")
   rows=""
   if [[ -s "$file" ]]; then
@@ -1912,6 +1912,7 @@ notify_port_due() {
     ' "$file")
   fi
   if [[ -n "$rows" ]]; then
+    title="Python parity: $(grep -c '^- ' <<<"$rows") hand port(s) due after runtime adoption"
     body="$port_due_marker
 Automatic runtime adoption moved the parity pin, and these upstream sources
 changed in ways the adoption could not reconcile on evidence alone. The
@@ -1924,9 +1925,13 @@ entry from \`parity/port_due.toml\`. Until then ordinary parity accepts the
 listed exact changes and strict parity (pr-gates) names them. Refreshed by the
 runtime-adopt workflow; closed when no port is due."
     if [[ -z "$number" ]]; then
-      gh issue create --repo "$GITHUB_REPOSITORY" --title "Python parity: $(grep -c '^- ' <<<"$rows") hand port(s) due after runtime adoption" --body "$body" >/dev/null
-    elif ! gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body | cmp -s - <(printf '%s\n' "$body"); then
-      gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --body "$body" >/dev/null
+      gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
+    else
+      current_title=$(gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json title --jq .title)
+      if [[ "$current_title" != "$title" ]] ||
+        ! gh issue view "$number" --repo "$GITHUB_REPOSITORY" --json body --jq .body | cmp -s - <(printf '%s\n' "$body"); then
+        gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" >/dev/null
+      fi
     fi
   elif [[ -n "$number" ]]; then
     gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment "No hand port is due." >/dev/null

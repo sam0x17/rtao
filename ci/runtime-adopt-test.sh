@@ -480,13 +480,17 @@ case "$verb" in
       [[ -e "$file" ]] || continue
       jq -n --argjson n "$(basename "$file" .open)" --rawfile b "$file" '{number: $n, body: $b}'
     done | jq -s . | jq -r "$jq_expr" ;;
-  view) jq -n --rawfile b "$dir/$number.open" '{body: $b}' | jq -r "$jq_expr" ;;
+  view)
+    saved_title=$(cat "$dir/$number.title" 2>/dev/null || true)
+    jq -n --rawfile b "$dir/$number.open" --arg title "$saved_title" '{body: $b, title: $title}' | jq -r "$jq_expr" ;;
   create)
     n=$(($(find "$dir" -name '*.open' -o -name '*.closed' | wc -l) + 1))
     printf '%s' "$body" >"$dir/$n.open"
+    printf '%s' "$title" >"$dir/$n.title"
     echo "create $n $title" >>"$dir/log" ;;
   edit)
     printf '%s' "$body" >"$dir/$number.open"
+    if [[ -n "$title" ]]; then printf '%s' "$title" >"$dir/$number.title"; fi
     echo "edit $number $title" >>"$dir/log" ;;
   close)
     mv "$dir/$number.open" "$dir/$number.closed"
@@ -501,7 +505,7 @@ while (($#)); do
 done
 CURL
 chmod +x "$fake/bin/gh" "$fake/bin/curl"
-sed -n -e '/^adopt_marker=/p' -e '/^open_issue() {/,/^}/p' -e '/^previous_state() {/,/^}/p' -e '/^state_from_body() {/,/^}/p' \
+sed -n -e '/^adopt_marker=/p' -e '/^port_due_marker=/p' -e '/^open_issue() {/,/^}/p' -e '/^previous_state() {/,/^}/p' -e '/^state_from_body() {/,/^}/p' -e '/^notify_port_due() {/,/^}/p' \
   "$script" >"$work/issue-state.sh"
 # shellcheck disable=SC1091
 source "$work/issue-state.sh"
@@ -521,6 +525,31 @@ check() {
     failures=$((failures + 1))
   fi
 }
+# The due-port issue's title must follow the list even when its body is
+# already current. Repeating the same observation must leave it untouched.
+due_fake=$work/due-fake
+mkdir -p "$due_fake"
+cat >"$work/one-port-due.toml" <<'DUE'
+[[file]]
+py = "sdk/python/bittensor/cli/context.py"
+kind = "hand"
+tag = "v491"
+symbols = []
+DUE
+due_loop() { FAKE_GH=$due_fake PATH=$fake/bin:$PATH GITHUB_REPOSITORY=owner/repo notify_port_due "$work/one-port-due.toml"; }
+due_loop
+cp "$due_fake/1.open" "$work/due-body-before"
+printf '%s' 'Python parity: 2 hand port(s) due after runtime adoption' >"$due_fake/1.title"
+due_loop
+if [[ "$(cat "$due_fake/1.title")" == 'Python parity: 1 hand port(s) due after runtime adoption' ]] &&
+  cmp -s "$work/due-body-before" "$due_fake/1.open" &&
+  [[ "$(grep -c '^edit ' "$due_fake/log")" == 1 ]]; then
+  due_loop
+  check due-port-title-refresh '[[ "$(grep -c "^edit " "$due_fake/log")" == 1 ]]'
+else
+  echo "FAIL due-port-title-refresh"
+  failures=$((failures + 1))
+fi
 # run <name> <observation> <outcome> [stage] [finished at]: decide on the
 # observation with the stand-in issue's states, then notify the outcome at
 # the time the run finished (default: when it observed).
