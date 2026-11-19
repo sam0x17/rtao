@@ -173,6 +173,9 @@ fn all_catalog_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip(
             let annotation = field.annotation.unwrap_or("");
             let value = if field.name.ends_with("_ss58") {
                 json!(address)
+            } else if field.name == "call_hash" {
+                // Proxy announcement constructors require a Blake2-256 hash.
+                json!(format!("0x{}", "11".repeat(32)))
             } else if annotation == "Money" {
                 json!("1.000000001")
             } else if annotation.starts_with("list") {
