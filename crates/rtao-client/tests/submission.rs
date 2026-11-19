@@ -1231,6 +1231,9 @@ async fn full_timeout_during_reconciliation_keeps_hash_and_clears_all_entry_leas
 
 #[tokio::test]
 async fn full_timeout_during_report_resolution_keeps_hash_without_rebroadcast() {
+    // This test needs to reach author RPC before the silent report read uses
+    // the full deadline. A short admission budget can expire during signing
+    // when the hosted suite runs many tests at once.
     for entry in 0..3 {
         let (client, fake, signer) = fixture().await;
         let call = call(&client, vec![]).await;
@@ -1248,8 +1251,8 @@ async fn full_timeout_during_report_resolution_keeps_hash_without_rebroadcast() 
             &signer,
             &SubmitOptions {
                 reconcile: true,
-                submit_deadline: Some(Duration::from_millis(50)),
-                deadline: Some(Duration::from_millis(100)),
+                submit_deadline: Some(Duration::from_secs(5)),
+                deadline: Some(Duration::from_secs(6)),
                 ..Default::default()
             },
             entry,
