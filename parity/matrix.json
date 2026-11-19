@@ -8539,7 +8539,7 @@
           "xtask/src/extract_fee_contract.rs",
           "vendor/upstream/extracted/chain_rules.json"
         ],
-        "synced_blob": "ac183bf1bcc59f4bacb2f0230bd07c9a0d68fac7"
+        "synced_blob": "8e346aa779ece7d4d9cd4b15906e4a2b263bab23"
       },
       {
         "kind": "oracle-only",
@@ -9114,7 +9114,7 @@
         "rust": [
           "`rtao_runtime::generated::calls`"
         ],
-        "synced_blob": "b872af71f2eaaa41ed44b25c4a3d360145228ca1"
+        "synced_blob": "e06ddafb9e1ffc2e8bf9655d262d810ae84479dd"
       },
       {
         "kind": "generated",
@@ -15198,8 +15198,8 @@
     ]
   },
   "pin": {
-    "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
-    "tag": "v491"
+    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
+    "tag": "v492"
   },
   "schema": 1,
   "status_semantics": {

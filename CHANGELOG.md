@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Finney runtime 492 adopted automatically
+
+- The parity pin moves from spec 491 to v492 (`541a50d38764acdce23578bd8ba54f80156ffb2a`, pinned as `v492`), the runtime Finney finalized at block 9542901 with `:code` `0x22786f72f280dc968f38a10627c085eaf3ea530dd3a1621a4776882851ac3d8e`.
+- Live evidence: 4 public endpoints agree at the pinned block on genesis, spec, the `:code` hash (and the BLAKE2b-256 of its bytes) and the V15/V16 metadata digests; release wasm: matches.
+- Metadata drift 491 -> 492: `surface-unchanged`. Code generation, extracted tables and catalogs are regenerated from the pinned sources; watched sources changed: 2, of which 0 were reconciled automatically and 2 re-derived and checked. 11 hand port(s) remain due and are listed in `parity/port_due.toml` (`sdk/python/bittensor/cli/commands/proxy.py`, `sdk/python/bittensor/cli/commands/subnets.py`, `sdk/python/bittensor/cli/commands/wallet.py`, `sdk/python/bittensor/cli/context.py`, `sdk/python/bittensor/cli/globals.py`, `sdk/python/bittensor/cli/main.py`, `sdk/python/bittensor/cli/multisig_helpers.py`, `sdk/python/bittensor/cli/root_helpers.py`, `sdk/python/bittensor/cli/stake_exit.py`, `sdk/python/bittensor/cli/stake_picker.py`, `sdk/python/bittensor/intents/proxy.py`); strict parity names them until they are ported and blessed.
+- Core and its patch are unchanged.
+- Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/44604652300)): pin source identity, live evidence, imports, extraction, regeneration, compatibility, probe pins, drift, parity, formatting, a workspace build, the runtime, reads, intents and client tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution; the validated range is unchanged.
+
 ### Testnet runtime 492 recorded automatically
 
 - Testnet finalized spec 492 (`:code` `0x22786f72f280dc968f38a10627c085eaf3ea530dd3a1621a4776882851ac3d8e`) at block 8475271; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `surface-unchanged`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/44423431350)). No upstream source is recorded: upstream has published no v492 release. The parity pin is unchanged.

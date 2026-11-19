@@ -82,18 +82,18 @@ path = "sdk/bittensor-core"
 checksum = "954983f3870ef1e2d504316116cfa6aa309be06330af01df7dd13571a627fe53"
 
 [parity]
-tag = "v491"
-commit = "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44"
-spec_version = 491
+tag = "v492"
+commit = "541a50d38764acdce23578bd8ba54f80156ffb2a"
+spec_version = 492
 python_package_version = "11.3.4.dev0"
 
 [localnet]
 image = "ghcr.io/raofoundation/subtensor-localnet"
-pinned = { tag = "v491", digest = "sha256:5880e9463c6bba59fde88f59f57d29c9138d1fedff4dc3c817a7b8771c0263d2" }
-mainnet = { tag = "mainnet", digest = "sha256:5880e9463c6bba59fde88f59f57d29c9138d1fedff4dc3c817a7b8771c0263d2" }
-testnet = { tag = "testnet", digest = "sha256:d96b3f0dda7be0740a2635eed483abbba8c52d6872d75038e77b972ed5103712" }
-devnet = { tag = "devnet", digest = "sha256:e95c044c8ed51a5848cd22da449f3922f9d775f7c84003517e116aeb5cd731f1" }
-main = { tag = "main", digest = "sha256:4668adf69408d98c2e5a46414adc2d56912f3bf1cc2611ac1df255e4a5b6c68f" }
+pinned = { tag = "v492", digest = "sha256:2cbe9871f515f515d87119352137df074355481cf8adb0c89cd66f2a17c5a365" }
+mainnet = { tag = "mainnet", digest = "sha256:2cbe9871f515f515d87119352137df074355481cf8adb0c89cd66f2a17c5a365" }
+testnet = { tag = "testnet", digest = "sha256:fa20b851d81567821e2b4d0fcf36b161754c0f40255f2e6d8ba754c311ec8acb" }
+devnet = { tag = "devnet", digest = "sha256:309cdf52d1d3d8a4a28386489eb13fe46aef72d3ca40c63fdfa46d593f4b76b7" }
+main = { tag = "main", digest = "sha256:0fae3e4fc5794fc445b0eed4073792b2f209d52798ae6ed7dae0eb0f0a976fd6" }
 
 [networks]
 
@@ -102,13 +102,13 @@ genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
 genesis_endpoint = "https://entrypoint-finney.opentensor.ai:443"
 
 [networks.finney.metadata]
-spec = 491
-code_hash = "0x4201278656a17aff924ca24123c8e5866d569a84a7150bb0372bc7078fc6173c"
-finalized_head = "0xbfe6f502e525a43ee3e18b146b0170bfcbf60af6f20657ca85b1326c4edd104f"
-v15 = "vendor/metadata/finney/491.v15.scale"
-v15_sha256 = "ba8cc38444a60f34d80b27db56ad9ac331b7f84ddc36444191258cb7c1989b08"
-v16 = "vendor/metadata/finney/491.v16.scale"
-v16_sha256 = "5ef5a1af766a9fd409bd4e1a439fd69bea790d246f342d8f1140a643c738b922"
+spec = 492
+code_hash = "0x22786f72f280dc968f38a10627c085eaf3ea530dd3a1621a4776882851ac3d8e"
+finalized_head = "0x7c59354833cbaa979f508a6a4e10d7b3411921a829df14762d17769d8164654c"
+v15 = "vendor/metadata/finney/492.v15.scale"
+v15_sha256 = "a397a753ad67ba335fb02cd5c54ccb0c1149fbf981f3ed6d9df44d49ca5bf71d"
+v16 = "vendor/metadata/finney/492.v16.scale"
+v16_sha256 = "1af749a5bb8fa5edd429b0650ce86b37cc1542bef5d362cd42e3d6ff8ab7ce99"
 
 [networks.testnet]
 genesis = "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105"
@@ -130,7 +130,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "eco-tests/src/tests.rs" = { to = "vendor/upstream/src/eco-tests/src/tests.rs", sha256 = "f127a55157a0c9f9a746ebdafb8e367664c4c8e088440220cddfdbe1125ec3d9" }
 "eco-tests/src/tests_mentat_indexer.rs" = { to = "vendor/upstream/src/eco-tests/src/tests_mentat_indexer.rs", sha256 = "61604627b22b0c3e17789f88e2f5cec08b232239fa3c379c2ee242b0bb16bd68" }
 "eco-tests/src/tests_taocom_indexer.rs" = { to = "vendor/upstream/src/eco-tests/src/tests_taocom_indexer.rs", sha256 = "c3c5a26cde9461490b56b07259d6310abf48202cb1b4d6d96a13d3fe0e3b1cca" }
-"git:watched-tree" = { to = "vendor/upstream/tree.txt", sha256 = "c8ebd30be329bb7f121ac00dd35c381e0d70cf40c42b6abc6f22d0a8f4338e5a" }
+"git:watched-tree" = { to = "vendor/upstream/tree.txt", sha256 = "babb3e9ef8da468b4304da26c79e5176f1006bacb0ced4e434490d8d47fdb7f3" }
 "pallets/admin-utils/src/lib.rs" = { to = "vendor/upstream/src/pallets/admin-utils/src/lib.rs", sha256 = "ae1ba37b8bf4527c2ed4a6819bce1f529ead89787fe3e4c48d65283033bc257f" }
 "pallets/subtensor/src/coinbase/reveal_commits.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/coinbase/reveal_commits.rs", sha256 = "33098bed261a1ad7c970c7e38c02c7446316c00483e945ef0a86dddb9485f683" }
 "pallets/subtensor/src/coinbase/run_coinbase.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/coinbase/run_coinbase.rs", sha256 = "94fb704fcdcaaa84f1ed6ddfee48fbc83fbf9d2eee967d9a65c581559a64eb27" }
@@ -149,7 +149,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "pallets/subtensor/src/subnets/registration.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/subnets/registration.rs", sha256 = "0b5c8f1752a934b28f0ab827f09f8cc96547aea7e04d5f2dca4c7f6f1462e081" }
 "pallets/subtensor/src/subnets/serving.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/subnets/serving.rs", sha256 = "6191fa34bc4eddf78dbdecc5b1c6842f1140b1a1e5419d245cc7f2ee67d5f3fe" }
 "pallets/subtensor/src/subnets/subnet.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/subnets/subnet.rs", sha256 = "7da9a16653673272225e3cda834236efc3358717411083c555bc31bd510eaaaf" }
-"pallets/subtensor/src/subnets/uids.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/subnets/uids.rs", sha256 = "57b99fe103b43cc3f68a42f9c697bda59cc5ff2d7af0549e8f8fca292b6d6e16" }
+"pallets/subtensor/src/subnets/uids.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/subnets/uids.rs", sha256 = "c00694fe78921fffaa6cdbf396d47aa65e9e14b9b55faf7e132c9f781cbf9a73" }
 "pallets/subtensor/src/subnets/weights.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/subnets/weights.rs", sha256 = "6dd0d7831cbf504e6f18d776159b17176ef346390bc2a42481849137ba6685b7" }
 "pallets/subtensor/src/utils/misc.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/utils/misc.rs", sha256 = "694c9e8a465572bb4cf95a0bac347d2ffd543437eb0f6549959a75d324f18060" }
 "pallets/subtensor/src/utils/rate_limiting.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/utils/rate_limiting.rs", sha256 = "09e22ae3bbd53a9b892e418cd93926300db9311ebe999d61204bf2b93d452772" }
@@ -176,7 +176,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "precompiles/src/solidity/votingPower.abi" = { to = "vendor/upstream/src/precompiles/src/solidity/votingPower.abi", sha256 = "f7b4d8c25fb779ef812403bb8dae423d1d86b9505e79dcb80bdfb17cc3b5d133" }
 "runtime/src/check_mortality.rs" = { to = "vendor/upstream/src/runtime/src/check_mortality.rs", sha256 = "49400692259e4a3679ffc236ab820accbf1b3d412847f10c700010cce259be71" }
 "runtime/src/fee_filters.rs" = { to = "vendor/upstream/src/runtime/src/fee_filters.rs", sha256 = "9694acf499e47243142450d7a05b6e0438c5b14248411b23b4c494b8336b3a11" }
-"runtime/src/transaction_payment_wrapper.rs" = { to = "vendor/upstream/src/runtime/src/transaction_payment_wrapper.rs", sha256 = "90fef6363a6b8091b4cc8d11e2b48dce0bdb8407b80d72f5fc338c1ff090e068" }
+"runtime/src/transaction_payment_wrapper.rs" = { to = "vendor/upstream/src/runtime/src/transaction_payment_wrapper.rs", sha256 = "6b0f9f320c4c6acfbea43356c4f6eff7dc7ecbffc1917a6bd5dccab640012bf8" }
 "sdk/bittensor-core-py/Cargo.toml" = { to = "vendor/upstream/src/sdk/bittensor-core-py/Cargo.toml", sha256 = "d74529e097176bf3f0560751a0d4e8408aa7d9c714526d6423df640b0e8649d9" }
 "sdk/bittensor-core-py/README.md" = { to = "vendor/upstream/src/sdk/bittensor-core-py/README.md", sha256 = "69e9c3c6ded2595a1e7501960cd480f0a7fc0da45d9b28a543524a572bf22780" }
 "sdk/bittensor-core-py/pyproject.toml" = { to = "vendor/upstream/src/sdk/bittensor-core-py/pyproject.toml", sha256 = "b50f9d53f8b50091d55d3f8fedc57ff25b99fa93b0b13d4bcf0ede1db6a704e5" }
@@ -233,7 +233,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/bittensor-core/tests/verify_strict.rs" = { to = "vendor/upstream/src/sdk/bittensor-core/tests/verify_strict.rs", sha256 = "d9fd33c0c3679a8cf3ce47ec2928bc39a72a2ceef5805689fd16415a4c317a3f" }
 "sdk/python/bittensor/__init__.py" = { to = "vendor/upstream/src/sdk/python/bittensor/__init__.py", sha256 = "28fc1a93c067b68c996f50ac12d1ec72e607590bf98e7d23d2bc4d72b42e858f" }
 "sdk/python/bittensor/_generated/__init__.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_generated/__init__.py", sha256 = "3a3051da2738a370350e7706e788462e2f392da784190656676ac5f50baae0e8" }
-"sdk/python/bittensor/_generated/calls.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_generated/calls.py", sha256 = "d91105e899f0633f4bbbe7de9e23724ffe16ec526796b8af77034de0cb099592" }
+"sdk/python/bittensor/_generated/calls.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_generated/calls.py", sha256 = "2a6c6d35da7b23723b6134a4e0736cd70101662ad03dcf0ff44f57c8a735a30f" }
 "sdk/python/bittensor/_generated/constants.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_generated/constants.py", sha256 = "f86e2842e56ea9fbb072666c398ace93867123d83d66ad2ae978336f24bbbb40" }
 "sdk/python/bittensor/_generated/errors.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_generated/errors.py", sha256 = "71f4cfbc32acd5a924a4fda76a5e913d8858ce0ad38dd84d0d685652879e77b3" }
 "sdk/python/bittensor/_generated/runtime_apis.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_generated/runtime_apis.py", sha256 = "6532dd9c48d26b19f6c84a29098c1d82f29cb1caea999704e8bb84f8de55dfeb" }

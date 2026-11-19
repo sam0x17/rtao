@@ -357,6 +357,16 @@ porting report lists 65 changed watched sources: 0 auto-blessed,
 9 re-derived and checked. 28 hand port(s) remain due and are listed in `parity/port_due.toml` (`pallets/subtensor/src/utils/misc.rs`, `sdk/bittensor-core-py/pyproject.toml`, `sdk/python/bittensor/cli/commands/proxy.py`, `sdk/python/bittensor/cli/commands/subnet_emission.py`, `sdk/python/bittensor/cli/commands/subnets.py`, `sdk/python/bittensor/cli/commands/wallet.py`, `sdk/python/bittensor/cli/context.py`, `sdk/python/bittensor/cli/globals.py`, `sdk/python/bittensor/cli/main.py`, `sdk/python/bittensor/cli/multisig_helpers.py`, `sdk/python/bittensor/cli/output.py`, `sdk/python/bittensor/cli/root_helpers.py`, `sdk/python/bittensor/cli/stake_exit.py`, `sdk/python/bittensor/cli/stake_picker.py`, `sdk/python/bittensor/cli/tx.py`, `sdk/python/bittensor/emission_weights.py`, `sdk/python/bittensor/intents/__init__.py`, `sdk/python/bittensor/intents/batch.py`, `sdk/python/bittensor/intents/coldkey.py`, `sdk/python/bittensor/intents/emission_weights.py`, `sdk/python/bittensor/intents/proxy.py`, `sdk/python/bittensor/intents/root.py`, `sdk/python/bittensor/namespaces.pyi`, `sdk/python/bittensor/reads/accounts.py`, `sdk/python/bittensor/reads/hyperparameters.py`, `sdk/python/bittensor/reads/locks.py`, `sdk/python/bittensor/reads/subnets.py`, `sdk/python/tests/unit/test_emission_weights.py`); strict parity names them until they are ported and blessed. Core and its patch are unchanged. The validated range
 is unchanged. Workflow run: <https://github.com/sam0x17/rtao/actions/runs/44031502234>.
 
+## 2026-11-19: Finney runtime 492 adopted automatically
+
+The hosted runtime-adopt workflow observed Finney finalize spec 492 at block
+9542901 (`0x231da59adbeebfb9b08522b8f8656fe054614479ebd0ef9b08750e4bad5fc7a0`), `:code` `0x22786f72f280dc968f38a10627c085eaf3ea530dd3a1621a4776882851ac3d8e`, confirmed it from 4 public
+endpoints (release wasm: matches), and advanced parity from spec 491 to
+`v492` (`541a50d38764acdce23578bd8ba54f80156ffb2a`, pin source `v492`). Metadata drift is `surface-unchanged`. The
+porting report lists 2 changed watched sources: 0 auto-blessed,
+2 re-derived and checked. 11 hand port(s) remain due and are listed in `parity/port_due.toml` (`sdk/python/bittensor/cli/commands/proxy.py`, `sdk/python/bittensor/cli/commands/subnets.py`, `sdk/python/bittensor/cli/commands/wallet.py`, `sdk/python/bittensor/cli/context.py`, `sdk/python/bittensor/cli/globals.py`, `sdk/python/bittensor/cli/main.py`, `sdk/python/bittensor/cli/multisig_helpers.py`, `sdk/python/bittensor/cli/root_helpers.py`, `sdk/python/bittensor/cli/stake_exit.py`, `sdk/python/bittensor/cli/stake_picker.py`, `sdk/python/bittensor/intents/proxy.py`); strict parity names them until they are ported and blessed. Core and its patch are unchanged. The validated range
+is unchanged. Workflow run: <https://github.com/sam0x17/rtao/actions/runs/44604652300>.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

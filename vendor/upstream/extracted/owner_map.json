@@ -1,59 +1,59 @@
 {
   "format": 1,
   "metadata_provenance": {
-    "finalized_head": "0xbfe6f502e525a43ee3e18b146b0170bfcbf60af6f20657ca85b1326c4edd104f",
-    "path": "vendor/metadata/finney/491.v15.scale",
-    "sha256": "ba8cc38444a60f34d80b27db56ad9ac331b7f84ddc36444191258cb7c1989b08",
-    "spec": 491
+    "finalized_head": "0x7c59354833cbaa979f508a6a4e10d7b3411921a829df14762d17769d8164654c",
+    "path": "vendor/metadata/finney/492.v15.scale",
+    "sha256": "a397a753ad67ba335fb02cd5c54ccb0c1149fbf981f3ed6d9df44d49ca5bf71d",
+    "spec": 492
   },
   "provenance": {
     "blob": "898812ed48595a20cb343a80297728d759b5cf2e",
-    "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
     "path": "sdk/python/bittensor/intents/hyperparameters.py",
-    "tag": "v491"
+    "tag": "v492"
   },
   "sources": [
     {
       "blob": "898812ed48595a20cb343a80297728d759b5cf2e",
-      "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
       "path": "sdk/python/bittensor/intents/hyperparameters.py",
-      "tag": "v491"
+      "tag": "v492"
     },
     {
       "blob": "772977590e33f80c932eefa3611dbac6e425b3da",
-      "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
       "path": "sdk/python/bittensor/hyperparams.py",
-      "tag": "v491"
+      "tag": "v492"
     },
     {
       "blob": "8aa8a8219d8b1d642b18a31d66998943efbb0bf7",
-      "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
       "path": "pallets/admin-utils/src/lib.rs",
-      "tag": "v491"
+      "tag": "v492"
     },
     {
       "blob": "98c0081114fb19d18d4f7a76b2fecd67a8b53243",
-      "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
       "path": "pallets/subtensor/src/coinbase/tempo_control.rs",
-      "tag": "v491"
+      "tag": "v492"
     },
     {
       "blob": "7c50fd80383b16eb7c647afb075185e2982cb4db",
-      "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
       "path": "pallets/subtensor/src/utils/rate_limiting.rs",
-      "tag": "v491"
+      "tag": "v492"
     },
     {
       "blob": "f3c9483919a66fc27dfa1438b53cae0cf9f174f1",
-      "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
       "path": "pallets/subtensor/src/utils/misc.rs",
-      "tag": "v491"
+      "tag": "v492"
     },
     {
       "blob": "eb78dd66775314fe06fbcb47a7f511e94f0057aa",
-      "commit": "be3a11b1a5300bb58d6fbad3c629e4a926bb2f44",
+      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
       "path": "pallets/subtensor/src/coinbase/run_coinbase.rs",
-      "tag": "v491"
+      "tag": "v492"
     }
   ],
   "values": {

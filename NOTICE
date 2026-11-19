@@ -131,7 +131,7 @@ use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
 BEGIN cargo xtask import-upstream attribution
-Copied byte for byte from RaoFoundation/subtensor @ be3a11b1a5300bb58d6fbad3c629e4a926bb2f44
+Copied byte for byte from RaoFoundation/subtensor @ 541a50d38764acdce23578bd8ba54f80156ffb2a
 https://github.com/RaoFoundation/subtensor
 License: Apache-2.0 (upstream LICENSE preserved in vendor/upstream/src/LICENSE).
 All watched files are retained for offline checks and Rust-native extraction;
@@ -150,7 +150,7 @@ eco-tests/src/mock.rs -> vendor/upstream/src/eco-tests/src/mock.rs; bf58d1079424
 eco-tests/src/tests.rs -> vendor/upstream/src/eco-tests/src/tests.rs; f127a55157a0c9f9a746ebdafb8e367664c4c8e088440220cddfdbe1125ec3d9
 eco-tests/src/tests_mentat_indexer.rs -> vendor/upstream/src/eco-tests/src/tests_mentat_indexer.rs; 61604627b22b0c3e17789f88e2f5cec08b232239fa3c379c2ee242b0bb16bd68
 eco-tests/src/tests_taocom_indexer.rs -> vendor/upstream/src/eco-tests/src/tests_taocom_indexer.rs; c3c5a26cde9461490b56b07259d6310abf48202cb1b4d6d96a13d3fe0e3b1cca
-git:watched-tree -> vendor/upstream/tree.txt; c8ebd30be329bb7f121ac00dd35c381e0d70cf40c42b6abc6f22d0a8f4338e5a
+git:watched-tree -> vendor/upstream/tree.txt; babb3e9ef8da468b4304da26c79e5176f1006bacb0ced4e434490d8d47fdb7f3
 pallets/admin-utils/src/lib.rs -> vendor/upstream/src/pallets/admin-utils/src/lib.rs; ae1ba37b8bf4527c2ed4a6819bce1f529ead89787fe3e4c48d65283033bc257f
 pallets/subtensor/src/coinbase/reveal_commits.rs -> vendor/upstream/src/pallets/subtensor/src/coinbase/reveal_commits.rs; 33098bed261a1ad7c970c7e38c02c7446316c00483e945ef0a86dddb9485f683
 pallets/subtensor/src/coinbase/run_coinbase.rs -> vendor/upstream/src/pallets/subtensor/src/coinbase/run_coinbase.rs; 94fb704fcdcaaa84f1ed6ddfee48fbc83fbf9d2eee967d9a65c581559a64eb27
@@ -169,7 +169,7 @@ pallets/subtensor/src/rpc_info/subnet_info.rs -> vendor/upstream/src/pallets/sub
 pallets/subtensor/src/subnets/registration.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/registration.rs; 0b5c8f1752a934b28f0ab827f09f8cc96547aea7e04d5f2dca4c7f6f1462e081
 pallets/subtensor/src/subnets/serving.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/serving.rs; 6191fa34bc4eddf78dbdecc5b1c6842f1140b1a1e5419d245cc7f2ee67d5f3fe
 pallets/subtensor/src/subnets/subnet.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/subnet.rs; 7da9a16653673272225e3cda834236efc3358717411083c555bc31bd510eaaaf
-pallets/subtensor/src/subnets/uids.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/uids.rs; 57b99fe103b43cc3f68a42f9c697bda59cc5ff2d7af0549e8f8fca292b6d6e16
+pallets/subtensor/src/subnets/uids.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/uids.rs; c00694fe78921fffaa6cdbf396d47aa65e9e14b9b55faf7e132c9f781cbf9a73
 pallets/subtensor/src/subnets/weights.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/weights.rs; 6dd0d7831cbf504e6f18d776159b17176ef346390bc2a42481849137ba6685b7
 pallets/subtensor/src/utils/misc.rs -> vendor/upstream/src/pallets/subtensor/src/utils/misc.rs; 694c9e8a465572bb4cf95a0bac347d2ffd543437eb0f6549959a75d324f18060
 pallets/subtensor/src/utils/rate_limiting.rs -> vendor/upstream/src/pallets/subtensor/src/utils/rate_limiting.rs; 09e22ae3bbd53a9b892e418cd93926300db9311ebe999d61204bf2b93d452772
@@ -196,7 +196,7 @@ precompiles/src/solidity/uidLookup.abi -> vendor/upstream/src/precompiles/src/so
 precompiles/src/solidity/votingPower.abi -> vendor/upstream/src/precompiles/src/solidity/votingPower.abi; f7b4d8c25fb779ef812403bb8dae423d1d86b9505e79dcb80bdfb17cc3b5d133
 runtime/src/check_mortality.rs -> vendor/upstream/src/runtime/src/check_mortality.rs; 49400692259e4a3679ffc236ab820accbf1b3d412847f10c700010cce259be71
 runtime/src/fee_filters.rs -> vendor/upstream/src/runtime/src/fee_filters.rs; 9694acf499e47243142450d7a05b6e0438c5b14248411b23b4c494b8336b3a11
-runtime/src/transaction_payment_wrapper.rs -> vendor/upstream/src/runtime/src/transaction_payment_wrapper.rs; 90fef6363a6b8091b4cc8d11e2b48dce0bdb8407b80d72f5fc338c1ff090e068
+runtime/src/transaction_payment_wrapper.rs -> vendor/upstream/src/runtime/src/transaction_payment_wrapper.rs; 6b0f9f320c4c6acfbea43356c4f6eff7dc7ecbffc1917a6bd5dccab640012bf8
 sdk/bittensor-core-py/Cargo.toml -> vendor/upstream/src/sdk/bittensor-core-py/Cargo.toml; d74529e097176bf3f0560751a0d4e8408aa7d9c714526d6423df640b0e8649d9
 sdk/bittensor-core-py/README.md -> vendor/upstream/src/sdk/bittensor-core-py/README.md; 69e9c3c6ded2595a1e7501960cd480f0a7fc0da45d9b28a543524a572bf22780
 sdk/bittensor-core-py/pyproject.toml -> vendor/upstream/src/sdk/bittensor-core-py/pyproject.toml; b50f9d53f8b50091d55d3f8fedc57ff25b99fa93b0b13d4bcf0ede1db6a704e5
@@ -253,7 +253,7 @@ sdk/bittensor-core/tests/password_environment.rs -> vendor/upstream/src/sdk/bitt
 sdk/bittensor-core/tests/verify_strict.rs -> vendor/upstream/src/sdk/bittensor-core/tests/verify_strict.rs; d9fd33c0c3679a8cf3ce47ec2928bc39a72a2ceef5805689fd16415a4c317a3f
 sdk/python/bittensor/__init__.py -> vendor/upstream/src/sdk/python/bittensor/__init__.py; 28fc1a93c067b68c996f50ac12d1ec72e607590bf98e7d23d2bc4d72b42e858f
 sdk/python/bittensor/_generated/__init__.py -> vendor/upstream/src/sdk/python/bittensor/_generated/__init__.py; 3a3051da2738a370350e7706e788462e2f392da784190656676ac5f50baae0e8
-sdk/python/bittensor/_generated/calls.py -> vendor/upstream/src/sdk/python/bittensor/_generated/calls.py; d91105e899f0633f4bbbe7de9e23724ffe16ec526796b8af77034de0cb099592
+sdk/python/bittensor/_generated/calls.py -> vendor/upstream/src/sdk/python/bittensor/_generated/calls.py; 2a6c6d35da7b23723b6134a4e0736cd70101662ad03dcf0ff44f57c8a735a30f
 sdk/python/bittensor/_generated/constants.py -> vendor/upstream/src/sdk/python/bittensor/_generated/constants.py; f86e2842e56ea9fbb072666c398ace93867123d83d66ad2ae978336f24bbbb40
 sdk/python/bittensor/_generated/errors.py -> vendor/upstream/src/sdk/python/bittensor/_generated/errors.py; 71f4cfbc32acd5a924a4fda76a5e913d8858ce0ad38dd84d0d685652879e77b3
 sdk/python/bittensor/_generated/runtime_apis.py -> vendor/upstream/src/sdk/python/bittensor/_generated/runtime_apis.py; 6532dd9c48d26b19f6c84a29098c1d82f29cb1caea999704e8bb84f8de55dfeb
