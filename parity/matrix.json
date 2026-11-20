@@ -8296,7 +8296,7 @@
           "crates/rtao-intents/src/hyperparameters/planner.rs (selective owner current-value and freeze/cooldown planning)",
           "vendor/upstream/extracted/owner_map.json (33 owner names over 32 setters plus four operation policies and source provenance)"
         ],
-        "synced_blob": "8aa8a8219d8b1d642b18a31d66998943efbb0bf7"
+        "synced_blob": "a81c0740bd8d8555c095ccc5cea744a635eb451d"
       },
       {
         "kind": "extracted",
@@ -8485,7 +8485,7 @@
           "crates/rtao-neuron/src/weights.rs (LastUpdate fallback and activity-cutoff alarm)",
           "vendor/upstream/extracted/owner_map.json (authenticated helper bodies and selected getter storage linkage)"
         ],
-        "synced_blob": "f3c9483919a66fc27dfa1438b53cae0cf9f174f1"
+        "synced_blob": "88c689ad71a097b2d44fcead9b866f6443c7f81b"
       },
       {
         "kind": "ported",

@@ -10,6 +10,26 @@ mod pinned_metadata;
 use pinned_metadata::pinned_metadata;
 
 #[test]
+fn timelocked_commit_cap_preserves_zero_and_full_u8_on_finney_493() {
+    use rtao_primitives::NetUid;
+    use rtao_runtime::{RuntimeHandle, calls::admin_utils};
+
+    let metadata = include_bytes!("../../../vendor/metadata/finney/493.v15.scale");
+    let runtime = RuntimeHandle::new(Runtime::parse(metadata, 493, 1, 42).unwrap()).unwrap();
+    let cap = storage::subtensor_module::MAX_TIMELOCKED_COMMITS_PER_HOTKEY.surface();
+    let entry = runtime.storage_entry(cap.pallet, cap.name).unwrap();
+    assert_eq!(entry.default_bytes, [10]);
+    assert_eq!(cap.default_bytes, entry.default_bytes);
+    for limit in [0, 10, u8::MAX] {
+        let call = admin_utils::sudo_set_max_timelocked_commits_per_hotkey(NetUid(0x0107), limit);
+        assert_eq!(
+            call.compose(&runtime).unwrap().as_bytes(),
+            [19, 122, 7, 1, limit]
+        );
+    }
+}
+
+#[test]
 fn zero_account_default_decodes_to_zero_bytes() {
     let runtime = Runtime::parse(&pinned_metadata().0, pinned_metadata().1, 1, 42).unwrap();
     let entries = runtime

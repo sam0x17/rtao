@@ -5,26 +5,10 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "pallets/admin-utils/src/lib.rs"
-kind = "ported"
-from = "8aa8a8219d8b1d642b18a31d66998943efbb0bf7"
-to = "a81c0740bd8d8555c095ccc5cea744a635eb451d"
-tag = "v493"
-symbols = []
-
-[[file]]
 py = "pallets/subtensor/src/subnets/weights.rs"
 kind = "ported"
 from = "2f8569bc0a877de50d478ef46489f2966398b48e"
 to = "9ea06ff70d143f238e50fa6d270df4276d5fa6f6"
-tag = "v493"
-symbols = []
-
-[[file]]
-py = "pallets/subtensor/src/utils/misc.rs"
-kind = "ported"
-from = "f3c9483919a66fc27dfa1438b53cae0cf9f174f1"
-to = "88c689ad71a097b2d44fcead9b866f6443c7f81b"
 tag = "v493"
 symbols = []
 

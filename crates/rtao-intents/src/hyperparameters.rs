@@ -316,6 +316,7 @@ mod tests {
         }
         for name in [
             "activity_cutoff",
+            "max_timelocked_commits_per_hotkey",
             "recycle_or_burn",
             "sn_owner_hotkey",
             "unknown",
