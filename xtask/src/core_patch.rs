@@ -744,8 +744,8 @@ fn verify_security_source(repo: &Path, rev: &str) -> Result<()> {
 fn applied_review_tree(repo: &Path, base: &str, diffs: &[(&str, &str)]) -> Result<String> {
     use std::io::Write;
     use std::process::Stdio;
-    let temporary = hosted_root()?.join("core-patch");
-    fs::create_dir_all(&temporary)?;
+    let temporary = task_root()?.join(format!("core-review-{}", std::process::id()));
+    fs::create_dir(&temporary).context("cannot create isolated core review directory")?;
     let index = temporary.join("review-verify.index");
     let lock = temporary.join("review-verify.index.lock");
     ensure!(
@@ -814,6 +814,7 @@ fn applied_review_tree(repo: &Path, base: &str, diffs: &[(&str, &str)]) -> Resul
             fs::remove_file(path)?;
         }
     }
+    fs::remove_dir(&temporary)?;
     result
 }
 
@@ -827,11 +828,15 @@ fn hosted_root() -> Result<PathBuf> {
         hosted_linux(),
         "core-patch builds and rebases run only in bounded hosted Linux CI (PLAN Q30)"
     );
+    task_root()
+}
+
+fn task_root() -> Result<PathBuf> {
     let root =
         PathBuf::from(std::env::var_os("RTAO_TEMP_ROOT").context("RTAO_TEMP_ROOT is required")?);
     ensure!(root.is_absolute(), "RTAO_TEMP_ROOT must be absolute");
     fs::create_dir_all(&root)?;
-    root.canonicalize().context("canonical hosted task root")
+    root.canonicalize().context("canonical core patch task root")
 }
 
 fn missing_symbols(output: &[u8], directory: &Path) -> Result<bool> {
