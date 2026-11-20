@@ -836,7 +836,8 @@ fn task_root() -> Result<PathBuf> {
         PathBuf::from(std::env::var_os("RTAO_TEMP_ROOT").context("RTAO_TEMP_ROOT is required")?);
     ensure!(root.is_absolute(), "RTAO_TEMP_ROOT must be absolute");
     fs::create_dir_all(&root)?;
-    root.canonicalize().context("canonical core patch task root")
+    root.canonicalize()
+        .context("canonical core patch task root")
 }
 
 fn missing_symbols(output: &[u8], directory: &Path) -> Result<bool> {

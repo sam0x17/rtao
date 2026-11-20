@@ -938,7 +938,9 @@ pub fn interface_metadata()->Vec<InterfaceMetadata> {\nvec![\n",
             format!(
                 "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::hyperparameters::canonicalize(&mut intent)?;"
             )
-        } else if spec.name == "spend_gamma" {
+        } else if spec.name == "spend_gamma"
+            && spec.fields.iter().any(|field| field.name == "spends")
+        {
             format!(
                 "let mut intent:super::interfaces::{class}=serde_json::from_value(args)?; crate::gamma::canonicalize(&mut intent)?;"
             )
