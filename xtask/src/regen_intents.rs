@@ -386,6 +386,12 @@ fn field_type(
         "rtao_primitives::MechId".to_owned()
     } else if name == "uids" {
         "Vec<rtao_primitives::Uid>".to_owned()
+    } else if annotation == "Money"
+        && name == "amount_gamma"
+        && matches!(spec.name, "move_gamma" | "spend_gamma")
+    {
+        // Gamma intents convert an exact decimal amount to gamma units in their port.
+        "rtao_primitives::Amount".to_owned()
     } else if annotation == "Money" {
         if !name.ends_with("_tao") && !name.ends_with("_alpha") {
             ensure!(

@@ -479,7 +479,39 @@ fn frozen_source(root: &Path) -> Result<BTreeMap<String, String>> {
     );
     Ok(result)
 }
-pub(super) fn freeze_tripwires(root: &Path, check: bool) -> Result<()> {
+/// A scalar is the reviewed hash at every spec. A versioned row selects the
+/// most recent reviewed layout at or before the pinned metadata spec.
+fn reviewed_hash(value: &toml_edit::Item, spec: u32) -> Result<&str> {
+    if let Some(hash) = value.as_str() {
+        return Ok(hash);
+    }
+    let versions = value
+        .as_inline_table()
+        .context("expected a frozen hash or version table")?;
+    ensure!(
+        versions.contains_key("0"),
+        "versioned frozen hash needs its original layout at 0"
+    );
+    let mut selected = None;
+    for (key, value) in versions {
+        let since: u32 = key.parse().context("invalid frozen layout version")?;
+        ensure!(
+            since.to_string() == key,
+            "noncanonical frozen layout version"
+        );
+        let hash = value.as_str().context("frozen hash must be string")?;
+        ensure!(
+            !hash.is_empty() && hash.len() <= 16 && hash.bytes().all(|b| b.is_ascii_hexdigit()),
+            "invalid frozen layout hash"
+        );
+        if since <= spec && selected.is_none_or(|(previous, _)| since > previous) {
+            selected = Some((since, hash));
+        }
+    }
+    Ok(selected.context("no frozen layout at pinned spec")?.1)
+}
+
+pub(super) fn freeze_tripwires(root: &Path, check: bool, spec: u32) -> Result<()> {
     let expected = frozen_source(root)?;
     let path = root.join("codegen/frozen_models.toml");
     if !path.exists() {
@@ -505,15 +537,7 @@ pub(super) fn freeze_tripwires(root: &Path, check: bool) -> Result<()> {
         .and_then(|item| item.as_table_like())
         .context("frozen [hashes] missing")?
         .iter()
-        .map(|(key, value)| {
-            Ok((
-                key.to_owned(),
-                value
-                    .as_str()
-                    .context("frozen hash must be string")?
-                    .to_owned(),
-            ))
-        })
+        .map(|(key, value)| Ok((key.to_owned(), reviewed_hash(value, spec)?.to_owned())))
         .collect::<Result<BTreeMap<_, _>>>()?;
     ensure!(
         actual == expected,
@@ -525,6 +549,18 @@ pub(super) fn freeze_tripwires(root: &Path, check: bool) -> Result<()> {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    #[test]
+    fn frozen_layout_selects_one_reviewed_hash_at_the_transition() -> Result<()> {
+        let config =
+            r#"model = { "493" = "abcd", "0" = "1234" }"#.parse::<toml_edit::DocumentMut>()?;
+        assert_eq!(reviewed_hash(&config["model"], 492)?, "1234");
+        assert_eq!(reviewed_hash(&config["model"], 493)?, "abcd");
+        assert_eq!(reviewed_hash(&config["model"], 494)?, "abcd");
+        let incomplete = r#"model = { "493" = "abcd" }"#.parse::<toml_edit::DocumentMut>()?;
+        assert!(reviewed_hash(&incomplete["model"], 492).is_err());
+        Ok(())
+    }
+
     fn pinned_runtime() -> rtao_core::runtime::Runtime {
         rtao_core::runtime::Runtime::parse(
             include_bytes!("../../vendor/metadata/finney/488.v15.scale"),

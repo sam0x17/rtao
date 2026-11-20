@@ -308,7 +308,7 @@ fn run_at(args: Vec<String>, root_path: &Path) -> Result<()> {
         return intents::run(&root, &ir, &mapper, check);
     }
     models::check(&root, &mapper)?;
-    models::freeze_tripwires(&root, check)?;
+    models::freeze_tripwires(&root, check, spec)?;
     if models_only {
         println!("hand models and frozen source tripwires match pinned metadata");
         return Ok(());
