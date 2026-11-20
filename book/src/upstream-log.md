@@ -367,6 +367,37 @@ porting report lists 2 changed watched sources: 0 auto-blessed,
 2 re-derived and checked. 11 hand port(s) remain due and are listed in `parity/port_due.toml` (`sdk/python/bittensor/cli/commands/proxy.py`, `sdk/python/bittensor/cli/commands/subnets.py`, `sdk/python/bittensor/cli/commands/wallet.py`, `sdk/python/bittensor/cli/context.py`, `sdk/python/bittensor/cli/globals.py`, `sdk/python/bittensor/cli/main.py`, `sdk/python/bittensor/cli/multisig_helpers.py`, `sdk/python/bittensor/cli/root_helpers.py`, `sdk/python/bittensor/cli/stake_exit.py`, `sdk/python/bittensor/cli/stake_picker.py`, `sdk/python/bittensor/intents/proxy.py`); strict parity names them until they are ported and blessed. Core and its patch are unchanged. The validated range
 is unchanged. Workflow run: <https://github.com/sam0x17/rtao/actions/runs/44604652300>.
 
+## 2026-11-20 Finney spec 493
+
+The SDK advances from v492 (`541a50d38764acdce23578bd8ba54f80156ffb2a`)
+to v493 (`8b407e40988ea7a251abb6dbc07a9ab7d602b740`). The pinned Finney
+block is 9,549,692, hash `0x43d6c2cb48b0f3887cef8cc5cc91a585c1544abfd91e8f662ab7a17f8171ca7f`.
+Entrypoint, Lite and OnFinality agreed on finality, genesis, spec,
+V15/V16 metadata digests and the code bytes. The release wasm had the
+same BLAKE2b-256 hash, `0x51adea39b16a2b9d60b58d430246d49312f1111b74607edc1166e47a73de4591`.
+The archive endpoint did not return V16 for this check.
+
+Hosted Finney run 44794039345 passed provenance and evidence, imported
+the source and stopped during regeneration at the changed Gamma deposit
+layout. D-295 records the two reviewed layouts. The manual candidate
+changes Gamma reads, transaction construction, service registration and
+CLI aliases. The metadata comparison found 5 breaking, 10 behavioural
+and 5 additive changes. Hosted testnet run 44786356910 ran the independent
+subxt comparison on byte-identical old and new metadata. Its drift report
+matches the local Finney report exactly. [Finney run](https://github.com/sam0x17/rtao/actions/runs/44794039345) · [Testnet run](https://github.com/sam0x17/rtao/actions/runs/44786356910)
+
+The porting report found 38 changed watched sources, re-derived 13 and
+lists 29 outstanding hand ports, including earlier work. Ordinary parity
+passed. The workspace built for all targets. The candidate CLI read
+the existential deposit, timestamp and subnet 1 hyperparameters from
+Finney. All 619 executed runtime, read and intent checks passed, as did
+the CLI command inventory, generated command tests and subnet emission
+tests. The client integration and doc tests passed. Three client tests
+for shielded transaction recovery failed intermittently across local
+runs. All three passed together on the same binary with their original
+assertions. The final client run still recorded two failures before
+that focused repeat. The Python oracle comparison remains unverified.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

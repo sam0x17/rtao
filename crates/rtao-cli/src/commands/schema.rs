@@ -119,6 +119,8 @@ fn field(
     } else if annotation_base == "Money" {
         help.push_str(if param.name.ends_with("_alpha") {
             " Amount in subnet alpha (TAO for netuid0)."
+        } else if param.name.ends_with("_gamma") {
+            " Amount in gamma."
         } else {
             " Amount in TAO."
         });
@@ -144,19 +146,23 @@ fn field(
     if required {
         help.push_str(" (required)");
     }
+    let mut default = param
+        .default_json
+        .map(serde_json::from_str::<Value>)
+        .transpose()
+        .map_err(|error| CliError::failure(format!("invalid authenticated default: {error}")))?;
+    // The extractor preserves Python dict literals as key/value pairs.
+    // Materialize default_factory=dict exactly as the generated constructor does.
+    if param.default_factory && default.as_ref() == Some(&json!({"dict": []})) {
+        default = Some(json!({}));
+    }
     Ok(Field {
         name: param.name,
         annotation,
         kind,
         required,
         own_key,
-        default: param
-            .default_json
-            .map(serde_json::from_str)
-            .transpose()
-            .map_err(|error| {
-                CliError::failure(format!("invalid authenticated default: {error}"))
-            })?,
+        default,
         allow_all,
         help: help.trim().into(),
         query,

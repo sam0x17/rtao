@@ -122,6 +122,9 @@ pub fn intent_args(op: &str, original: &Value) -> Result<Value, CoreError> {
     if op == "move_gamma" {
         args["destination_hotkey_ss58"] = json!(OTHER_HOT.to_string());
     }
+    if op == "spend_gamma" && args.get("service_hotkey_ss58").is_some() {
+        args["service_hotkey_ss58"] = json!(OTHER_HOT.to_string());
+    }
     // An order's owner is the planning wallet's coldkey, as ALICE is the
     // Python harness's dev wallet.
     let owned = |order: &mut Value| {
@@ -473,22 +476,34 @@ pub fn intent_state(runtime: Arc<Runtime>, op: &str) -> Result<FakeState, CoreEr
         emission_weights_info(SUBNET),
     )?;
     seed_availability(&mut state)?;
-    // py: sdk/python/tests/harness/samples.py:419-425 (seed_gamma)
+    // The hotkey owns the spend and OTHER_HOT hosts its service (seed_gamma).
     if op.contains("gamma") {
-        // Deposits owned and spent by the signer: the sample hotkey holds one
-        // gamma (empty for the close sample, so it can close) and the move
-        // destination is empty.
         let held = if op == "close_gamma_deposit" {
             0
         } else {
             1_000_000_000u64
         };
         for (hotkey, balance) in [(HOT, held), (OTHER_HOT, 0)] {
+            let mut deposit =
+                json!({"coldkey": COLD.to_string(), "balance": balance, "daily_spend_cap": null});
+            if state.runtime.spec_version < 493 {
+                deposit["spender"] = json!(COLD.to_string());
+            } else if op == "spend_gamma" && hotkey == HOT {
+                state.seed_python(
+                    "SubtensorModule",
+                    "Services",
+                    &[json!(SUBNET.0), json!(OTHER_HOT.to_string())],
+                    json!({"url":"https://example.org"}),
+                )?;
+                state.seed_runtime("GammaRuntimeApi", "get_gamma_deposit", json!({
+                    "netuid":SUBNET.0, "hotkey":hotkey.to_string(), "deposit":deposit, "spendable":balance
+                }))?;
+            }
             state.seed_python(
                 "SubtensorModule",
                 "GammaDeposits",
                 &[json!(SUBNET.0), json!(hotkey.to_string())],
-                json!({"coldkey": COLD.to_string(), "spender": COLD.to_string(), "balance": balance, "daily_spend_cap": null}),
+                deposit,
             )?;
         }
     }

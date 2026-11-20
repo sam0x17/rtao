@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
+    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
     "path": "website/apps/bittensor-website/public/catalog/intents.json",
-    "sha256": "657a16701d65e67ccfdabe7be60900fcea450e6171cfc29f040fa6aedfde5921",
-    "tag": "v492"
+    "sha256": "0396dbf116fa8b09e602dd32bd7147457602dd47e16fdad0beccd4c380d6baa5",
+    "tag": "v493"
   },
   "format": 1,
   "intents": [
@@ -155,12 +155,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 3680,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 3691,
             "end_line": 105,
             "line": 105,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 3664
+            "start_byte": 3675
           },
           "value": "add_proxy"
         },
@@ -177,12 +177,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 3703,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 3714,
             "end_line": 106,
             "line": 106,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 3685
+            "start_byte": 3696
           },
           "value": "coldkey"
         },
@@ -199,12 +199,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 3741,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 3752,
             "end_line": 107,
             "line": 107,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 3708
+            "start_byte": 3719
           },
           "value": {
             "tuple": [
@@ -585,12 +585,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 15334,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 15345,
             "end_line": 411,
             "line": 411,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 15308
+            "start_byte": 15319
           },
           "value": "announce_proxy_call"
         },
@@ -607,12 +607,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 15357,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 15368,
             "end_line": 412,
             "line": 412,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 15339
+            "start_byte": 15350
           },
           "value": "coldkey"
         },
@@ -629,12 +629,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 15394,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 15405,
             "end_line": 413,
             "line": 413,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 15362
+            "start_byte": 15373
           },
           "value": {
             "tuple": [
@@ -1635,12 +1635,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 21434,
-            "end_line": 500,
-            "line": 500,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 18445,
+            "end_line": 441,
+            "line": 441,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 21408
+            "start_byte": 18419
           },
           "value": "close_gamma_deposit"
         },
@@ -1657,12 +1657,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 21457,
-            "end_line": 501,
-            "line": 501,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 18468,
+            "end_line": 442,
+            "line": 442,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 21439
+            "start_byte": 18450
           },
           "value": "coldkey"
         },
@@ -1679,12 +1679,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 21515,
-            "end_line": 502,
-            "line": 502,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 18526,
+            "end_line": 443,
+            "line": 443,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 21462
+            "start_byte": 18473
           },
           "value": {
             "tuple": [
@@ -2057,12 +2057,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 9142,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 9153,
             "end_line": 251,
             "line": 251,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 9118
+            "start_byte": 9129
           },
           "value": "create_pure_proxy"
         },
@@ -2079,12 +2079,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 9165,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 9176,
             "end_line": 252,
             "line": 252,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 9147
+            "start_byte": 9158
           },
           "value": "coldkey"
         },
@@ -2101,12 +2101,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 9302,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 9313,
             "end_line": 257,
             "line": 253,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 9170
+            "start_byte": 9181
           },
           "value": {
             "tuple": [
@@ -2806,12 +2806,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 23302,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 23313,
             "end_line": 603,
             "line": 603,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 23272
+            "start_byte": 23283
           },
           "value": "execute_proxy_announced"
         },
@@ -2828,12 +2828,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 23325,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 23336,
             "end_line": 604,
             "line": 604,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 23307
+            "start_byte": 23318
           },
           "value": "coldkey"
         },
@@ -2850,12 +2850,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 23369,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 23380,
             "end_line": 605,
             "line": 605,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 23330
+            "start_byte": 23341
           },
           "value": {
             "tuple": [
@@ -3234,12 +3234,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 13099,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 13110,
             "end_line": 349,
             "line": 349,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 13077
+            "start_byte": 13088
           },
           "value": "kill_pure_proxy"
         },
@@ -3256,12 +3256,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 13122,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 13133,
             "end_line": 350,
             "line": 350,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 13104
+            "start_byte": 13115
           },
           "value": "coldkey"
         },
@@ -3278,12 +3278,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 13188,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 13199,
             "end_line": 351,
             "line": 351,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 13127
+            "start_byte": 13138
           },
           "value": {
             "tuple": [
@@ -3430,12 +3430,12 @@
         },
         "mev_shield_default": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 9838,
-            "end_line": 239,
-            "line": 239,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 7303,
+            "end_line": 186,
+            "line": 186,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9813
+            "start_byte": 7278
           },
           "value": true
         },
@@ -3452,12 +3452,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 9736,
-            "end_line": 236,
-            "line": 236,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 7201,
+            "end_line": 183,
+            "line": 183,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9719
+            "start_byte": 7184
           },
           "value": "mint_gamma"
         },
@@ -3474,12 +3474,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 9759,
-            "end_line": 237,
-            "line": 237,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 7224,
+            "end_line": 184,
+            "line": 184,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9741
+            "start_byte": 7206
           },
           "value": "coldkey"
         },
@@ -3496,12 +3496,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 9808,
-            "end_line": 238,
-            "line": 238,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 7273,
+            "end_line": 185,
+            "line": 185,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 9764
+            "start_byte": 7229
           },
           "value": {
             "tuple": [
@@ -3522,12 +3522,12 @@
       "values": {
         "all_amount_fields": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 13052,
-            "end_line": 313,
-            "line": 313,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 10172,
+            "end_line": 255,
+            "line": 255,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 12988
+            "start_byte": 10108
           },
           "value": {
             "tuple": [
@@ -3559,12 +3559,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 12900,
-            "end_line": 310,
-            "line": 310,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 10020,
+            "end_line": 252,
+            "line": 252,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 12872
+            "start_byte": 9992
           },
           "value": "mint_gamma_with_stake"
         },
@@ -3581,12 +3581,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 12923,
-            "end_line": 311,
-            "line": 311,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 10043,
+            "end_line": 253,
+            "line": 253,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 12905
+            "start_byte": 10025
           },
           "value": "coldkey"
         },
@@ -3603,12 +3603,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 12983,
-            "end_line": 312,
-            "line": 312,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 10103,
+            "end_line": 254,
+            "line": 254,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 12928
+            "start_byte": 10048
           },
           "value": {
             "tuple": [
@@ -3629,12 +3629,12 @@
       "values": {
         "all_amount_fields": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 17439,
-            "end_line": 411,
-            "line": 411,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 14330,
+            "end_line": 349,
+            "line": 349,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17375
+            "start_byte": 14266
           },
           "value": {
             "tuple": [
@@ -3666,12 +3666,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 17298,
-            "end_line": 408,
-            "line": 408,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 14189,
+            "end_line": 346,
+            "line": 346,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17281
+            "start_byte": 14172
           },
           "value": "move_gamma"
         },
@@ -3688,12 +3688,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 17321,
-            "end_line": 409,
-            "line": 409,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 14212,
+            "end_line": 347,
+            "line": 347,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17303
+            "start_byte": 14194
           },
           "value": "coldkey"
         },
@@ -3710,12 +3710,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 17370,
-            "end_line": 410,
-            "line": 410,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 14261,
+            "end_line": 348,
+            "line": 348,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 17326
+            "start_byte": 14217
           },
           "value": {
             "tuple": [
@@ -5002,12 +5002,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 17835,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 17846,
             "end_line": 483,
             "line": 483,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 17803
+            "start_byte": 17814
           },
           "value": "reject_proxy_announcement"
         },
@@ -5024,12 +5024,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 17858,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 17869,
             "end_line": 484,
             "line": 484,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 17840
+            "start_byte": 17851
           },
           "value": "coldkey"
         },
@@ -5046,12 +5046,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 17906,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 17917,
             "end_line": 485,
             "line": 485,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 17863
+            "start_byte": 17874
           },
           "value": {
             "tuple": [
@@ -5212,12 +5212,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 7693,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 7704,
             "end_line": 214,
             "line": 214,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 7672
+            "start_byte": 7683
           },
           "value": "remove_proxies"
         },
@@ -5234,12 +5234,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 7716,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 7727,
             "end_line": 215,
             "line": 215,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 7698
+            "start_byte": 7709
           },
           "value": "coldkey"
         },
@@ -5256,12 +5256,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 7759,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 7770,
             "end_line": 216,
             "line": 216,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 7721
+            "start_byte": 7732
           },
           "value": {
             "tuple": [
@@ -5317,12 +5317,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 6152,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 6163,
             "end_line": 172,
             "line": 172,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 6133
+            "start_byte": 6144
           },
           "value": "remove_proxy"
         },
@@ -5339,12 +5339,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 6175,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 6186,
             "end_line": 173,
             "line": 173,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 6157
+            "start_byte": 6168
           },
           "value": "coldkey"
         },
@@ -5361,12 +5361,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 6216,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 6227,
             "end_line": 174,
             "line": 174,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 6180
+            "start_byte": 6191
           },
           "value": {
             "tuple": [
@@ -5422,12 +5422,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 16689,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 16700,
             "end_line": 451,
             "line": 451,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 16657
+            "start_byte": 16668
           },
           "value": "remove_proxy_announcement"
         },
@@ -5444,12 +5444,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 16712,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 16723,
             "end_line": 452,
             "line": 452,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 16694
+            "start_byte": 16705
           },
           "value": "coldkey"
         },
@@ -5466,12 +5466,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3",
-            "end_byte": 16760,
+            "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
+            "end_byte": 16771,
             "end_line": 453,
             "line": 453,
             "path": "sdk/python/bittensor/intents/proxy.py",
-            "start_byte": 16717
+            "start_byte": 16728
           },
           "value": {
             "tuple": [
@@ -5777,12 +5777,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-            "end_byte": 8811,
-            "end_line": 232,
-            "line": 232,
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
+            "end_byte": 8346,
+            "end_line": 226,
+            "line": 226,
             "path": "sdk/python/bittensor/intents/serving.py",
-            "start_byte": 8794
+            "start_byte": 8329
           },
           "value": "reset_axon"
         },
@@ -5799,12 +5799,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-            "end_byte": 8833,
-            "end_line": 233,
-            "line": 233,
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
+            "end_byte": 8368,
+            "end_line": 227,
+            "line": 227,
             "path": "sdk/python/bittensor/intents/serving.py",
-            "start_byte": 8816
+            "start_byte": 8351
           },
           "value": "hotkey"
         },
@@ -5821,12 +5821,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-            "end_byte": 8882,
-            "end_line": 234,
-            "line": 234,
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
+            "end_byte": 8417,
+            "end_line": 228,
+            "line": 228,
             "path": "sdk/python/bittensor/intents/serving.py",
-            "start_byte": 8838
+            "start_byte": 8373
           },
           "value": {
             "tuple": [
@@ -6092,7 +6092,7 @@
         },
         "op": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 1618,
             "end_line": 45,
             "line": 45,
@@ -6114,7 +6114,7 @@
         },
         "signer": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 1640,
             "end_line": 46,
             "line": 46,
@@ -6136,7 +6136,7 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 1689,
             "end_line": 47,
             "line": 47,
@@ -6197,7 +6197,7 @@
         },
         "op": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 3244,
             "end_line": 88,
             "line": 88,
@@ -6219,7 +6219,7 @@
         },
         "signer": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 3266,
             "end_line": 89,
             "line": 89,
@@ -6241,7 +6241,7 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 3319,
             "end_line": 90,
             "line": 90,
@@ -6302,7 +6302,7 @@
         },
         "op": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 5131,
             "end_line": 137,
             "line": 137,
@@ -6324,7 +6324,7 @@
         },
         "signer": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 5153,
             "end_line": 138,
             "line": 138,
@@ -6346,7 +6346,7 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
             "end_byte": 5208,
             "end_line": 139,
             "line": 139,
@@ -6827,12 +6827,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 25440,
-            "end_line": 600,
-            "line": 600,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 19967,
+            "end_line": 478,
+            "line": 478,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 25400
+            "start_byte": 19927
           },
           "value": "set_gamma_deposit_daily_spend_cap"
         },
@@ -6849,12 +6849,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 25463,
-            "end_line": 601,
-            "line": 601,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 19990,
+            "end_line": 479,
+            "line": 479,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 25445
+            "start_byte": 19972
           },
           "value": "coldkey"
         },
@@ -6871,12 +6871,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 25535,
-            "end_line": 602,
-            "line": 602,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 20062,
+            "end_line": 480,
+            "line": 480,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 25468
+            "start_byte": 19995
           },
           "value": {
             "tuple": [
@@ -6884,111 +6884,6 @@
                 "tuple": [
                   "SubtensorModule",
                   "set_gamma_deposit_daily_spend_cap"
-                ]
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "name": "set_gamma_deposit_spender",
-      "python_class": "SetGammaDepositSpender",
-      "values": {
-        "all_amount_fields": {
-          "provenance": {
-            "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-            "end_byte": 7663,
-            "end_line": 173,
-            "line": 173,
-            "path": "sdk/python/bittensor/intents/base.py",
-            "start_byte": 7614
-          },
-          "value": {
-            "tuple": []
-          }
-        },
-        "mev_shield_default": {
-          "provenance": {
-            "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-            "end_byte": 8059,
-            "end_line": 179,
-            "line": 179,
-            "path": "sdk/python/bittensor/intents/base.py",
-            "start_byte": 8017
-          },
-          "value": false
-        },
-        "mev_shield_required": {
-          "provenance": {
-            "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-            "end_byte": 8331,
-            "end_line": 183,
-            "line": 183,
-            "path": "sdk/python/bittensor/intents/base.py",
-            "start_byte": 8288
-          },
-          "value": false
-        },
-        "op": {
-          "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 22805,
-            "end_line": 535,
-            "line": 535,
-            "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 22773
-          },
-          "value": "set_gamma_deposit_spender"
-        },
-        "origin": {
-          "provenance": {
-            "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-            "end_byte": 6882,
-            "end_line": 162,
-            "line": 162,
-            "path": "sdk/python/bittensor/intents/base.py",
-            "start_byte": 6847
-          },
-          "value": "signed"
-        },
-        "signer": {
-          "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 22828,
-            "end_line": 536,
-            "line": 536,
-            "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 22810
-          },
-          "value": "coldkey"
-        },
-        "verify": {
-          "provenance": {
-            "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-            "end_byte": 7156,
-            "end_line": 166,
-            "line": 166,
-            "path": "sdk/python/bittensor/intents/base.py",
-            "start_byte": 7118
-          },
-          "value": null
-        },
-        "wraps": {
-          "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 22892,
-            "end_line": 537,
-            "line": 537,
-            "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 22833
-          },
-          "value": {
-            "tuple": [
-              {
-                "tuple": [
-                  "SubtensorModule",
-                  "set_gamma_deposit_spender"
                 ]
               }
             ]
@@ -8075,12 +7970,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-            "end_byte": 6561,
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
+            "end_byte": 6437,
             "end_line": 175,
             "line": 175,
             "path": "sdk/python/bittensor/intents/serving.py",
-            "start_byte": 6543
+            "start_byte": 6419
           },
           "value": "set_service"
         },
@@ -8097,12 +7992,12 @@
         },
         "signer": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-            "end_byte": 6584,
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
+            "end_byte": 6460,
             "end_line": 176,
             "line": 176,
             "path": "sdk/python/bittensor/intents/serving.py",
-            "start_byte": 6566
+            "start_byte": 6442
           },
           "value": "coldkey"
         },
@@ -8119,12 +8014,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6",
-            "end_byte": 6634,
+            "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
+            "end_byte": 6510,
             "end_line": 177,
             "line": 177,
             "path": "sdk/python/bittensor/intents/serving.py",
-            "start_byte": 6589
+            "start_byte": 6465
           },
           "value": {
             "tuple": [
@@ -8834,12 +8729,12 @@
         },
         "op": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 28068,
-            "end_line": 659,
-            "line": 659,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 22184,
+            "end_line": 531,
+            "line": 531,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 28050
+            "start_byte": 22166
           },
           "value": "spend_gamma"
         },
@@ -8856,14 +8751,14 @@
         },
         "signer": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 28091,
-            "end_line": 660,
-            "line": 660,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 22206,
+            "end_line": 532,
+            "line": 532,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 28073
+            "start_byte": 22189
           },
-          "value": "coldkey"
+          "value": "hotkey"
         },
         "verify": {
           "provenance": {
@@ -8878,12 +8773,12 @@
         },
         "wraps": {
           "provenance": {
-            "blob": "0b48b3352b0580881c2a01549425f5651273e346",
-            "end_byte": 28141,
-            "end_line": 661,
-            "line": 661,
+            "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
+            "end_byte": 22256,
+            "end_line": 533,
+            "line": 533,
             "path": "sdk/python/bittensor/intents/gamma.py",
-            "start_byte": 28096
+            "start_byte": 22211
           },
           "value": {
             "tuple": [
@@ -11151,7 +11046,7 @@
     }
   ],
   "parity": {
-    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
-    "tag": "v492"
+    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
+    "tag": "v493"
   }
 }

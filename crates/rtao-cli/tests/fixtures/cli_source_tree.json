@@ -28,7 +28,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
-      "sha256": "fa09ac098b296531493ef277b3964b62dcfa1747064607b3444cad032e70e932"
+      "sha256": "b6484a83610ecf41443a6e18d4fd373c47ece225f7e3cb40b41288685d5efe3d"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py",
@@ -48,7 +48,7 @@
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py",
-      "sha256": "7b2a7d5bc4899af336887d3a8623f7b885f367821a6be86a48ce3cad845b2f08"
+      "sha256": "67c78413137e40eb3a6f41eacf41667d9f35022b201fd49b825dcc9745e9625b"
     },
     {
       "path": "vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py",
@@ -742,15 +742,6 @@
       "unresolved": []
     },
     {
-      "path": "gamma set-spender",
-      "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
-      "function": null,
-      "generated_intent": "set_gamma_deposit_spender",
-      "options": [],
-      "positionals": [],
-      "unresolved": []
-    },
-    {
       "path": "gamma show",
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
       "function": "show_deposit",
@@ -764,11 +755,9 @@
     {
       "path": "gamma spend",
       "source": "vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py",
-      "function": "spend",
-      "options": [
-        "--netuid",
-        "--spend"
-      ],
+      "function": null,
+      "generated_intent": "spend_gamma",
+      "options": [],
       "positionals": [],
       "unresolved": []
     },
@@ -1782,8 +1771,10 @@
       "function": "set_weights",
       "options": [
         "--burn",
+        "--gamma",
         "--miner",
         "--netuid",
+        "--no-gamma",
         "--owner",
         "--recycle",
         "--validator"

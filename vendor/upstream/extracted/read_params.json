@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
+    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
     "path": "website/apps/bittensor-website/public/catalog/reads.json",
-    "sha256": "aa757947019c2916e1cdc8e93eab54ef200b7f2d1935f6ece22fff587c66fad6",
-    "tag": "v492"
+    "sha256": "46538073414d58b6676f50175c17d1dcf862af4f6fa7ee6d3d7642eb4ca63fe1",
+    "tag": "v493"
   },
   "format": 1,
   "modules": {
@@ -19,8 +19,8 @@
     ]
   },
   "parity": {
-    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
-    "tag": "v492"
+    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
+    "tag": "v493"
   },
   "reads": [
     {
@@ -770,7 +770,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 6871,
             "end_line": 201,
             "line": 201,
@@ -782,7 +782,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 6838,
           "end_line": 200,
           "line": 195,
@@ -790,7 +790,7 @@
           "start_byte": 6721
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 7051,
           "end_line": 204,
           "line": 201,
@@ -1058,7 +1058,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 8516,
             "end_line": 242,
             "line": 242,
@@ -1070,7 +1070,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 8466,
           "end_line": 241,
           "line": 236,
@@ -1078,7 +1078,7 @@
           "start_byte": 8332
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 8700,
           "end_line": 245,
           "line": 242,
@@ -1582,12 +1582,12 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-            "end_byte": 1665,
-            "end_line": 52,
-            "line": 52,
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 1621,
+            "end_line": 51,
+            "line": 51,
             "path": "sdk/python/bittensor/reads/gamma.py",
-            "start_byte": 1654
+            "start_byte": 1610
           },
           "required": true
         },
@@ -1600,32 +1600,32 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-            "end_byte": 1683,
-            "end_line": 52,
-            "line": 52,
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 1639,
+            "end_line": 51,
+            "line": 51,
             "path": "sdk/python/bittensor/reads/gamma.py",
-            "start_byte": 1667
+            "start_byte": 1623
           },
           "required": false
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 1623,
-          "end_line": 51,
-          "line": 46,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 1579,
+          "end_line": 50,
+          "line": 45,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 1427
+          "start_byte": 1383
         },
         "fetch": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 2232,
-          "end_line": 62,
-          "line": 52,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 2237,
+          "end_line": 61,
+          "line": 51,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 1624
+          "start_byte": 1580
         }
       }
     },
@@ -1642,32 +1642,110 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-            "end_byte": 2433,
-            "end_line": 71,
-            "line": 71,
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 2438,
+            "end_line": 70,
+            "line": 70,
             "path": "sdk/python/bittensor/reads/gamma.py",
-            "start_byte": 2416
+            "start_byte": 2421
           },
           "required": false
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 2384,
-          "end_line": 70,
-          "line": 65,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 2389,
+          "end_line": 69,
+          "line": 64,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 2236
+          "start_byte": 2241
         },
         "fetch": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 2668,
-          "end_line": 74,
-          "line": 71,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 2673,
+          "end_line": 73,
+          "line": 70,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 2385
+          "start_byte": 2390
+        }
+      }
+    },
+    {
+      "category": "Gamma",
+      "name": "gamma_spent",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 3020,
+            "end_line": 86,
+            "line": 86,
+            "path": "sdk/python/bittensor/reads/gamma.py",
+            "start_byte": 3009
+          },
+          "required": true
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "service_hotkey_ss58",
+          "own_key": false,
+          "provenance": {
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 3046,
+            "end_line": 86,
+            "line": 86,
+            "path": "sdk/python/bittensor/reads/gamma.py",
+            "start_byte": 3022
+          },
+          "required": true
+        },
+        {
+          "annotation": "str",
+          "default": {
+            "present": false
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 3064,
+            "end_line": 86,
+            "line": 86,
+            "path": "sdk/python/bittensor/reads/gamma.py",
+            "start_byte": 3048
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 2980,
+          "end_line": 85,
+          "line": 76,
+          "path": "sdk/python/bittensor/reads/gamma.py",
+          "start_byte": 2677
+        },
+        "fetch": {
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 3534,
+          "end_line": 96,
+          "line": 86,
+          "path": "sdk/python/bittensor/reads/gamma.py",
+          "start_byte": 2981
         }
       }
     },
@@ -2220,7 +2298,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 21246,
             "end_line": 553,
             "line": 553,
@@ -2232,7 +2310,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 21202,
           "end_line": 552,
           "line": 547,
@@ -2240,7 +2318,7 @@
           "start_byte": 21074
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 21422,
           "end_line": 556,
           "line": 553,
@@ -2262,7 +2340,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 21616,
             "end_line": 565,
             "line": 565,
@@ -2274,7 +2352,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 21563,
           "end_line": 564,
           "line": 559,
@@ -2282,7 +2360,7 @@
           "start_byte": 21426
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 21946,
           "end_line": 572,
           "line": 565,
@@ -2304,7 +2382,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 18105,
             "end_line": 469,
             "line": 469,
@@ -2316,7 +2394,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 18067,
           "end_line": 468,
           "line": 463,
@@ -2324,7 +2402,7 @@
           "start_byte": 17929
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 18798,
           "end_line": 483,
           "line": 469,
@@ -3000,12 +3078,12 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-            "end_byte": 2911,
-            "end_line": 83,
-            "line": 83,
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 3777,
+            "end_line": 105,
+            "line": 105,
             "path": "sdk/python/bittensor/reads/gamma.py",
-            "start_byte": 2900
+            "start_byte": 3766
           },
           "required": true
         },
@@ -3018,32 +3096,32 @@
           "name": "amount_tao",
           "own_key": false,
           "provenance": {
-            "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-            "end_byte": 2930,
-            "end_line": 83,
-            "line": 83,
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 3796,
+            "end_line": 105,
+            "line": 105,
             "path": "sdk/python/bittensor/reads/gamma.py",
-            "start_byte": 2913
+            "start_byte": 3779
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 2866,
-          "end_line": 82,
-          "line": 77,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 3732,
+          "end_line": 104,
+          "line": 99,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 2672
+          "start_byte": 3538
         },
         "fetch": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 3365,
-          "end_line": 91,
-          "line": 83,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 4231,
+          "end_line": 113,
+          "line": 105,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 2867
+          "start_byte": 3733
         }
       }
     },
@@ -3060,12 +3138,12 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-            "end_byte": 3633,
-            "end_line": 100,
-            "line": 100,
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 4499,
+            "end_line": 122,
+            "line": 122,
             "path": "sdk/python/bittensor/reads/gamma.py",
-            "start_byte": 3622
+            "start_byte": 4488
           },
           "required": true
         },
@@ -3078,32 +3156,32 @@
           "name": "amount_alpha",
           "own_key": false,
           "provenance": {
-            "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-            "end_byte": 3654,
-            "end_line": 100,
-            "line": 100,
+            "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+            "end_byte": 4520,
+            "end_line": 122,
+            "line": 122,
             "path": "sdk/python/bittensor/reads/gamma.py",
-            "start_byte": 3635
+            "start_byte": 4501
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 3577,
-          "end_line": 99,
-          "line": 94,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 4443,
+          "end_line": 121,
+          "line": 116,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 3369
+          "start_byte": 4235
         },
         "fetch": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 4124,
-          "end_line": 108,
-          "line": 100,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 4990,
+          "end_line": 130,
+          "line": 122,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 3578
+          "start_byte": 4444
         }
       }
     },
@@ -3554,7 +3632,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 22537,
             "end_line": 592,
             "line": 592,
@@ -3566,7 +3644,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 22500,
           "end_line": 591,
           "line": 586,
@@ -3574,9 +3652,9 @@
           "start_byte": 22365
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
-          "end_byte": 23589,
-          "end_line": 616,
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
+          "end_byte": 23478,
+          "end_line": 614,
           "line": 592,
           "path": "sdk/python/bittensor/reads/subnets.py",
           "start_byte": 22501
@@ -4004,7 +4082,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 4776,
             "end_line": 144,
             "line": 144,
@@ -4016,7 +4094,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 4741,
           "end_line": 143,
           "line": 138,
@@ -4024,7 +4102,7 @@
           "start_byte": 4622
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 5510,
           "end_line": 161,
           "line": 144,
@@ -4189,7 +4267,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 15307,
             "end_line": 402,
             "line": 402,
@@ -4201,7 +4279,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 15255,
           "end_line": 401,
           "line": 396,
@@ -4209,7 +4287,7 @@
           "start_byte": 15091
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 17925,
           "end_line": 460,
           "line": 402,
@@ -4290,7 +4368,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 9843,
             "end_line": 278,
             "line": 278,
@@ -4302,7 +4380,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 9792,
           "end_line": 277,
           "line": 272,
@@ -4310,7 +4388,7 @@
           "start_byte": 9657
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 10429,
           "end_line": 289,
           "line": 278,
@@ -4332,7 +4410,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 18988,
             "end_line": 492,
             "line": 492,
@@ -4344,7 +4422,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 18944,
           "end_line": 491,
           "line": 486,
@@ -4352,7 +4430,7 @@
           "start_byte": 18802
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 19214,
           "end_line": 495,
           "line": 492,
@@ -4367,7 +4445,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 19262,
           "end_line": 498,
           "line": 498,
@@ -4375,7 +4453,7 @@
           "start_byte": 19218
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 19666,
           "end_line": 507,
           "line": 499,
@@ -4390,7 +4468,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 22006,
           "end_line": 575,
           "line": 575,
@@ -4398,7 +4476,7 @@
           "start_byte": 21950
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 22361,
           "end_line": 583,
           "line": 576,
@@ -4420,7 +4498,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 20371,
             "end_line": 528,
             "line": 528,
@@ -4432,7 +4510,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 20321,
           "end_line": 527,
           "line": 522,
@@ -4440,7 +4518,7 @@
           "start_byte": 20187
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 21070,
           "end_line": 544,
           "line": 528,
@@ -4462,7 +4540,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
             "end_byte": 2971,
             "end_line": 101,
             "line": 101,
@@ -4474,7 +4552,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 2930,
           "end_line": 100,
           "line": 95,
@@ -4482,7 +4560,7 @@
           "start_byte": 2779
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 3401,
           "end_line": 108,
           "line": 101,
@@ -4497,7 +4575,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 3450,
           "end_line": 111,
           "line": 111,
@@ -4505,7 +4583,7 @@
           "start_byte": 3405
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 4618,
           "end_line": 135,
           "line": 112,
@@ -4520,7 +4598,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 7329,
           "end_line": 214,
           "line": 214,
@@ -4528,7 +4606,7 @@
           "start_byte": 7281
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 8328,
           "end_line": 233,
           "line": 215,
@@ -4543,7 +4621,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 5553,
           "end_line": 164,
           "line": 164,
@@ -4551,7 +4629,7 @@
           "start_byte": 5514
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 6717,
           "end_line": 192,
           "line": 165,
@@ -4566,20 +4644,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 4171,
-          "end_line": 111,
-          "line": 111,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 5037,
+          "end_line": 133,
+          "line": 133,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 4128
+          "start_byte": 4994
         },
         "fetch": {
-          "blob": "90ce64115cd3d6678aec246402eb0d8d7328b400",
-          "end_byte": 5112,
-          "end_line": 130,
-          "line": 112,
+          "blob": "26a8280ef6b3beebdea1b204f46a9fde7a6d324e",
+          "end_byte": 5978,
+          "end_line": 152,
+          "line": 134,
           "path": "sdk/python/bittensor/reads/gamma.py",
-          "start_byte": 4172
+          "start_byte": 5038
         }
       }
     },
@@ -4673,7 +4751,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 19715,
           "end_line": 510,
           "line": 510,
@@ -4681,7 +4759,7 @@
           "start_byte": 19670
         },
         "fetch": {
-          "blob": "0a98222f215aaca9de63a1e546c143a3e5c65bb4",
+          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
           "end_byte": 20183,
           "end_line": 519,
           "line": 511,

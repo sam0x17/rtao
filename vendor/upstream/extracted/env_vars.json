@@ -678,12 +678,12 @@
       "missing_value": "returns_default_or_none",
       "name": "TERM_PROGRAM",
       "source": {
-        "blob": "d488940b2cfec05fc35c6c2aeefbf6f4c2578066",
-        "end_byte": 11909,
+        "blob": "f8c0057428bf03fcc7f66ca288eb7a926ef02050",
+        "end_byte": 11893,
         "end_line": 303,
         "line": 303,
         "path": "sdk/python/bittensor/cli/output.py",
-        "start_byte": 11879
+        "start_byte": 11863
       },
       "truthy_fallback": null
     },
@@ -1310,33 +1310,33 @@
       "missing_value": "returns_default_or_none",
       "name": "BTCLI_PROTECTED_PATH",
       "source": {
-        "blob": "10aa4ea6581925581c9fbe935a1fc40efbc3cda7",
-        "end_byte": 5060,
-        "end_line": 131,
-        "line": 131,
+        "blob": "8923f0a8a59d3226fd900292a8b3c948b6df552f",
+        "end_byte": 4987,
+        "end_line": 129,
+        "line": 129,
         "path": "sdk/python/bittensor/protected_account.py",
-        "start_byte": 5027
+        "start_byte": 4954
       },
       "truthy_fallback": {
         "condition": "missing_or_empty",
         "source": {
-          "blob": "10aa4ea6581925581c9fbe935a1fc40efbc3cda7",
-          "end_byte": 5086,
-          "end_line": 131,
-          "line": 131,
+          "blob": "8923f0a8a59d3226fd900292a8b3c948b6df552f",
+          "end_byte": 5013,
+          "end_line": 129,
+          "line": 129,
           "path": "sdk/python/bittensor/protected_account.py",
-          "start_byte": 5027
+          "start_byte": 4954
         },
         "values": [
           {
             "kind": "resolved",
             "source": {
-              "blob": "10aa4ea6581925581c9fbe935a1fc40efbc3cda7",
-              "end_byte": 5086,
-              "end_line": 131,
-              "line": 131,
+              "blob": "8923f0a8a59d3226fd900292a8b3c948b6df552f",
+              "end_byte": 5013,
+              "end_line": 129,
+              "line": 129,
               "path": "sdk/python/bittensor/protected_account.py",
-              "start_byte": 5064
+              "start_byte": 4991
             },
             "value": {
               "home_relative": [
@@ -1580,8 +1580,8 @@
     "status": "matches"
   },
   "provenance": {
-    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
-    "tag": "v492"
+    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
+    "tag": "v493"
   },
   "scope": {
     "authenticated_modules": 218,

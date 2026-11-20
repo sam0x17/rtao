@@ -89,6 +89,8 @@ pub mod existential_deposit {}
 pub mod gamma_deposit {}
 /// Extracted defaults for `gamma_deposits`.
 pub mod gamma_deposits {}
+/// Extracted defaults for `gamma_spent`.
+pub mod gamma_spent {}
 /// Extracted defaults for `hotkey_conviction`.
 pub mod hotkey_conviction {}
 /// Extracted defaults for `hotkey_identities`.

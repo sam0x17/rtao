@@ -320,7 +320,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Balances<'_, V> {
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
-    #[doc = "The gamma deposit at a hotkey on a subnet, or None.\n\nIts `netuid`, `hotkey`, `coldkey`, `spender`, and `balance_gamma`,\n`daily_spend_cap_gamma` and `spendable_gamma` as exact decimal strings of\ngamma. A `daily_spend_cap_gamma` of None is no cap, and \"0\" pauses the\ndeposit. `spendable_gamma` is the balance within what its daily spend cap\nallows now."]
+    #[doc = "The gamma deposit at a hotkey on a subnet, or None.\n\nIts `netuid`, `hotkey`, `coldkey`, and `balance_gamma`,\n`daily_spend_cap_gamma` and `spendable_gamma` as exact decimal strings of\ngamma. A `daily_spend_cap_gamma` of None is no cap, and \"0\" pauses the\ndeposit. `spendable_gamma` is the balance within what its daily spend cap\nallows now, or 0 when that is below 0.1 gamma and short of the balance."]
     pub async fn gamma_deposit(
         &self,
         netuid: rtao_primitives::NetUid,
@@ -336,6 +336,17 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
         coldkey_ss58: rtao_primitives::AccountId,
     ) -> Result<Vec<crate::reads::gamma::GammaDeposit>, crate::ReadError> {
         super::interfaces::gamma_deposits(self.view, coldkey_ss58).await
+    }
+}
+impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
+    #[doc = "The gamma a hotkey has spent at a service on a subnet, as an exact decimal string.\n\nIt only grows, until the subnet is dissolved, which clears it. A service crediting spends\nreads it at a finalized block:\n`(await client.at(await client.finalized_block())).gamma.gamma_spent(...)`."]
+    pub async fn gamma_spent(
+        &self,
+        netuid: rtao_primitives::NetUid,
+        service_hotkey_ss58: rtao_primitives::AccountId,
+        hotkey_ss58: rtao_primitives::AccountId,
+    ) -> Result<serde_json::Value, crate::ReadError> {
+        super::interfaces::gamma_spent(self.view, netuid, service_hotkey_ss58, hotkey_ss58).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Locks<'_, V> {
@@ -696,7 +707,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
-    #[doc = "Every service published on a subnet, by hotkey.\n\nEach `url` points to its hotkey's own document of its services and the\npayments they accept; the chain does not check what it says. `spender` is\nthe spender customers name on gamma deposits for the service. `owner`\nmarks the subnet owner's hotkey while the owner owns it, whose spender new\ndeposits name by default. A url that is not printable text is returned as\n0x-hex."]
+    #[doc = "Every service published on a subnet, by hotkey.\n\nEach `url` points to its hotkey's own document of its services and the\npayments they accept; the chain does not check what it says. Gamma is\nspent at a service's hotkey with `spend_gamma`. `owner` marks the subnet\nowner's hotkey while the owner owns it. A url that is not printable text\nis returned as 0x-hex."]
     pub async fn services(
         &self,
         netuid: rtao_primitives::NetUid,

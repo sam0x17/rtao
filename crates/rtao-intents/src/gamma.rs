@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/gamma.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
-//! Gamma intents: minting, deposits, spenders and daily spend caps, and spending.
+//! Gamma intents: minting, deposits, services and daily spend caps, and spending.
 //!
 //! Gamma is not a balance unit: amounts are exact decimal strings of gamma,
 //! [`rtao_primitives::gamma::GAMMA_UNITS`] chain units per gamma.
@@ -22,15 +22,11 @@ use serde_json::{Map, Value, json};
 
 pub use crate::{
     CloseGammaDeposit, MintGamma, MintGammaWithStake, MoveGamma, SetGammaDepositDailySpendCap,
-    SetGammaDepositSpender, SpendGamma,
+    SpendGamma,
 };
 
-/// Most entries in one `spend_gamma` call (`MAX_GAMMA_SPENDS`).
-pub const MAX_GAMMA_SPENDS: usize = 512;
-
-/// The spender a new deposit names when none is given.
-pub const DEFAULT_SPENDER: &str =
-    "the subnet owner's service spender, or the owner (a leased subnet's beneficiary)";
+/// Minimum partial spend, move, remaining balance or nonzero daily cap, in gamma units.
+const MIN_GAMMA_AMOUNT: u64 = 100_000_000;
 
 const U64_MAX: u64 = u64::MAX;
 
@@ -64,6 +60,17 @@ fn gamma_units(amount: &Amount, allow_all: bool) -> Result<Option<u64>, IntentEr
             "gamma amounts are plain numbers, not a Balance: {balance}."
         ))),
     }
+}
+
+fn daily_cap(amount: Option<&Amount>) -> Result<Option<u64>, IntentError> {
+    let Some(amount) = amount else {
+        return Ok(None);
+    };
+    let cap = gamma_units(amount, false)?;
+    if cap.is_some_and(|cap| cap > 0 && cap < MIN_GAMMA_AMOUNT) {
+        return Err(validation("a daily spend cap is 0 or at least 0.1 gamma"));
+    }
+    Ok(cap)
 }
 
 fn gamma_string(amount: &Amount) -> String {
@@ -109,7 +116,6 @@ fn min_out(gamma: u128, tolerance: Ratio) -> u128 {
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Deposit {
     coldkey: AccountId,
-    spender: AccountId,
     balance: u64,
     cap: Option<u64>,
 }
@@ -150,7 +156,6 @@ impl Deposit {
         };
         Ok(Self {
             coldkey: json_account(&record, "coldkey")?,
-            spender: json_account(&record, "spender")?,
             balance: record
                 .get("balance")
                 .and_then(json_u64)
@@ -170,50 +175,6 @@ async fn deposit<V: View + ?Sized>(
         .as_ref()
         .map(Deposit::decode)
         .transpose()
-}
-
-// py: sdk/python/bittensor/intents/gamma.py:113-118
-async fn service_spender<V: View + ?Sized>(
-    view: &V,
-    netuid: NetUid,
-    hotkey: &Ss58Address,
-) -> Result<AccountId, IntentError> {
-    let Some(service) = view
-        .storage(&st::SERVICES, (netuid, hotkey.account()))
-        .await?
-    else {
-        return Err(validation(format!(
-            "{hotkey} publishes no service on netuid {netuid}"
-        )));
-    };
-    json_account(&service.to_json(), "spender")
-}
-
-// py: sdk/python/bittensor/intents/gamma.py:121-125
-async fn named_spender<V: View + ?Sized>(
-    view: &V,
-    netuid: NetUid,
-    spender: Option<&Ss58Address>,
-    service: Option<&Ss58Address>,
-) -> Result<Option<AccountId>, IntentError> {
-    match service {
-        None => Ok(spender.map(Ss58Address::account)),
-        Some(service) => service_spender(view, netuid, service).await.map(Some),
-    }
-}
-
-// py: sdk/python/bittensor/intents/gamma.py:128-130
-fn check_spender_or_service(
-    op: &str,
-    spender: Option<&Ss58Address>,
-    service: Option<&Ss58Address>,
-) -> Result<(), IntentError> {
-    if spender.is_some() && service.is_some() {
-        return Err(validation(format!(
-            "{op}: name a spender or a service, not both"
-        )));
-    }
-    Ok(())
 }
 
 // py: sdk/python/bittensor/intents/gamma.py:97-110
@@ -300,8 +261,6 @@ struct MintTerms<'a> {
     netuid: NetUid,
     hotkey: &'a Ss58Address,
     rate_tolerance: Ratio,
-    spender: Option<&'a Ss58Address>,
-    service: Option<&'a Ss58Address>,
     cap: Option<u64>,
 }
 
@@ -316,7 +275,6 @@ async fn mint_preflight<V: View + ?Sized>(
     quote: Quote,
 ) -> Result<IntentPreflight, IntentError> {
     let deposit = deposit(view, terms.netuid, terms.hotkey.account()).await?;
-    let named = named_spender(view, terms.netuid, terms.spender, terms.service).await?;
     let mut cap = terms.cap;
     let hotkey = terms.hotkey;
     match &deposit {
@@ -324,12 +282,6 @@ async fn mint_preflight<V: View + ?Sized>(
             "the gamma deposit at {hotkey} belongs to another coldkey; mint to a fresh hotkey"
         )),
         Some(deposit) => {
-            if named.is_some_and(|named| named != deposit.spender) {
-                preview.blocks.push(format!(
-                    "the gamma deposit at {hotkey} is spent by {}; mint without naming a spender, or set its spender first",
-                    deposit.spender
-                ));
-            }
             if cap.is_some_and(|cap| Some(cap) != deposit.cap) {
                 preview.blocks.push(format!(
                     "the gamma deposit at {hotkey} has {}; mint without a cap, or set its cap first",
@@ -341,10 +293,6 @@ async fn mint_preflight<V: View + ?Sized>(
             .blocks
             .extend(new_deposit_blocks(view, hotkey, signer).await?),
     }
-    let spender = match (&deposit, named) {
-        (Some(deposit), None) => Some(deposit.spender),
-        (_, named) => named,
-    };
     if let Some(deposit) = &deposit {
         cap = deposit.cap;
     }
@@ -362,10 +310,6 @@ async fn mint_preflight<V: View + ?Sized>(
                 || "new".to_owned(),
                 |deposit| format!("holds {}", gamma_text(u128::from(deposit.balance))),
             ),
-        ),
-        (
-            "spender".to_owned(),
-            spender.map_or_else(|| DEFAULT_SPENDER.to_owned(), |spender| spender.to_string()),
         ),
         (
             "daily spend cap".to_owned(),
@@ -393,10 +337,6 @@ async fn mint_preflight<V: View + ?Sized>(
                 .as_ref()
                 .map(|deposit| gamma_from_units(u128::from(deposit.balance)))
         ),
-    );
-    fields.insert(
-        "spender_ss58".into(),
-        json!(spender.map(|spender| spender.to_string())),
     );
     fields.insert(
         "daily_spend_cap_gamma".into(),
@@ -428,10 +368,7 @@ impl MintGamma {
     }
 
     fn cap(&self) -> Result<Option<u64>, IntentError> {
-        self.daily_spend_cap_gamma
-            .as_ref()
-            .map(|cap| gamma_units(cap, false).map(Option::unwrap_or_default))
-            .transpose()
+        daily_cap(self.daily_spend_cap_gamma.as_ref())
     }
 
     fn terms(&self) -> Result<MintTerms<'_>, IntentError> {
@@ -439,8 +376,6 @@ impl MintGamma {
             netuid: self.netuid,
             hotkey: &self.hotkey_ss58,
             rate_tolerance: self.rate_tolerance,
-            spender: self.spender_ss58.as_ref(),
-            service: self.service_hotkey_ss58.as_ref(),
             cap: self.cap()?,
         })
     }
@@ -465,20 +400,12 @@ impl Intent for MintGamma {
         self.validate()?;
         let amount = self.amount()?;
         let quote = quote(cx.view, self.netuid, false, amount).await?;
-        let spender = named_spender(
-            cx.view,
-            self.netuid,
-            self.spender_ss58.as_ref(),
-            self.service_hotkey_ss58.as_ref(),
-        )
-        .await?;
         Ok(Built::new(
             calls::mint_gamma(
                 self.hotkey_ss58.account(),
                 self.netuid,
                 TaoBalance(amount),
                 units(min_out(quote.gamma, self.rate_tolerance)),
-                spender,
                 self.cap()?.map(|cap| units(u128::from(cap))),
             )
             .compose(cx.runtime)?,
@@ -501,11 +428,6 @@ impl Intent for MintGamma {
     fn validate(&self) -> Result<(), IntentError> {
         crate::arguments::tao_amount(&self.amount_tao)?;
         check_rate_tolerance(self.rate_tolerance)?;
-        check_spender_or_service(
-            "mint_gamma",
-            self.spender_ss58.as_ref(),
-            self.service_hotkey_ss58.as_ref(),
-        )?;
         self.cap()?;
         Ok(())
     }
@@ -529,10 +451,7 @@ impl MintGammaWithStake {
     }
 
     fn cap(&self) -> Result<Option<u64>, IntentError> {
-        self.daily_spend_cap_gamma
-            .as_ref()
-            .map(|cap| gamma_units(cap, false).map(Option::unwrap_or_default))
-            .transpose()
+        daily_cap(self.daily_spend_cap_gamma.as_ref())
     }
 
     async fn staked<V: View + ?Sized>(
@@ -576,13 +495,6 @@ impl Intent for MintGammaWithStake {
             )));
         }
         let quote = quote(cx.view, self.netuid, true, self.burned(staked)?).await?;
-        let spender = named_spender(
-            cx.view,
-            self.netuid,
-            self.spender_ss58.as_ref(),
-            self.service_hotkey_ss58.as_ref(),
-        )
-        .await?;
         Ok(Built::new(
             calls::mint_gamma_with_stake(
                 self.origin_hotkey_ss58.account(),
@@ -590,7 +502,6 @@ impl Intent for MintGammaWithStake {
                 self.netuid,
                 AlphaBalance(self.requested()?.unwrap_or(U64_MAX)),
                 units(min_out(quote.gamma, self.rate_tolerance)),
-                spender,
                 self.cap()?.map(|cap| units(u128::from(cap))),
             )
             .compose(cx.runtime)?,
@@ -626,8 +537,6 @@ impl Intent for MintGammaWithStake {
             netuid: self.netuid,
             hotkey: &self.hotkey_ss58,
             rate_tolerance: self.rate_tolerance,
-            spender: self.spender_ss58.as_ref(),
-            service: self.service_hotkey_ss58.as_ref(),
             cap: self.cap()?,
         };
         mint_preflight(&terms, preview, cx.view, cx.dispatch_origin, quote).await
@@ -641,11 +550,6 @@ impl Intent for MintGammaWithStake {
     fn validate(&self) -> Result<(), IntentError> {
         self.requested()?;
         check_rate_tolerance(self.rate_tolerance)?;
-        check_spender_or_service(
-            "mint_gamma_with_stake",
-            self.spender_ss58.as_ref(),
-            self.service_hotkey_ss58.as_ref(),
-        )?;
         self.cap()?;
         Ok(())
     }
@@ -696,11 +600,19 @@ impl Intent for MoveGamma {
         let signer = cx.dispatch_origin;
         let (origin, destination) = self.deposits(cx.view).await?;
         let mut blocks = own_deposit_blocks(origin.as_ref(), signer, &self.origin_hotkey_ss58);
-        if blocks.is_empty() && origin.as_ref().is_some_and(|origin| origin.balance == 0) {
-            blocks.push(format!(
-                "the gamma deposit at {} holds no gamma",
-                self.origin_hotkey_ss58
-            ));
+        if blocks.is_empty()
+            && let Some(origin) = &origin
+        {
+            let amount = gamma_units(&self.amount_gamma, true)?.unwrap_or(origin.balance);
+            let rest = origin.balance.saturating_sub(amount);
+            if origin.balance == 0 {
+                blocks.push(format!(
+                    "the gamma deposit at {} holds no gamma",
+                    self.origin_hotkey_ss58
+                ));
+            } else if rest > 0 && amount.min(rest) < MIN_GAMMA_AMOUNT {
+                blocks.push("a move takes the whole balance, or at least 0.1 gamma leaving at least as much".into());
+            }
         }
         match &destination {
             Some(_) => blocks.extend(own_deposit_blocks(
@@ -730,12 +642,6 @@ impl Intent for MoveGamma {
         let Some(destination) = destination else {
             return Ok(warnings);
         };
-        if destination.spender != origin.spender {
-            warnings.push(format!(
-                "the moved gamma becomes spendable by {}, the destination deposit's spender, instead of {}",
-                destination.spender, origin.spender
-            ));
-        }
         if destination.cap != origin.cap {
             let text = |cap: Option<u64>| {
                 cap.map_or_else(|| "none".to_owned(), |cap| gamma_text(u128::from(cap)))
@@ -794,7 +700,7 @@ impl Intent for CloseGammaDeposit {
             && blocks.is_empty()
         {
             blocks.push(format!(
-                "the deposit holds {}; move it out first, or close it once its spender has spent it",
+                "the deposit holds {}; move it out first, or close it once its hotkey has spent it",
                 gamma_text(u128::from(deposit.balance))
             ));
         }
@@ -802,71 +708,9 @@ impl Intent for CloseGammaDeposit {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:526-586
-impl Intent for SetGammaDepositSpender {
-    fn summary(&self) -> String {
-        let spender = match (&self.service_hotkey_ss58, &self.spender_ss58) {
-            (Some(service), _) => format!("the spender of the service at {service}"),
-            (None, Some(spender)) => spender.to_string(),
-            (None, None) => DEFAULT_SPENDER.to_owned(),
-        };
-        format!(
-            "let {spender} spend the gamma deposit at {} on netuid {}",
-            self.hotkey_ss58, self.netuid
-        )
-    }
-
-    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        self.validate()?;
-        let spender = named_spender(
-            cx.view,
-            self.netuid,
-            self.spender_ss58.as_ref(),
-            self.service_hotkey_ss58.as_ref(),
-        )
-        .await?;
-        Ok(Built::new(
-            calls::set_gamma_deposit_spender(self.hotkey_ss58.account(), self.netuid, spender)
-                .compose(cx.runtime)?,
-        ))
-    }
-
-    async fn blocks<V: View + ?Sized>(
-        &self,
-        cx: &PreflightCx<'_, V>,
-    ) -> Result<Vec<String>, IntentError> {
-        let deposit = deposit(cx.view, self.netuid, self.hotkey_ss58.account()).await?;
-        Ok(own_deposit_blocks(
-            deposit.as_ref(),
-            cx.dispatch_origin,
-            &self.hotkey_ss58,
-        ))
-    }
-
-    fn spend(&self) -> Spend {
-        // Hands the deposit's whole balance to the new spender.
-        Spend::Unbounded
-    }
-
-    fn validate(&self) -> Result<(), IntentError> {
-        let named = usize::from(self.spender_ss58.is_some())
-            + usize::from(self.service_hotkey_ss58.is_some())
-            + usize::from(self.default_spender);
-        if named != 1 {
-            return Err(validation(
-                "set_gamma_deposit_spender: set exactly one of spender_ss58, service_hotkey_ss58 or default_spender",
-            ));
-        }
-        Ok(())
-    }
-}
-
 impl SetGammaDepositDailySpendCap {
     fn cap(&self) -> Result<Option<u64>, IntentError> {
-        self.daily_spend_cap_gamma
-            .as_ref()
-            .map(|cap| gamma_units(cap, false).map(Option::unwrap_or_default))
-            .transpose()
+        daily_cap(self.daily_spend_cap_gamma.as_ref())
     }
 }
 
@@ -918,178 +762,96 @@ impl Intent for SetGammaDepositDailySpendCap {
     }
 }
 
-/// One normalized `spend_gamma` entry.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GammaSpend {
-    /// Hotkey of the deposit spent from.
-    pub hotkey: Ss58Address,
-    /// Exact decimal gamma amount.
-    pub amount_gamma: String,
-    /// Chain units of `amount_gamma`.
-    pub units: u64,
-    /// The 32-byte reference repeated in the spend's event.
-    pub reference: [u8; 32],
-}
-
-// py: sdk/python/bittensor/intents/gamma.py:80-90
-fn reference(value: Option<&Value>) -> Result<[u8; 32], IntentError> {
-    let Some(value) = value else {
-        return Ok([0; 32]);
-    };
-    let text = match value {
-        Value::String(text) => text.clone(),
-        other => other.to_string(),
-    };
-    let raw = pyfmt::bytes_fromhex(text.strip_prefix("0x").unwrap_or(&text)).unwrap_or_default();
-    raw.try_into().map_err(|_| {
-        validation(format!(
-            "a spend reference is 32 bytes as hex, not {}",
-            match value {
-                Value::String(text) => pyfmt::string_repr(text),
-                other => other.to_string(),
-            }
-        ))
-    })
-}
-
 impl SpendGamma {
-    // py: sdk/python/bittensor/intents/gamma.py:671-691
-    /// The entries, normalized and checked as Python's constructor does.
-    pub fn entries(&self) -> Result<Vec<GammaSpend>, IntentError> {
-        if !(1..=MAX_GAMMA_SPENDS).contains(&self.spends.len()) {
-            return Err(validation(format!(
-                "spend_gamma takes 1 to {MAX_GAMMA_SPENDS} spends"
-            )));
-        }
-        self.spends
-            .iter()
-            .enumerate()
-            .map(|(index, spend)| {
-                let object = spend.as_object().filter(|object| {
-                    object.contains_key("hotkey_ss58")
-                        && object.contains_key("amount_gamma")
-                        && object
-                            .keys()
-                            .all(|key| matches!(key.as_str(), "hotkey_ss58" | "amount_gamma" | "reference"))
-                });
-                let Some(object) = object else {
-                    return Err(validation(format!(
-                        "spend_gamma: entry {} must be an object of hotkey_ss58, amount_gamma and an optional reference, not {spend}",
-                        index + 1
-                    )));
-                };
-                let hotkey: Ss58Address = object["hotkey_ss58"]
-                    .as_str()
-                    .and_then(|text| text.parse().ok())
-                    .ok_or_else(|| {
-                        validation(format!(
-                            "hotkey_ss58 must be an SS58 address, not {}",
-                            object["hotkey_ss58"]
-                        ))
-                    })?;
-                let amount_gamma = rtao_primitives::gamma::gamma_amount_json(
-                    &object["amount_gamma"],
-                    false,
-                )
-                .map_err(|error| validation(error.message()))?;
-                let units = u64::try_from(
-                    rtao_primitives::gamma::gamma_units(&amount_gamma)
-                        .map_err(|error| validation(error.message()))?,
-                )
-                .map_err(|_| validation(format!("gamma amount {amount_gamma} exceeds u64 units")))?;
-                Ok(GammaSpend {
-                    hotkey,
-                    amount_gamma,
-                    units,
-                    reference: reference(object.get("reference"))?,
-                })
-            })
-            .collect()
+    fn amount_units(&self) -> Result<u64, IntentError> {
+        gamma_units(&self.amount_gamma, false)?
+            .filter(|amount| *amount != 0)
+            .ok_or_else(|| validation("spend_gamma: the amount must be above 0"))
     }
 }
 
-/// Replace the given entries with Python's normalized dictionaries.
-pub(crate) fn canonicalize(intent: &mut SpendGamma) -> Result<(), IntentError> {
-    intent.spends = intent
-        .entries()?
-        .into_iter()
-        .map(|spend| {
-            json!({
-                "hotkey_ss58": spend.hotkey.as_str(),
-                "amount_gamma": spend.amount_gamma,
-                "reference": format!("0x{}", hex::encode(spend.reference)),
-            })
-        })
-        .collect();
-    Ok(())
-}
-
-// py: sdk/python/bittensor/intents/gamma.py:640-727
 impl Intent for SpendGamma {
     fn summary(&self) -> String {
-        let Ok(entries) = self.entries() else {
-            return format!("spend gamma on netuid {}", self.netuid);
-        };
-        let total: u128 = entries.iter().map(|spend| u128::from(spend.units)).sum();
         format!(
-            "spend {} gamma in {} {} on netuid {}",
-            gamma_from_units(total),
-            entries.len(),
-            if entries.len() == 1 {
-                "entry"
-            } else {
-                "entries"
-            },
+            "spend {} gamma at {} on netuid {}",
+            gamma_string(&self.amount_gamma),
+            self.service_hotkey_ss58,
             self.netuid
         )
     }
 
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
-        let spends = self
-            .entries()?
-            .into_iter()
-            .map(|spend| {
-                (
-                    spend.hotkey.account(),
-                    units(u128::from(spend.units)),
-                    spend.reference,
-                )
-            })
-            .collect();
+        let amount = self.amount_units()?;
         Ok(Built::new(
-            calls::spend_gamma(self.netuid, spends).compose(cx.runtime)?,
+            calls::spend_gamma(
+                self.service_hotkey_ss58.account(),
+                self.netuid,
+                units(u128::from(amount)),
+            )
+            .compose(cx.runtime)?,
         ))
     }
 
-    async fn warnings<V: View + ?Sized>(
+    async fn blocks<V: View + ?Sized>(
         &self,
         cx: &PreflightCx<'_, V>,
     ) -> Result<Vec<String>, IntentError> {
-        let entries = self.entries()?;
-        let mut skipped = Vec::new();
-        for spend in &entries {
-            let deposit = deposit(cx.view, self.netuid, spend.hotkey.account()).await?;
-            if deposit.is_none_or(|deposit| deposit.spender != cx.dispatch_origin) {
-                skipped.push(spend.hotkey.to_string());
-            }
+        let amount = self.amount_units()?;
+        let snapshot = cx.view.pin().await?;
+        if snapshot
+            .storage(
+                &st::SERVICES,
+                (self.netuid, self.service_hotkey_ss58.account()),
+            )
+            .await?
+            .is_none()
+        {
+            return Ok(vec![format!(
+                "{} has no service on netuid {}",
+                self.service_hotkey_ss58, self.netuid
+            )]);
         }
-        if skipped.is_empty() {
-            return Ok(Vec::new());
+        let Some(info) = snapshot
+            .call(
+                &rtao_runtime::runtime_apis::gamma_runtime_api::GET_GAMMA_DEPOSIT,
+                (self.netuid, cx.dispatch_origin),
+            )
+            .await?
+        else {
+            return Ok(vec![format!(
+                "there is no gamma deposit at {} on this subnet",
+                cx.dispatch_origin
+            )]);
+        };
+        let info = info.to_json();
+        let balance = info
+            .get("deposit")
+            .and_then(|deposit| deposit.get("balance"))
+            .and_then(json_u64)
+            .ok_or_else(|| {
+                validation("GammaRuntimeApi.get_gamma_deposit: invalid deposit balance")
+            })?;
+        let spendable = info.get("spendable").and_then(json_u64).ok_or_else(|| {
+            validation("GammaRuntimeApi.get_gamma_deposit: invalid spendable amount")
+        })?;
+        if balance == 0 {
+            return Ok(vec!["the deposit holds no gamma".into()]);
         }
-        if skipped.len() == entries.len() {
+        if amount < MIN_GAMMA_AMOUNT && amount != balance {
             return Ok(vec![
-                "nothing would be spent: no entry is a deposit you are the spender of".into(),
+                "a spend takes at least 0.1 gamma, or the deposit's whole balance".into(),
             ]);
         }
-        Ok(vec![format!(
-            "{} of {} entries would be skipped, having no deposit you are the spender of: {}",
-            skipped.len(),
-            entries.len(),
-            skipped.join(", ")
-        )])
+        if amount > spendable {
+            return Ok(vec![format!(
+                "the deposit can spend {} now",
+                gamma_text(u128::from(spendable))
+            )]);
+        }
+        Ok(Vec::new())
     }
 
     fn validate(&self) -> Result<(), IntentError> {
-        self.entries().map(|_| ())
+        self.amount_units().map(|_| ())
     }
 }

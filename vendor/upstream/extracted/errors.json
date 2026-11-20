@@ -1,13 +1,13 @@
 {
   "catalog": {
-    "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
+    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
     "path": "website/apps/bittensor-website/public/catalog/errors.json",
-    "sha256": "ecdd64dcb0b6f134f1510c65003982c36f4e6d8c9db03e94360ecbeb56310870",
-    "tag": "v492"
+    "sha256": "1a65a957e851d94a2ee1d58234049e367b32e9e340572fe5bf6db7ab2688c650",
+    "tag": "v493"
   },
   "classification_rules": {
-    "end_line": 522,
-    "line": 507,
+    "end_line": 519,
+    "line": 504,
     "rate_limit_contains": "RateLimit",
     "rate_limit_suffix": "RateLimitExceeded",
     "validated_bindings": {
@@ -35,25 +35,25 @@
   },
   "classification_sources": [
     {
-      "blob": "01f24577d207390720efe950b1f77735560474ca",
-      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
+      "blob": "f9d766026910de77ffaee60a3bfb61d5f5bc95b7",
+      "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
       "path": "sdk/python/bittensor/error_map.py",
-      "tag": "v492"
+      "tag": "v493"
     },
     {
-      "blob": "8f2d33830bea92232ef7173adad3105a553f9d9d",
-      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
+      "blob": "e07f33c7287a3472e6b4dd9ff56ddb74566648a9",
+      "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
       "path": "sdk/python/bittensor/result.py",
-      "tag": "v492"
+      "tag": "v493"
     }
   ],
   "enum": {
     "format": 1,
     "provenance": {
-      "blob": "01f24577d207390720efe950b1f77735560474ca",
-      "commit": "541a50d38764acdce23578bd8ba54f80156ffb2a",
+      "blob": "f9d766026910de77ffaee60a3bfb61d5f5bc95b7",
+      "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
       "path": "sdk/python/bittensor/error_map.py",
-      "tag": "v492"
+      "tag": "v493"
     },
     "values": {
       "ALREADY_EXISTS": {

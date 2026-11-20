@@ -2200,7 +2200,7 @@ fn reference_text(value: &Value) -> String {
     }
 }
 
-/// What each gamma spend entry did, in order (Python's `_gamma_spent_data`).
+/// Result data from the legacy batched Gamma spend events.
 ///
 /// Nothing while the spend has not run: submitted without waiting, or a
 /// multisig approval short of its threshold.
@@ -2221,6 +2221,11 @@ fn gamma_spent_data(result: &mut ExtrinsicResult) {
             continue;
         }
         let attributes = rtao_core::codec::value::to_corpus_json(&event.attributes);
+        // The hotkey-to-service event replaced the batch receipt in spec 493.
+        // Its service is already present in the finalized event.
+        if !skip && attributes.get("service").is_some() {
+            return;
+        }
         let mut entry = Map::new();
         entry.insert(
             "hotkey_ss58".into(),
@@ -2250,6 +2255,9 @@ fn gamma_spent_data(result: &mut ExtrinsicResult) {
             spent.push(Value::Object(entry));
         }
     }
+    if spent.is_empty() && skipped.is_empty() {
+        return;
+    }
     result.data.insert("spent".into(), Value::Array(spent));
     result.data.insert("skipped".into(), Value::Array(skipped));
 }
@@ -2276,7 +2284,6 @@ fn gamma_minted_data(result: &mut ExtrinsicResult) {
         "minted".into(),
         json!({
             "hotkey_ss58": reference_text(&attributes["hotkey"]),
-            "spender_ss58": reference_text(&attributes["spender"]),
             "daily_spend_cap_gamma": if cap.is_null() {
                 Value::Null
             } else {
@@ -2287,6 +2294,9 @@ fn gamma_minted_data(result: &mut ExtrinsicResult) {
             "gamma": rtao_primitives::gamma::gamma_from_units(units(&attributes["gamma"])),
         }),
     );
+    if let Some(spender) = attributes.get("spender") {
+        result.data["minted"]["spender_ss58"] = json!(reference_text(spender));
+    }
 }
 
 /// Receipt data an operation's own events add (pure proxy coordinates,

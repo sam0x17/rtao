@@ -187,16 +187,22 @@ async fn quotes_ask_in_chain_units_and_a_refusal_is_the_chain_error() {
 // pyt: unit/test_gamma.py::TestGammaReads::test_deposit_reads_are_exact_and_tell_no_cap_from_a_paused_one
 #[tokio::test]
 async fn deposit_reads_are_exact_and_tell_no_cap_from_a_paused_one() {
+    let mut state = FakeState::default();
+    let legacy = state.runtime.spec_version < 493;
     let info = |cap: Option<u64>| {
         let daily_spend_cap = cap.map(|cap| json!({"cap": cap, "bucket": [0, 0]}));
+        let mut deposit =
+            json!({"coldkey": ss58(1), "balance": 3 * RAO + 1, "daily_spend_cap": daily_spend_cap});
+        if legacy {
+            deposit["spender"] = json!(ss58(3));
+        }
         json!({
             "netuid": 1,
             "hotkey": ss58(2),
-            "deposit": {"coldkey": ss58(1), "spender": ss58(3), "balance": 3 * RAO + 1, "daily_spend_cap": daily_spend_cap},
+            "deposit": deposit,
             "spendable": RAO / 2,
         })
     };
-    let mut state = FakeState::default();
     state
         .seed_runtime("GammaRuntimeApi", "get_gamma_deposit", info(Some(0)))
         .unwrap();
@@ -212,18 +218,14 @@ async fn deposit_reads_are_exact_and_tell_no_cap_from_a_paused_one() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(
-        serde_json::to_value(&deposit).unwrap(),
-        json!({
-            "netuid": 1,
-            "hotkey": ss58(2),
-            "coldkey": ss58(1),
-            "spender": ss58(3),
-            "balance_gamma": "3.000000001",
-            "daily_spend_cap_gamma": "0",
-            "spendable_gamma": "0.5",
-        })
-    );
+    let mut expected = json!({
+        "netuid": 1, "hotkey": ss58(2), "coldkey": ss58(1),
+        "balance_gamma": "3.000000001", "daily_spend_cap_gamma": "0", "spendable_gamma": "0.5",
+    });
+    if legacy {
+        expected["spender"] = json!(ss58(3));
+    }
+    assert_eq!(serde_json::to_value(&deposit).unwrap(), expected);
     let listed = gamma::gamma_deposits(&client, account(1)).await.unwrap();
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].daily_spend_cap_gamma, None);
@@ -251,12 +253,16 @@ fn services_state(owner_of_owner_hotkey: u8) -> FakeState {
         // The literal text "0x41", seeded as its bytes (a 0x string seeds hex).
         (13, "0x30783431", 3),
     ] {
+        let mut service = json!({"url": url});
+        if state.runtime.spec_version < 493 {
+            service["spender"] = json!(ss58(spender));
+        }
         state
             .seed_python(
                 "SubtensorModule",
                 "Services",
                 &[json!(1), json!(ss58(hotkey))],
-                json!({"url": url, "spender": ss58(spender)}),
+                service,
             )
             .unwrap();
     }
@@ -291,18 +297,24 @@ fn services_state(owner_of_owner_hotkey: u8) -> FakeState {
 // pyt: unit/test_gamma.py::TestServicesRead::test_an_owner_hotkey_another_coldkey_owns_marks_no_owner
 #[tokio::test]
 async fn services_read_unprintable_urls_as_hex_and_mark_the_owned_owner_hotkey() {
-    let (owned, _) = client(services_state(1)).await;
+    let state = services_state(1);
+    let legacy = state.runtime.spec_version < 493;
+    let (owned, _) = client(state).await;
     let services = gamma::services(&owned, NetUid(1)).await.unwrap();
+    let mut expected = json!({"url":"https://a.example","owner":true});
+    if legacy {
+        expected["spender"] = json!(ss58(1));
+    }
     assert_eq!(
         serde_json::to_value(&services[&account(10)]).unwrap(),
-        json!({"url": "https://a.example", "spender": ss58(1), "owner": true})
+        expected
     );
     let spoof = "https://a.example\u{1b}[1A\u{1b}[2K";
     assert_eq!(
         services[&account(11)].url,
         format!("0x{}", hex::encode(spoof))
     );
-    assert_eq!(services[&account(11)].spender, account(1));
+    assert_eq!(services[&account(11)].spender, legacy.then_some(account(1)));
     assert!(!services[&account(11)].owner);
     assert!(services[&account(12)].url.starts_with("0x"));
     assert_eq!(services[&account(13)].url, "0x41");

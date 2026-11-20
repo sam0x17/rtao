@@ -64,7 +64,6 @@ fn required_after_prompt(op: &str) -> &'static [&'static str] {
         | "mint_gamma"
         | "mint_gamma_with_stake"
         | "close_gamma_deposit"
-        | "set_gamma_deposit_spender"
         | "set_gamma_deposit_daily_spend_cap" => &["hotkey_ss58"],
         _ => &[],
     }
@@ -96,10 +95,9 @@ fn rules(op: &str) -> Vec<Rule> {
         }],
         "add_stake" | "add_stake_limit" => vec![target("hotkey_ss58", "amount_tao")],
         "transfer" | "transfer_all" => vec![destination("dest_ss58")],
-        "mint_gamma"
-        | "close_gamma_deposit"
-        | "set_gamma_deposit_spender"
-        | "set_gamma_deposit_daily_spend_cap" => vec![deposit_hotkey()],
+        "mint_gamma" | "close_gamma_deposit" | "set_gamma_deposit_daily_spend_cap" => {
+            vec![deposit_hotkey()]
+        }
         // Each rule is placed first, so the stake source precedes the hotkey.
         "mint_gamma_with_stake" => vec![
             deposit_hotkey(),
@@ -442,7 +440,6 @@ mod tests {
             "mint_gamma",
             "mint_gamma_with_stake",
             "close_gamma_deposit",
-            "set_gamma_deposit_spender",
             "set_gamma_deposit_daily_spend_cap",
             "claim_root_with_hotkey",
         ] {

@@ -592,6 +592,27 @@ pub async fn dispatch(
                 detail: error.to_string(),
             })
         }
+        ReadName::GammaSpent => {
+            let args: super::interfaces::GammaSpentParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::gamma_spent(
+                view,
+                args.netuid,
+                args.service_hotkey_ss58,
+                args.hotkey_ss58,
+            )
+            .await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
         ReadName::HotkeyConviction => {
             let args: super::interfaces::HotkeyConvictionParams =
                 serde_json::from_value(Value::Object(params)).map_err(|error| {

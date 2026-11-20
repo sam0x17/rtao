@@ -65,6 +65,12 @@ fn account(value: &Value, name: &str, descriptor: &'static str) -> Result<Accoun
         .map_err(|_| surface(descriptor, format!("{name} is not an account")))
 }
 
+fn legacy_spender(value: &Value, descriptor: &'static str) -> Result<Option<AccountId>, ReadError> {
+    field(value, "spender")
+        .map(|_| account(value, "spender", descriptor))
+        .transpose()
+}
+
 /// One gamma deposit, as the runtime reports it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GammaDeposit {
@@ -74,8 +80,9 @@ pub struct GammaDeposit {
     pub hotkey: AccountId,
     /// Coldkey owning the deposit.
     pub coldkey: AccountId,
-    /// Account allowed to spend it.
-    pub spender: AccountId,
+    /// Separate spender returned by the legacy deposit API.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spender: Option<AccountId>,
     /// Balance, as an exact decimal string of gamma.
     pub balance_gamma: String,
     /// Daily spend cap; `None` is no cap and `"0"` pauses the deposit.
@@ -98,7 +105,7 @@ fn deposit_record(info: &Value) -> Result<GammaDeposit, ReadError> {
         netuid: NetUid(netuid),
         hotkey: account(info, "hotkey", DEPOSIT_API)?,
         coldkey: account(deposit, "coldkey", DEPOSIT_API)?,
-        spender: account(deposit, "spender", DEPOSIT_API)?,
+        spender: legacy_spender(deposit, DEPOSIT_API)?,
         balance_gamma: gamma_from_units(number(deposit, "balance", DEPOSIT_API)?),
         daily_spend_cap_gamma: cap.map(gamma_from_units),
         spendable_gamma: gamma_from_units(number(info, "spendable", DEPOSIT_API)?),
@@ -353,8 +360,9 @@ pub async fn tao_usd_price<V: View + ?Sized>(view: &V) -> Result<TaoUsdPrice, Re
 pub struct Service {
     /// The url, or 0x-hex when it is not printable text.
     pub url: String,
-    /// Spender customers name on gamma deposits for the service.
-    pub spender: AccountId,
+    /// Separate spender recorded by the legacy service layout.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spender: Option<AccountId>,
     /// Whether this is the subnet owner's hotkey while the owner owns it.
     pub owner: bool,
 }
@@ -420,7 +428,7 @@ pub async fn services<V: View + ?Sized>(
             hotkey,
             Service {
                 url,
-                spender: account(info, "spender", SERVICES_STORAGE)?,
+                spender: legacy_spender(info, SERVICES_STORAGE)?,
                 owner: Some(hotkey) == owner,
             },
         );

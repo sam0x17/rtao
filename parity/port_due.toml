@@ -5,10 +5,66 @@
 # strict parity reports them as due.
 
 [[file]]
+py = "pallets/admin-utils/src/lib.rs"
+kind = "ported"
+from = "8aa8a8219d8b1d642b18a31d66998943efbb0bf7"
+to = "a81c0740bd8d8555c095ccc5cea744a635eb451d"
+tag = "v493"
+symbols = []
+
+[[file]]
+py = "pallets/subtensor/src/subnets/serving.rs"
+kind = "ported"
+from = "a9e5b2ba801dd33defb975b2eefb9c0c5a959f9d"
+to = "9fc27bf8b8dd954df3b737fd08d75afc922cf5c5"
+tag = "v493"
+symbols = []
+
+[[file]]
+py = "pallets/subtensor/src/subnets/weights.rs"
+kind = "ported"
+from = "2f8569bc0a877de50d478ef46489f2966398b48e"
+to = "9ea06ff70d143f238e50fa6d270df4276d5fa6f6"
+tag = "v493"
+symbols = []
+
+[[file]]
+py = "pallets/subtensor/src/utils/misc.rs"
+kind = "ported"
+from = "f3c9483919a66fc27dfa1438b53cae0cf9f174f1"
+to = "88c689ad71a097b2d44fcead9b866f6443c7f81b"
+tag = "v493"
+symbols = []
+
+[[file]]
+py = "sdk/bittensor-core-py/pyproject.toml"
+kind = "oracle-only"
+from = "255b656137494e0f517c49530f41c16874078da2"
+to = "86a4b245728c20c99911323303a85179d42ed86d"
+tag = "v493"
+symbols = []
+
+[[file]]
+py = "sdk/bittensor-core/tests/e2e.rs"
+kind = "n/a"
+from = "35ecd6602e71a1619b220ad8656ef5d6aae57902"
+to = "d74a9cfaf8c2a08f5ff82d82c169b4f9bdc7dc5a"
+tag = "v493"
+symbols = []
+
+[[file]]
+py = "sdk/python/bittensor/cli/commands/gamma.py"
+kind = "ported"
+from = "cd8e254744312effe8513e86743517e2def3d7b5"
+to = "74d16db5c1f99f9191bb8c0816cd451d19748fa5"
+tag = "v493"
+symbols = ["bittensor.cli.commands.gamma.SpendGamma", "bittensor.cli.commands.gamma.guide_docs_url", "bittensor.cli.commands.gamma.list_deposits", "bittensor.cli.commands.gamma.query_docs_url", "bittensor.cli.commands.gamma.show_deposit", "bittensor.cli.commands.gamma.spend", "bittensor.cli.commands.gamma.tx_docs_url", "bittensor.cli.commands.gamma.with_globals", "bittensor.cli.commands.gamma.with_tx_globals"]
+
+[[file]]
 py = "sdk/python/bittensor/cli/commands/proxy.py"
 kind = "ported"
 from = "805279ee0c84b2162d372ac03f002b91d3aa516b"
-to = "7de3a1d8839da76ede7a3e157d0d763e0d54f46c"
+to = "36c213c85b04fb3b7c45ba0c79fe56b35118d0b5"
 tag = "v491"
 symbols = ["bittensor.cli.commands.proxy.app", "bittensor.cli.commands.proxy.cancel_announcement", "bittensor.cli.commands.proxy.execute_announced", "bittensor.cli.commands.proxy.fund_controller", "bittensor.cli.commands.proxy.protect_account", "bittensor.cli.commands.proxy.rotate_controller", "bittensor.cli.commands.proxy.run_cancel", "bittensor.cli.commands.proxy.run_execute_protected", "bittensor.cli.commands.proxy.run_fund", "bittensor.cli.commands.proxy.run_protect", "bittensor.cli.commands.proxy.run_rotate", "bittensor.cli.commands.proxy.run_rotate_finalize", "bittensor.cli.commands.proxy.run_show", "bittensor.cli.commands.proxy.show_protected"]
 
@@ -45,6 +101,14 @@ tag = "v491"
 symbols = ["bittensor.cli.globals._TX_FLOW", "bittensor.cli.globals.apply", "bittensor.cli.globals.parse_controller_refill"]
 
 [[file]]
+py = "sdk/python/bittensor/cli/intent_prompts.py"
+kind = "ported"
+from = "1af00aa98cf5c3f7f54f930f22ab025464d7216d"
+to = "84226b43f0eb3e3763a0652c58e8180b9e008cde"
+tag = "v493"
+symbols = ["bittensor.cli.intent_prompts._POLICIES"]
+
+[[file]]
 py = "sdk/python/bittensor/cli/main.py"
 kind = "ported"
 from = "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b"
@@ -59,6 +123,14 @@ from = "181554458baf46525826a6e1b83d43594de87c1d"
 to = "5eab9cd6e10c6faf71b37a5ab932fe328c680aa1"
 tag = "v491"
 symbols = ["bittensor.cli.multisig_helpers._PROXY_ANNOUNCEMENT_FEE_PAYER_OPS", "bittensor.cli.multisig_helpers.announcement_cancel_completed", "bittensor.cli.multisig_helpers.build_pending_followup", "bittensor.cli.multisig_helpers.multisig_approval_only", "bittensor.cli.multisig_helpers.wrap_intent_for_multisig_wallet"]
+
+[[file]]
+py = "sdk/python/bittensor/cli/output.py"
+kind = "ported"
+from = "d488940b2cfec05fc35c6c2aeefbf6f4c2578066"
+to = "f8c0057428bf03fcc7f66ca288eb7a926ef02050"
+tag = "v493"
+symbols = ["bittensor.cli.output.record_rows"]
 
 [[file]]
 py = "sdk/python/bittensor/cli/root_helpers.py"
@@ -85,9 +157,81 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
+py = "sdk/python/bittensor/executor.py"
+kind = "ported"
+from = "ea6547dfb106fa26bf3a3dc5d2613e5170068b91"
+to = "d2ed00f7bbff3529efc57a847c92fad3901e1b35"
+tag = "v493"
+symbols = ["bittensor.executor.Executor", "bittensor.executor.Executor._submit_shielded_prepared", "bittensor.executor.Executor.execute", "bittensor.executor._gamma_minted_data", "bittensor.executor._gamma_spent_data"]
+
+[[file]]
+py = "sdk/python/bittensor/intents/__init__.py"
+kind = "n/a"
+from = "b1bdea507b1c758a3a60eff94dfe1c54b1906a34"
+to = "1236265dffc92353cfddd8e51c22a9d53cbf3226"
+tag = "v493"
+symbols = ["bittensor.intents.CloseGammaDeposit", "bittensor.intents.MintGamma", "bittensor.intents.MintGammaWithStake", "bittensor.intents.MoveGamma", "bittensor.intents.SetGammaDepositDailySpendCap", "bittensor.intents.SetGammaDepositSpender", "bittensor.intents.SpendGamma", "bittensor.intents.__all__"]
+
+[[file]]
+py = "sdk/python/bittensor/intents/gamma.py"
+kind = "ported"
+from = "0b48b3352b0580881c2a01549425f5651273e346"
+to = "50cc2991df4260a8749905bca1efbf751ef35569"
+tag = "v493"
+symbols = ["bittensor.intents.gamma.CloseGammaDeposit", "bittensor.intents.gamma.CloseGammaDeposit.blocks", "bittensor.intents.gamma.DAILY_SPEND_CAP_HELP", "bittensor.intents.gamma.DEFAULT_SPENDER", "bittensor.intents.gamma.MAX_GAMMA_SPENDS", "bittensor.intents.gamma.MIN_GAMMA_AMOUNT", "bittensor.intents.gamma.MintGamma", "bittensor.intents.gamma.MintGamma.__post_init__", "bittensor.intents.gamma.MintGamma.build", "bittensor.intents.gamma.MintGamma.service_hotkey_ss58", "bittensor.intents.gamma.MintGamma.spender_ss58", "bittensor.intents.gamma.MintGammaWithStake", "bittensor.intents.gamma.MintGammaWithStake.__post_init__", "bittensor.intents.gamma.MintGammaWithStake.build", "bittensor.intents.gamma.MintGammaWithStake.service_hotkey_ss58", "bittensor.intents.gamma.MintGammaWithStake.spender_ss58", "bittensor.intents.gamma.MoveGamma", "bittensor.intents.gamma.MoveGamma.blocks", "bittensor.intents.gamma.MoveGamma.warnings", "bittensor.intents.gamma.SERVICE_HELP", "bittensor.intents.gamma.SPENDER_HELP", "bittensor.intents.gamma.SetGammaDepositDailySpendCap", "bittensor.intents.gamma.SetGammaDepositDailySpendCap.daily_spend_cap_gamma", "bittensor.intents.gamma.SetGammaDepositSpender", "bittensor.intents.gamma.SetGammaDepositSpender.__post_init__", "bittensor.intents.gamma.SetGammaDepositSpender.blocks", "bittensor.intents.gamma.SetGammaDepositSpender.build", "bittensor.intents.gamma.SetGammaDepositSpender.default_spender", "bittensor.intents.gamma.SetGammaDepositSpender.hotkey_ss58", "bittensor.intents.gamma.SetGammaDepositSpender.netuid", "bittensor.intents.gamma.SetGammaDepositSpender.op", "bittensor.intents.gamma.SetGammaDepositSpender.service_hotkey_ss58", "bittensor.intents.gamma.SetGammaDepositSpender.signer", "bittensor.intents.gamma.SetGammaDepositSpender.spend", "bittensor.intents.gamma.SetGammaDepositSpender.spender_ss58", "bittensor.intents.gamma.SetGammaDepositSpender.summary", "bittensor.intents.gamma.SetGammaDepositSpender.wraps", "bittensor.intents.gamma.SpendGamma", "bittensor.intents.gamma.SpendGamma.__post_init__", "bittensor.intents.gamma.SpendGamma.amount_gamma", "bittensor.intents.gamma.SpendGamma.blocks", "bittensor.intents.gamma.SpendGamma.build", "bittensor.intents.gamma.SpendGamma.netuid", "bittensor.intents.gamma.SpendGamma.service_hotkey_ss58", "bittensor.intents.gamma.SpendGamma.signer", "bittensor.intents.gamma.SpendGamma.spends", "bittensor.intents.gamma.SpendGamma.summary", "bittensor.intents.gamma.SpendGamma.warnings", "bittensor.intents.gamma._check_spender_or_service", "bittensor.intents.gamma._daily_spend_cap", "bittensor.intents.gamma._mint_preflight", "bittensor.intents.gamma._named_spender", "bittensor.intents.gamma._reference", "bittensor.intents.gamma._service_spender", "bittensor.intents.gamma.coerce_address"]
+
+[[file]]
 py = "sdk/python/bittensor/intents/proxy.py"
 kind = "ported"
 from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
-to = "e0e3ffa6e94ebf6bd1a51484e11a5ae01602f6b3"
+to = "781f7a8f14261edc31e4ef11f248cbcec7cbb997"
 tag = "v491"
-symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
+symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.PROXY_TYPE_HELP", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
+
+[[file]]
+py = "sdk/python/bittensor/intents/serving.py"
+kind = "ported"
+from = "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6"
+to = "df6efb9d7c7ae962370056e6a01f0450e601c61c"
+tag = "v493"
+symbols = ["bittensor.intents.serving.SetService", "bittensor.intents.serving.SetService.build", "bittensor.intents.serving.SetService.spender_ss58", "bittensor.intents.serving.SetService.summary"]
+
+[[file]]
+py = "sdk/python/bittensor/namespaces.pyi"
+kind = "n/a"
+from = "ab71193b884fb41f5ce22b8dfa7871e9edbf33c6"
+to = "fded4d4c5796b1f0c82f6422350e03897baffd18"
+tag = "v493"
+symbols = []
+
+[[file]]
+py = "sdk/python/bittensor/reads/gamma.py"
+kind = "ported"
+from = "90ce64115cd3d6678aec246402eb0d8d7328b400"
+to = "26a8280ef6b3beebdea1b204f46a9fde7a6d324e"
+tag = "v493"
+symbols = ["bittensor.reads.gamma._deposit_record", "bittensor.reads.gamma.gamma_deposit", "bittensor.reads.gamma.gamma_spent"]
+
+[[file]]
+py = "sdk/python/bittensor/reads/subnets.py"
+kind = "ported"
+from = "0a98222f215aaca9de63a1e546c143a3e5c65bb4"
+to = "6dfe3616b353b751a8a843e3ea22d7e51c865559"
+tag = "v493"
+symbols = ["bittensor.reads.subnets.services"]
+
+[[file]]
+py = "sdk/python/bittensor/result.py"
+kind = "ported"
+from = "8f2d33830bea92232ef7173adad3105a553f9d9d"
+to = "e07f33c7287a3472e6b4dd9ff56ddb74566648a9"
+tag = "v493"
+symbols = ["bittensor.result._NAME_HELP_OVERRIDES"]
+
+[[file]]
+py = "sdk/python/tests/unit/test_cli_commands.py"
+kind = "ported"
+from = "fc8ab506628b2ac956117ba602f0644dad3453c2"
+to = "b327a7e65000b30bd4e0de9fb6f15e04a2cf1477"
+tag = "v493"
+symbols = ["tests.unit.test_cli_commands.fake"]

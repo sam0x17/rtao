@@ -211,17 +211,8 @@ fn all_catalog_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip(
                 json!(rtao_primitives::AccountId([2; 32]).to_ss58(110)),
             );
         }
-        if spec.name == "set_gamma_deposit_spender" {
-            args.insert("default_spender".into(), json!(true));
-        }
         if spec.name == "set_gamma_deposit_daily_spend_cap" {
             args.insert("remove_cap".into(), json!(true));
-        }
-        if spec.name == "spend_gamma" {
-            args.insert(
-                "spends".into(),
-                json!([{"hotkey_ss58": address, "amount_gamma": "1"}]),
-            );
         }
         if matches!(spec.name, "authorize_order" | "cancel_order") {
             args.insert(
@@ -386,10 +377,6 @@ fn all_catalog_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip(
         {
             let mut explicit = json.clone();
             explicit[field.name] = json!(address);
-            if spec.name == "set_gamma_deposit_spender" {
-                // Exactly one spender choice: a named one replaces the default.
-                explicit["default_spender"] = json!(false);
-            }
             let intent = AnyIntent::from_tool(spec.name, explicit).unwrap();
             assert_eq!(
                 intent.to_json()[field.name],

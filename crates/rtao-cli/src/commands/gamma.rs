@@ -9,21 +9,21 @@ use crate::{
     output::{DiagnosticContext, TableSpec},
     prompt::PromptHistory,
 };
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use rtao_client::Client;
 use rtao_primitives::AccountId;
 use rtao_reads::ReadName;
 use serde_json::{Map, Value, json};
 
-/// The deposit owner's calls are the generated intent commands (`tx
+/// The Gamma calls are the generated intent commands (`tx
 /// mint-gamma` and so on), mounted as `stake` mounts its verbs, so both
 /// spellings stay in sync.
-const OWNER_COMMANDS: [(&str, &str); 6] = [
+const INTENT_COMMANDS: [(&str, &str); 6] = [
     ("mint", "mint_gamma"),
     ("mint-with-stake", "mint_gamma_with_stake"),
     ("move", "move_gamma"),
     ("close", "close_gamma_deposit"),
-    ("set-spender", "set_gamma_deposit_spender"),
+    ("spend", "spend_gamma"),
     ("set-cap", "set_gamma_deposit_daily_spend_cap"),
 ];
 
@@ -80,36 +80,14 @@ pub fn command() -> Result<Command, CliError> {
                 ))),
             Tier::Read,
         ));
-    for (alias, op) in OWNER_COMMANDS {
+    for (alias, op) in INTENT_COMMANDS {
         group = group.subcommand(generated::intent_command(op)?.name(alias));
     }
-    let spend_help = format!(
-        "Spend gamma from the deposits you are the spender of.\n\nEach --spend spends, in order, its AMOUNT from the deposit at its HOTKEY, and spent gamma is destroyed. Entries whose hotkey has no deposit, whose deposit you are not the spender of, or whose AMOUNT is zero or above the deposit's balance or what its daily spend cap allows, are skipped. Sign as the spender, or as its GammaSpend proxy with --proxy-for SPENDER.\n\nDocs: {}/tx/spend-gamma",
-        rtao_catalog::py::DOCS_URL
-    );
-    // The generated spend_gamma command carries the transaction globals; its
-    // JSON-list field is replaced by the repeatable --spend entries.
-    let spend = generated::intent_command("spend_gamma")?
-        .name("spend")
-        .about("Spend gamma from the deposits you are the spender of.")
-        .long_about(spend_help)
-        .mut_arg("netuid", |arg| arg.required(true))
-        .mut_arg("spends", |arg| arg.hide(true).required(false))
-        .arg(
-            Arg::new("spend")
-                .long("spend")
-                .action(ArgAction::Append)
-                .required(true)
-                .help(format!(
-                    "HOTKEY=AMOUNT or HOTKEY=AMOUNT:REFERENCE, spending AMOUNT gamma from the deposit at HOTKEY, with an optional 32-byte hex reference that the entry's GammaSpent or GammaSpendSkipped event repeats. Repeatable. HOTKEY is an {}",
-                    crate::books::ss58_param_help_for("hotkey_ss58", false).replace("HOTKEY", "NAME")
-                )),
-        );
-    Ok(group.subcommand(spend))
+    Ok(group)
 }
 
-fn owner_op(name: &str) -> Option<&'static str> {
-    OWNER_COMMANDS
+fn intent_op(name: &str) -> Option<&'static str> {
+    INTENT_COMMANDS
         .iter()
         .find(|(alias, _)| *alias == name)
         .map(|(_, op)| *op)
@@ -120,31 +98,12 @@ pub fn reserved(matches: &ArgMatches) -> Result<Vec<&'static str>, CliError> {
     match matches.subcommand_name() {
         Some("show") => Ok(vec!["netuid", "hotkey_ss58"]),
         Some("list") => Ok(vec!["coldkey_ss58"]),
-        Some("spend") => generated::intent_reserved("spend_gamma"),
-        Some(name) => match owner_op(name) {
+        Some(name) => match intent_op(name) {
             Some(op) => generated::intent_reserved(op),
             None => Err(CliError::input("unknown gamma command")),
         },
         None => Err(CliError::input("missing gamma command")),
     }
-}
-
-/// Parse one `--spend HOTKEY=AMOUNT[:REFERENCE]` entry, as Python splits it:
-/// the hotkey ends at the last `=`, the reference follows the first `:`.
-fn spend_entry(entry: &str) -> Result<(&str, &str, Option<&str>), CliError> {
-    let Some((hotkey, amount)) = entry
-        .rsplit_once('=')
-        .filter(|(hotkey, _)| !hotkey.is_empty())
-    else {
-        return Err(CliError::input(format!(
-            "invalid value for `--spend`: {entry:?} is not HOTKEY=AMOUNT"
-        )));
-    };
-    let (amount, reference) = match amount.split_once(':') {
-        Some((amount, reference)) => (amount, (!reference.is_empty()).then_some(reference)),
-        None => (amount, None),
-    };
-    Ok((hotkey, amount, reference))
 }
 
 /// Prepare transactions before signing; reads return an empty sequence.
@@ -158,36 +117,7 @@ pub fn tx_requests(
         .ok_or_else(|| CliError::input("missing gamma command"))?;
     match name {
         "show" | "list" => Ok(vec![]),
-        "spend" => {
-            let netuid = *leaf
-                .get_one::<u16>("netuid")
-                .ok_or_else(|| CliError::input("missing --netuid"))?;
-            let mut spends = Vec::new();
-            for entry in leaf.get_many::<String>("spend").into_iter().flatten() {
-                let (hotkey, amount, reference) = spend_entry(entry)?;
-                // D-157: a spend's hotkey is a payment destination and keeps
-                // a receiving address, so execution guards its registration.
-                let hotkey = ctx
-                    .resolve_target_text("hotkey_ss58", Some(hotkey), history)?
-                    .ok_or_else(|| CliError::input("--spend needs a hotkey"))?;
-                spends.push(json!({
-                    "hotkey_ss58": hotkey,
-                    "amount_gamma": amount,
-                    "reference": reference,
-                }));
-            }
-            let request = TxRequest {
-                op: "spend_gamma",
-                args: Map::from_iter([
-                    ("netuid".into(), json!(netuid)),
-                    ("spends".into(), Value::Array(spends)),
-                ]),
-                period: leaf.try_get_one::<u32>("__period").ok().flatten().copied(),
-            };
-            request.intent()?;
-            Ok(vec![request])
-        }
-        name => match owner_op(name) {
+        name => match intent_op(name) {
             Some(op) => Ok(vec![TxRequest::from_matches(ctx, op, leaf, history)?]),
             None => Err(CliError::input("unknown gamma command")),
         },
@@ -315,7 +245,6 @@ pub async fn execute_prepared_read(
             let fields = vec![
                 ("hotkey".to_owned(), text(&deposit["hotkey"])),
                 ("coldkey".to_owned(), text(&deposit["coldkey"])),
-                ("spender".to_owned(), text(&deposit["spender"])),
                 (
                     "balance".to_owned(),
                     json!(gamma_text(&deposit["balance_gamma"])),
@@ -354,7 +283,6 @@ pub async fn execute_prepared_read(
                                 json!(gamma_text(&d["balance_gamma"])),
                                 json!(gamma_text(&d["daily_spend_cap_gamma"])),
                                 json!(gamma_text(&d["spendable_gamma"])),
-                                d["spender"].clone(),
                             ]
                         })
                         .collect()
@@ -369,7 +297,6 @@ pub async fn execute_prepared_read(
                         "balance",
                         "daily spend cap",
                         "spendable",
-                        "spender",
                     ]
                     .into_iter()
                     .map(str::to_owned)
@@ -402,17 +329,6 @@ mod tests {
     }
 
     #[test]
-    fn spend_entries_split_as_python_does() -> Result<(), CliError> {
-        assert_eq!(spend_entry("alice=1.5")?, ("alice", "1.5", None));
-        assert_eq!(spend_entry("w/h=2:0xab")?, ("w/h", "2", Some("0xab")));
-        assert_eq!(spend_entry("a=b=3")?, ("a=b", "3", None));
-        assert_eq!(spend_entry("hot=4:")?, ("hot", "4", None));
-        assert!(spend_entry("=4").is_err());
-        assert!(spend_entry("hot").is_err());
-        Ok(())
-    }
-
-    #[test]
     fn the_group_mounts_every_owner_call_and_spend() -> Result<(), CliError> {
         let group = command()?;
         for name in [
@@ -422,7 +338,6 @@ mod tests {
             "mint-with-stake",
             "move",
             "close",
-            "set-spender",
             "set-cap",
             "spend",
         ] {

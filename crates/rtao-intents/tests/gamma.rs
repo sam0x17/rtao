@@ -9,7 +9,7 @@ use rtao_client::{BlockRef, Client, ClientConfig, Network, Snapshot};
 use rtao_core::{DynValue, codec::Value as CoreValue};
 use rtao_intents::{
     AnyIntent, CloseGammaDeposit, MintGamma, MintGammaWithStake, MoveGamma,
-    SetGammaDepositDailySpendCap, SetGammaDepositSpender,
+    SetGammaDepositDailySpendCap,
 };
 use rtao_primitives::{AccountId, AlphaBalance, NetUid, Spend, TaoBalance};
 use rtao_runtime::calls::subtensor_module as calls;
@@ -19,7 +19,7 @@ use rtao_testkit::{
     fixtures::catalog_samples::{COLD, HOT, OTHER_HOT, intent_state},
     rpc::RpcClient,
 };
-use rtao_tx::{BuildCx, Intent, IntentError, OriginView, SystemClock};
+use rtao_tx::{BuildCx, Intent, IntentError, IntentInterface, OriginView, SystemClock};
 use serde_json::{Value, json};
 
 const RAO: u64 = 1_000_000_000;
@@ -102,7 +102,6 @@ async fn calls_carry_chain_units() -> Result<()> {
             NET,
             TaoBalance(RAO),
             units(u128::from(380 * RAO)),
-            None,
             None
         ))
     );
@@ -121,7 +120,6 @@ async fn calls_carry_chain_units() -> Result<()> {
             NET,
             AlphaBalance(RAO),
             units(u128::from(380 * RAO)),
-            None,
             None
         ))
     );
@@ -166,42 +164,45 @@ async fn calls_carry_chain_units() -> Result<()> {
             ))
         );
     }
-    for (args, spender) in [
-        (json!({"spender_ss58": COLD.to_string()}), Some(COLD)),
-        (json!({"default_spender": true}), None),
-    ] {
-        let mut args = args;
-        args["netuid"] = json!(1);
-        args["hotkey_ss58"] = json!(hot);
-        let AnyIntent::SetGammaDepositSpender(intent) = any("set_gamma_deposit_spender", args)?
-        else {
-            unreachable!()
-        };
-        assert_eq!(
-            build(&intent, &snapshot).await?,
-            compose(calls::set_gamma_deposit_spender(HOT, NET, spender))
-        );
-    }
+    assert!(
+        any(
+            "set_gamma_deposit_spender",
+            json!({"netuid": 1, "hotkey_ss58": hot})
+        )
+        .is_err()
+    );
     let AnyIntent::SpendGamma(intent) = any(
         "spend_gamma",
-        json!({"netuid": 1, "spends": [{"hotkey_ss58": hot, "amount_gamma": "0.5", "reference": "ab".repeat(32)}]}),
+        json!({"netuid":1,"service_hotkey_ss58":other,"amount_gamma":"0.5"}),
     )?
     else {
         unreachable!()
     };
-    assert_eq!(
-        intent.spends,
-        [
-            json!({"hotkey_ss58": hot, "amount_gamma": "0.5", "reference": format!("0x{}", "ab".repeat(32))})
-        ]
-    );
+    assert_eq!(rtao_intents::SpendGamma::SPEC.signer, "hotkey");
     assert_eq!(
         build(&intent, &snapshot).await?,
         compose(calls::spend_gamma(
+            OTHER_HOT,
             NET,
-            vec![(HOT, units(u128::from(RAO / 2)), [0xab; 32])]
+            units(u128::from(RAO / 2))
         ))
     );
+    #[cfg(feature = "serving")]
+    {
+        let service = rtao_intents::SetService {
+            netuid: NET,
+            hotkey_ss58: Some(OTHER_HOT.into()),
+            url: "https://example.org".into(),
+        };
+        assert_eq!(
+            build(&service, &snapshot).await?,
+            compose(calls::set_service(
+                NET,
+                OTHER_HOT,
+                b"https://example.org".to_vec()
+            ))
+        );
+    }
     let close = CloseGammaDeposit {
         netuid: NET,
         hotkey_ss58: HOT.into(),
@@ -237,7 +238,7 @@ async fn the_minimum_is_the_quote_less_tolerance_and_a_refusal_is_the_chain_erro
         let intent = mint(
             json!({"netuid": 1, "hotkey_ss58": HOT.to_string(), "amount_tao": 1.0, "rate_tolerance": tolerance}),
         );
-        let expected = calls::mint_gamma(HOT, NET, TaoBalance(RAO), units(minimum), None, None)
+        let expected = calls::mint_gamma(HOT, NET, TaoBalance(RAO), units(minimum), None)
             .compose(&snapshot.block().runtime)?;
         assert_eq!(build(&intent, &snapshot).await?, expected.as_bytes());
         client.close().await;
@@ -299,7 +300,6 @@ async fn a_stake_mint_quotes_at_most_the_stake_held_and_refuses_without_stake() 
             AlphaBalance(sent),
             units((100.0 * RAO as f64 * 0.95) as u128),
             None,
-            None,
         )
         .compose(&snapshot.block().runtime)?;
         assert_eq!(build(&intent, &snapshot).await?, expected.as_bytes());
@@ -331,8 +331,6 @@ async fn a_stake_mint_quotes_at_most_the_stake_held_and_refuses_without_stake() 
         amount_alpha: rtao_primitives::Amount::parse("1")?,
         origin_hotkey_ss58: OTHER_HOT.into(),
         rate_tolerance: rtao_primitives::Ratio::new(0.05)?,
-        spender_ss58: None,
-        service_hotkey_ss58: None,
         daily_spend_cap_gamma: None,
     };
     let refused = build(&intent, &snapshot).await.unwrap_err().to_string();
@@ -358,10 +356,6 @@ fn spends_are_bounded_only_for_tao_mints() -> Result<()> {
         (
             "move_gamma",
             json!({"netuid": 1, "origin_hotkey_ss58": other, "destination_hotkey_ss58": hot, "amount_gamma": 1}),
-        ),
-        (
-            "set_gamma_deposit_spender",
-            json!({"netuid": 1, "hotkey_ss58": hot, "spender_ss58": COLD.to_string()}),
         ),
     ] {
         assert_eq!(
@@ -391,22 +385,12 @@ fn inputs_are_checked_as_python_constructs_them() {
         (
             "mint_gamma",
             json!({"netuid": 1, "hotkey_ss58": hot, "amount_tao": 1, "spender_ss58": other, "service_hotkey_ss58": other}),
-            "not both",
+            "unknown field",
         ),
         (
             "mint_gamma",
             json!({"netuid": 1, "hotkey_ss58": hot, "amount_tao": 1, "rate_tolerance": 1.0}),
             "[0, 1)",
-        ),
-        (
-            "set_gamma_deposit_spender",
-            json!({"netuid": 1, "hotkey_ss58": hot}),
-            "exactly one",
-        ),
-        (
-            "set_gamma_deposit_spender",
-            json!({"netuid": 1, "hotkey_ss58": hot, "spender_ss58": other, "default_spender": true}),
-            "exactly one",
         ),
         (
             "set_gamma_deposit_daily_spend_cap",
@@ -420,23 +404,18 @@ fn inputs_are_checked_as_python_constructs_them() {
         ),
         (
             "spend_gamma",
-            json!({"netuid": 1, "spends": []}),
-            "1 to 512",
+            json!({"netuid":1,"spends":[]}),
+            "unknown field",
         ),
         (
             "spend_gamma",
-            json!({"netuid": 1, "spends": [{"hotkey_ss58": hot}]}),
-            "entry 1 must be",
+            json!({"netuid":1,"service_hotkey_ss58":hot,"amount_gamma":0}),
+            "above 0",
         ),
         (
-            "spend_gamma",
-            json!({"netuid": 1, "spends": [{"hotkey_ss58": hot, "amount_gamma": 1, "reference": "ab"}]}),
-            "32 bytes",
-        ),
-        (
-            "spend_gamma",
-            json!({"netuid": 1, "spends": [{"hotkey_ss58": hot, "amount_gamma": "0.0000000001"}]}),
-            "at most 9 decimals",
+            "set_gamma_deposit_daily_spend_cap",
+            json!({"netuid":1,"hotkey_ss58":hot,"daily_spend_cap_gamma":"0.099999999"}),
+            "at least 0.1 gamma",
         ),
     ] {
         let error = any(op, args).unwrap_err().to_string();
@@ -457,12 +436,15 @@ fn summaries_name_the_terms() {
     );
     let AnyIntent::SpendGamma(spend) = any(
         "spend_gamma",
-        json!({"netuid": 1, "spends": [{"hotkey_ss58": hot, "amount_gamma": "0.5"}, {"hotkey_ss58": hot, "amount_gamma": 1}]}),
+        json!({"netuid":1,"service_hotkey_ss58":hot,"amount_gamma":"1.5"}),
     )
     .unwrap() else {
         unreachable!()
     };
-    assert_eq!(spend.summary(), "spend 1.5 gamma in 2 entries on netuid 1");
+    assert_eq!(
+        spend.summary(),
+        format!("spend 1.5 gamma at {hot} on netuid 1")
+    );
     let cap = SetGammaDepositDailySpendCap {
         netuid: NET,
         hotkey_ss58: HOT.into(),
@@ -472,18 +454,6 @@ fn summaries_name_the_terms() {
     assert_eq!(
         cap.summary(),
         format!("set no cap on the gamma deposit at {hot} on netuid 1")
-    );
-    let spender = SetGammaDepositSpender {
-        netuid: NET,
-        hotkey_ss58: HOT.into(),
-        spender_ss58: None,
-        service_hotkey_ss58: None,
-        default_spender: true,
-    };
-    assert!(
-        spender
-            .summary()
-            .starts_with("let the subnet owner's service spender")
     );
     let moved = MoveGamma {
         netuid: NET,
@@ -519,10 +489,9 @@ impl rtao_signer::DynKeySource for PublicKeys {
     }
 }
 
-fn deposit(coldkey: AccountId, spender: AccountId, balance: u64, cap: Option<u64>) -> Value {
+fn deposit(coldkey: AccountId, balance: u64, cap: Option<u64>) -> Value {
     json!({
         "coldkey": coldkey.to_string(),
-        "spender": spender.to_string(),
         "balance": balance,
         "daily_spend_cap": cap.map(|cap| json!({"cap": cap, "bucket": [0, 0]})),
     })
@@ -607,13 +576,12 @@ async fn a_mint_preview_shows_the_quote_and_the_deposit_it_credits() -> Result<(
             "alpha_burned": "1",
             "tao_value": "0.5",
             "deposit_balance_gamma": null,
-            "spender_ss58": null,
             "daily_spend_cap_gamma": null,
         })
     );
     // Another coldkey's deposit blocks the mint.
     let plan = mint_plan(
-        |state| seed_deposit(state, deposit(HOT, HOT, 0, None)),
+        |state| seed_deposit(state, deposit(HOT, 0, None)),
         json!({}),
     )
     .await?;
@@ -658,26 +626,10 @@ async fn a_mint_preview_shows_the_quote_and_the_deposit_it_credits() -> Result<(
     Ok(())
 }
 
-// pyt: unit/test_gamma.py::TestMintTerms::test_a_deposit_naming_another_spender_blocks
 // pyt: unit/test_gamma.py::TestMintTerms::test_a_deposit_with_another_cap_blocks
 // pyt: unit/test_gamma.py::TestMintTerms::test_a_new_deposit_shows_the_named_cap
-// pyt: unit/test_gamma.py::TestMintTerms::test_a_service_names_its_spender
 #[tokio::test]
-async fn a_mint_must_match_the_deposits_spender_and_cap() -> Result<()> {
-    for (spender, blocked) in [(None, false), (Some(COLD), false), (Some(OTHER_HOT), true)] {
-        let plan = mint_plan(
-            |state| seed_deposit(state, deposit(COLD, COLD, 0, None)),
-            json!({"spender_ss58": spender.map(|spender| spender.to_string())}),
-        )
-        .await?;
-        assert_eq!(
-            plan.blocks
-                .iter()
-                .any(|block| block.contains("is spent by")),
-            blocked,
-            "{spender:?}"
-        );
-    }
+async fn a_mint_must_match_the_deposits_cap() -> Result<()> {
     for (held, named, blocked) in [
         (None, None, false),
         (Some(RAO), None, false),
@@ -686,7 +638,7 @@ async fn a_mint_must_match_the_deposits_spender_and_cap() -> Result<()> {
         (None, Some(0), true),
     ] {
         let plan = mint_plan(
-            |state| seed_deposit(state, deposit(COLD, COLD, 0, held)),
+            |state| seed_deposit(state, deposit(COLD, 0, held)),
             json!({"daily_spend_cap_gamma": named}),
         )
         .await?;
@@ -704,26 +656,87 @@ async fn a_mint_must_match_the_deposits_spender_and_cap() -> Result<()> {
     }
     let plan = mint_plan(|_| Ok(()), json!({"daily_spend_cap_gamma": "2.5"})).await?;
     assert_eq!(fact(&plan, "daily spend cap").unwrap(), "2.5 gamma");
-    let plan = mint_plan(
-        |state| {
+    Ok(())
+}
+
+#[tokio::test]
+async fn spend_checks_the_service_and_the_signing_hotkeys_spendable_balance() -> Result<()> {
+    for (listed, balance, spendable, amount, expected) in [
+        (false, Some(RAO), RAO, "1", Some("has no service")),
+        (true, None, 0, "1", Some("no gamma deposit")),
+        (true, Some(0), 0, "1", Some("holds no gamma")),
+        (true, Some(RAO), RAO, "0.05", Some("at least 0.1")),
+        (true, Some(RAO / 20), RAO / 20, "0.05", None),
+        (
+            true,
+            Some(2 * RAO),
+            RAO / 2,
+            "1",
+            Some("can spend 0.5 gamma now"),
+        ),
+        (true, Some(RAO), RAO, "1", None),
+    ] {
+        let mut state = FakeState::try_default()?;
+        if listed {
             state.seed_python(
                 "SubtensorModule",
                 "Services",
                 &[json!(1), json!(OTHER_HOT.to_string())],
-                json!({"url": "https://a.example", "spender": OTHER_HOT.to_string()}),
+                json!({"url":"https://example.org"}),
             )?;
-            Ok(())
-        },
-        json!({"service_hotkey_ss58": OTHER_HOT.to_string()}),
-    )
-    .await?;
-    assert_eq!(fact(&plan, "spender").unwrap(), OTHER_HOT.to_string());
-    let missing = mint_plan(|_| Ok(()), json!({"service_hotkey_ss58": COLD.to_string()})).await;
-    assert!(
-        missing
-            .as_ref()
-            .is_err_and(|error| error.to_string().contains("publishes no service")),
-        "{missing:?}"
-    );
+        }
+        state.seed_runtime("GammaRuntimeApi", "get_gamma_deposit", json!(balance.map(|balance| json!({
+            "netuid": 1, "hotkey": HOT.to_string(), "deposit": deposit(COLD, balance, None), "spendable": spendable
+        }))))?;
+        let (client, chain) = client(state).await?;
+        let snapshot = client.at(BlockRef::Best).await?;
+        let AnyIntent::SpendGamma(intent) = any(
+            "spend_gamma",
+            json!({"netuid":1, "service_hotkey_ss58":OTHER_HOT.to_string(), "amount_gamma":amount}),
+        )?
+        else {
+            unreachable!()
+        };
+        let runtime = &snapshot.block().runtime;
+        let spec = rtao_intents::SpendGamma::SPEC;
+        let call = intent
+            .build(&BuildCx {
+                view: &snapshot,
+                origin: OriginView::Keys(&Keys),
+                runtime,
+                clock: &SystemClock,
+                spec,
+            })
+            .await?
+            .call;
+        let blocks = intent
+            .blocks(&rtao_tx::PreflightCx {
+                view: &snapshot,
+                runtime,
+                clock: &SystemClock,
+                spec,
+                client: &client,
+                dispatch_origin: HOT,
+                fee_payer: HOT,
+                call: &call,
+            })
+            .await?;
+        match expected {
+            Some(expected) => assert!(
+                matches!(blocks.as_slice(), [message] if message.contains(expected)),
+                "{blocks:?}"
+            ),
+            None => assert!(blocks.is_empty(), "{blocks:?}"),
+        }
+        if listed {
+            let mut key = NET.0.to_le_bytes().to_vec();
+            key.extend(HOT.0);
+            let key = json!(format!("0x{}", hex::encode(key)));
+            assert!(chain.requests().iter().any(|r| r.method == "state_call"
+                && r.params[0] == "GammaRuntimeApi_get_gamma_deposit"
+                && r.params[1] == key));
+        }
+        client.close().await;
+    }
     Ok(())
 }
