@@ -189,18 +189,27 @@ async fn calls_carry_chain_units() -> Result<()> {
     );
     #[cfg(feature = "serving")]
     {
-        let service = rtao_intents::SetService {
-            netuid: NET,
-            hotkey_ss58: Some(OTHER_HOT.into()),
-            url: "https://example.org".into(),
-        };
-        assert_eq!(
-            build(&service, &snapshot).await?,
-            compose(calls::set_service(
-                NET,
-                OTHER_HOT,
-                b"https://example.org".to_vec()
-            ))
+        assert_eq!(rtao_intents::SetService::SPEC.signer, "coldkey");
+        for (selected, expected, url) in [
+            (Some(OTHER_HOT.into()), OTHER_HOT, "https://example.org"),
+            (None, HOT, ""),
+        ] {
+            let service = rtao_intents::SetService {
+                netuid: NET,
+                hotkey_ss58: selected,
+                url: url.into(),
+            };
+            assert_eq!(
+                build(&service, &snapshot).await?,
+                compose(calls::set_service(NET, expected, url.as_bytes().to_vec()))
+            );
+        }
+        assert!(
+            any(
+                "set_service",
+                json!({"netuid": 1, "url": "", "spender_ss58": other})
+            )
+            .is_err()
         );
     }
     let close = CloseGammaDeposit {

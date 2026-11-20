@@ -670,7 +670,7 @@ impl SyncGamma<'_> {
         netuid: rtao_primitives::NetUid,
         service_hotkey_ss58: rtao_primitives::AccountId,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<String, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::gamma_spent(
                 &view,

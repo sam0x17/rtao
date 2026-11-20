@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/gamma.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
-//! Gamma reads: deposits, mint quotes, and the TAO/USD price.
+//! Gamma deposits, service spend totals, mint quotes, and the TAO/USD price.
 //!
 //! Gamma amounts are exact decimal strings of gamma, as in Python; see
 //! [`rtao_primitives::gamma`].
@@ -113,7 +113,7 @@ fn deposit_record(info: &Value) -> Result<GammaDeposit, ReadError> {
 }
 
 /// The gamma deposit at a hotkey on a subnet, or `None`.
-// py: sdk/python/bittensor/reads/gamma.py:46-63
+// py: sdk/python/bittensor/reads/gamma.py:51-61
 pub async fn gamma_deposit<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -131,7 +131,7 @@ pub async fn gamma_deposit<V: View + ?Sized>(
 }
 
 /// Every gamma deposit of a coldkey, on every subnet, in runtime order.
-// py: sdk/python/bittensor/reads/gamma.py:66-74
+// py: sdk/python/bittensor/reads/gamma.py:70-73
 pub async fn gamma_deposits<V: View + ?Sized>(
     view: &V,
     coldkey_ss58: AccountId,
@@ -146,6 +146,25 @@ pub async fn gamma_deposits<V: View + ?Sized>(
         .iter()
         .map(|info| deposit_record(info.as_core()))
         .collect()
+}
+
+/// Total gamma spent by a hotkey at one service on a subnet, in exact decimal units.
+// py: sdk/python/bittensor/reads/gamma.py:86-96
+pub async fn gamma_spent<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+    service_hotkey_ss58: AccountId,
+    hotkey_ss58: AccountId,
+) -> Result<String, ReadError> {
+    let spent = view
+        .storage(
+            &st::subtensor_module::GAMMA_SPENT,
+            (netuid, service_hotkey_ss58, hotkey_ss58),
+        )
+        .await?;
+    let units = uint(spent.as_core())
+        .ok_or_else(|| surface("SubtensorModule.GammaSpent", "expected an unsigned balance"))?;
+    Ok(gamma_from_units(units))
 }
 
 /// What a mint would burn, its TAO value and the gamma it would mint.
@@ -198,7 +217,7 @@ pub async fn sim_mint<V: View + ?Sized>(
     ))
 }
 
-// py: sdk/python/bittensor/reads/gamma.py:33-43
+// py: sdk/python/bittensor/reads/gamma.py:33-42
 async fn mint_quote(
     view: &rtao_client::Snapshot,
     quote: &DynValue,
@@ -252,7 +271,7 @@ async fn mint_quote(
 /// Fails with the chain error that stops the mint, such as
 /// `TaoUsdPriceUnavailable` when the TAO/USD price is missing or stale, or
 /// `AmountTooLow` below 0.1 gamma.
-// py: sdk/python/bittensor/reads/gamma.py:77-94
+// py: sdk/python/bittensor/reads/gamma.py:105-113
 pub async fn quote_mint_gamma<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -271,7 +290,7 @@ pub async fn quote_mint_gamma<V: View + ?Sized>(
 
 /// The alpha burned, its TAO value and the gamma `mint_gamma_with_stake`
 /// would mint now; errors as [`quote_mint_gamma`].
-// py: sdk/python/bittensor/reads/gamma.py:97-111
+// py: sdk/python/bittensor/reads/gamma.py:122-130
 pub async fn quote_mint_gamma_with_stake<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -303,7 +322,7 @@ pub struct TaoUsdPrice {
     pub blocks_since_last_feed: Option<i128>,
 }
 
-// py: sdk/python/bittensor/reads/gamma.py:134-138
+// py: sdk/python/bittensor/reads/gamma.py:155-160
 /// The accepted price `blocks` after its feed: raised by
 /// [`TAO_USD_PRICE_MAX_STEP`] of itself, rounded up, per block, up to the
 /// feed, as the chain's `tao_usd_price_at`.
@@ -321,7 +340,7 @@ pub fn accepted_price(accepted: u128, feed: u128, blocks: i128) -> i128 {
 /// 0.0066% (66 ppm) of itself per block; mints value TAO at it. Minting needs
 /// a feed at most 300 blocks old, so no new mint succeeds once
 /// `blocks_since_last_feed` exceeds 300.
-// py: sdk/python/bittensor/reads/gamma.py:114-131
+// py: sdk/python/bittensor/reads/gamma.py:134-152
 pub async fn tao_usd_price<V: View + ?Sized>(view: &V) -> Result<TaoUsdPrice, ReadError> {
     let snapshot = view.pin().await?;
     let (oracle, state) = snapshot
@@ -369,7 +388,7 @@ pub struct Service {
 
 const SERVICES_STORAGE: &str = "SubtensorModule.Services";
 
-// py: sdk/python/bittensor/reads/subnets.py:591-594
+// py: sdk/python/bittensor/reads/subnets.py:617-620
 /// A url as text, or as hex when it holds characters a terminal would act on.
 pub fn url_text(raw: &str) -> String {
     if rtao_primitives::pyfmt::is_printable(raw) {
@@ -384,7 +403,7 @@ pub fn url_text(raw: &str) -> String {
 /// Each `url` points to its hotkey's own document of its services and the
 /// payments they accept; the chain does not check what it says. `owner`
 /// marks the subnet owner's hotkey while the owner owns it.
-// py: sdk/python/bittensor/reads/subnets.py:558-588
+// py: sdk/python/bittensor/reads/subnets.py:592-614
 pub async fn services<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,

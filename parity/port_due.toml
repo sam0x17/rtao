@@ -13,14 +13,6 @@ tag = "v493"
 symbols = []
 
 [[file]]
-py = "pallets/subtensor/src/subnets/serving.rs"
-kind = "ported"
-from = "a9e5b2ba801dd33defb975b2eefb9c0c5a959f9d"
-to = "9fc27bf8b8dd954df3b737fd08d75afc922cf5c5"
-tag = "v493"
-symbols = []
-
-[[file]]
 py = "pallets/subtensor/src/subnets/weights.rs"
 kind = "ported"
 from = "2f8569bc0a877de50d478ef46489f2966398b48e"
@@ -189,36 +181,12 @@ tag = "v491"
 symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.PROXY_TYPE_HELP", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/serving.py"
-kind = "ported"
-from = "64b0d06f1bbfe5829389298e881d5f3d8f0bb8e6"
-to = "df6efb9d7c7ae962370056e6a01f0450e601c61c"
-tag = "v493"
-symbols = ["bittensor.intents.serving.SetService", "bittensor.intents.serving.SetService.build", "bittensor.intents.serving.SetService.spender_ss58", "bittensor.intents.serving.SetService.summary"]
-
-[[file]]
 py = "sdk/python/bittensor/namespaces.pyi"
 kind = "n/a"
 from = "ab71193b884fb41f5ce22b8dfa7871e9edbf33c6"
 to = "fded4d4c5796b1f0c82f6422350e03897baffd18"
 tag = "v493"
 symbols = []
-
-[[file]]
-py = "sdk/python/bittensor/reads/gamma.py"
-kind = "ported"
-from = "90ce64115cd3d6678aec246402eb0d8d7328b400"
-to = "26a8280ef6b3beebdea1b204f46a9fde7a6d324e"
-tag = "v493"
-symbols = ["bittensor.reads.gamma._deposit_record", "bittensor.reads.gamma.gamma_deposit", "bittensor.reads.gamma.gamma_spent"]
-
-[[file]]
-py = "sdk/python/bittensor/reads/subnets.py"
-kind = "ported"
-from = "0a98222f215aaca9de63a1e546c143a3e5c65bb4"
-to = "6dfe3616b353b751a8a843e3ea22d7e51c865559"
-tag = "v493"
-symbols = ["bittensor.reads.subnets.services"]
 
 [[file]]
 py = "sdk/python/bittensor/result.py"

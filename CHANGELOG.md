@@ -6,7 +6,8 @@
 
 - Finney finalized spec 493. The parity pin advances from v492 to v493 at upstream commit `8b407e40988ea7a251abb6dbc07a9ab7d602b740`. Three public endpoints agreed on the candidate block, runtime code and V15/V16 metadata at height 9,549,692. The release wasm matched the on-chain code.
 - A Gamma deposit's hotkey now signs a fee-free spend to one registered service. Use `rtao gamma spend --netuid N --service-hotkey ADDRESS --amount AMOUNT`. Mint and service registration no longer accept a spender. The old set-spender operation has been removed. Partial spends and moves use the chain's 0.1 Gamma minimum. The `GammaSpend` proxy variant retains its codec index and denies all calls.
-- The metadata comparison found five breaking call changes. The transaction version remains 1. The signing envelope and core sources are unchanged. The compatibility report records the pin separately from validation and oracle coverage. The new `gamma_spent` SDK read is listed in `parity/pending.toml`.
+- The `gamma_spent` read returns a hotkey’s cumulative payments to one service on a subnet as an exact decimal string. At a finalized block, an unused combination returns `"0"`.
+- The metadata comparison found five breaking call changes. The transaction version remains 1. The signing envelope and core sources are unchanged. The compatibility report records the pin separately from validation and oracle coverage.
 
 ### Testnet runtime 493 recorded automatically
 

@@ -595,14 +595,12 @@ pub struct GammaSpentParams {
 #[doc = "The gamma a hotkey has spent at a service on a subnet, as an exact decimal string.\n\nIt only grows, until the subnet is dissolved, which clears it. A service crediting spends\nreads it at a finalized block:\n`(await client.at(await client.finalized_block())).gamma.gamma_spent(...)`."]
 #[doc(alias = "bittensor.reads.gamma_spent")]
 pub async fn gamma_spent<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _service_hotkey_ss58: rtao_primitives::AccountId,
-    _hotkey_ss58: rtao_primitives::AccountId,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::GammaSpent,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    service_hotkey_ss58: rtao_primitives::AccountId,
+    hotkey_ss58: rtao_primitives::AccountId,
+) -> Result<String, crate::ReadError> {
+    crate::reads::gamma::gamma_spent(view, netuid, service_hotkey_ss58, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `hotkey_conviction`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

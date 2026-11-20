@@ -345,7 +345,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Gamma<'_, V> {
         netuid: rtao_primitives::NetUid,
         service_hotkey_ss58: rtao_primitives::AccountId,
         hotkey_ss58: rtao_primitives::AccountId,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<String, crate::ReadError> {
         super::interfaces::gamma_spent(self.view, netuid, service_hotkey_ss58, hotkey_ss58).await
     }
 }

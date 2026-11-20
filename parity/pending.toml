@@ -2,4 +2,4 @@
 # parity pin bump adds operations new to the upstream catalog (D-128).
 intents = []
 
-reads = ["gamma_spent"]
+reads = []

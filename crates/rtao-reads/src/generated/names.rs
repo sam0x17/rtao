@@ -757,7 +757,7 @@ impl ReadName {
             Self::ExistentialDeposit => true,
             Self::GammaDeposit => true,
             Self::GammaDeposits => true,
-            Self::GammaSpent => false,
+            Self::GammaSpent => true,
             Self::HotkeyConviction => true,
             Self::HotkeyIdentities => true,
             Self::HotkeyOwner => true,
@@ -1071,9 +1071,9 @@ impl ReadName {
                 output_type_name: std::any::type_name::<Vec<crate::reads::gamma::GammaDeposit>>(),
             },
             Self::GammaSpent => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::GammaSpentParams>(),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<String>(),
             },
             Self::HotkeyConviction => ReadInterfaceMetadata {
                 implemented: true,

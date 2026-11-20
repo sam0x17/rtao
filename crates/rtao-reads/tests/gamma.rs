@@ -45,6 +45,39 @@ fn gamma_disabled() -> Value {
     json!({"Module": {"index": error.pallet_index, "error": [error.error_index, 0, 0, 0]}})
 }
 
+// pyt: unit/test_gamma.py::TestGammaReads::test_spent_is_exact_and_zero_before_a_spend
+#[tokio::test]
+async fn gamma_spent_is_exact_and_keyed_by_subnet_service_and_payer() {
+    let mut state = FakeState::default();
+    state
+        .seed_python(
+            "SubtensorModule",
+            "GammaSpent",
+            &[json!(1), json!(ss58(1)), json!(ss58(2))],
+            json!((1u64 << 53) + 1),
+        )
+        .unwrap();
+    let (client, _) = client(state).await;
+    let view = client.at(BlockRef::Finalized).await.unwrap();
+    for (netuid, service, payer, amount) in [
+        (1, 1, 2, "9007199.254740993"),
+        (2, 1, 2, "0"),
+        (1, 2, 1, "0"),
+        (1, 1, 3, "0"),
+    ] {
+        let spent = rtao_reads::generated::interfaces::gamma_spent(
+            &view,
+            NetUid(netuid),
+            account(service),
+            account(payer),
+        )
+        .await
+        .unwrap();
+        assert_eq!(spent, amount);
+    }
+    client.close().await;
+}
+
 // pyt: unit/test_gamma.py::TestGammaReads::test_amounts_are_exact_and_the_feed_has_an_age
 #[tokio::test]
 async fn amounts_are_exact_and_the_feed_has_an_age() {
