@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testnet runtime 493 recorded automatically
+
+- Testnet finalized spec 493 (`:code` `0x51adea39b16a2b9d60b58d430246d49312f1111b74607edc1166e47a73de4591`) at block 8487872; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `breaking`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/44786356910)). Source: upstream commit `8b407e40988ea7a251abb6dbc07a9ab7d602b740`, whose v493 wasm is this `:code`. The parity pin is unchanged.
+
 ### Finney runtime 492 adopted automatically
 
 - The parity pin moves from spec 491 to v492 (`541a50d38764acdce23578bd8ba54f80156ffb2a`, pinned as `v492`), the runtime Finney finalized at block 9542901 with `:code` `0x22786f72f280dc968f38a10627c085eaf3ea530dd3a1621a4776882851ac3d8e`.
