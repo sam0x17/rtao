@@ -8571,7 +8571,7 @@
           "ci/oracle/image_identity.py (source, binding and lock identity)",
           "xtask::oracle::{execution_identity, inputs} (authenticated optional image inputs)"
         ],
-        "synced_blob": "255b656137494e0f517c49530f41c16874078da2"
+        "synced_blob": "86a4b245728c20c99911323303a85179d42ed86d"
       },
       {
         "kind": "oracle-only",
@@ -10874,7 +10874,7 @@
         "rust": [
           "`rtao_intents` crate root"
         ],
-        "synced_blob": "b1bdea507b1c758a3a60eff94dfe1c54b1906a34"
+        "synced_blob": "1236265dffc92353cfddd8e51c22a9d53cbf3226"
       },
       {
         "kind": "ported",
@@ -11282,7 +11282,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "ab71193b884fb41f5ce22b8dfa7871e9edbf33c6"
+        "synced_blob": "fded4d4c5796b1f0c82f6422350e03897baffd18"
       },
       {
         "kind": "ported",
@@ -11536,7 +11536,7 @@
           "rtao_tx::{ExtrinsicResult,ChainError,TxError,PolicyError,classify}",
           "rtao_catalog::{errors,py}; rtao_client::{PoolRejection,SubmitFailure}"
         ],
-        "synced_blob": "8f2d33830bea92232ef7173adad3105a553f9d9d"
+        "synced_blob": "e07f33c7287a3472e6b4dd9ff56ddb74566648a9"
       },
       {
         "kind": "extracted",

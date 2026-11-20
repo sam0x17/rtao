@@ -29,14 +29,6 @@ tag = "v493"
 symbols = []
 
 [[file]]
-py = "sdk/bittensor-core-py/pyproject.toml"
-kind = "oracle-only"
-from = "255b656137494e0f517c49530f41c16874078da2"
-to = "86a4b245728c20c99911323303a85179d42ed86d"
-tag = "v493"
-symbols = []
-
-[[file]]
 py = "sdk/bittensor-core/tests/e2e.rs"
 kind = "n/a"
 from = "35ecd6602e71a1619b220ad8656ef5d6aae57902"
@@ -157,14 +149,6 @@ tag = "v493"
 symbols = ["bittensor.executor.Executor", "bittensor.executor.Executor._submit_shielded_prepared", "bittensor.executor.Executor.execute", "bittensor.executor._gamma_minted_data", "bittensor.executor._gamma_spent_data"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/__init__.py"
-kind = "n/a"
-from = "b1bdea507b1c758a3a60eff94dfe1c54b1906a34"
-to = "1236265dffc92353cfddd8e51c22a9d53cbf3226"
-tag = "v493"
-symbols = ["bittensor.intents.CloseGammaDeposit", "bittensor.intents.MintGamma", "bittensor.intents.MintGammaWithStake", "bittensor.intents.MoveGamma", "bittensor.intents.SetGammaDepositDailySpendCap", "bittensor.intents.SetGammaDepositSpender", "bittensor.intents.SpendGamma", "bittensor.intents.__all__"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/gamma.py"
 kind = "ported"
 from = "0b48b3352b0580881c2a01549425f5651273e346"
@@ -179,22 +163,6 @@ from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
 to = "781f7a8f14261edc31e4ef11f248cbcec7cbb997"
 tag = "v491"
 symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.PROXY_TYPE_HELP", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
-
-[[file]]
-py = "sdk/python/bittensor/namespaces.pyi"
-kind = "n/a"
-from = "ab71193b884fb41f5ce22b8dfa7871e9edbf33c6"
-to = "fded4d4c5796b1f0c82f6422350e03897baffd18"
-tag = "v493"
-symbols = []
-
-[[file]]
-py = "sdk/python/bittensor/result.py"
-kind = "ported"
-from = "8f2d33830bea92232ef7173adad3105a553f9d9d"
-to = "e07f33c7287a3472e6b4dd9ff56ddb74566648a9"
-tag = "v493"
-symbols = ["bittensor.result._NAME_HELP_OVERRIDES"]
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_commands.py"
