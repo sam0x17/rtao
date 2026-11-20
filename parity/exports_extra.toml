@@ -1905,17 +1905,17 @@ pinning_tests = ["rtao_reads::lifecycle::lifecycle_storage_includes_dissolving_s
 
 [[export]]
 python = "bittensor.RegistrationSponsorship"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_tx::RegistrationSponsorship"
+reason = "The composed first-payment preview identifies the recipient, the payer and the exact native TAO reserve. A registered recipient has no sponsorship quote."
 source = "sdk/python/bittensor/__init__.py"
-pending = "v488 adoption"
+pinning_tests = ["rtao_intents::recipient_registration::a_first_payment_registers_the_recipient_in_one_batch", "rtao_intents::recipient_registration::a_registered_recipient_is_checked_and_reserves_nothing"]
 
 [[export]]
 python = "bittensor.RegistrationSponsorshipRequired"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_tx::SponsorshipRequired"
+reason = "The typed execution error retains the quote and refusal reason when consent is absent, the allowance is insufficient or the callback declines. Each refusal precedes signer acquisition."
 source = "sdk/python/bittensor/__init__.py"
-pending = "v488 adoption"
+pinning_tests = ["rtao_intents::recipient_registration::execution_needs_consent_before_any_key_is_unlocked"]
 
 [[export]]
 python = "bittensor.evm.resolve_evm_recipient"

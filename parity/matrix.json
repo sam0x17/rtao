@@ -5644,13 +5644,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.RegistrationSponsorship",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.RegistrationSponsorshipRequired",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/__init__.py"
       },
       {

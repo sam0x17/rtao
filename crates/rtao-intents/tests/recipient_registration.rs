@@ -235,7 +235,7 @@ async fn runtime_existential_deposit(executor: &Executor) -> Result<u64> {
 
 #[tokio::test]
 async fn execution_needs_consent_before_any_key_is_unlocked() -> Result<()> {
-    let (_, address, _) = hashed();
+    let (_, address, account) = hashed();
     let (executor, chain, keys) = fixture(None, true).await?;
     let intent = transfer(&address, "1");
     let run = |opts: ExecuteOptions| {
@@ -245,7 +245,12 @@ async fn execution_needs_consent_before_any_key_is_unlocked() -> Result<()> {
         async move { executor.execute_dyn(intent.as_dyn(), keys, &opts).await }
     };
     let reason = |result: Result<rtao_tx::ExtrinsicResult, TxError>| match result {
-        Err(TxError::RegistrationSponsorship(error)) => error.reason,
+        Err(TxError::RegistrationSponsorship(error)) => {
+            assert_eq!(error.quote.recipient_account, account);
+            assert_eq!(error.quote.payer_account, COLD);
+            assert_eq!(error.quote.deposit, Balance::from_rao(DEPOSIT));
+            error.reason
+        }
         other => panic!("{other:?}"),
     };
     assert_eq!(
