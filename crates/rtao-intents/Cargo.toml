@@ -46,7 +46,7 @@ collateral = ["dep:tokio"]
 pow = ["rtao-core/host", "dep:tokio", "dep:tokio-util"]
 pow-gpu = ["pow"]
 # Runtime 487/488 catalog categories; their intents are pending ports (D-128).
-gamma = ["dep:rtao-reads"]
+gamma = ["dep:rtao-reads", "dep:futures"]
 limit_orders = []
 all = ["association", "batch", "children", "coldkey", "commitments", "collateral", "crowdloan", "emission_weights", "evm", "gamma", "governance", "hyperparameters", "identity", "leasing", "limit_orders", "lock", "multisig", "proxy", "registration", "root", "serving", "staking", "transfer", "weights"]
 

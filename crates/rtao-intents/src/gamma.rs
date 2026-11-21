@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/gamma.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/gamma.py @ 8b407e40988ea7a251abb6dbc07a9ab7d602b740 (Apache-2.0); modified by rtao.
 //! Gamma intents: minting, deposits, services and daily spend caps, and spending.
 //!
 //! Gamma is not a balance unit: amounts are exact decimal strings of gamma,
@@ -80,7 +80,7 @@ fn gamma_string(amount: &Amount) -> String {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:142-143
+// py: sdk/python/bittensor/intents/gamma.py:103-104
 /// `"1,234.5 gamma"`: Python's `f"{Decimal(text):,f}"`.
 fn gamma_text(units: u128) -> String {
     let text = gamma_from_units(units);
@@ -102,7 +102,7 @@ fn cap_text(cap: Option<u64>) -> String {
     )
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:68-69
+// py: sdk/python/bittensor/intents/gamma.py:57-58
 fn min_out(gamma: u128, tolerance: Ratio) -> u128 {
     if tolerance.get() == 0.0 {
         // Python's integer zero tolerance keeps the quote exact (D-132).
@@ -177,7 +177,7 @@ async fn deposit<V: View + ?Sized>(
         .transpose()
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:97-110
+// py: sdk/python/bittensor/intents/gamma.py:78-91
 /// What stops `signer` opening a new deposit at `hotkey`, as the runtime's
 /// `Owner::try_get` decides it (runtime 489): an unassociated hotkey (no
 /// `Owner` entry) may be used, a hotkey with a stored owner only by that
@@ -205,7 +205,7 @@ async fn new_deposit_blocks<V: View + ?Sized>(
     Ok(Vec::new())
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:133-139
+// py: sdk/python/bittensor/intents/gamma.py:94-100
 fn own_deposit_blocks(
     deposit: Option<&Deposit>,
     signer: AccountId,
@@ -239,7 +239,7 @@ fn read_error(error: rtao_reads::ReadError) -> IntentError {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:60-65
+// py: sdk/python/bittensor/intents/gamma.py:49-54
 async fn quote<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
@@ -264,7 +264,7 @@ struct MintTerms<'a> {
     cap: Option<u64>,
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:156-208
+// py: sdk/python/bittensor/intents/gamma.py:117-159
 /// A mint's preview: its quote, the deposit it credits and the hard stops
 /// the chain would refuse it with.
 async fn mint_preflight<V: View + ?Sized>(
@@ -381,7 +381,7 @@ impl MintGamma {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:211-292
+// py: sdk/python/bittensor/intents/gamma.py:164-235
 impl Intent for MintGamma {
     fn summary(&self) -> String {
         let amount = match self.amount_tao.resolve(NetUid::ROOT, false) {
@@ -442,7 +442,7 @@ impl MintGammaWithStake {
         }
     }
 
-    // py: sdk/python/bittensor/intents/gamma.py:336-338
+    // py: sdk/python/bittensor/intents/gamma.py:275-277
     /// The alpha the chain burns: at most the stake held.
     fn burned(&self, staked: u64) -> Result<u64, IntentError> {
         Ok(self
@@ -469,7 +469,7 @@ impl MintGammaWithStake {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:295-393
+// py: sdk/python/bittensor/intents/gamma.py:240-331
 impl Intent for MintGammaWithStake {
     fn summary(&self) -> String {
         let amount = match self.requested() {
@@ -560,14 +560,19 @@ impl MoveGamma {
         &self,
         view: &V,
     ) -> Result<(Option<Deposit>, Option<Deposit>), IntentError> {
-        Ok((
-            deposit(view, self.netuid, self.origin_hotkey_ss58.account()).await?,
-            deposit(view, self.netuid, self.destination_hotkey_ss58.account()).await?,
-        ))
+        let snapshot = view.pin().await?;
+        futures::try_join!(
+            deposit(&snapshot, self.netuid, self.origin_hotkey_ss58.account()),
+            deposit(
+                &snapshot,
+                self.netuid,
+                self.destination_hotkey_ss58.account()
+            ),
+        )
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:396-489
+// py: sdk/python/bittensor/intents/gamma.py:336-430
 impl Intent for MoveGamma {
     fn summary(&self) -> String {
         format!(
@@ -673,7 +678,7 @@ impl Intent for MoveGamma {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:492-523
+// py: sdk/python/bittensor/intents/gamma.py:435-464
 impl Intent for CloseGammaDeposit {
     fn summary(&self) -> String {
         format!(
@@ -714,7 +719,7 @@ impl SetGammaDepositDailySpendCap {
     }
 }
 
-// py: sdk/python/bittensor/intents/gamma.py:589-637
+// py: sdk/python/bittensor/intents/gamma.py:469-516
 impl Intent for SetGammaDepositDailySpendCap {
     fn summary(&self) -> String {
         let cap = self.daily_spend_cap_gamma.as_ref().map_or_else(
@@ -770,6 +775,7 @@ impl SpendGamma {
     }
 }
 
+// py: sdk/python/bittensor/intents/gamma.py:521-576
 impl Intent for SpendGamma {
     fn summary(&self) -> String {
         format!(
@@ -798,26 +804,23 @@ impl Intent for SpendGamma {
     ) -> Result<Vec<String>, IntentError> {
         let amount = self.amount_units()?;
         let snapshot = cx.view.pin().await?;
-        if snapshot
-            .storage(
+        let (service, deposit) = futures::try_join!(
+            snapshot.storage(
                 &st::SERVICES,
-                (self.netuid, self.service_hotkey_ss58.account()),
-            )
-            .await?
-            .is_none()
-        {
+                (self.netuid, self.service_hotkey_ss58.account())
+            ),
+            snapshot.call(
+                &rtao_runtime::runtime_apis::gamma_runtime_api::GET_GAMMA_DEPOSIT,
+                (self.netuid, cx.dispatch_origin),
+            ),
+        )?;
+        if service.is_none() {
             return Ok(vec![format!(
                 "{} has no service on netuid {}",
                 self.service_hotkey_ss58, self.netuid
             )]);
         }
-        let Some(info) = snapshot
-            .call(
-                &rtao_runtime::runtime_apis::gamma_runtime_api::GET_GAMMA_DEPOSIT,
-                (self.netuid, cx.dispatch_origin),
-            )
-            .await?
-        else {
+        let Some(info) = deposit else {
             return Ok(vec![format!(
                 "there is no gamma deposit at {} on this subnet",
                 cx.dispatch_origin

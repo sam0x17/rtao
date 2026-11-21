@@ -737,15 +737,72 @@ async fn spend_checks_the_service_and_the_signing_hotkeys_spendable_balance() ->
             ),
             None => assert!(blocks.is_empty(), "{blocks:?}"),
         }
-        if listed {
-            let mut key = NET.0.to_le_bytes().to_vec();
-            key.extend(HOT.0);
-            let key = json!(format!("0x{}", hex::encode(key)));
-            assert!(chain.requests().iter().any(|r| r.method == "state_call"
-                && r.params[0] == "GammaRuntimeApi_get_gamma_deposit"
-                && r.params[1] == key));
-        }
+        let mut input = NET.0.to_le_bytes().to_vec();
+        input.extend(HOT.0);
+        let key = json!(format!("0x{}", hex::encode(input)));
+        assert!(chain.requests().iter().any(|r| r.method == "state_call"
+            && r.params[0] == "GammaRuntimeApi_get_gamma_deposit"
+            && r.params[1] == key));
         client.close().await;
     }
+    Ok(())
+}
+
+#[tokio::test]
+async fn missing_service_does_not_hide_a_failed_deposit_lookup() -> Result<()> {
+    let mut state = state()?;
+    state.set_handler("state_call", |state, request| {
+        if request.params[0] == "GammaRuntimeApi_get_gamma_deposit" {
+            return rtao_testkit::Reply::error(-32602, "deposit lookup refused", None);
+        }
+        state.dispatch(request)
+    });
+    let (client, _) = client(state).await?;
+    let intent = any(
+        "spend_gamma",
+        json!({"netuid":1, "service_hotkey_ss58":OTHER_HOT, "amount_gamma":1}),
+    )?;
+    let error = rtao_tx::Executor::new(client.clone())
+        .preflight_dyn(intent.as_dyn(), &PublicKeys, &Default::default())
+        .await
+        .unwrap_err();
+    client.close().await;
+    assert!(
+        error.to_string().contains("deposit lookup refused"),
+        "{error}"
+    );
+    Ok(())
+}
+
+// pyt: unit/test_gamma.py::TestDepositPreviews::test_move_warns_when_the_destination_has_other_terms
+#[tokio::test]
+async fn moving_the_whole_deposit_reports_closure_and_the_destination_cap() -> Result<()> {
+    let mut state = state()?;
+    seed_deposit(&mut state, deposit(COLD, 2 * RAO, None))?;
+    state.seed_python(
+        "SubtensorModule",
+        "GammaDeposits",
+        &[json!(NET.0), json!(OTHER_HOT)],
+        deposit(COLD, 0, Some(RAO)),
+    )?;
+    let (client, _) = client(state).await?;
+    let executor = rtao_tx::Executor::new(client.clone());
+    for (amount, closes) in [("1", false), ("all", true)] {
+        let intent = any(
+            "move_gamma",
+            json!({"netuid":1, "origin_hotkey_ss58":HOT, "destination_hotkey_ss58":OTHER_HOT, "amount_gamma":amount}),
+        )?;
+        let plan = executor
+            .preflight_dyn(intent.as_dyn(), &PublicKeys, &Default::default())
+            .await?;
+        assert!(plan.blocks.is_empty(), "{:?}", plan.blocks);
+        let mut warnings = Vec::new();
+        if closes {
+            warnings.push("moves the entire balance, which closes the origin deposit");
+        }
+        warnings.push("the moved gamma falls under the destination deposit's daily spend cap, 1 gamma, instead of none");
+        assert_eq!(plan.warnings, warnings);
+    }
+    client.close().await;
     Ok(())
 }
