@@ -2986,10 +2986,10 @@ rs = [
   "crates/rtao/tests/m8_help_theme.rs",
 ]
 kind = "ported"
-synced_blob = "fc8ab506628b2ac956117ba602f0644dad3453c2"
-synced_tag = "v492"
+synced_blob = "b327a7e65000b30bd4e0de9fb6f15e04a2cf1477"
+synced_tag = "v493"
 milestone = "the milestone of the code each tests"
-notes = "v484 source reconciliation: New claim-root factory/default and CSV/JSON subnet options covered by real native schema/CLI tests; full 105-query and 86-intent sample loops retained with exact source identity. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: the sample loop runs every v488 intent sample through the actual CLI dry run with gamma, multisig balance and order-signer seeds (generated_commands::all_86_samples_run_through_actual_cli_json_dry_run_without_private_access)."
+notes = "v484 source reconciliation: New claim-root factory/default and CSV/JSON subnet options covered by real native schema/CLI tests; full 105-query and 86-intent sample loops retained with exact source identity. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488: the sample loop runs every v488 intent sample through the actual CLI dry run with gamma, multisig balance and order-signer seeds (generated_commands::all_86_samples_run_through_actual_cli_json_dry_run_without_private_access). v493: The generated CLI dry-run fixture seeds the selected wallet hotkey separately from the catalog and service hotkeys. It checks the exact subnet and signer in the Gamma deposit runtime API request and verifies zero signer acquisitions and submissions."
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_intent_prompts.py"

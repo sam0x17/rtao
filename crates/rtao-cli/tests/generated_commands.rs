@@ -2,7 +2,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/query.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/stake_picker.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/cli/context.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_cli_commands.py @ 8b407e40988ea7a251abb6dbc07a9ab7d602b740 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_emission_weights.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Generated parser and SDK dispatch exercised with authenticated FakeChain state.
 
@@ -28,7 +28,9 @@ use rtao_signer::{
 use rtao_testkit::{
     FakeChain, FakeState,
     fixtures::{
-        catalog_samples::{COLD, HOT, SUBNET, intent_args, intent_state, literal, read_state},
+        catalog_samples::{
+            COLD, HOT, SUBNET, intent_args, intent_state, literal, read_state, seed_gamma_deposit,
+        },
         decode_fixed_hex,
     },
     rpc::RpcClient,
@@ -71,19 +73,27 @@ impl Terminal for NoTerminal {
 // These table fixtures hold public identities only. A mistaken private
 // acquisition returns an error and increments the sentinel even if a caller
 // were to swallow that error.
-#[derive(Default)]
 struct SamplePublicKeys {
+    hotkey: AccountId,
     acquisitions: AtomicUsize,
+}
+impl SamplePublicKeys {
+    fn new(hotkey: AccountId) -> Self {
+        Self {
+            hotkey,
+            acquisitions: AtomicUsize::new(0),
+        }
+    }
 }
 impl KeyView for SamplePublicKeys {
     fn coldkey_address(&self) -> Result<AccountId, SignerError> {
         Ok(COLD)
     }
     fn hotkey_address(&self) -> Result<AccountId, SignerError> {
-        Ok(HOT)
+        Ok(self.hotkey)
     }
     fn hotkey_public_key(&self) -> Result<[u8; 32], SignerError> {
-        Ok(HOT.0)
+        Ok(self.hotkey.0)
     }
 }
 impl DynKeySource for SamplePublicKeys {
@@ -885,7 +895,7 @@ fn generated_tx_dictionary_option_requires_a_json_object() -> TestResult {
         json!({"quantity":2})
     );
     for raw in ["[]", "null", "1", "not-json"] {
-        let error = schema::coerce(order, raw).expect_err(raw);
+        let error = schema::coerce(order, raw).err().ok_or(raw)?;
         assert_eq!(
             error.message,
             format!(
@@ -906,7 +916,8 @@ fn generated_tx_dictionary_option_requires_a_json_object() -> TestResult {
     for raw in ["3=5%", "3"] {
         assert!(
             schema::coerce(&gamma, raw)
-                .expect_err(raw)
+                .err()
+                .ok_or(raw)?
                 .message
                 .contains("expected a JSON object")
         );
@@ -1125,8 +1136,10 @@ async fn all_source_intent_samples_run_through_actual_cli_json_dry_run_without_p
     let wallet = root.path().join("sample");
     std::fs::create_dir(&wallet)?;
     std::fs::create_dir(wallet.join("hotkeys"))?;
+    let gamma_signer = AccountId([42; 32]);
     for (path, account) in [
         (wallet.join("coldkeypub.txt"), COLD),
+        (wallet.join("hotkeys/gamma"), gamma_signer),
         (wallet.join("hotkeys/sample"), HOT),
     ] {
         std::fs::write(
@@ -1143,7 +1156,13 @@ async fn all_source_intent_samples_run_through_actual_cli_json_dry_run_without_p
             continue;
         }
         let outcome: TestResult = async {
-            let state = intent_state(runtime.clone(), spec.name)?;
+            let mut state = intent_state(runtime.clone(), spec.name)?;
+            let (wallet_hotkey, signer_hotkey) = if spec.name == "spend_gamma" {
+                seed_gamma_deposit(&mut state, gamma_signer, 1_000_000_000)?;
+                ("gamma", gamma_signer)
+            } else {
+                ("sample", HOT)
+            };
             let mut args = intent_args(spec.name, &samples[spec.name])?;
             bind_cli_sample_work(&state, spec.name, &mut args)?;
             let mut argv = vec![
@@ -1153,7 +1172,7 @@ async fn all_source_intent_samples_run_through_actual_cli_json_dry_run_without_p
                 "--wallet".into(),
                 "sample".into(),
                 "--wallet-hotkey".into(),
-                "sample".into(),
+                wallet_hotkey.into(),
                 "--json".into(),
                 "--dry-run".into(),
                 "tx".into(),
@@ -1170,7 +1189,7 @@ async fn all_source_intent_samples_run_through_actual_cli_json_dry_run_without_p
                 leaf(&parsed)?,
                 &mut PromptHistory::default(),
             )?;
-            let keys = SamplePublicKeys::default();
+            let keys = SamplePublicKeys::new(signer_hotkey);
             let hooks = Hooks::default();
             let (client, chain) = client(state).await?;
             let result = generated::execute_tx_with_keys(
@@ -1195,6 +1214,24 @@ async fn all_source_intent_samples_run_through_actual_cli_json_dry_run_without_p
                     .iter()
                     .all(|request| !request.method.starts_with("author_"))
             );
+            if spec.name == "spend_gamma" {
+                let mut lookup = SUBNET.0.to_le_bytes().to_vec();
+                lookup.extend(signer_hotkey.0);
+                let expected = json!(format!("0x{}", hex::encode(lookup)));
+                let lookups: Vec<_> = chain
+                    .requests()
+                    .into_iter()
+                    .filter(|r| {
+                        r.method == "state_call"
+                            && r.params[0] == "GammaRuntimeApi_get_gamma_deposit"
+                    })
+                    .map(|r| r.params[1].clone())
+                    .collect();
+                assert!(
+                    !lookups.is_empty() && lookups.iter().all(|key| key == &expected),
+                    "Gamma signer lookup: {lookups:?}"
+                );
+            }
             if result?.is_some() {
                 return Err("CLI dry-run returned a submitted receipt".into());
             }
@@ -1220,7 +1257,7 @@ async fn all_source_intent_samples_run_through_actual_cli_json_dry_run_without_p
                     leaf(&parsed)?,
                     &mut PromptHistory::default(),
                 )?;
-                let keys = SamplePublicKeys::default();
+                let keys = SamplePublicKeys::new(signer_hotkey);
                 let hooks = Hooks::default();
                 let (human_client, chain) =
                     self::client(intent_state(runtime.clone(), spec.name)?).await?;
@@ -2871,11 +2908,13 @@ fn gamma_spend_alias_prepares_the_service_payment() -> TestResult {
     let removed = command
         .clone()
         .try_get_matches_from(["rtao", "gamma", "set-spender"])
-        .unwrap_err();
+        .err()
+        .ok_or("retired set-spender command was accepted")?;
     assert_eq!(removed.kind(), clap::error::ErrorKind::InvalidSubcommand);
     let batch = command
         .try_get_matches_from(["rtao", "gamma", "spend", "--spend", "service=1.5"])
-        .unwrap_err();
+        .err()
+        .ok_or("retired --spend option was accepted")?;
     assert_eq!(batch.kind(), clap::error::ErrorKind::UnknownArgument);
     Ok(())
 }

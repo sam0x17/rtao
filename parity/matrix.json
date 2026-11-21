@@ -12033,7 +12033,7 @@
           "crates/rtao-cli/tests/generated_commands.rs",
           "crates/rtao/tests/m8_help_theme.rs"
         ],
-        "synced_blob": "fc8ab506628b2ac956117ba602f0644dad3453c2"
+        "synced_blob": "b327a7e65000b30bd4e0de9fb6f15e04a2cf1477"
       },
       {
         "kind": "ported",

@@ -395,6 +395,41 @@ pub fn emission_weights_info(netuid: NetUid) -> Value {
     })
 }
 
+/// Seed a spec 493 Gamma deposit for one hotkey in both storage and its exact
+/// runtime API lookup. A different subnet or hotkey cannot reuse this answer.
+pub fn seed_gamma_deposit(
+    state: &mut FakeState,
+    hotkey: AccountId,
+    balance: u64,
+) -> Result<(), CoreError> {
+    let deposit = json!({"coldkey":COLD.to_string(), "balance":balance, "daily_spend_cap":null});
+    state.seed_python(
+        "SubtensorModule",
+        "GammaDeposits",
+        &[json!(SUBNET.0), json!(hotkey.to_string())],
+        deposit.clone(),
+    )?;
+    let api = "GammaRuntimeApi";
+    let method = "get_gamma_deposit";
+    let signature = rtao_core::ops::runtime_api::runtime_api_method(&state.runtime, api, method)?;
+    let input = rtao_core::ops::runtime_api::encode_params(
+        &state.runtime,
+        api,
+        signature,
+        &[
+            CoreValue::Int(i128::from(SUBNET.0)),
+            CoreValue::Bytes(hotkey.0.to_vec()),
+        ],
+    )?;
+    let info = json!({"netuid":SUBNET.0, "hotkey":hotkey.to_string(), "deposit":deposit, "spendable":balance});
+    let value = crate::fakes::fill_defaults(&state.runtime, signature.output, info)?;
+    let output = state
+        .runtime
+        .encode_spec(&TypeSpec::Id(signature.output), &value)?;
+    state.seed_runtime_encoded(format!("{api}_{method}"), input, output);
+    Ok(())
+}
+
 /// Seed valid native SCALE state for the complete authenticated intent table.
 ///
 /// This holds only public fixture identities; proof binding stays in callers.
@@ -483,28 +518,30 @@ pub fn intent_state(runtime: Arc<Runtime>, op: &str) -> Result<FakeState, CoreEr
         } else {
             1_000_000_000u64
         };
-        for (hotkey, balance) in [(HOT, held), (OTHER_HOT, 0)] {
-            let mut deposit =
-                json!({"coldkey": COLD.to_string(), "balance": balance, "daily_spend_cap": null});
-            if state.runtime.spec_version < 493 {
-                deposit["spender"] = json!(COLD.to_string());
-            } else if op == "spend_gamma" && hotkey == HOT {
-                state.seed_python(
-                    "SubtensorModule",
-                    "Services",
-                    &[json!(SUBNET.0), json!(OTHER_HOT.to_string())],
-                    json!({"url":"https://example.org"}),
-                )?;
-                state.seed_runtime("GammaRuntimeApi", "get_gamma_deposit", json!({
-                    "netuid":SUBNET.0, "hotkey":hotkey.to_string(), "deposit":deposit, "spendable":balance
-                }))?;
-            }
+        if op == "spend_gamma" && state.runtime.spec_version >= 493 {
+            state.seed_runtime("GammaRuntimeApi", "get_gamma_deposit", Value::Null)?;
+            seed_gamma_deposit(&mut state, HOT, held)?;
+            seed_gamma_deposit(&mut state, OTHER_HOT, 0)?;
             state.seed_python(
                 "SubtensorModule",
-                "GammaDeposits",
-                &[json!(SUBNET.0), json!(hotkey.to_string())],
-                deposit,
+                "Services",
+                &[json!(SUBNET.0), json!(OTHER_HOT.to_string())],
+                json!({"url":"https://example.org"}),
             )?;
+        } else {
+            for (hotkey, balance) in [(HOT, held), (OTHER_HOT, 0)] {
+                let mut deposit =
+                    json!({"coldkey":COLD.to_string(), "balance":balance, "daily_spend_cap":null});
+                if state.runtime.spec_version < 493 {
+                    deposit["spender"] = json!(COLD.to_string());
+                }
+                state.seed_python(
+                    "SubtensorModule",
+                    "GammaDeposits",
+                    &[json!(SUBNET.0), json!(hotkey.to_string())],
+                    deposit,
+                )?;
+            }
         }
     }
     if op == "finalize_crowdloan" {
