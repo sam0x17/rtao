@@ -4377,9 +4377,9 @@ notes = "Added by the v491 runtime adoption (D-128): the file is new upstream; i
 
 [[file]]
 py = "sdk/python/tests/unit/test_subnet_convictions.py"
-rs = ["pending: new upstream file at v491, not yet classified or ported"]
+rs = ["crates/rtao-reads/tests/m6_locks.rs"]
 kind = "ported"
-synced_blob = "pending"
-synced_tag = "v491"
-milestone = "port due"
-notes = "Added by the v491 runtime adoption (D-128): the file is new upstream; its kind and Rust home are undecided."
+synced_blob = "f8feb21e939ef834a0a5d97aee412a1b450e1edc"
+synced_tag = "v493"
+milestone = "the milestone of the code each tests"
+notes = "The three D-193 fake-chain tests check the owner hotkey and its locked and conviction balances under three storage layouts. They cover hotkey aggregates alone, both owner maps, and only the perpetual owner map."

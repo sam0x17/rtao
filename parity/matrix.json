@@ -13906,14 +13906,14 @@
       },
       {
         "kind": "ported",
-        "milestone": "port due",
+        "milestone": "the milestone of the code each tests",
         "oracle": "unverified",
         "python": "sdk/python/tests/unit/test_subnet_convictions.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "pending: new upstream file at v491, not yet classified or ported"
+          "crates/rtao-reads/tests/m6_locks.rs"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "f8feb21e939ef834a0a5d97aee412a1b450e1edc"
       }
     ],
     "intents": [
