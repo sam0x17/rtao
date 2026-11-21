@@ -85,14 +85,6 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/executor.py"
-kind = "ported"
-from = "ea6547dfb106fa26bf3a3dc5d2613e5170068b91"
-to = "d2ed00f7bbff3529efc57a847c92fad3901e1b35"
-tag = "v493"
-symbols = ["bittensor.executor.Executor", "bittensor.executor.Executor._submit_shielded_prepared", "bittensor.executor.Executor.execute", "bittensor.executor._gamma_minted_data", "bittensor.executor._gamma_spent_data"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/gamma.py"
 kind = "ported"
 from = "0b48b3352b0580881c2a01549425f5651273e346"

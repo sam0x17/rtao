@@ -2728,6 +2728,103 @@ mod tests {
         atomic::{AtomicUsize, Ordering},
     };
 
+    // Compare actual SCALE event layouts on both sides of the spec 493 change.
+    fn gamma_receipt(
+        metadata: &[u8],
+        spec: u32,
+        event: &str,
+        attributes: Value,
+    ) -> Result<ExtrinsicResult, Box<dyn std::error::Error>> {
+        let runtime = rtao_runtime::RuntimeHandle::parse(metadata, spec, 1, 42)?;
+        let ty = runtime
+            .storage_entry("System", "Events")
+            .ok_or("System.Events")?
+            .value_type;
+        let records = json!([{"phase":"ApplyExtrinsic", "extrinsic_idx":0,
+            "module_id":"SubtensorModule","event_id":event,"attributes":attributes,"topics":[]}]);
+        let fields = rtao_testkit::fakes::fill_defaults(runtime.core(), ty, records)?;
+        let bytes = runtime
+            .core()
+            .encode_spec(&rtao_core::runtime::TypeSpec::Id(ty), &fields)?;
+        let events = rtao_client::Events::decode(runtime, bytes.into())?;
+        Ok(ExtrinsicResult {
+            success: true,
+            message: String::new(),
+            extrinsic_hash: None,
+            block_hash: None,
+            extrinsic_id: None,
+            explorer_url: None,
+            fee: None,
+            events: events.records().to_vec(),
+            error: None,
+            data: Map::new(),
+            output: (),
+            inclusion: Inclusion::Finalized,
+            fate_unknown: None,
+        })
+    }
+
+    #[test]
+    fn gamma_receipt_fields_follow_the_inclusion_runtime() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let hotkey = AccountId([7; 32]);
+        let other = AccountId([8; 32]);
+        for (spec, metadata) in [
+            (
+                492,
+                include_bytes!("../../../vendor/metadata/finney/492.v15.scale").as_slice(),
+            ),
+            (
+                493,
+                include_bytes!("../../../vendor/metadata/finney/493.v15.scale").as_slice(),
+            ),
+        ] {
+            for cap in [None, Some(500_000_000u64)] {
+                let mut attributes = json!({"netuid":1,"hotkey":hotkey,"daily_spend_cap":cap,
+                    "tao":1_000_000_000u64,"alpha":500_000_000u64,"value":250_000_000u64,"gamma":100_000_000_001u64});
+                let mut minted = json!({"hotkey_ss58":hotkey,"daily_spend_cap_gamma":cap.map(|_| "0.5"),
+                    "alpha_burned":"0.5","tao_value":"0.25","gamma":"100.000000001"});
+                if spec == 492 {
+                    attributes["spender"] = json!(other);
+                    minted["spender_ss58"] = json!(other);
+                }
+                let receipt = gamma_receipt(metadata, spec, "GammaMinted", attributes)?;
+                for op in ["mint_gamma", "mint_gamma_with_stake"] {
+                    let mut result = receipt.clone();
+                    semantic_result_data(op, &mut result);
+                    assert_eq!(json!(result.data), json!({"minted":minted}), "{spec} {op}");
+                }
+            }
+            let mut attributes = json!({"netuid":1,"hotkey":hotkey,"amount":500_000_000u64});
+            let reference = format!("0x{}", "ab".repeat(32));
+            if spec == 492 {
+                attributes["spender"] = json!(other);
+                attributes["reference"] = json!(reference);
+            } else {
+                attributes["service"] = json!(other);
+            }
+            let mut result = gamma_receipt(metadata, spec, "GammaSpent", attributes)?;
+            semantic_result_data("spend_gamma", &mut result);
+            if spec == 492 {
+                assert_eq!(
+                    json!(result.data),
+                    json!({"spent":[{"hotkey_ss58":hotkey,
+                    "amount_gamma":"0.5","reference":reference}],"skipped":[]})
+                );
+            } else {
+                assert!(result.data.is_empty());
+                assert!(result.events[0].matches("SubtensorModule", "GammaSpent"));
+            }
+            result.events.clear();
+            result.data.clear();
+            for op in ["spend_gamma", "mint_gamma", "mint_gamma_with_stake"] {
+                semantic_result_data(op, &mut result);
+                assert!(result.data.is_empty());
+            }
+        }
+        Ok(())
+    }
+
     #[test]
     fn gamma_receipt_amounts_and_skip_reasons_follow_python() {
         // Python's Balance.decimal formatted with "f".
