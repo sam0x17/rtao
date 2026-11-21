@@ -12481,15 +12481,14 @@
       },
       {
         "kind": "extracted",
-        "milestone": "port due",
+        "milestone": "M1",
         "oracle": "unverified",
         "python": "pallets/subtensor/src/rpc_info/gamma_info.rs",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
-          "codegen/frozen_models.toml",
-          "rtao_runtime::models (GammaDepositInfo freeze_struct layout tripwire)"
+          "codegen/frozen_models.toml"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "3ec0f4c362eed56c81978ee90720310a9f286ee8"
       },
       {
         "kind": "n/a",
@@ -12596,14 +12595,14 @@
       },
       {
         "kind": "generated",
-        "milestone": "port due",
+        "milestone": "M2",
         "oracle": "unverified",
         "python": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "rtao": "pending",
+        "rtao": "reconciled",
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "pending"
+        "synced_blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57"
       },
       {
         "kind": "ported",

@@ -915,6 +915,16 @@ enum IndependentProducer {
 }
 
 fn independent_producer(row: &Row) -> Result<Option<IndependentProducer>> {
+    // Gamma reads decode the runtime API response by name. Only the frozen
+    // layout hash is extracted from the pallet source.
+    if row.py == "pallets/subtensor/src/rpc_info/gamma_info.rs" {
+        ensure!(
+            row.kind == "extracted" && row.rs == ["codegen/frozen_models.toml"],
+            "{}: Gamma deposit layout requires its exact frozen model snapshot home",
+            row.py
+        );
+        return Ok(Some(IndependentProducer::Metadata));
+    }
     let frozen_model = match row.py.as_str() {
         "pallets/subtensor/src/rpc_info/basket_info.rs" => Some("basket_info"),
         "pallets/subtensor/src/rpc_info/delegate_info.rs" => Some("delegate_info"),
@@ -968,6 +978,7 @@ fn independent_producer(row: &Row) -> Result<Option<IndependentProducer>> {
         "ethereum",
         "evm",
         "grandpa",
+        "hashed_accounts",
         "limit_orders",
         "mev_shield",
         "multisig",
@@ -1481,6 +1492,11 @@ mod tests {
             independent_producer(&descriptions)?,
             Some(IndependentProducer::Descriptions)
         );
+        descriptions.py = "sdk/python/bittensor/error_descriptions/hashed_accounts.py".into();
+        assert_eq!(
+            independent_producer(&descriptions)?,
+            Some(IndependentProducer::Descriptions)
+        );
         descriptions.rs = vec!["rtao_catalog::unreviewed".into()];
         assert!(independent_producer(&descriptions).is_err());
         descriptions.py = "sdk/python/bittensor/error_descriptions/new_unreviewed.py".into();
@@ -1497,6 +1513,13 @@ mod tests {
         );
         frozen.rs[0] = "codegen/unreviewed_models.toml".into();
         assert!(independent_producer(&frozen).is_err());
+        frozen.py = "pallets/subtensor/src/rpc_info/gamma_info.rs".into();
+        assert!(independent_producer(&frozen).is_err());
+        frozen.rs = vec!["codegen/frozen_models.toml".into()];
+        assert_eq!(
+            independent_producer(&frozen)?,
+            Some(IndependentProducer::Metadata)
+        );
         frozen.py = "pallets/subtensor/src/rpc_info/unreviewed.rs".into();
         assert_eq!(independent_producer(&frozen)?, None);
         Ok(())

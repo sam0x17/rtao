@@ -3333,12 +3333,12 @@ notes = "v484 source reconciliation: Import exact release catalog and regenerate
 
 [[file]]
 py = "pallets/subtensor/src/rpc_info/gamma_info.rs"
-rs = ["codegen/frozen_models.toml", "rtao_runtime::models (GammaDepositInfo freeze_struct layout tripwire)"]
+rs = ["codegen/frozen_models.toml"]
 kind = "extracted"
-synced_blob = "pending"
-synced_tag = "v488"
-milestone = "port due"
-notes = "Classified 2026-11-08 (D-155): GammaDepositInfo is a frozen model (codegen/frozen_models.toml) read by the gamma_deposit(s) reads."
+synced_blob = "3ec0f4c362eed56c81978ee90720310a9f286ee8"
+synced_tag = "v493"
+milestone = "M1"
+notes = "The v493 GammaDepositInfo layout hash (668aa00c4a8f9a0a) matches codegen/frozen_models.toml. The SDK reads the deposit and spendable balance returned by the runtime and delegates both mint simulations to GammaRuntimeApi."
 
 [[file]]
 py = "sdk/bittensor-core/src/keys/falcon.rs"
@@ -3425,10 +3425,10 @@ notes = "Classified 2026-11-09 (D-156): public-only address fields (the receivin
 py = "sdk/python/bittensor/error_descriptions/hashed_accounts.py"
 rs = ["`rtao_catalog::CHAIN_ERRORS` (description field)"]
 kind = "generated"
-synced_blob = "pending"
-synced_tag = "v488"
-milestone = "port due"
-notes = "Classified 2026-11-08 (D-155): HashedAccounts error descriptions, extracted with the other error_descriptions modules."
+synced_blob = "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57"
+synced_tag = "v493"
+milestone = "M2"
+notes = "All 13 v493 source names and descriptions match the extracted records and the generated CHAIN_ERRORS entries. Each extracted record identifies the pinned source blob and commit."
 
 [[file]]
 py = "sdk/python/bittensor/hashed.py"
