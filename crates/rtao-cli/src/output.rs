@@ -2249,7 +2249,7 @@ pub(crate) fn record_list(value: &Value) -> Option<&[Value]> {
 }
 
 // py: sdk/python/bittensor/cli/output.py:225-236
-/// Python v488 `record_rows`: a list of records (spend entries) as one card
+/// Python `record_rows`: a list of records as one card
 /// row per record, `label 1`, `label 2`, ..., each `key value` pair in order.
 pub fn record_rows(
     label: &str,

@@ -21,14 +21,6 @@ tag = "v493"
 symbols = []
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/gamma.py"
-kind = "ported"
-from = "cd8e254744312effe8513e86743517e2def3d7b5"
-to = "74d16db5c1f99f9191bb8c0816cd451d19748fa5"
-tag = "v493"
-symbols = ["bittensor.cli.commands.gamma.SpendGamma", "bittensor.cli.commands.gamma.guide_docs_url", "bittensor.cli.commands.gamma.list_deposits", "bittensor.cli.commands.gamma.query_docs_url", "bittensor.cli.commands.gamma.show_deposit", "bittensor.cli.commands.gamma.spend", "bittensor.cli.commands.gamma.tx_docs_url", "bittensor.cli.commands.gamma.with_globals", "bittensor.cli.commands.gamma.with_tx_globals"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/proxy.py"
 kind = "ported"
 from = "805279ee0c84b2162d372ac03f002b91d3aa516b"
@@ -69,14 +61,6 @@ tag = "v491"
 symbols = ["bittensor.cli.globals._TX_FLOW", "bittensor.cli.globals.apply", "bittensor.cli.globals.parse_controller_refill"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/intent_prompts.py"
-kind = "ported"
-from = "1af00aa98cf5c3f7f54f930f22ab025464d7216d"
-to = "84226b43f0eb3e3763a0652c58e8180b9e008cde"
-tag = "v493"
-symbols = ["bittensor.cli.intent_prompts._POLICIES"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/main.py"
 kind = "ported"
 from = "ca4ee4e650e99e1fe09623aeef1fdad276aeb56b"
@@ -91,14 +75,6 @@ from = "181554458baf46525826a6e1b83d43594de87c1d"
 to = "5eab9cd6e10c6faf71b37a5ab932fe328c680aa1"
 tag = "v491"
 symbols = ["bittensor.cli.multisig_helpers._PROXY_ANNOUNCEMENT_FEE_PAYER_OPS", "bittensor.cli.multisig_helpers.announcement_cancel_completed", "bittensor.cli.multisig_helpers.build_pending_followup", "bittensor.cli.multisig_helpers.multisig_approval_only", "bittensor.cli.multisig_helpers.wrap_intent_for_multisig_wallet"]
-
-[[file]]
-py = "sdk/python/bittensor/cli/output.py"
-kind = "ported"
-from = "d488940b2cfec05fc35c6c2aeefbf6f4c2578066"
-to = "f8c0057428bf03fcc7f66ca288eb7a926ef02050"
-tag = "v493"
-symbols = ["bittensor.cli.output.record_rows"]
 
 [[file]]
 py = "sdk/python/bittensor/cli/root_helpers.py"

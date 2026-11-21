@@ -2832,6 +2832,55 @@ fn factory_backed_cli_defaults_are_fresh_per_parse() -> TestResult {
 }
 
 #[test]
+fn gamma_spend_alias_prepares_the_service_payment() -> TestResult {
+    let command =
+        application::command_tree([commands::gamma::command()?, generated::tx_command()?]);
+    let service = HOT.to_string();
+    let options = [
+        "--netuid",
+        "1",
+        "--service-hotkey",
+        &service,
+        "--amount",
+        "1.5",
+    ];
+    let parse = |route: [&str; 3]| {
+        command
+            .clone()
+            .try_get_matches_from(route.into_iter().chain(options))
+    };
+    let alias = parse(["rtao", "gamma", "spend"])?;
+    let group = alias.subcommand_matches("gamma").ok_or("gamma")?;
+    let (mut ctx, _) = context(&alias, &commands::gamma::reserved(group)?)?;
+    let [payment] = commands::gamma::tx_requests(&mut ctx, group, &mut PromptHistory::default())?
+        .try_into()
+        .map_err(|_: Vec<_>| "expected one payment")?;
+    let canonical = parse(["rtao", "tx", "spend-gamma"])?;
+    let (mut ctx, _) = context(&canonical, &generated::intent_reserved("spend_gamma")?)?;
+    let tx = TxRequest::from_matches(
+        &mut ctx,
+        "spend_gamma",
+        leaf(&canonical)?,
+        &mut PromptHistory::default(),
+    )?;
+    assert_eq!(payment.op, tx.op);
+    assert_eq!(payment.args, tx.args);
+    assert_eq!(payment.args["service_hotkey_ss58"], json!(service));
+    assert_eq!(payment.args["amount_gamma"], json!("1.5"));
+    assert_eq!(payment.intent()?.to_json(), tx.intent()?.to_json());
+    let removed = command
+        .clone()
+        .try_get_matches_from(["rtao", "gamma", "set-spender"])
+        .unwrap_err();
+    assert_eq!(removed.kind(), clap::error::ErrorKind::InvalidSubcommand);
+    let batch = command
+        .try_get_matches_from(["rtao", "gamma", "spend", "--spend", "service=1.5"])
+        .unwrap_err();
+    assert_eq!(batch.kind(), clap::error::ErrorKind::UnknownArgument);
+    Ok(())
+}
+
+#[test]
 fn gamma_amounts_take_the_bare_alias() -> TestResult {
     for name in ["move_gamma", "spend_gamma"] {
         let spec = rtao_catalog::INTENTS

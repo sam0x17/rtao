@@ -768,11 +768,8 @@ fn required_wallet_tier(path: &[String]) -> Option<&'static str> {
         | ["misc", "weights", "set" | "commit" | "reveal"]
         | ["misc", "axon", "set" | "reset"]
         | ["misc", "collateral", "add" | "set-min"]
-        | [
-            "gamma",
-            "mint" | "mint-with-stake" | "move" | "close" | "set-spender" | "set-cap" | "spend",
-        ]
         | ["evm", "associate"] => Some("tx"),
+        ["gamma", name] if crate::commands::gamma::intent_op(name).is_some() => Some("tx"),
         _ => None,
     }
 }

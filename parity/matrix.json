@@ -9889,7 +9889,7 @@
           "crates/rtao-cli/src/intent_prompts.rs",
           "crates/rtao-cli/src/commands/generated.rs"
         ],
-        "synced_blob": "1af00aa98cf5c3f7f54f930f22ab025464d7216d"
+        "synced_blob": "84226b43f0eb3e3763a0652c58e8180b9e008cde"
       },
       {
         "kind": "ported",
@@ -9968,7 +9968,7 @@
           "crates/rtao-cli/src/output.rs",
           "rtao_cli::commands specialized human renderers"
         ],
-        "synced_blob": "d488940b2cfec05fc35c6c2aeefbf6f4c2578066"
+        "synced_blob": "f8c0057428bf03fcc7f66ca288eb7a926ef02050"
       },
       {
         "kind": "ported",
@@ -12569,7 +12569,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/gamma.rs"
         ],
-        "synced_blob": "cd8e254744312effe8513e86743517e2def3d7b5"
+        "synced_blob": "74d16db5c1f99f9191bb8c0816cd451d19748fa5"
       },
       {
         "kind": "ported",

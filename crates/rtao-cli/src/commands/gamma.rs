@@ -86,7 +86,7 @@ pub fn command() -> Result<Command, CliError> {
     Ok(group)
 }
 
-fn intent_op(name: &str) -> Option<&'static str> {
+pub(crate) fn intent_op(name: &str) -> Option<&'static str> {
     INTENT_COMMANDS
         .iter()
         .find(|(alias, _)| *alias == name)
