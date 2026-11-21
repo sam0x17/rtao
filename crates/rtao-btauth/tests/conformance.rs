@@ -2002,7 +2002,12 @@ fn trusted_sender_schemes_fail_closed_and_bind_the_declared_scheme() -> TestResu
             "declared signature scheme does not match the trusted sender scheme".into(),
         ),
     )?;
-    unconfigured.configure_verifier([(sender_text, 1)])?;
+    assert!(
+        unconfigured
+            .authenticate_expecting(&request, &Method::POST, TARGET, BODY, NOW, Some(1))
+            .is_ok()
+    );
+    unconfigured.configure_verifier([(sender_text.clone(), 1)])?;
     assert!(
         unconfigured
             .authenticate(&request, &Method::POST, TARGET, BODY, NOW)
@@ -2010,7 +2015,7 @@ fn trusted_sender_schemes_fail_closed_and_bind_the_declared_scheme() -> TestResu
     );
     assert!(
         unconfigured
-            .configure_verifier([("x".to_owned(), 8)])
+            .configure_verifier([(sender_text, 0), ("x".to_owned(), 8)])
             .is_err()
     );
     assert!(
@@ -2018,6 +2023,9 @@ fn trusted_sender_schemes_fail_closed_and_bind_the_declared_scheme() -> TestResu
             .configure_verifier([(String::new(), 1)])
             .is_err()
     );
+    // A rejected refresh preserves the entire last valid mapping.
+    unconfigured.authenticate(&request, &Method::POST, TARGET, BODY, NOW)?;
+    unconfigured.clear_verifier();
     unconfigured.clear_verifier();
     assert!(
         unconfigured

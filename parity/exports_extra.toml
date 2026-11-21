@@ -1930,31 +1930,41 @@ pinning_tests = [
 
 [[export]]
 python = "bittensor.http_auth.clear_verifier"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_btauth::Verifier::clear_verifier"
+reason = "Each Verifier owns its receiver's configuration. Clearing it is idempotent. Subsequent requests require an explicit expected scheme until the verifier is configured again."
 source = "sdk/python/bittensor/http_auth.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_btauth::conformance::trusted_sender_schemes_fail_closed_and_bind_the_declared_scheme",
+]
 
 [[export]]
 python = "bittensor.http_auth.configure_verifier"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_btauth::Verifier::configure_verifier"
+reason = "Each Verifier owns its receiver's sender map. It validates the complete replacement before publishing it. An explicit per-request expected scheme takes precedence."
 source = "sdk/python/bittensor/http_auth.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_btauth::conformance::trusted_sender_schemes_fail_closed_and_bind_the_declared_scheme",
+]
 
 [[export]]
 python = "bittensor.intents.AuthorizeOrder"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::AuthorizeOrder"
+reason = "The limit_orders feature exposes owner approval of complete terms and their nonce. The planner checks the coldkey origin and any supplied pinned order bytes."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_intents::authority_execution::authority_owners_approve_cancel_and_relay_account_approved_orders",
+  "rtao_intents::limit_orders::tests::owner_orders_validate_summarize_and_scope_their_subnet",
+]
 
 [[export]]
 python = "bittensor.intents.CancelOrder"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::CancelOrder"
+reason = "The limit_orders feature exposes owner cancellation with the nonce and complete terms. The intent composes LimitOrders.cancel_order and declares no spend."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_intents::authority_execution::authority_owners_approve_cancel_and_relay_account_approved_orders",
+  "rtao_intents::limit_orders::tests::owner_orders_validate_summarize_and_scope_their_subnet",
+]
 
 [[export]]
 python = "bittensor.intents.CloseGammaDeposit"
@@ -1968,17 +1978,23 @@ pinning_tests = [
 
 [[export]]
 python = "bittensor.intents.ExecuteBatchedOrders"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::ExecuteBatchedOrders"
+reason = "The limit_orders feature exposes atomic netting. All orders must name the selected non-root subnet and the intent requires should_fail to be true."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_intents::authority_execution::authority_owners_approve_cancel_and_relay_account_approved_orders",
+  "rtao_intents::limit_orders::tests::netted_batches_are_atomic_and_share_one_subnet",
+]
 
 [[export]]
 python = "bittensor.intents.ExecuteOrders"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::ExecuteOrders"
+reason = "The limit_orders feature exposes relay of classical and account-approved orders, their partial fills and the caller’s should_fail setting. The validator permits at most eight account-approved orders."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_intents::authority_execution::authority_owners_approve_cancel_and_relay_account_approved_orders",
+  "rtao_intents::limit_orders::tests::signed_orders_follow_python_authorization_rules",
+]
 
 [[export]]
 python = "bittensor.intents.MintGamma"

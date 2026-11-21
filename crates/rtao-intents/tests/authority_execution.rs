@@ -184,12 +184,30 @@ async fn authority_owners_approve_cancel_and_relay_account_approved_orders() -> 
             "execute_batched_orders",
             json!({"orders": [prepared.account_approved(None)], "netuid": 1}),
         )?;
-        for intent in [&approve, &cancel, &relay, &netted] {
+        for (intent, function) in [
+            (&approve, "authorize_order"),
+            (&cancel, "cancel_order"),
+            (&relay, "execute_orders"),
+            (&netted, "execute_batched_orders"),
+        ] {
             let plan = executor
                 .plan_dyn(intent.as_dyn(), &keys, &PlanOptions::default())
                 .await?;
             assert!(plan.ok(), "{crypto}: {:?}", plan.violations);
             assert_eq!(plan.signer_address, owner);
+            let call = runtime.core().decode_spec(
+                &rtao_core::runtime::TypeSpec::Call,
+                plan.call().as_bytes(),
+                true,
+            )?;
+            assert_eq!(
+                call.field("call_module").and_then(ValueExt::as_str),
+                Some("LimitOrders")
+            );
+            assert_eq!(
+                call.field("call_function").and_then(ValueExt::as_str),
+                Some(function)
+            );
         }
         // The owner's approval is an authorized extrinsic carrying the pinned
         // terms (prepared bytes) and the owner's account.

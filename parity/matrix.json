@@ -7270,7 +7270,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.AuthorizeOrder",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7288,7 +7288,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.CancelOrder",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7366,13 +7366,13 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ExecuteBatchedOrders",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
         "oracle": "unverified",
         "python": "bittensor.intents.ExecuteOrders",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
