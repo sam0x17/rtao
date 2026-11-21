@@ -433,13 +433,14 @@ pub const PREFLIGHT_STORAGE: [rtao_runtime::StorageSurface; 17] = [
 /// When an entry's compiled shape no longer matches, these reads and the
 /// preflight's resolve it by name against live metadata and decode the same
 /// values, or refuse that entry alone when its meaning changed (D-089).
-pub const RUN_PATH_STORAGE: [rtao_runtime::StorageSurface; 6] = [
+pub const RUN_PATH_STORAGE: [rtao_runtime::StorageSurface; 7] = [
     st::MECHANISM_COUNT_CURRENT.surface(),
     st::ACTIVITY_CUTOFF_FACTOR_MILLI.surface(),
     st::STAKE_THRESHOLD.surface(),
     st::SUBNET_OWNER_HOTKEY.surface(),
     st::TIMELOCKED_WEIGHT_COMMITS.surface(),
     rtao_runtime::storage::drand::LAST_STORED_ROUND.surface(),
+    st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY.surface(),
 ];
 
 /// Constants the validator run path reads with typed, shape-checked reads.
@@ -554,9 +555,15 @@ impl ValidatorSurface {
             .iter()
             .map(|call| crate::runtime::call_identity(call))
             .collect::<Vec<_>>();
-        let typed = PREFLIGHT_STORAGE
+        let storage_reads = PREFLIGHT_STORAGE
             .iter()
             .chain(&RUN_PATH_STORAGE)
+            .filter(|s| {
+                s.name != st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY.surface().name
+                    || !legacy_yuma_commit_cap(runtime)
+            });
+        let typed = storage_reads
+            .clone()
             .map(|storage| format!("storage:{}.{}", storage.pallet, storage.name))
             .chain(
                 RUN_PATH_CONSTANTS
@@ -581,7 +588,7 @@ impl ValidatorSurface {
                 ),
             });
         };
-        for storage in PREFLIGHT_STORAGE.iter().chain(&RUN_PATH_STORAGE) {
+        for storage in storage_reads {
             let id = format!("storage:{}.{}", storage.pallet, storage.name);
             match reads::route(runtime, storage) {
                 Ok(reads::Route::Compiled) => {}
@@ -697,6 +704,12 @@ fn metagraph_api_usable(runtime: &rtao_runtime::RuntimeHandle) -> Result<(), Str
     runtime_api::encode_params(runtime.core(), METAGRAPH_API.api, method, &sample)
         .map(|_| ())
         .map_err(|error| format!("runtime API inputs no longer encode: {error}"))
+}
+
+// Before Finney 493 the Yuma queue enforced ten in the pallet itself.
+fn legacy_yuma_commit_cap(runtime: &rtao_runtime::RuntimeHandle) -> bool {
+    let cap = st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY.surface();
+    runtime.spec_version() < 493 && runtime.storage_entry(cap.pallet, cap.name).is_none()
 }
 
 /// The seventeen storage fields used by one mechanism's preflight.
@@ -825,6 +838,48 @@ impl WeightPreflight {
                 current_block: snapshot.block().number,
             },
         })
+    }
+
+    /// Check Yuma's per-hotkey queue at the same best block as this preflight.
+    /// Inclusion can land in a different epoch. The chain checks admission again.
+    async fn check_yuma_commit(
+        &self,
+        snapshot: &Snapshot,
+        netuid: NetUid,
+        mech: MechId,
+        hotkey: AccountId,
+    ) -> anyhow::Result<()> {
+        if self.null_consensus || !self.commit_reveal {
+            return Ok(());
+        }
+        let cap = if legacy_yuma_commit_cap(&self.at.runtime) {
+            10
+        } else {
+            reads::storage(snapshot, &st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY, (netuid,)).await?
+        };
+        let epoch = rtao_core::timelock::epoch_schedule::current_epoch_pre_run_coinbase(
+            &self.schedule,
+            self.at.number,
+        );
+        let count = if cap == 0 {
+            0
+        } else {
+            let index = NetUidStorageIndex::new(netuid, mech)?;
+            let queue =
+                reads::storage(snapshot, &st::TIMELOCKED_WEIGHT_COMMITS, (index, epoch)).await?;
+            queue.iter().filter(|(who, _, _, _)| *who == hotkey).count()
+        };
+        if count >= usize::from(cap) {
+            return Err(refuse(
+                rtao_catalog::ErrorCode::LimitExceeded,
+                "TooManyUnrevealedCommits",
+                format!(
+                    "Yuma timelocked commit cap {cap} reached on subnet {} mechanism {} in epoch {epoch}; recheck the subnet cap and epoch queue before submitting",
+                    netuid.0, mech.0
+                ),
+            ));
+        }
+        Ok(())
     }
 
     /// Check certain registration, Null permit and weight version-key
@@ -1137,7 +1192,8 @@ impl WeightScheduler {
     pub fn last_attempt(&self, mechanism: MechId) -> Option<&WeightAttempt> {
         self.attempts.get(&mechanism)
     }
-    /// Inspect scheduling using a fresh coherent preflight, without submitting.
+    /// Inspect cadence and retained work using a fresh coherent preflight.
+    /// A ready timelocked attempt still checks the current Yuma epoch queue before signing.
     /// Recompute after every relevant parameter change; this is not a future
     /// chain guarantee or a replacement for runtime/policy/semantic checks.
     pub fn next_action(
@@ -1894,6 +1950,9 @@ impl WeightScheduler {
         let block_time = snapshot_slot_duration(&cx.client, &preflight.at).await?;
         let mut commit = None;
         if preflight.commit_reveal {
+            preflight
+                .check_yuma_commit(&at, cx.netuid, mech, hotkey)
+                .await?;
             self.anchor_clock(cx, &preflight.at, pinned).await;
             self.clock_guard.check(self.clock.as_ref())?;
             let committer = TimelockCommitter::new(if preflight.null_consensus {
@@ -2054,6 +2113,9 @@ impl WeightScheduler {
                     }
                     block_time = snapshot_slot_duration(&cx.client, &state.at).await?;
                     commit = if state.commit_reveal {
+                        state
+                            .check_yuma_commit(&fresh, cx.netuid, mech, hotkey)
+                            .await?;
                         self.anchor_clock(cx, &state.at, fresh_pinned).await;
                         self.clock_guard.check(self.clock.as_ref())?;
                         Some(

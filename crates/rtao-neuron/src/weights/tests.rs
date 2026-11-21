@@ -170,6 +170,74 @@ async fn finality_lag_three_preflight_uses_best_state_in_one_seventeen_key_rpc()
 }
 
 #[tokio::test]
+async fn yuma_admission_counts_only_this_hotkey_mechanism_and_epoch() -> anyhow::Result<()> {
+    let net = NetUid(1);
+    let mech = MechId(0);
+    let other = AccountId([8; 32]);
+    let mut fixture = fixture_state()?;
+    fixture.seed(&st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY, (net,), 2u8)?;
+    fixture.seed(
+        &st::TIMELOCKED_WEIGHT_COMMITS,
+        (NetUidStorageIndex::new(net, mech)?, 5u64),
+        vec![
+            (HOTKEY, 98u64, vec![1u8], 20u64),
+            (other, 99, vec![2], 21),
+            (HOTKEY, 100, vec![3], 22),
+        ],
+    )?;
+    let chain = FakeChain::from_state(fixture);
+    let client = Client::from_rpc(RpcClient::new(chain), fixture_config()?).await?;
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, net, mech, HOTKEY).await?;
+    let full = state
+        .check_yuma_commit(&best, net, mech, HOTKEY)
+        .await
+        .expect_err("hotkey has already filled its epoch queue");
+    assert_eq!(
+        full.downcast::<WeightRefusal>()?.name,
+        "TooManyUnrevealedCommits"
+    );
+    state.check_yuma_commit(&best, net, mech, other).await?;
+    state
+        .check_yuma_commit(&best, net, MechId(1), HOTKEY)
+        .await?;
+    // On a deferred fire block the same stored counter selects the following epoch.
+    state.schedule.pending_epoch_at = state.at.number;
+    state.check_yuma_commit(&best, net, mech, HOTKEY).await?;
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn zero_yuma_cap_refuses_an_empty_queue_and_skips_direct_and_null() -> anyhow::Result<()> {
+    let net = NetUid(1);
+    let mech = MechId(0);
+    let mut fixture = fixture_state()?;
+    fixture.seed(&st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY, (net,), 0u8)?;
+    let chain = FakeChain::from_state(fixture);
+    let client = Client::from_rpc(RpcClient::new(chain.clone()), fixture_config()?).await?;
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, net, mech, HOTKEY).await?;
+    let error = state
+        .check_yuma_commit(&best, net, mech, HOTKEY)
+        .await
+        .expect_err("zero capacity prevents the first commit");
+    assert_eq!(
+        error.downcast::<WeightRefusal>()?.code,
+        rtao_catalog::ErrorCode::LimitExceeded
+    );
+    let calls = chain.requests().len();
+    state.null_consensus = true;
+    state.check_yuma_commit(&best, net, mech, HOTKEY).await?;
+    state.null_consensus = false;
+    state.commit_reveal = false;
+    state.check_yuma_commit(&best, net, mech, HOTKEY).await?;
+    assert_eq!(chain.requests().len(), calls);
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn preflight_distinguishes_null_refusal_yuma_warning_and_upgrade_gates() -> anyhow::Result<()>
 {
     let (_, client) = fixture().await?;
@@ -1616,6 +1684,24 @@ mod validator_surface {
                 .expect("failure line");
             assert!(line.contains("name-resolved read refused"), "{line}");
             assert!(line.contains(reason), "{line}");
+        }
+    }
+
+    #[test]
+    fn missing_yuma_cap_uses_the_fixed_limit_only_before_493() {
+        let entry = "storage:SubtensorModule.MaxTimelockedCommitsPerHotkey";
+        for (version, legacy) in [(492, true), (493, false)] {
+            let mut core = pinned();
+            core.spec_version = version;
+            core.pallets
+                .iter_mut()
+                .find(|p| p.name == "SubtensorModule")
+                .expect("pinned SubtensorModule")
+                .storage
+                .retain(|entry| entry.name != "MaxTimelockedCommitsPerHotkey");
+            let runtime = handle(core);
+            assert_eq!(super::super::legacy_yuma_commit_cap(&runtime), legacy);
+            assert_eq!(fails_on(&ValidatorSurface::check(&runtime), entry), !legacy);
         }
     }
 

@@ -73,7 +73,7 @@ pub const TIMELOCKED_COMMIT_FIELDS: &[ReadField] = &[
 /// Name-resolved form of every validator run-path storage read: the
 /// `weights::PREFLIGHT_STORAGE` entries followed by the
 /// `weights::RUN_PATH_STORAGE` entries, in the same order.
-pub const VALIDATOR_READS: [ResolvedStorage; 23] = [
+pub const VALIDATOR_READS: [ResolvedStorage; 24] = [
     ResolvedStorage {
         pallet: SUBTENSOR,
         name: "Uids",
@@ -112,6 +112,7 @@ pub const VALIDATOR_READS: [ResolvedStorage; 23] = [
         presence: ReadPresence::Default,
     },
     global("Drand", "LastStoredRound", ReadClass::Uint(64)),
+    subnet("MaxTimelockedCommitsPerHotkey", ReadClass::Uint(8)),
 ];
 
 /// Name-resolved form of the chain-clock read: `Timestamp.Now`, in
@@ -250,6 +251,7 @@ macro_rules! uint_datum {
 }
 
 uint_datum!(
+    u8 => |value: u8| value,
     u16 => |value: u16| value,
     u32 => |value: u32| value,
     u64 => |value: u64| value,

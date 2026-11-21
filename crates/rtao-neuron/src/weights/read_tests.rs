@@ -187,6 +187,7 @@ async fn by_name_reads_equal_compiled_reads_on_the_pinned_runtime() -> anyhow::R
         state.seed(&st::MECHANISM_COUNT_CURRENT, (NetUid(1),), MechId(2))?;
         state.seed(&st::ACTIVITY_CUTOFF_FACTOR_MILLI, (NetUid(1),), 1_500u32)?;
         state.seed(&st::STAKE_THRESHOLD, (), 5u64)?;
+        state.seed(&st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY, (NetUid(1),), 3u8)?;
         state.seed_typed("SubtensorModule", "SubnetOwnerHotkey", (NetUid(1),), HOTKEY)?;
         state.seed(
             &st::TIMELOCKED_WEIGHT_COMMITS,
@@ -273,6 +274,9 @@ async fn by_name_reads_equal_compiled_reads_on_the_pinned_runtime() -> anyhow::R
         assert_eq!(compiled, reads::fetch_by_name(&best, queue()).await?);
     }
     let round = || rtao_runtime::storage::drand::LAST_STORED_ROUND.at(());
+    let cap = || st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY.at((NetUid(1),));
+    assert_eq!(reads::fetch(&best, cap()).await?, 3);
+    assert_eq!(reads::fetch_by_name(&best, cap()).await?, 3);
     assert_eq!(reads::fetch(&best, round()).await?, 499);
     assert_eq!(reads::fetch_by_name(&best, round()).await?, 499);
     let version = || st::COMMIT_REVEAL_WEIGHTS_VERSION.at(());

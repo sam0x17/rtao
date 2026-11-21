@@ -1006,6 +1006,41 @@ async fn own_uid_change_after_the_snapshot_is_decided_at_the_dispatch_block() ->
     Ok(())
 }
 
+#[tokio::test]
+async fn queued_yuma_row_waits_for_capacity_before_signing() -> anyhow::Result<()> {
+    let cap = &super::super::st::MAX_TIMELOCKED_COMMITS_PER_HOTKEY;
+    let (lab, cx, account) = owner_lab("yuma-cap", |state| {
+        state.seed(cap, (NetUid(1),), 0u8)?;
+        Ok(())
+    })
+    .await?;
+    queue_model(&lab, account);
+    let mut scheduler = durable(&lab, account)?;
+    scheduler.enqueue("capped", None, MechId(0), by_uid(&[(1, 1.0)]))?;
+    drive(&mut scheduler, &lab, &cx, 4, |_| {
+        panic!("row already queued")
+    })
+    .await?;
+    assert!(
+        matches!(outcome(&scheduler), WeightAttemptOutcome::Refused(r) if r.name == "TooManyUnrevealedCommits")
+    );
+    assert_eq!(lab.authors(), 0);
+    let binding = lab.journal().unwrap().bind("capped")?;
+    assert!(binding.record()?.attempts.is_empty());
+    assert_eq!(lab.signer.signatures(), 0);
+
+    lab.node
+        .mutate_state(|state| state.seed(cap, (NetUid(1),), 1u8))?;
+    until_queued_authored(&mut scheduler, &lab, &cx).await?;
+    assert!(submitted(&scheduler));
+    let submitted = binding.record()?;
+    assert_eq!(submitted.shield_pairs.len(), 1);
+    assert_eq!(submitted.attempts.len(), 2);
+    assert_eq!(lab.authors(), 1);
+    close_cr_lab(scheduler, lab, cx).await;
+    Ok(())
+}
+
 /// A queued row's weight version below the chain's `WeightsVersionKey` is
 /// refused before anything is signed, as `IncorrectWeightVersionKey`
 /// (`invalid_argument`) carrying the observed key and block. The version is

@@ -5,14 +5,6 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "pallets/subtensor/src/subnets/weights.rs"
-kind = "ported"
-from = "2f8569bc0a877de50d478ef46489f2966398b48e"
-to = "9ea06ff70d143f238e50fa6d270df4276d5fa6f6"
-tag = "v493"
-symbols = []
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/proxy.py"
 kind = "ported"
 from = "805279ee0c84b2162d372ac03f002b91d3aa516b"
