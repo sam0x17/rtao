@@ -9063,7 +9063,7 @@
         "rust": [
           "guarded by `core-surface` and `staged --check` (§1.6, §1.9)"
         ],
-        "synced_blob": "35ecd6602e71a1619b220ad8656ef5d6aae57902"
+        "synced_blob": "d74a9cfaf8c2a08f5ff82d82c169b4f9bdc7dc5a"
       },
       {
         "kind": "n/a",

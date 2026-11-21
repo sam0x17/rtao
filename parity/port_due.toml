@@ -13,14 +13,6 @@ tag = "v493"
 symbols = []
 
 [[file]]
-py = "sdk/bittensor-core/tests/e2e.rs"
-kind = "n/a"
-from = "35ecd6602e71a1619b220ad8656ef5d6aae57902"
-to = "d74a9cfaf8c2a08f5ff82d82c169b4f9bdc7dc5a"
-tag = "v493"
-symbols = []
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/proxy.py"
 kind = "ported"
 from = "805279ee0c84b2162d372ac03f002b91d3aa516b"

@@ -701,10 +701,10 @@ notes = "Source reconciliation 2026-10-15: retained source blob authenticated ag
 py = "sdk/bittensor-core/tests/e2e.rs"
 rs = ["guarded by `core-surface` and `staged --check` (§1.6, §1.9)"]
 kind = "n/a"
-synced_blob = "35ecd6602e71a1619b220ad8656ef5d6aae57902"
-synced_tag = "v492"
+synced_blob = "d74a9cfaf8c2a08f5ff82d82c169b4f9bdc7dc5a"
+synced_tag = "v493"
 milestone = "M0"
-notes = "v482 source mapping 2026-10-22: Announcement sample sends cleartext V2 and compares a destination-and-policy commitment. Maintained source/staged checks cover the core test surface; actual coldkey lifecycle remains deferred under Q30. The core dependency stays v478 with the existing patch; these are parity-pin test inputs, not a core dependency upgrade. Consumers: xtask/src/core_surface.rs; xtask/src/staged.rs; parity/e2e_map.toml. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
+notes = "v482 source mapping 2026-10-22: Announcement sample sends cleartext V2 and compares a destination-and-policy commitment. Maintained source/staged checks cover the core test surface; actual coldkey lifecycle remains deferred under Q30. The core dependency stays v478 with the existing patch; these are parity-pin test inputs, not a core dependency upgrade. Consumers: xtask/src/core_surface.rs; xtask/src/staged.rs; parity/e2e_map.toml. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v493 changes only test_gamma_lifecycle. The owner's coldkey publishes the service URL, then each payer hotkey signs its own spend. The test checks GammaSpent by subnet, service and payer before and after moving the deposit. Rust Gamma intent and read fixtures cover the call encoding, signer roles, balances, caps and spent counters. Localnet lifecycle execution remains pending under M9 in parity/e2e_map.toml."
 
 [[file]]
 py = "sdk/bittensor-core/tests/e2e_support/mod.rs"
