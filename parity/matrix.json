@@ -6916,7 +6916,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.evm.resolve_evm_recipient",
-        "rtao": "pending",
+        "rtao": "aliased",
         "source": "sdk/python/bittensor/evm/__init__.py"
       },
       {

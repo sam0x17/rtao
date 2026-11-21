@@ -88,7 +88,7 @@ async fn native_deposit_supported<V: View + ?Sized>(
         .await?)
 }
 
-fn legacy(account: AccountId) -> Recipient {
+fn plain_recipient(account: AccountId) -> Recipient {
     Recipient {
         address: account.to_string(),
         account,
@@ -106,45 +106,52 @@ fn invalid_alias(reason: &str) -> IntentError {
 ///
 /// Chains without hashed accounts, and unbound addresses, keep the legacy
 /// mirror. A bound alias must name an account whose first twenty bytes are
-/// the address and which is registered with a descriptor naming that account;
-/// a derived authority binding is refused unless the caller has checked it
-/// is final (Python reads finalized state, which a pinned view cannot), so it
-/// fails closed here. Malformed bindings always fail closed.
+/// the address. A direct registration must have a descriptor naming the
+/// account. A derived authority has no receiving descriptor and requires
+/// the same alias binding and authority kind at the finalized head.
+/// Registry reads use each snapshot's own metadata, including when the
+/// caller obtained its runtime handle before an upgrade.
+#[doc(alias = "bittensor.evm.resolve_evm_recipient")]
 #[doc(alias = "bittensor.evm.addresses.resolve_evm_recipient")]
 pub async fn resolve_evm_recipient<V: View + ?Sized>(
     view: &V,
-    runtime: &RuntimeHandle,
+    _runtime: &RuntimeHandle,
     evm_address: &str,
 ) -> Result<Recipient, IntentError> {
     let (_, bytes) = normalize_h160(evm_address)?;
     let legacy_account = mirror_account(evm_address)?;
-    if !has_constant(runtime, "HashedAccounts", "RegistrationDeposit")
-        || runtime
-            .storage_entry("HashedAccounts", "EvmAliases")
-            .is_none()
-    {
-        return Ok(legacy(legacy_account));
+    let snapshot = view.pin().await?;
+    let runtime = &snapshot.block().runtime;
+    if !has_constant(runtime, "HashedAccounts", "RegistrationDeposit") {
+        return Ok(plain_recipient(legacy_account));
     }
     let address: [u8; 20] = bytes
         .as_slice()
         .try_into()
         .map_err(|_| IntentError::validation("an EVM alias is exactly 20 bytes"))?;
-    let Some(bound) = view.storage(&st::EVM_ALIASES, (address,)).await? else {
-        return Ok(legacy(legacy_account));
+    let Some(bound) = snapshot.storage(&st::EVM_ALIASES, (address,)).await? else {
+        return Ok(plain_recipient(legacy_account));
     };
     if bound.0[..20] != address {
         return Err(invalid_alias("alias does not match the bound account"));
     }
-    let descriptor = match protected_account_kind(view, runtime, bound).await? {
+    let descriptor = match protected_account_kind(&snapshot, runtime, bound).await? {
         None => return Err(invalid_alias("alias has no registered account")),
         Some(ProtectedKind::Derived) => {
-            return Err(invalid_alias("derived alias registration is not finalized"));
+            let finalized = snapshot.at(Some(rtao_client::BlockRef::Finalized)).await?;
+            if finalized.storage(&st::EVM_ALIASES, (address,)).await? != Some(bound)
+                || protected_account_kind(&finalized, &finalized.block().runtime, bound).await?
+                    != Some(ProtectedKind::Derived)
+            {
+                return Err(invalid_alias("derived alias registration is not finalized"));
+            }
+            return Ok(plain_recipient(bound));
         }
         Some(kind) => {
             let record = if kind == ProtectedKind::MlDsa {
-                view.storage(&st::ML_DSA_ACCOUNTS, (bound,)).await?
+                snapshot.storage(&st::ML_DSA_ACCOUNTS, (bound,)).await?
             } else {
-                view.storage(&st::ACCOUNTS, (bound,)).await?
+                snapshot.storage(&st::ACCOUNTS, (bound,)).await?
             }
             .ok_or_else(|| invalid_alias("alias has no registered account"))?
             .to_json();
@@ -872,6 +879,98 @@ mod tests {
         assert_eq!(recipient.account.to_string(), MIRROR);
         assert!(recipient.descriptor.is_none());
         client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn registered_mldsa_alias_keeps_its_receiving_guard_when_registration_is_disabled()
+    -> anyhow::Result<()> {
+        let (chain, client, snapshot) = fixture(0).await?;
+        let key = rtao_core::keys::Keypair::from_seed(&[5; 32], rtao_core::keys::CRYPTO_MLDSA65)?;
+        let descriptor = key.authorization_descriptor()?;
+        let account = descriptor_account(&descriptor)?;
+        let alias = format!("0x{}", hex::encode(&account.0[..20]));
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            state.seed_python("AdminUtils", "HashedAccountsEnabled", &[], json!(false))?;
+            state.seed_python(
+                "HashedAccounts",
+                "EvmAliases",
+                &[json!(alias)],
+                json!(account.to_string()),
+            )?;
+            state.seed_python(
+                "HashedAccounts",
+                "MlDsaAccounts",
+                &[json!(account.to_string())],
+                json!({"descriptor": rtao_primitives::receiving::descriptor_value(&descriptor)?,
+                       "generation": 1, "commitment": format!("0x{}", "00".repeat(64))}),
+            )?;
+            Ok(())
+        })?;
+        let recipient = resolve_evm_recipient(&snapshot, &snapshot.block().runtime, &alias).await?;
+        assert_eq!(recipient.account, account);
+        assert_eq!(
+            recipient.address,
+            rtao_core::keys::encode_hashed_receiving_address(&descriptor)?
+        );
+        assert_eq!(recipient.descriptor.as_deref(), Some(descriptor.as_slice()));
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn derived_evm_alias_requires_the_same_binding_and_authority_at_finality()
+    -> anyhow::Result<()> {
+        fn seed_authority(state: &mut FakeState) -> anyhow::Result<()> {
+            state.seed_python(
+                "HashedAccounts",
+                "DerivedAuthorities",
+                &[json!(COLDKEY.to_string())],
+                json!({
+                    "descriptor": {"Multisig": {"threshold": 2, "signatories": [COLDKEY.to_string(), OTHER.to_string()]}},
+                    "pq_dependencies": [OTHER.to_string()], "depth": 1, "nodes": 2
+                }),
+            )?;
+            Ok(())
+        }
+        for (final_bound, final_authority) in [(OTHER, true), (COLDKEY, false), (COLDKEY, true)] {
+            let (chain, client, _) = fixture(0).await?;
+            chain.mutate_state(|state| -> anyhow::Result<()> {
+                let finalized = state.block;
+                state.seed_python(
+                    "HashedAccounts",
+                    "EvmAliases",
+                    &[json!(ADDRESS)],
+                    json!(final_bound.to_string()),
+                )?;
+                if final_authority {
+                    seed_authority(state)?;
+                }
+                state.advance(1);
+                state.set_finalized(finalized)?;
+                state.seed_python(
+                    "HashedAccounts",
+                    "EvmAliases",
+                    &[json!(ADDRESS)],
+                    json!(COLDKEY.to_string()),
+                )?;
+                seed_authority(state)
+            })?;
+            let best = client.at(BlockRef::Best).await?;
+            let result = resolve_evm_recipient(&best, &best.block().runtime, ADDRESS).await;
+            if final_bound == COLDKEY && final_authority {
+                let recipient = result?;
+                assert_eq!(recipient.account, COLDKEY);
+                assert_eq!(recipient.address, COLDKEY.to_string());
+                assert!(recipient.descriptor.is_none());
+            } else {
+                assert_eq!(
+                    result.expect_err("unconfirmed derived alias").to_string(),
+                    "invalid protected EVM alias binding: derived alias registration is not finalized"
+                );
+            }
+            client.close().await;
+        }
         Ok(())
     }
 

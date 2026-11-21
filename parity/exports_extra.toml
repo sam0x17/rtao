@@ -1919,10 +1919,14 @@ pinning_tests = ["rtao_intents::recipient_registration::execution_needs_consent_
 
 [[export]]
 python = "bittensor.evm.resolve_evm_recipient"
-home = "pending: new public export at v488"
-reason = "Added by the v488 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::evm::resolve_evm_recipient"
+reason = "Unbound H160 addresses resolve to the legacy mirror. Direct registrations retain the receiving descriptor for the bound account. Derived authorities resolve to their native account only when the finalized alias and authority kind agree."
 source = "sdk/python/bittensor/evm/__init__.py"
-pending = "v488 adoption"
+pinning_tests = [
+  "rtao_intents::evm::tests::registered_hashed_aliases_resolve_to_their_native_account_and_fail_closed",
+  "rtao_intents::evm::tests::registered_mldsa_alias_keeps_its_receiving_guard_when_registration_is_disabled",
+  "rtao_intents::evm::tests::derived_evm_alias_requires_the_same_binding_and_authority_at_finality",
+]
 
 [[export]]
 python = "bittensor.http_auth.clear_verifier"
