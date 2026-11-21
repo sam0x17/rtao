@@ -47,10 +47,6 @@ fn tree(repo: &Path, commit: &str) -> Result<BTreeMap<String, String>> {
 }
 
 fn preview(root: &Path, branch: &str) -> Result<Value> {
-    ensure!(
-        ["main", "testnet"].contains(&branch),
-        "upstream-next branch must be main or testnet"
-    );
     let repo = crate::pin::cached_repo(root)?;
     let reference = format!("+refs/heads/{branch}:refs/remotes/origin/{branch}");
     crate::pin::git(
@@ -209,7 +205,11 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--branch" => branch = args.next().context("--branch needs main or testnet")?,
+            "--branch" => {
+                branch = args
+                    .next()
+                    .context("--branch needs main, testnet or devnet")?
+            }
             "--out" if output.is_none() => {
                 output = Some(PathBuf::from(
                     args.next().context("--out needs a report path")?,
@@ -217,13 +217,13 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
             }
             "--plan" if !plan => plan = true,
             _ => bail!(
-                "usage: cargo xtask upstream-next [--branch main|testnet] [--out json] [--plan]"
+                "usage: cargo xtask upstream-next [--branch main|testnet|devnet] [--out json] [--plan]"
             ),
         }
     }
     ensure!(
-        ["main", "testnet"].contains(&branch.as_str()),
-        "branch must be main or testnet"
+        matches!(branch.as_str(), "main" | "testnet" | "devnet"),
+        "branch must be main, testnet or devnet"
     );
     let report = if plan {
         json!({"branch":branch,"read_only":true,"steps":["resolve branch to commit","diff watched tree joined to parity map","normalize catalogs","compare core-input fingerprint"],"python_execution":false})
@@ -282,6 +282,14 @@ pub(crate) fn run(args: Vec<String>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn plan_accepts_the_runtime_watchers_devnet_branch() {
+        let plan = |branch: &str| run(vec!["--branch".into(), branch.into(), "--plan".into()]);
+        plan("devnet").unwrap();
+        assert!(plan("devnet~1").is_err());
+    }
+
     #[test]
     fn catalog_location_changes_do_not_report_behavior_changes() {
         let mut first = json!({"entries":[{"name":"transfer","sources":[{"line":1,"end_line":9,"url":"#L1","path":"pallet.rs"}],"amount":1}]});

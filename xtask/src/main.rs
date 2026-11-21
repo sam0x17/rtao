@@ -101,7 +101,7 @@ fn main() -> Result<()> {
   cargo xtask localnet up --lane pinned|mainnet|testnet|devnet|main --profile fast|slow --out <json>\n\
   cargo xtask localnet contracts --check\n\
   cargo xtask pr-u4-proof prepare\n\
-  cargo xtask upstream-next [--branch main|testnet] [--out <json>]\n\
+  cargo xtask upstream-next [--branch main|testnet|devnet] [--out <json>] [--plan]\n\
   cargo xtask docs --out <directory> [--llms] [--check]\n\
   cargo xtask release verify|local-record --tag rtao-vX.Y.Z --dir <assets>\n\
   cargo xtask release-notes --tag rtao-vX.Y.Z\n\
