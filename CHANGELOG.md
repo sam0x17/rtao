@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Finney runtime 494
+
+- The parity pin advances to v494 at upstream commit `a68c6e8c65411a842fbf69269dc385aa13041391`. Four public RPCs agreed on the finalized runtime and V15/V16 metadata at block 9,570,771. The release wasm matched the on-chain code.
+- The runtime increments the transaction version from 1 to 2. The client rejects a prepared 493 signature after the upgrade before making a submission RPC. Prepare and sign new payloads on the current runtime. Use the original transaction hash to reconcile unresolved submissions.
+- The SDK weight intents accept a delegated validator hotkey after checking the current delegate for the subnet and mechanism. Timelocked commits use the validator's hotkey. The mechanism-zero reveal keeps its existing call for self-submission.
+- The porting report lists 33 remaining source entries in `parity/port_due.toml`. The SDK uses core v490 and reports an empty validation range.
+
 ### Testnet runtime 494 recorded automatically
 
 - Testnet finalized spec 494 (`:code` `0x1735bc231789bead3ab3edfa583f3c9a95aaf7643adcc906ea224a7761a303ca`) at block 8508571; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `breaking`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45197716366)). No upstream source is recorded: upstream has published no v494 release. The parity pin is unchanged.

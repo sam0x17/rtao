@@ -108,12 +108,18 @@ async fn python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_s
             assert_eq!(value["era"], "00");
             assert_eq!(value["payload_json"]["nonce"], "0x00000003");
             // The fake chain serves the pinned metadata; its spec follows pin bumps.
-            let spec = client.refresh_runtime().await.unwrap().spec_version();
+            let runtime = client.refresh_runtime().await.unwrap();
             assert_eq!(
                 value["payload_json"]["specVersion"],
-                format!("0x{}", hex::encode(spec.to_be_bytes()))
+                format!("0x{}", hex::encode(runtime.spec_version().to_be_bytes()))
             );
-            assert_eq!(value["payload_json"]["transactionVersion"], "0x00000001");
+            assert_eq!(
+                value["payload_json"]["transactionVersion"],
+                format!(
+                    "0x{}",
+                    hex::encode(runtime.transaction_version().to_be_bytes())
+                )
+            );
             assert_eq!(
                 value["payload_json"]["tip"],
                 "0x00000000000000000000000000000011"
@@ -151,7 +157,7 @@ async fn python_schema_and_big_endian_views_roundtrip_both_schemes_and_payload_s
             let state = state.lock().unwrap();
             assert_eq!(state.submissions.len(), 1);
             let decoded = imported.context();
-            assert_eq!(decoded.transaction_version, 1);
+            assert_eq!(decoded.transaction_version, runtime.transaction_version());
         }
     }
 }
@@ -613,7 +619,10 @@ async fn altered_call_identity_era_payload_views_parts_and_hashes_refuse() {
         // the signature must verify for the account under it.
         ("crypto_type", json!(3)),
         ("spec_version", json!(479)),
-        ("transaction_version", json!(2)),
+        (
+            "transaction_version",
+            json!(value["transaction_version"].as_u64().unwrap() + 1),
+        ),
         ("era", json!({"period":128,"current":0})),
         ("address", json!(AccountId([9; 32]).to_ss58(42))),
         ("metadata_hash", json!(format!("0x{}", "00".repeat(32)))),

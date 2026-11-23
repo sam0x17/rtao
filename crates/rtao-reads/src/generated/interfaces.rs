@@ -150,7 +150,7 @@ pub struct BasketTradingStatusParams {
     #[doc = "Validator hotkey whose basket trading status to read."]
     pub hotkey_ss58: rtao_primitives::AccountId,
 }
-#[doc = "A validator's `swap_basket` trading status: gates and the turnover bucket.\n\n`enabled` is the network-wide gate, `frozen` the per-hotkey governance freeze.\nThe turnover budget is a token bucket: `budget_tao` is its capacity\n(`BasketDailyTurnoverCap` share of the fund's guarded NAV — each holding at\nthe lower of its realizable value and its slow-moving-price value, so a\npumped pool cannot enlarge it), `remaining_tao` what a trade right\nnow could push through the fund, `used_tao` the difference, and the bucket\nrefills by `refill_per_block_tao` every block (`budget_tao / refill_blocks`,\na full refill over `refill_blocks` = 7200 blocks)."]
+#[doc = "A validator's `swap_basket` trading status: gates and the turnover bucket.\n\n`enabled` is the network-wide gate, `frozen` the per-hotkey governance freeze.\nThe turnover budget is a token bucket: `budget_tao` is its capacity\n(`BasketDailyTurnoverCap` share of the fund's guarded NAV — each holding at\nthe lower of its realizable value and its slow-moving-price value, so a\npumped pool cannot enlarge it), `remaining_tao` what a trade right\nnow could push through the fund, `used_tao` the difference, and the bucket\nrefills by `refill_per_block_tao` every block (`budget_tao / refill_blocks`,\na full refill over the configured `refill_blocks`, 7200 by default)."]
 #[doc(alias = "bittensor.reads.basket_trading_status")]
 pub async fn basket_trading_status<V: rtao_client::View + ?Sized>(
     view: &V,
@@ -273,6 +273,35 @@ pub async fn burn<V: rtao_client::View + ?Sized>(
 ) -> Result<rtao_primitives::DynBalance, crate::ReadError> {
     crate::reads::owner::burn(view, netuid).await
 }
+#[doc = "Typed parameters for `channel_commitment`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ChannelCommitmentParams {
+    #[doc = "Subnet containing the mechanism and hotkey."]
+    pub netuid: rtao_primitives::NetUid,
+    #[doc = "Mechanism whose independent channel to read."]
+    #[serde(default = "super::defaults::channel_commitment::mechid")]
+    pub mechid: rtao_primitives::MechId,
+    #[doc = "Independent channel index (0..255)."]
+    #[serde(default = "super::defaults::channel_commitment::channel")]
+    pub channel: i64,
+    #[doc = "Hotkey whose channel commitment to read."]
+    #[serde(default = "super::defaults::channel_commitment::hotkey_ss58")]
+    pub hotkey_ss58: Option<rtao_primitives::AccountId>,
+}
+#[doc = "One hotkey's independent channel commitment, or None when absent.\n\nReads the v2 runtime API and decodes the returned SCALE registration. On a\nnode without v2, reads the equivalent channel storage instead; both paths\ndistinguish this target from the legacy `commitment` read. The `revealed`\nlist reports plaintext and reveal blocks even after the active record is removed."]
+#[doc(alias = "bittensor.reads.channel_commitment")]
+pub async fn channel_commitment<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: rtao_primitives::NetUid,
+    _mechid: rtao_primitives::MechId,
+    _channel: i64,
+    _hotkey_ss58: Option<rtao_primitives::AccountId>,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::ChannelCommitment,
+    ))
+}
 #[doc = "Typed parameters for `childkey_threshold_suspended`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -353,6 +382,31 @@ pub async fn collateral_policy<V: rtao_client::View + ?Sized>(
     netuid: rtao_primitives::NetUid,
 ) -> Result<crate::reads::m6_locks::CollateralPolicy, crate::ReadError> {
     crate::reads::m6_locks::collateral_policy(view, netuid).await
+}
+#[doc = "Typed parameters for `commit_burn`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CommitBurnParams {
+    #[doc = "Subnet whose commitment channel to inspect."]
+    pub netuid: rtao_primitives::NetUid,
+    #[doc = "Mechanism whose channel to inspect."]
+    #[serde(default = "super::defaults::commit_burn::mechid")]
+    pub mechid: rtao_primitives::MechId,
+    #[doc = "Independent commitment channel index (0..255)."]
+    #[serde(default = "super::defaults::commit_burn::channel")]
+    pub channel: i64,
+}
+#[doc = "Live decayed channel burn price and its stored configuration.\n\n`burn` is the price a commitment would pay now, or None when the burn is\ndisabled/unconfigured. The runtime API returns no record when disabled, so\nthis read also inspects `CommitBurnConfig` to show `enabled` and the other\nparameters. Direct storage readers should not treat stored `burn` as live:\ndecay is lazy; this read's `price_is_decayed` marks the runtime quote."]
+#[doc(alias = "bittensor.reads.commit_burn")]
+pub async fn commit_burn<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: rtao_primitives::NetUid,
+    _mechid: rtao_primitives::MechId,
+    _channel: i64,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::CommitBurn,
+    ))
 }
 #[doc = "Typed parameters for `commit_reveal_enabled`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -800,6 +854,31 @@ pub async fn max_weight_limit<V: rtao_client::View + ?Sized>(
         })?,),
     )
     .await?)
+}
+#[doc = "Typed parameters for `mech_weight_delegate`."]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MechWeightDelegateParams {
+    #[doc = "Subnet containing the validator hotkey."]
+    pub netuid: rtao_primitives::NetUid,
+    #[doc = "Mechanism whose delegate to inspect."]
+    #[serde(default = "super::defaults::mech_weight_delegate::mechid")]
+    pub mechid: rtao_primitives::MechId,
+    #[doc = "Validator hotkey whose delegate to inspect."]
+    #[serde(default = "super::defaults::mech_weight_delegate::hotkey_ss58")]
+    pub hotkey_ss58: Option<rtao_primitives::AccountId>,
+}
+#[doc = "The account authorized to set weights for this hotkey/mechanism, or None."]
+#[doc(alias = "bittensor.reads.mech_weight_delegate")]
+pub async fn mech_weight_delegate<V: rtao_client::View + ?Sized>(
+    _view: &V,
+    _netuid: rtao_primitives::NetUid,
+    _mechid: rtao_primitives::MechId,
+    _hotkey_ss58: Option<rtao_primitives::AccountId>,
+) -> Result<serde_json::Value, crate::ReadError> {
+    Err(crate::ReadError::NotYetPorted(
+        super::names::ReadName::MechWeightDelegate,
+    ))
 }
 #[doc = "Typed parameters for `mechanism_count`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

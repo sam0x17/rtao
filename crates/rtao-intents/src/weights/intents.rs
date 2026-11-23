@@ -7,6 +7,7 @@ use std::time::SystemTime;
 use rtao_catalog::ErrorCode;
 use rtao_client::{Snapshot, View, ViewExt};
 use rtao_primitives::{AccountId, MechId, NetUid, NetUidStorageIndex, Ratio, Uid};
+use rtao_runtime::runtime_apis::subnet_registration_runtime_api::GET_MECH_WEIGHT_DELEGATE;
 use rtao_runtime::{calls::subtensor_module as calls, storage::subtensor_module as st};
 use rtao_tx::{BuildCx, Built, ChainError, Intent, IntentError, PreflightCx};
 use serde_json::json;
@@ -25,6 +26,7 @@ struct CommitRow {
     row: (Vec<Uid>, Vec<u16>),
     version_key: u64,
     commit_reveal_version: u16,
+    for_hotkey: Option<AccountId>,
 }
 
 fn semantic(message: String, code: ErrorCode) -> IntentError {
@@ -62,13 +64,12 @@ fn count(uids: Option<&[Uid]>, weights: Option<&WeightsArg>) -> usize {
 }
 
 // py: weights.py::_preflight. Registration precedes the Null permit, then rate.
-async fn checked<V: View + ?Sized>(
-    view: &V,
+async fn checked(
+    snapshot: &Snapshot,
     hotkey: AccountId,
     netuid: NetUid,
     mechid: MechId,
-) -> Result<(Snapshot, CheckedState), IntentError> {
-    let snapshot = View::pin(view).await?;
+) -> Result<CheckedState, IntentError> {
     let index = NetUidStorageIndex::new(netuid, mechid)?;
     let (uid, enabled, rate, last, min, max, mode) = snapshot
         .fetch((
@@ -117,17 +118,54 @@ async fn checked<V: View + ?Sized>(
             ));
         }
     }
-    Ok((
-        snapshot,
-        CheckedState {
-            conform: ConformState {
-                uid: Uid(uid),
-                min_allowed_weights: min,
-                max_weight_limit: max,
-            },
-            commit_reveal: enabled,
+    Ok(CheckedState {
+        conform: ConformState {
+            uid: Uid(uid),
+            min_allowed_weights: min,
+            max_weight_limit: max,
         },
-    ))
+        commit_reveal: enabled,
+    })
+}
+
+async fn authorized_target(
+    snapshot: &Snapshot,
+    signer: AccountId,
+    netuid: NetUid,
+    mechid: MechId,
+    hotkey: &str,
+) -> Result<AccountId, IntentError> {
+    let target: AccountId = hotkey
+        .parse()
+        .map_err(|error| IntentError::Validation(format!("Invalid validator hotkey: {error}")))?;
+    let delegate = snapshot
+        .call(&GET_MECH_WEIGHT_DELEGATE, (netuid, mechid, target))
+        .await?;
+    if delegate != Some(signer) {
+        return Err(semantic(
+            format!(
+                "{signer} is not the current weight delegate for {target} on netuid {netuid}, mechanism {mechid}."
+            ),
+            ErrorCode::NotAuthorized,
+        ));
+    }
+    Ok(target)
+}
+
+async fn weight_context<V: View + ?Sized>(
+    cx: &BuildCx<'_, V>,
+    netuid: NetUid,
+    mechid: MechId,
+    for_hotkey: Option<&str>,
+) -> Result<(Snapshot, CheckedState, Option<AccountId>), IntentError> {
+    let snapshot = View::pin(cx.view).await?;
+    let signer = cx.hotkey_address(None)?;
+    let target = match for_hotkey {
+        Some(hotkey) => Some(authorized_target(&snapshot, signer, netuid, mechid, hotkey).await?),
+        None => None,
+    };
+    let state = checked(&snapshot, target.unwrap_or(signer), netuid, mechid).await?;
+    Ok((snapshot, state, target))
 }
 
 fn null_mode(mode: &serde_json::Value, allow_numeric: bool) -> bool {
@@ -175,6 +213,7 @@ async fn timelocked<V: View + ?Sized>(
         row,
         version_key,
         commit_reveal_version,
+        for_hotkey,
     } = commit;
     let (tempo, reveal, last_epoch, pending, epoch_index, since, stored_tag) = snapshot
         .fetch((
@@ -196,7 +235,10 @@ async fn timelocked<V: View + ?Sized>(
         .as_secs_f64();
     let commit = super::commit::encrypt_at(TimelockCommitRequest {
         now,
-        hotkey: AccountId(cx.hotkey_public_key()?),
+        hotkey: match for_hotkey {
+            Some(target) => target,
+            None => AccountId(cx.hotkey_public_key()?),
+        },
         row,
         version_key,
         state: rtao_core::timelock::epoch_schedule::EpochScheduleState {
@@ -212,15 +254,24 @@ async fn timelocked<V: View + ?Sized>(
     })
     .await
     .map_err(|error| IntentError::Validation(error.to_string()))?;
-    let call = calls::commit_timelocked_mechanism_weights(
-        netuid,
-        mechid,
-        commit.ciphertext,
-        commit.reveal_round,
-        commit_reveal_version,
-    )
-    .compose(cx.runtime)?;
-    let mut built = Built::new(call);
+    let call = match for_hotkey {
+        Some(hotkey) => calls::commit_timelocked_mechanism_weights_for(
+            netuid,
+            mechid,
+            hotkey,
+            commit.ciphertext,
+            commit.reveal_round,
+            commit_reveal_version,
+        ),
+        None => calls::commit_timelocked_mechanism_weights(
+            netuid,
+            mechid,
+            commit.ciphertext,
+            commit.reveal_round,
+            commit_reveal_version,
+        ),
+    };
+    let mut built = Built::new(call.compose(cx.runtime)?);
     built
         .extras
         .insert("reveal_round".into(), json!(commit.reveal_round));
@@ -260,8 +311,8 @@ impl Intent for SetWeights {
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let (uids, weights) = pairs(self.uids.as_deref(), self.weights.as_ref())?;
-        let (snapshot, state) =
-            checked(cx.view, cx.hotkey_address(None)?, self.netuid, self.mechid).await?;
+        let (snapshot, state, for_hotkey) =
+            weight_context(cx, self.netuid, self.mechid, self.for_hotkey.as_deref()).await?;
         if self.raw_u16 {
             ensure_raw_null(&snapshot, self.netuid).await?;
         }
@@ -278,20 +329,30 @@ impl Intent for SetWeights {
                     version_key: self.version_key,
                     commit_reveal_version:
                         crate::generated::defaults::commit_weights::commit_reveal_version(),
+                    for_hotkey,
                 },
             )
             .await
         } else {
-            Ok(Built::new(
-                calls::set_mechanism_weights(
+            let uids = row.0.into_iter().map(|uid| uid.0).collect();
+            let call = match for_hotkey {
+                Some(hotkey) => calls::set_mechanism_weights_for(
                     self.netuid,
                     self.mechid,
-                    row.0.into_iter().map(|uid| uid.0).collect(),
+                    hotkey,
+                    uids,
                     row.1,
                     self.version_key,
-                )
-                .compose(cx.runtime)?,
-            ))
+                ),
+                None => calls::set_mechanism_weights(
+                    self.netuid,
+                    self.mechid,
+                    uids,
+                    row.1,
+                    self.version_key,
+                ),
+            };
+            Ok(Built::new(call.compose(cx.runtime)?))
         }
     }
     async fn effects<V: View + ?Sized>(
@@ -334,8 +395,8 @@ impl Intent for CommitWeights {
     }
     async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
         let (uids, weights) = pairs(self.uids.as_deref(), self.weights.as_ref())?;
-        let (snapshot, state) =
-            checked(cx.view, cx.hotkey_address(None)?, self.netuid, self.mechid).await?;
+        let (snapshot, state, for_hotkey) =
+            weight_context(cx, self.netuid, self.mechid, self.for_hotkey.as_deref()).await?;
         if self.raw_u16 {
             ensure_raw_null(&snapshot, self.netuid).await?;
         }
@@ -350,6 +411,7 @@ impl Intent for CommitWeights {
                 row,
                 version_key: self.version_key,
                 commit_reveal_version: self.commit_reveal_version,
+                for_hotkey,
             },
         )
         .await
@@ -386,16 +448,40 @@ impl Intent for RevealWeights {
                 "All weights are zero; nothing to reveal.".into(),
             ));
         }
-        Ok(Built::new(
-            calls::reveal_weights(
+        let uids = row.0.into_iter().map(|uid| uid.0).collect();
+        let call = match self.for_hotkey.as_deref() {
+            Some(hotkey) => {
+                let snapshot = View::pin(cx.view).await?;
+                let signer = cx.hotkey_address(None)?;
+                let target =
+                    authorized_target(&snapshot, signer, self.netuid, self.mechid, hotkey).await?;
+                calls::reveal_mechanism_weights_for(
+                    self.netuid,
+                    self.mechid,
+                    target,
+                    uids,
+                    row.1,
+                    self.salt.clone(),
+                    self.version_key,
+                )
+            }
+            None if self.mechid != MechId(0) => calls::reveal_mechanism_weights(
                 self.netuid,
-                row.0.into_iter().map(|uid| uid.0).collect(),
+                self.mechid,
+                uids,
                 row.1,
                 self.salt.clone(),
                 self.version_key,
-            )
-            .compose(cx.runtime)?,
-        ))
+            ),
+            None => calls::reveal_weights(
+                self.netuid,
+                uids,
+                row.1,
+                self.salt.clone(),
+                self.version_key,
+            ),
+        };
+        Ok(Built::new(call.compose(cx.runtime)?))
     }
 }
 
@@ -526,6 +612,7 @@ mod tests {
             netuid: NETUID,
             mechid: MECHID,
             version_key: 123,
+            for_hotkey: None,
             raw_u16: false,
             uids: Some((0..values.len()).map(|index| Uid(index as u16)).collect()),
             weights: Some(WeightsArg::List(
@@ -714,6 +801,7 @@ mod tests {
             weights: set.weights,
             mechid: set.mechid,
             version_key: set.version_key,
+            for_hotkey: None,
             raw_u16: false,
             commit_reveal_version: 4,
         };
@@ -762,6 +850,7 @@ mod tests {
             weights: set.weights.clone(),
             mechid: set.mechid,
             version_key: set.version_key,
+            for_hotkey: None,
             raw_u16: false,
             commit_reveal_version: 4,
         };
@@ -835,6 +924,8 @@ mod tests {
             ],
             salt: vec![0, 123, u16::MAX],
             version_key: 123,
+            mechid: MechId(0),
+            for_hotkey: None,
         };
         let built = build(&reveal, &snapshot).await.unwrap();
         let expected = calls::reveal_weights(
@@ -854,6 +945,93 @@ mod tests {
             build(&zero, &snapshot).await.unwrap_err().to_string(),
             "All weights are zero; nothing to reveal."
         );
+    }
+
+    #[tokio::test]
+    async fn delegated_weights_check_the_exact_target_and_origin() {
+        let (snapshot, fake) = fixture(false, false).await;
+        let target = AccountId([9; 32]);
+        let mut api_input = NETUID.0.to_le_bytes().to_vec();
+        api_input.extend(MECHID.0.to_le_bytes());
+        api_input.extend(target.0);
+        let method = "SubnetRegistrationRuntimeApi_get_mech_weight_delegate";
+        let mut delegate = vec![1];
+        delegate.extend(HOTKEY.0);
+        fake.mutate_state(|state| {
+            state
+                .seed_typed("SubtensorModule", "Uids", (NETUID, target), 2u16)
+                .unwrap();
+            state.seed_runtime_encoded(method, api_input.clone(), delegate);
+        });
+        let mut set = input(&[1.0, 2.0, 3.0]);
+        set.for_hotkey = Some(target.to_ss58(42));
+        let runtime = View::runtime(&snapshot).await.unwrap();
+        let built = build(&set, &snapshot).await.unwrap();
+        let expected = calls::set_mechanism_weights_for(
+            NETUID,
+            MECHID,
+            target,
+            vec![0, 1, 2],
+            vec![21845, 43690, 65535],
+            123,
+        )
+        .compose(&runtime)
+        .unwrap();
+        assert_eq!(built.call.as_bytes(), expected.as_bytes());
+
+        let mut reveal = RevealWeights {
+            netuid: NETUID,
+            mechid: MECHID,
+            uids: vec![Uid(0), Uid(1), Uid(2)],
+            weights: vec![
+                Ratio::new(1.0).unwrap(),
+                Ratio::new(2.0).unwrap(),
+                Ratio::new(3.0).unwrap(),
+            ],
+            salt: vec![7],
+            version_key: 123,
+            for_hotkey: set.for_hotkey.clone(),
+        };
+        let built = build(&reveal, &snapshot).await.unwrap();
+        let expected = calls::reveal_mechanism_weights_for(
+            NETUID,
+            MECHID,
+            target,
+            vec![0, 1, 2],
+            vec![21845, 43690, 65535],
+            vec![7],
+            123,
+        )
+        .compose(&runtime)
+        .unwrap();
+        assert_eq!(built.call.as_bytes(), expected.as_bytes());
+
+        let mut wrong = vec![1];
+        wrong.extend([5; 32]);
+        for reply in [wrong, vec![0]] {
+            fake.mutate_state(|state| state.seed_runtime_encoded(method, api_input.clone(), reply));
+            assert_eq!(
+                build(&set, &snapshot).await.unwrap_err().code(),
+                ErrorCode::NotAuthorized,
+            );
+            assert_eq!(
+                build(&reveal, &snapshot).await.unwrap_err().code(),
+                ErrorCode::NotAuthorized,
+            );
+        }
+        reveal.for_hotkey = None;
+        let built = build(&reveal, &snapshot).await.unwrap();
+        let expected = calls::reveal_mechanism_weights(
+            NETUID,
+            MECHID,
+            vec![0, 1, 2],
+            vec![21845, 43690, 65535],
+            vec![7],
+            123,
+        )
+        .compose(&runtime)
+        .unwrap();
+        assert_eq!(built.call.as_bytes(), expected.as_bytes());
     }
 
     // pyt: unit/test_intents_table.py::TestExecuteFlow::test_hotkey_intents_sign_with_hotkey

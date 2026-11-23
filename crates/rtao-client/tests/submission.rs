@@ -116,14 +116,20 @@ async fn preparation_anchors_finalized_era_and_does_not_reserve_nonce() {
     );
     assert_eq!(prepared.payload_json()["nonce"], json!("0x00000000"));
     // The fake chain serves the pinned metadata; its spec follows pin bumps.
-    let spec = client.refresh_runtime().await.unwrap().spec_version();
+    let runtime = client.refresh_runtime().await.unwrap();
     assert_eq!(
         prepared.payload_json()["specVersion"],
-        json!(format!("0x{}", hex::encode(spec.to_be_bytes())))
+        json!(format!(
+            "0x{}",
+            hex::encode(runtime.spec_version().to_be_bytes())
+        ))
     );
     assert_eq!(
         prepared.payload_json()["transactionVersion"],
-        json!("0x00000001")
+        json!(format!(
+            "0x{}",
+            hex::encode(runtime.transaction_version().to_be_bytes())
+        ))
     );
     assert_eq!(
         prepared.payload_json()["tip"],
@@ -1750,6 +1756,8 @@ async fn explicit_submission_nonce_is_shared_with_client_clones() {
 #[tokio::test]
 async fn prepared_signature_refuses_same_spec_transaction_version_change() {
     let (client, fake, signer) = fixture().await;
+    let runtime = client.refresh_runtime().await.unwrap();
+    let changed = runtime.transaction_version() + 1;
     let prepared = client
         .prepare_call(
             call(&client, vec![]).await,
@@ -1763,7 +1771,7 @@ async fn prepared_signature_refuses_same_spec_transaction_version_change() {
     fake.mutate_state(|state| {
         state.set_result(
             "state_getRuntimeVersion",
-            json!({"specName":"node-subtensor","specVersion":482,"transactionVersion":2,"apis":[]}),
+            json!({"specName":"node-subtensor","specVersion":runtime.spec_version(),"transactionVersion":changed,"apis":[]}),
         )
     });
     assert!(
@@ -1778,7 +1786,8 @@ async fn prepared_signature_refuses_same_spec_transaction_version_change() {
         None
     );
     let updated = client.refresh_runtime().await.unwrap();
-    assert_eq!(updated.transaction_version(), 2);
+    assert_eq!(updated.spec_version(), runtime.spec_version());
+    assert_eq!(updated.transaction_version(), changed);
     let fresh_call = rtao_runtime::calls::system::remark(vec![])
         .compose(&updated)
         .unwrap();
@@ -1788,7 +1797,7 @@ async fn prepared_signature_refuses_same_spec_transaction_version_change() {
         .unwrap();
     assert_eq!(
         fresh.payload_json()["transactionVersion"],
-        json!("0x00000002")
+        json!(format!("0x{}", hex::encode(changed.to_be_bytes())))
     );
     assert!(
         client
@@ -1798,6 +1807,77 @@ async fn prepared_signature_refuses_same_spec_transaction_version_change() {
             .success
     );
     assert_eq!(fake.state().lock().unwrap().submissions.len(), 1);
+}
+
+#[tokio::test]
+async fn finney_494_refuses_a_493_signature_and_prepares_transaction_version_two() {
+    use rtao_core::runtime::Runtime;
+
+    let old = Runtime::parse(
+        include_bytes!("../../../vendor/metadata/finney/493.v15.scale"),
+        493,
+        1,
+        42,
+    )
+    .unwrap();
+    let new = Runtime::parse(
+        include_bytes!("../../../vendor/metadata/finney/494.v15.scale"),
+        494,
+        2,
+        42,
+    )
+    .unwrap();
+    let fake = FakeChain::from_state(FakeState::try_finney(old).unwrap());
+    let client = Client::from_rpc(RpcClient::new(fake.clone()), config())
+        .await
+        .unwrap();
+    let signer = KeypairSigner::from_seed(&[7; 32], CryptoType::Ed25519).unwrap();
+    let opts = SubmitOptions::default();
+    let old = client
+        .prepare_call(call(&client, vec![1]).await, &signer, &opts)
+        .await
+        .unwrap();
+    let old_signature = signer
+        .sign(&old.signing_request(rtao_signer::SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+
+    fake.mutate_state(|state| {
+        let at = state.block_hash(state.block).unwrap();
+        state.set_runtime_at(at, state.runtime.clone());
+        state.runtime = Arc::new(new);
+        state.advance(1);
+    });
+    assert!(
+        client
+            .submit_signature(&old, old_signature, &opts)
+            .await
+            .is_err()
+    );
+    assert!(fake.state().lock().unwrap().submissions.is_empty());
+    assert!(
+        !fake
+            .requests()
+            .iter()
+            .any(|request| request.method.starts_with("author_submit"))
+    );
+
+    let fresh = client
+        .prepare_call(call(&client, vec![1]).await, &signer, &opts)
+        .await
+        .unwrap();
+    assert_eq!(fresh.context().chain_info.spec_version, 494);
+    assert_eq!(fresh.context().transaction_version, 2);
+    assert_eq!(
+        fresh.payload_json()["transactionVersion"],
+        json!("0x00000002")
+    );
+    assert!(fresh.verify_signature(old_signature).is_err());
+    let signature = signer
+        .sign(&fresh.signing_request(rtao_signer::SignPurpose::Extrinsic))
+        .await
+        .unwrap();
+    fresh.verify_signature(signature).unwrap();
 }
 
 #[test]

@@ -53,9 +53,9 @@
   "format": 1,
   "provenance": {
     "blob": "4c4a26ae8ca1be99c9ee834c7fb6184c89d888b8",
-    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
+    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
     "path": "sdk/python/bittensor/config.py",
-    "tag": "v493"
+    "tag": "v494"
   },
   "values": {
     "DEFAULT_ADDRESSES_PATH": {

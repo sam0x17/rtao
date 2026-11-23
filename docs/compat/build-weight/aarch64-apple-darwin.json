@@ -2,7 +2,7 @@
   "cargo": "cargo 1.100.0 (3acc79c0c 2026-11-05)",
   "compiler": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
   "host": "x86_64-unknown-linux-gnu",
-  "measured_unix_seconds": 1795445743,
+  "measured_unix_seconds": 1795455558,
   "method": {
     "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
     "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -12,7 +12,7 @@
     {
       "core_host_enabled": false,
       "default_features": false,
-      "feature_graph_sha256": "41dfd86936eea87de2f03d7973ffe7ad423936eb114b1881accedae9d7415410",
+      "feature_graph_sha256": "2198f11d71b9bdb0caab8a6dfb61429afe7901f860eff6212e96f888e63da752",
       "features": [],
       "normal_build_packages": 229,
       "package": "rtao-core",
@@ -252,7 +252,7 @@
     {
       "core_host_enabled": false,
       "default_features": false,
-      "feature_graph_sha256": "aa2be1cae41ee587c55736ad788c589906197df5c2a7cdc99049589b5db0b9b8",
+      "feature_graph_sha256": "8f1737dca82468a2c6a573be9d286eaee9dc690b7cddf7f5aa08ebb98de060a2",
       "features": [
         "validator"
       ],
@@ -632,7 +632,7 @@
     {
       "core_host_enabled": false,
       "default_features": false,
-      "feature_graph_sha256": "9a9982a5e66c5fe88446e54c92b70889dd8f2f72469447d7d7c3c668a9ea24eb",
+      "feature_graph_sha256": "1a0ad9996a98153b622e4533db64b3cece1f9154df0aaa5ee119940b46884e2b",
       "features": [
         "miner"
       ],
@@ -1016,7 +1016,7 @@
     {
       "core_host_enabled": true,
       "default_features": false,
-      "feature_graph_sha256": "17b75c613695d685e611c36c8553635275017fd31c051d0e4940bef9c0e6696e",
+      "feature_graph_sha256": "1ce70d650850565e6df50aa8a28b90f0b629734b990285c2e42314300c76ad26",
       "features": [
         "owner"
       ],
@@ -1481,12 +1481,12 @@
       "crates/rtao-tx/Cargo.toml": "f3010c454a0707f25fb70a285c43c7ed87b68f5fb9ba79344bd19a16c45dfd1e",
       "crates/rtao-wallet/Cargo.toml": "776cb4e3136f13758185e38af4746181e385e1283a6b5233bd45752fbbf69dbe",
       "crates/rtao/Cargo.toml": "1718e111f0bbef655f5c2ec8ecbadf658aba15a2c590e0bc331ceaa3a2143b9b",
-      "upstream.toml": "3f53bd251b1698b9e2f36b31be317d5908c25eb6dbbe067a1b8e649df9309b1b",
+      "upstream.toml": "0d464986996ed5323c7b721b00b55731a865ef73a9b55f7518cfff20f67edba9",
       "xtask/Cargo.toml": "3c4df51eadf75d7d87340251b4bdfc52d31c3ec0bda7c8861cf4a7f01c36b890"
     },
-    "dependency_inputs_sha256": "16edd342c0342ef89aef1b008adf3d864de6cde2d653845e55b982a6201f4d09",
+    "dependency_inputs_sha256": "ff474f5ab0cff3949783e58e3df17d28573eece46e55fa07012daa663876f8ea",
     "dirty": true,
-    "head_commit": "61396e55972ae0b955c45df14c31e3c726090e91"
+    "head_commit": "1e52e71b2ae908ca425b40408380be2f31a9904c"
   },
   "target": "aarch64-apple-darwin"
 }

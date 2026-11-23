@@ -131,7 +131,7 @@ use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
 BEGIN cargo xtask import-upstream attribution
-Copied byte for byte from RaoFoundation/subtensor @ 8b407e40988ea7a251abb6dbc07a9ab7d602b740
+Copied byte for byte from RaoFoundation/subtensor @ a68c6e8c65411a842fbf69269dc385aa13041391
 https://github.com/RaoFoundation/subtensor
 License: Apache-2.0 (upstream LICENSE preserved in vendor/upstream/src/LICENSE).
 All watched files are retained for offline checks and Rust-native extraction;
@@ -143,20 +143,20 @@ LICENSE -> vendor/upstream/src/LICENSE; ce46a3c2599448e6989685edf7a58cdc5c22aa6d
 common/src/proxy.rs -> vendor/upstream/src/common/src/proxy.rs; 9db2ca129f8f3d75c71619a41969d2437f0412525371353282bbeebf19c443f0
 common/src/transaction_error.rs -> vendor/upstream/src/common/src/transaction_error.rs; c8f1e34d1836391c065e291c206e7fa2390a5f22e98fc4dac4404899fdca9f6e
 docs/guides/signed-requests.mdx -> vendor/upstream/signed-requests.mdx; ac4b4194df1275251fd1a7b269c452c5a290d14dbd97c725071f52d8124ec1b8
-eco-tests/Cargo.toml -> vendor/upstream/src/eco-tests/Cargo.toml; ce12d23109095f0f762d6c88847695f418ea5cfb8e503fb66e517629c143a830
+eco-tests/Cargo.toml -> vendor/upstream/src/eco-tests/Cargo.toml; 89088e89feb9817e1e21441cb3a2a65344434b8bffd60eb8ad117739a08b54e3
 eco-tests/src/helpers.rs -> vendor/upstream/src/eco-tests/src/helpers.rs; 3173e54340c641b98c652c622b3db315c10a51ec0c05f4297837ed0c9342cde7
 eco-tests/src/lib.rs -> vendor/upstream/src/eco-tests/src/lib.rs; e37baad26be1f8f2be3c6c0392ba9057468974185b466a84b168fdba63c56521
-eco-tests/src/mock.rs -> vendor/upstream/src/eco-tests/src/mock.rs; bf58d1079424417259d0376d9cfa85d5853a67a6bc934d3688af42b82b006e5e
+eco-tests/src/mock.rs -> vendor/upstream/src/eco-tests/src/mock.rs; 547243606350008e924b1c98d8ccf8b361571bbfc4d125dfc00ea37614feae42
 eco-tests/src/tests.rs -> vendor/upstream/src/eco-tests/src/tests.rs; f127a55157a0c9f9a746ebdafb8e367664c4c8e088440220cddfdbe1125ec3d9
 eco-tests/src/tests_mentat_indexer.rs -> vendor/upstream/src/eco-tests/src/tests_mentat_indexer.rs; 61604627b22b0c3e17789f88e2f5cec08b232239fa3c379c2ee242b0bb16bd68
 eco-tests/src/tests_taocom_indexer.rs -> vendor/upstream/src/eco-tests/src/tests_taocom_indexer.rs; c3c5a26cde9461490b56b07259d6310abf48202cb1b4d6d96a13d3fe0e3b1cca
-git:watched-tree -> vendor/upstream/tree.txt; 8db1cf0884a57257599658ef0e09a90a1ca6f9450c22130e72c55ec6d7ea2073
-pallets/admin-utils/src/lib.rs -> vendor/upstream/src/pallets/admin-utils/src/lib.rs; 1e9a747cfd1a2a60f1082ebecf67eeb6182c1fcfdd5344f7ced5668b311623f1
+git:watched-tree -> vendor/upstream/tree.txt; ac0e53a8e95ca8f75d423781e028304c2a6233d8f5066286e48f248383d4d474
+pallets/admin-utils/src/lib.rs -> vendor/upstream/src/pallets/admin-utils/src/lib.rs; 3585876cc41a4971f85f6df91d163b50e5119294e83f2a40022e92070a6f5aa9
 pallets/subtensor/src/coinbase/reveal_commits.rs -> vendor/upstream/src/pallets/subtensor/src/coinbase/reveal_commits.rs; 33098bed261a1ad7c970c7e38c02c7446316c00483e945ef0a86dddb9485f683
 pallets/subtensor/src/coinbase/run_coinbase.rs -> vendor/upstream/src/pallets/subtensor/src/coinbase/run_coinbase.rs; 94fb704fcdcaaa84f1ed6ddfee48fbc83fbf9d2eee967d9a65c581559a64eb27
 pallets/subtensor/src/coinbase/tempo_control.rs -> vendor/upstream/src/pallets/subtensor/src/coinbase/tempo_control.rs; 4dccedfa564070e1dfe2e778bb7d3902cd690ffba23e6f04bd6f8bee47835722
-pallets/subtensor/src/lib.rs -> vendor/upstream/src/pallets/subtensor/src/lib.rs; bef4814f310de6bd96ce96cd81d9469481546f23b7307ffb19d63d94473828b9
-pallets/subtensor/src/rpc_info/basket_info.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/basket_info.rs; 384ce448bfddeb75ed9ac7c726df9f1ca58cbf8667ac72fa15c2102f696db80d
+pallets/subtensor/src/lib.rs -> vendor/upstream/src/pallets/subtensor/src/lib.rs; 0fa8987cf3d60ea4175af9be8f427e88b339f6f197c48b449f4c7a6b52bd6e17
+pallets/subtensor/src/rpc_info/basket_info.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/basket_info.rs; 5a58a8fb007802f6353570503ef0b8daef424cbaa19c2dc2c36813ecb50b733c
 pallets/subtensor/src/rpc_info/delegate_info.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/delegate_info.rs; b1f8dae6293f7c5c7e6274abc78299ccb8b2be890dccfbe65cf680a8ae72c4e7
 pallets/subtensor/src/rpc_info/dynamic_info.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/dynamic_info.rs; fd0f7543593c7eeaeb08531379fbddc2a0d4af58a4ed50aac02d7fcfa54cc316
 pallets/subtensor/src/rpc_info/gamma_info.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/gamma_info.rs; 5b35082a19653a4fb5e0ac1b1a5fe6ac66cf60054f78a3fba6eac2602ecb4e57
@@ -166,13 +166,13 @@ pallets/subtensor/src/rpc_info/neuron_info.rs -> vendor/upstream/src/pallets/sub
 pallets/subtensor/src/rpc_info/show_subnet.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/show_subnet.rs; 9aa16987a9ed08ce1db96aac86a327d154209fafb766e941a3de6307618796d3
 pallets/subtensor/src/rpc_info/stake_info.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/stake_info.rs; 25c0e9649d9a2715fff01aaac89ef62f717a9a93821575107dbeb9af0f84e843
 pallets/subtensor/src/rpc_info/subnet_info.rs -> vendor/upstream/src/pallets/subtensor/src/rpc_info/subnet_info.rs; cb14dbec204f020e059a889081860a6142b12d74de4d91ce1ec0eb081cbf7e48
-pallets/subtensor/src/subnets/registration.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/registration.rs; 0b5c8f1752a934b28f0ab827f09f8cc96547aea7e04d5f2dca4c7f6f1462e081
+pallets/subtensor/src/subnets/registration.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/registration.rs; f4ad70e91f48efa56a8d1fea742a3fc3d7959a4a514578c3b22130024b340977
 pallets/subtensor/src/subnets/serving.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/serving.rs; afba391d73a72e997de45d3c23cb9adeeed61632bbb4dd5448a76069a0ab58e6
 pallets/subtensor/src/subnets/subnet.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/subnet.rs; 7da9a16653673272225e3cda834236efc3358717411083c555bc31bd510eaaaf
-pallets/subtensor/src/subnets/uids.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/uids.rs; c00694fe78921fffaa6cdbf396d47aa65e9e14b9b55faf7e132c9f781cbf9a73
-pallets/subtensor/src/subnets/weights.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/weights.rs; cc4407f193c6b804df5a2f919e797cb7909da0c751f871081610d6770514a888
+pallets/subtensor/src/subnets/uids.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/uids.rs; d72f7b7f7fa0e9c6b53b81cef4937648b8d1a6c7c658eb402fd4f5bb3aa1bf51
+pallets/subtensor/src/subnets/weights.rs -> vendor/upstream/src/pallets/subtensor/src/subnets/weights.rs; dc256ab7796df4b0163fdbd6f5445954c677aceb1cd90b7b87b32bed2ddb9826
 pallets/subtensor/src/utils/misc.rs -> vendor/upstream/src/pallets/subtensor/src/utils/misc.rs; cf6633aa7ccb92e22987095143035074c1ef45eb26974d8cf219b1931a7a80cd
-pallets/subtensor/src/utils/rate_limiting.rs -> vendor/upstream/src/pallets/subtensor/src/utils/rate_limiting.rs; 09e22ae3bbd53a9b892e418cd93926300db9311ebe999d61204bf2b93d452772
+pallets/subtensor/src/utils/rate_limiting.rs -> vendor/upstream/src/pallets/subtensor/src/utils/rate_limiting.rs; 247928531434cf27522455ccaa87566915bc4437e4321cdb67662dd7dc4344ca
 precompiles/src/solidity/addressMapping.abi -> vendor/upstream/src/precompiles/src/solidity/addressMapping.abi; f4c28296bd6f13539b658aa79f26d5ece16913ba78a69e3d08136f68d82f101d
 precompiles/src/solidity/alpha.abi -> vendor/upstream/src/precompiles/src/solidity/alpha.abi; f2972f673e447660bcbb1db04b486ba999c37dad0202fc5b109080f572081e6d
 precompiles/src/solidity/balance.abi -> vendor/upstream/src/precompiles/src/solidity/balance.abi; 3aeadcb6f62bc004eef255b8990148b3d0b5cd16985cb078c0017de1680afdc5
@@ -253,14 +253,14 @@ sdk/bittensor-core/tests/password_environment.rs -> vendor/upstream/src/sdk/bitt
 sdk/bittensor-core/tests/verify_strict.rs -> vendor/upstream/src/sdk/bittensor-core/tests/verify_strict.rs; d9fd33c0c3679a8cf3ce47ec2928bc39a72a2ceef5805689fd16415a4c317a3f
 sdk/python/bittensor/__init__.py -> vendor/upstream/src/sdk/python/bittensor/__init__.py; 28fc1a93c067b68c996f50ac12d1ec72e607590bf98e7d23d2bc4d72b42e858f
 sdk/python/bittensor/_generated/__init__.py -> vendor/upstream/src/sdk/python/bittensor/_generated/__init__.py; 3a3051da2738a370350e7706e788462e2f392da784190656676ac5f50baae0e8
-sdk/python/bittensor/_generated/calls.py -> vendor/upstream/src/sdk/python/bittensor/_generated/calls.py; d9a31a57f195fa03ab7f78dc4ae425301be7fad6a572194ca0fcdacf72dbbf74
+sdk/python/bittensor/_generated/calls.py -> vendor/upstream/src/sdk/python/bittensor/_generated/calls.py; abc633fbef0944d74dac9420f1b56c03760602f2d67d0c4100f922aadf207433
 sdk/python/bittensor/_generated/constants.py -> vendor/upstream/src/sdk/python/bittensor/_generated/constants.py; f86e2842e56ea9fbb072666c398ace93867123d83d66ad2ae978336f24bbbb40
-sdk/python/bittensor/_generated/errors.py -> vendor/upstream/src/sdk/python/bittensor/_generated/errors.py; 62aad9967013091be00c4b0f84d4a44d575507bdb4d472563357aa37e90989c7
-sdk/python/bittensor/_generated/runtime_apis.py -> vendor/upstream/src/sdk/python/bittensor/_generated/runtime_apis.py; 6532dd9c48d26b19f6c84a29098c1d82f29cb1caea999704e8bb84f8de55dfeb
-sdk/python/bittensor/_generated/storage.py -> vendor/upstream/src/sdk/python/bittensor/_generated/storage.py; d310b2c83a47f0784c8443ea159d9d43ae51fafc7149e11e56869a4291ebb8c7
+sdk/python/bittensor/_generated/errors.py -> vendor/upstream/src/sdk/python/bittensor/_generated/errors.py; 00e8b4f01d59dcacd0b687beddb97ac5b80818519252996a99a2e745c4ee185c
+sdk/python/bittensor/_generated/runtime_apis.py -> vendor/upstream/src/sdk/python/bittensor/_generated/runtime_apis.py; a3462617a02b122fc6c5eff2c8fe4379e3b3895c3571f9dfd77181b83959d85c
+sdk/python/bittensor/_generated/storage.py -> vendor/upstream/src/sdk/python/bittensor/_generated/storage.py; a10c051dc97ff6d17058c0eece70758dfd70ffc2ce692aa7801470b30f31f901
 sdk/python/bittensor/_live.py -> vendor/upstream/src/sdk/python/bittensor/_live.py; 82788b1a42f38db51e2bbd24121f3287d959e745837261da353cf445fd762b66
 sdk/python/bittensor/_pinned.py -> vendor/upstream/src/sdk/python/bittensor/_pinned.py; 520848a7ba62d954735ac1e497d96b66d8c1f86458b8bef3940d8964fdfb909b
-sdk/python/bittensor/_substrate.py -> vendor/upstream/src/sdk/python/bittensor/_substrate.py; 75c5739e355191d1cd0690691a7b108d58229ae0e054c5a2e8b62049c3ce738a
+sdk/python/bittensor/_substrate.py -> vendor/upstream/src/sdk/python/bittensor/_substrate.py; 31360de543a0c355ab452c5b944d49095b8aa8fd6b413a408ddf37f4d8287bac
 sdk/python/bittensor/_subtensor.py -> vendor/upstream/src/sdk/python/bittensor/_subtensor.py; 1e7996b8ab2b50945c46d25186ce74ce88ba12775980d23732d3e6d139baff5b
 sdk/python/bittensor/_transport/__init__.py -> vendor/upstream/src/sdk/python/bittensor/_transport/__init__.py; 1843df314d85ceeb029e14ec3a84382ce4071676aaf32d3cdf7f42c5f7ac5f56
 sdk/python/bittensor/_transport/codec.py -> vendor/upstream/src/sdk/python/bittensor/_transport/codec.py; 218b62afd014c94c8f4c63c50d1d893b4a342d04b0e347feac81ffc48b7d1e33
@@ -268,7 +268,7 @@ sdk/python/bittensor/_transport/const.py -> vendor/upstream/src/sdk/python/bitte
 sdk/python/bittensor/_transport/contract.py -> vendor/upstream/src/sdk/python/bittensor/_transport/contract.py; 086de9c2b7f142a2dc1bbe35e17c0a10bbdd7e4b93a04468f398453e2d8daf6f
 sdk/python/bittensor/_transport/errors.py -> vendor/upstream/src/sdk/python/bittensor/_transport/errors.py; 4efbed2a74ed56772247df987e7b6da85cfbd25ec716835398e1b1cda1fa843d
 sdk/python/bittensor/_transport/extrinsics.py -> vendor/upstream/src/sdk/python/bittensor/_transport/extrinsics.py; 18030c7c895c2d37a0ede8e44a6ce40271688ae975b1bf1ced0f52039263b246
-sdk/python/bittensor/_transport/interface.py -> vendor/upstream/src/sdk/python/bittensor/_transport/interface.py; 646b5bef03ee07ccf329994edd1ad4a79500d2990870f5bca283a5453ff9f615
+sdk/python/bittensor/_transport/interface.py -> vendor/upstream/src/sdk/python/bittensor/_transport/interface.py; b60e44bf4319708348464714923f2ec8b242a870be59e6d8de401ec300023c79
 sdk/python/bittensor/_transport/lru.py -> vendor/upstream/src/sdk/python/bittensor/_transport/lru.py; a2faeced023162088223a5907ea34788f974dcd64bc9006a29dd8aaa8217f3a5
 sdk/python/bittensor/_transport/protocols.py -> vendor/upstream/src/sdk/python/bittensor/_transport/protocols.py; ad0a06c05c7676e7c7f568c0825a14d36a2689b0c82aa8fffc80153b41c05f2f
 sdk/python/bittensor/_transport/rpc.py -> vendor/upstream/src/sdk/python/bittensor/_transport/rpc.py; 69c6c35273e39a5807ea83696aa1de28c9ecc86f028ee99011eb4110c5bb6e59
@@ -288,6 +288,7 @@ sdk/python/bittensor/cli/commands/__init__.py -> vendor/upstream/src/sdk/python/
 sdk/python/bittensor/cli/commands/addresses.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py; ffaa1033fb7ba235d280eda32f43b22ea65df770cea0982dd0d1e77177bbc929
 sdk/python/bittensor/cli/commands/axon.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/axon.py; edc75ce66dc40f67a3ca12ef60c2cfe5b632c5d91143c28536aadf49dc3a3453
 sdk/python/bittensor/cli/commands/collateral.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/collateral.py; 822c6832244ea50e45fbf38e8e9cf966931ef6e85620bc602f7768c50b4ae077
+sdk/python/bittensor/cli/commands/commitments.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/commitments.py; 4e9caa0c46bc2ee5c003e63938b5aa4a7e9481c65c521b15294bc854fc13fe86
 sdk/python/bittensor/cli/commands/config.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/config.py; 4b42a27e1ca76fc8bc91256d47537f5628d18842cbc7e5bc61fef56c23c09d2c
 sdk/python/bittensor/cli/commands/crowd.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/crowd.py; 6aacc2a10721b356b26ba729019d1725760299025e1c46e726bab70fbc6eeb0c
 sdk/python/bittensor/cli/commands/evm/__init__.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/evm/__init__.py; a3ec64ba0f5a21c7e3777daedb91e362635fd5a2153146f16b581b179f35cfc7
@@ -303,28 +304,28 @@ sdk/python/bittensor/cli/commands/evm/stake.py -> vendor/upstream/src/sdk/python
 sdk/python/bittensor/cli/commands/extension.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/extension.py; 45be789f4c105ab5ff67aaf5816624d27ec24158709de03b449162fdf755fcc5
 sdk/python/bittensor/cli/commands/gamma.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/gamma.py; b6484a83610ecf41443a6e18d4fd373c47ece225f7e3cb40b41288685d5efe3d
 sdk/python/bittensor/cli/commands/lock.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/lock.py; 260ec28ec9bb8f41fd908cebf33b478e902a4def56cf62dda3b28cc9289dbe28
-sdk/python/bittensor/cli/commands/misc.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/misc.py; 628861e7824eb53d6308a8f5e87128f4ecd39dccffb5a15ccd3bde8e7fbc5815
+sdk/python/bittensor/cli/commands/misc.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/misc.py; 1521a026bbb50ebc82176766653f0d890750e056aa38ec56a5d9fbd3447e69fa
 sdk/python/bittensor/cli/commands/multisig.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/multisig.py; cf1ccb809ff4d9f0ff3972394edfbb9d54d8256d0887098ae0d8081043ad9fbc
 sdk/python/bittensor/cli/commands/proxy.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/proxy.py; 1bd4044aa9b03037be50ccd41eed634f0d49ce918719d075d3a3ad6364ed80a5
 sdk/python/bittensor/cli/commands/root.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/root.py; 8d5760a69f0dfaba5e38b3204f33dd2a1175f96f5cccdfa91e744e9a18d3a445
 sdk/python/bittensor/cli/commands/root_move.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/root_move.py; 6846daddb0448b338caf32de38c4fb13b8002bf0a414b0b6da59890502178327
-sdk/python/bittensor/cli/commands/root_swap.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/root_swap.py; 201517bb57424ebb256627a7d0bef68b83d1fe8d57c2c2f13beaeaccdf5443c7
+sdk/python/bittensor/cli/commands/root_swap.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/root_swap.py; b648cee82339c309da9b1badfff707ac55a40588a26676dc33434b4a56dd5377
 sdk/python/bittensor/cli/commands/stake.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/stake.py; abdcd4136715177ace0f2afcae176a11f2d0a5dd64e63b5d07d680f3765fbc0f
-sdk/python/bittensor/cli/commands/subnet_emission.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py; 67c78413137e40eb3a6f41eacf41667d9f35022b201fd49b825dcc9745e9625b
+sdk/python/bittensor/cli/commands/subnet_emission.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/subnet_emission.py; 9258d1c1fc31b4e94508e3a019aafafd82f70dfe4c9bb1ea48ebef5af95b7a0a
 sdk/python/bittensor/cli/commands/subnets.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/subnets.py; e62397ce5a78c05fb8b51c15d84e3a69cfaa0feea914db3eed3c526443eb8f97
 sdk/python/bittensor/cli/commands/sudo.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/sudo.py; 0b5222ccd326ae7dd0a984600f6485460e02925cffa0b04cab22a7f86be77dae
 sdk/python/bittensor/cli/commands/timelock.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/timelock.py; 34fadb588610a22eac98b75a084aba02ba2c309e204fdd0d60f8a8b2e62911d0
 sdk/python/bittensor/cli/commands/upgrade.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/upgrade.py; b79e75aac8a4fa90abe9c486ad5673f0486583582de417342b25ba403ff646c1
 sdk/python/bittensor/cli/commands/wallet.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/wallet.py; 3ef3f708917fe64c69f9264eba03a5160ca3e4d5efce9ea116d0e4a9322041aa
-sdk/python/bittensor/cli/commands/weights.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/weights.py; 63fe9c54b653c11d2187df513fdf27cea8dd1b30c1ffc9006b87fe80845daabc
+sdk/python/bittensor/cli/commands/weights.py -> vendor/upstream/src/sdk/python/bittensor/cli/commands/weights.py; 977ba5a8e8a4b19047071f2ae2793d5a6223a81adbd77e62adaf339d8a840acf
 sdk/python/bittensor/cli/context.py -> vendor/upstream/src/sdk/python/bittensor/cli/context.py; 200a70784ca6e7bab3aae03f66ba9d75553616040765ed71d96fd9b16e89d47c
 sdk/python/bittensor/cli/globals.py -> vendor/upstream/src/sdk/python/bittensor/cli/globals.py; bbe11dde3b7a7914d35cc95bd112d1faa01e2489d68818b422511f896a27e354
-sdk/python/bittensor/cli/help_theme.py -> vendor/upstream/src/sdk/python/bittensor/cli/help_theme.py; b5da0f0c4104e14fb05f478236608a25409c7ee0d345ca48316a5c81a75dad1c
+sdk/python/bittensor/cli/help_theme.py -> vendor/upstream/src/sdk/python/bittensor/cli/help_theme.py; 18cd5edc0e9fde09fc12a707638bab73185fb6c06c3297cc66a685267fb24373
 sdk/python/bittensor/cli/helpers.py -> vendor/upstream/src/sdk/python/bittensor/cli/helpers.py; 9e7153f3c57a04fa9fdc738bd989c893184584a2ec4db8a5c72a46ce8e3daa8d
 sdk/python/bittensor/cli/hyperparams_view.py -> vendor/upstream/src/sdk/python/bittensor/cli/hyperparams_view.py; c65d32e25af765fcc2bc3c45640ead756f5f740b4e7442fe88339dcbe30ea89a
 sdk/python/bittensor/cli/intent_prompts.py -> vendor/upstream/src/sdk/python/bittensor/cli/intent_prompts.py; 3fa89bdd49e2ac3879fde5515827fb1d7746dfd26cd78c81ce19893e1d5eb06c
 sdk/python/bittensor/cli/logs.py -> vendor/upstream/src/sdk/python/bittensor/cli/logs.py; ba0af1c766d5521095665bcdc2eebff4e4f001caeac56a539a4c88b6f80a8cba
-sdk/python/bittensor/cli/main.py -> vendor/upstream/src/sdk/python/bittensor/cli/main.py; 937d73be918ed43fafdd32ac988964f002dd89d24d318aef6b466710e391d0d1
+sdk/python/bittensor/cli/main.py -> vendor/upstream/src/sdk/python/bittensor/cli/main.py; 8897763698ae777f0438adcc66d9676d0b74d5d53dedb12678e2a94f9e3dd67e
 sdk/python/bittensor/cli/metagraph_view.py -> vendor/upstream/src/sdk/python/bittensor/cli/metagraph_view.py; 4d24aacf1e46759e5ae1e63f6e07880baf48e3032b2cde36175c4e0ed0105b8c
 sdk/python/bittensor/cli/multisig_helpers.py -> vendor/upstream/src/sdk/python/bittensor/cli/multisig_helpers.py; e871762de087a0eb16de611a672d275505f803e2fa38dfd10bfd1236ef0a6273
 sdk/python/bittensor/cli/null_pruning.py -> vendor/upstream/src/sdk/python/bittensor/cli/null_pruning.py; db5bec291885cfdbb3d7dda89dacd3f3c5ae97caf38f1ce8cc4ddcc07ed01c8d
@@ -340,13 +341,13 @@ sdk/python/bittensor/cli/stake_picker.py -> vendor/upstream/src/sdk/python/bitte
 sdk/python/bittensor/cli/tx.py -> vendor/upstream/src/sdk/python/bittensor/cli/tx.py; 6769bcc96dc0c340234f9b961ee72b5525b936f3bed0a17ec7a25dd01dcfe167
 sdk/python/bittensor/cli/upgrade_helpers.py -> vendor/upstream/src/sdk/python/bittensor/cli/upgrade_helpers.py; d2eca7310f321191dac519a87e7d1c3b4bc6ba8717d383b3c35ef0c72b86893f
 sdk/python/bittensor/cli/wallet_addresses.py -> vendor/upstream/src/sdk/python/bittensor/cli/wallet_addresses.py; 9fbdb3837132cef231884a70b73e32d4e2516e4f4e5b76add8c68b1be220b69c
-sdk/python/bittensor/client.py -> vendor/upstream/src/sdk/python/bittensor/client.py; 5f7571fa354a8996ce9a68ab01a5b70b5598484033462f7f17c29c9fc1b769ab
+sdk/python/bittensor/client.py -> vendor/upstream/src/sdk/python/bittensor/client.py; 429d70d2848d8dfa7d528fcca960701eedf9e32455cb969bd51c2a3c8b77c510
 sdk/python/bittensor/config.py -> vendor/upstream/src/sdk/python/bittensor/config.py; 6b2d004010669e283972f80762dfa8a93d38ac1e402a28d2fd1e24db7bf03c55
 sdk/python/bittensor/emission_weights.py -> vendor/upstream/src/sdk/python/bittensor/emission_weights.py; 5b17f9cefec63a2cffe41fa52a750bc172f7619d513d6fa3f07689ad17e4427b
 sdk/python/bittensor/error_descriptions/__init__.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/__init__.py; 48ecc5ebf234ff4a2337cd41b3828de439f4fd7107c5f8a891220a0a058b3797
 sdk/python/bittensor/error_descriptions/admin_utils.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/admin_utils.py; 50b8e4ad1eb281b198ac4d71d4da4743c5758f0df04edce9756f2f0c16c748f2
 sdk/python/bittensor/error_descriptions/balances.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/balances.py; 9f1c67f92e80cbb6f35f0be30b919c2af084b44ab2c3bcb3c5680cd2838c536d
-sdk/python/bittensor/error_descriptions/commitments.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/commitments.py; da7670c4c99713f7e9541b313b5cf67105792894e265900c835374a08168c947
+sdk/python/bittensor/error_descriptions/commitments.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/commitments.py; c25e50c5a31fc5a748b7f0a681be735d3966fc5cd2e2c67f1233372d927f5384
 sdk/python/bittensor/error_descriptions/contracts.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/contracts.py; 74b759acf79292cf99c9c9d3f8038086f36954ac7eac0b9e81c2669d000081ea
 sdk/python/bittensor/error_descriptions/crowdloan.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/crowdloan.py; 0e2fb0dfd89cfbf14988f607e8a1fff664dabb722c767875ae0a871121568bda
 sdk/python/bittensor/error_descriptions/drand.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/drand.py; 74df1fa98a13db29f30435a152d28b14884d8774ce1b2b0e04be983d69b4784d
@@ -361,12 +362,12 @@ sdk/python/bittensor/error_descriptions/preimage.py -> vendor/upstream/src/sdk/p
 sdk/python/bittensor/error_descriptions/proxy.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/proxy.py; cbb08fd5674fb2506650e2bba2153356da4d3a2b74043d7669602a2bea4aef56
 sdk/python/bittensor/error_descriptions/safe_mode.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/safe_mode.py; 5de762097514eda38085fdcbdcc674dd53b4edec75e2a66b6df0dacfbfba4aaf
 sdk/python/bittensor/error_descriptions/scheduler.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/scheduler.py; aa1895788d20564c886f5d617b1ea2b84b9d7e568324448c1c397a9a758d5d1d
-sdk/python/bittensor/error_descriptions/subtensor.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/subtensor.py; b28b525fdbd9469f37129075fef3b51bb0619d72a7beff845e087b7cef71ec3a
+sdk/python/bittensor/error_descriptions/subtensor.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/subtensor.py; 8678ea8eba0d8c8eb90ccab9748498f2ec7b4d68340fa5458804bb38570d54b6
 sdk/python/bittensor/error_descriptions/sudo.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/sudo.py; 8bed1224e1d0f204f165b2cc704833fad79421a0714d8231ae0fa088a7cecc03
 sdk/python/bittensor/error_descriptions/swap.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/swap.py; 10753e9b0700ada5ac473bdf1f60a95a82b610e9edfb725199d58ff91aa5fdff
 sdk/python/bittensor/error_descriptions/system.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/system.py; 721a47ff3cd247c5b4c65c048e2918cc9aa178ee2aeab2d461584c1e33a8ac0d
 sdk/python/bittensor/error_descriptions/utility.py -> vendor/upstream/src/sdk/python/bittensor/error_descriptions/utility.py; 211d66c45aa6dc9925c56764d91a3d2e8b1897e3b72ed44a4af17da88223659e
-sdk/python/bittensor/error_map.py -> vendor/upstream/src/sdk/python/bittensor/error_map.py; 1c17ba5f767a0250145424086f82abd5343a8ffec942de4f7b29c36fadf91155
+sdk/python/bittensor/error_map.py -> vendor/upstream/src/sdk/python/bittensor/error_map.py; e2895307957d1d2afa0a6b8aef1c5d11ecfa483e47756000ad794f2e0f30812b
 sdk/python/bittensor/evm/__init__.py -> vendor/upstream/src/sdk/python/bittensor/evm/__init__.py; a65fd9b4675604a2221a5809604a655daf884815df926483d6d7f61fafca3aaa
 sdk/python/bittensor/evm/abi/addressMapping.json -> vendor/upstream/evm/abi/addressMapping.json; f4c28296bd6f13539b658aa79f26d5ece16913ba78a69e3d08136f68d82f101d
 sdk/python/bittensor/evm/abi/alpha.json -> vendor/upstream/evm/abi/alpha.json; f2972f673e447660bcbb1db04b486ba999c37dad0202fc5b109080f572081e6d
@@ -411,7 +412,7 @@ sdk/python/bittensor/fee_filters.py -> vendor/upstream/src/sdk/python/bittensor/
 sdk/python/bittensor/hashed.py -> vendor/upstream/src/sdk/python/bittensor/hashed.py; 461dd755936e24a01f20d181d359d4b6f13105081fbb2e408df6cceee3891126
 sdk/python/bittensor/http_auth.py -> vendor/upstream/src/sdk/python/bittensor/http_auth.py; ccd502e0657239cc4e0e0af96c220da9818c955f34dd902a3adc5f3940612fa2
 sdk/python/bittensor/hyperparams.py -> vendor/upstream/src/sdk/python/bittensor/hyperparams.py; e7fb01db3b8698567509d21bcb24652aa09211035b3368158baf3256ca53da6d
-sdk/python/bittensor/intents/__init__.py -> vendor/upstream/src/sdk/python/bittensor/intents/__init__.py; 9322cd22144f87b9047d4cc4d0a12334ea25753a155de07daec203efd9d461e1
+sdk/python/bittensor/intents/__init__.py -> vendor/upstream/src/sdk/python/bittensor/intents/__init__.py; 684541b25516f34205c47510ab789907e8c77f9dabacfd4f6457467ca586dc0f
 sdk/python/bittensor/intents/_money.py -> vendor/upstream/src/sdk/python/bittensor/intents/_money.py; 3e9c4ac34d7198966f8e31a16dc6aa03567432dac9a193d53facf24056160e3e
 sdk/python/bittensor/intents/_root_claim_fee.py -> vendor/upstream/src/sdk/python/bittensor/intents/_root_claim_fee.py; 6ab6392876994a1910b8668cb7f577fb9d138bd7d6a04e80099b26efef49cedc
 sdk/python/bittensor/intents/association.py -> vendor/upstream/src/sdk/python/bittensor/intents/association.py; e015b2ddc33db384308b979d7d8752d56cf31bdfff14aa109a4573bf9b270f52
@@ -420,6 +421,7 @@ sdk/python/bittensor/intents/batch.py -> vendor/upstream/src/sdk/python/bittenso
 sdk/python/bittensor/intents/children.py -> vendor/upstream/src/sdk/python/bittensor/intents/children.py; e54bfc0f9542c6287d412fe1aeaceaa7d2a303dc0eaa8b6539d350800910bd11
 sdk/python/bittensor/intents/coldkey.py -> vendor/upstream/src/sdk/python/bittensor/intents/coldkey.py; c9cc84b898f6cafe0cc078e21c99a7855ddde442c79d1d312d2006be90f2eab1
 sdk/python/bittensor/intents/collateral.py -> vendor/upstream/src/sdk/python/bittensor/intents/collateral.py; 71a07e475f96863618fe4578ef246ad22c98233a0bfee85ad22e9f977c54b21e
+sdk/python/bittensor/intents/commitments.py -> vendor/upstream/src/sdk/python/bittensor/intents/commitments.py; f6ef8270552a0ba3cb30068decd097aed2048a698ad53a21e191f3e5cb813003
 sdk/python/bittensor/intents/crowdloan.py -> vendor/upstream/src/sdk/python/bittensor/intents/crowdloan.py; f58b4dad6d442aa69d770acb8e912c83a736b68ad996f5e557c3032814d23206
 sdk/python/bittensor/intents/emission_weights.py -> vendor/upstream/src/sdk/python/bittensor/intents/emission_weights.py; e8a9ad09392c355713d7fa65b530e51cad808cf2f6141e3a114c4a6ac804748d
 sdk/python/bittensor/intents/evm.py -> vendor/upstream/src/sdk/python/bittensor/intents/evm.py; f50b0c8838000496698930d87425350237fa2ee952c8d9a352e72aa2fc56f321
@@ -437,9 +439,9 @@ sdk/python/bittensor/intents/registration.py -> vendor/upstream/src/sdk/python/b
 sdk/python/bittensor/intents/registry.py -> vendor/upstream/src/sdk/python/bittensor/intents/registry.py; 150a87778b4b5388bc24cdc589b0e2bfe24212cba8a712d5a7b8c94fc9363288
 sdk/python/bittensor/intents/root.py -> vendor/upstream/src/sdk/python/bittensor/intents/root.py; 4815361bf5149312556ff4a84c1f47e452a1e565ced7a56faa4c231980bb227a
 sdk/python/bittensor/intents/serving.py -> vendor/upstream/src/sdk/python/bittensor/intents/serving.py; 1eb1b61508af90f44744532948bc69d3feda2c819ce85f6f4156d0713ed6b9c2
-sdk/python/bittensor/intents/staking.py -> vendor/upstream/src/sdk/python/bittensor/intents/staking.py; ee0408019e02d919f78b8f88a546774f24597e65058736d67b92dcb68cfa7ce3
+sdk/python/bittensor/intents/staking.py -> vendor/upstream/src/sdk/python/bittensor/intents/staking.py; f999ef0af79ca50edb2d5d3e5b0a1715d3d031b5813929c02d3df4ca03d30b81
 sdk/python/bittensor/intents/transfer.py -> vendor/upstream/src/sdk/python/bittensor/intents/transfer.py; 997b3393c1fa8e0598a7f4cbf14fb33b61c4b58772cab196e33fb3f8d4ca8887
-sdk/python/bittensor/intents/weights.py -> vendor/upstream/src/sdk/python/bittensor/intents/weights.py; d6419eda3b32a1e07f20ab3aa45c40351e2677bb4a5ffce90352c465bfff7f38
+sdk/python/bittensor/intents/weights.py -> vendor/upstream/src/sdk/python/bittensor/intents/weights.py; be345bd1a57863571862b96b999e32dcace6189cb6be422ab7ab587799bfc727
 sdk/python/bittensor/keyfiles.py -> vendor/upstream/src/sdk/python/bittensor/keyfiles.py; a93478f8bd8707039dc113612d72817a111777cbc9ae59b6027cacf8e6c42eba
 sdk/python/bittensor/ledger.py -> vendor/upstream/src/sdk/python/bittensor/ledger.py; 9a7ff9b5daab9658dfd7bf00daf01cda9630bb923b93a0aeffad6dea69c0cf58
 sdk/python/bittensor/limit_orders.py -> vendor/upstream/src/sdk/python/bittensor/limit_orders.py; 5170ec5f597d5c73a4d1beff050b3fabc65fe41fd289c64e6f8642714feb5a05
@@ -450,7 +452,7 @@ sdk/python/bittensor/mldsa.py -> vendor/upstream/src/sdk/python/bittensor/mldsa.
 sdk/python/bittensor/mldsa_signing.py -> vendor/upstream/src/sdk/python/bittensor/mldsa_signing.py; fa6faa065cf7f81ee7922c3267f181dcac94f17a891981b88e68a85efd3d0c64
 sdk/python/bittensor/multisig.py -> vendor/upstream/src/sdk/python/bittensor/multisig.py; 581d85a2ce15cfe4ac28c58c1da3b8980f080389ae4da451ede1233741d6263b
 sdk/python/bittensor/namespaces.py -> vendor/upstream/src/sdk/python/bittensor/namespaces.py; c9c48669e227524ea4b502b2396a8802be7e2507e6f506ef32a3198290294602
-sdk/python/bittensor/namespaces.pyi -> vendor/upstream/src/sdk/python/bittensor/namespaces.pyi; c11ff3df133c9d5278484ec7cf83554db2fa791fcead77c2c0dd087f9845e19d
+sdk/python/bittensor/namespaces.pyi -> vendor/upstream/src/sdk/python/bittensor/namespaces.pyi; 2853f0a9f85f882482774e7a046c589321bfdc08694e3214d6e9d93edefe908a
 sdk/python/bittensor/pow_registration.py -> vendor/upstream/src/sdk/python/bittensor/pow_registration.py; af066716be449a4e283724e1e418c606158b7c5d62cb8a36cd7904a165599321
 sdk/python/bittensor/protected_account.py -> vendor/upstream/src/sdk/python/bittensor/protected_account.py; b4af91ec9d9b2f16d67d1824ea945e35eb5a7c3714eed2c0ceafa62b738fa8e3
 sdk/python/bittensor/protected_funding.py -> vendor/upstream/src/sdk/python/bittensor/protected_funding.py; d53065b7b99bba074a6a72466bffa86b7b7ea8669a9fbebbd6f8b72171b15ab1
@@ -465,12 +467,12 @@ sdk/python/bittensor/reads/delegation.py -> vendor/upstream/src/sdk/python/bitte
 sdk/python/bittensor/reads/epochs.py -> vendor/upstream/src/sdk/python/bittensor/reads/epochs.py; ae900241e1370e98ed568cdcca08bbc5dea5ee25435a48e51b4cbe7ec403a627
 sdk/python/bittensor/reads/gamma.py -> vendor/upstream/src/sdk/python/bittensor/reads/gamma.py; e149dc6dde4320c48e118d6521b1d3d0fa54717bd43d3fb517d91fe6c7e5c17f
 sdk/python/bittensor/reads/hyperparameters.py -> vendor/upstream/src/sdk/python/bittensor/reads/hyperparameters.py; 208b24e4921e93e1047aeafb0870b5267c7145b9b1370f40a366c890c9a2d9dc
-sdk/python/bittensor/reads/identity.py -> vendor/upstream/src/sdk/python/bittensor/reads/identity.py; e7851e4c776ba3a73ce45d042f6e11e042def8b3fd9b07716986b69ed5bd3d1f
+sdk/python/bittensor/reads/identity.py -> vendor/upstream/src/sdk/python/bittensor/reads/identity.py; f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796
 sdk/python/bittensor/reads/leasing.py -> vendor/upstream/src/sdk/python/bittensor/reads/leasing.py; 242fe1d58ad663f12af789065783371c346569b3b0b8d96c6a81b258ee9d7c66
 sdk/python/bittensor/reads/locks.py -> vendor/upstream/src/sdk/python/bittensor/reads/locks.py; 01b9f0cd82027fa73dd064cf279855aa488aed1b7a500a6a5c18c626bca56438
 sdk/python/bittensor/reads/neurons.py -> vendor/upstream/src/sdk/python/bittensor/reads/neurons.py; 3d193277a1400c661208af188dd3209fdc0cde04851b863ab39e8032e8acc49b
 sdk/python/bittensor/reads/prices.py -> vendor/upstream/src/sdk/python/bittensor/reads/prices.py; ca53c8e2af8c0b20a654cae9a72a62597bd53339df69f15e4818677a5b8f71b3
-sdk/python/bittensor/reads/root.py -> vendor/upstream/src/sdk/python/bittensor/reads/root.py; 8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd
+sdk/python/bittensor/reads/root.py -> vendor/upstream/src/sdk/python/bittensor/reads/root.py; 0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897
 sdk/python/bittensor/reads/staking.py -> vendor/upstream/src/sdk/python/bittensor/reads/staking.py; b37eb3ba05e1a018872f359ccef1b3c8848221f1d6a5e799f003fec6357cda16
 sdk/python/bittensor/reads/subnets.py -> vendor/upstream/src/sdk/python/bittensor/reads/subnets.py; cfaab8a1b60f76f416cd39f415fe696f9c29baf3bd6db4a8720503781c62a140
 sdk/python/bittensor/reads/weights.py -> vendor/upstream/src/sdk/python/bittensor/reads/weights.py; 30de7c1ad8d8039f38b3df7ee2d27e4877f931f70ba974d9879f73a505903e49
@@ -480,9 +482,9 @@ sdk/python/bittensor/result.py -> vendor/upstream/src/sdk/python/bittensor/resul
 sdk/python/bittensor/settings.py -> vendor/upstream/src/sdk/python/bittensor/settings.py; 63dbe86ba2b151f95746d5d9673834e13299d129356666cf606730c6b93ce528
 sdk/python/bittensor/shielding.py -> vendor/upstream/src/sdk/python/bittensor/shielding.py; 7a8af1ac0859bae40bf59422b02d04edda6f9bb2c32e0f5f160c7ec62d02b988
 sdk/python/bittensor/signing.py -> vendor/upstream/src/sdk/python/bittensor/signing.py; 1b1f4cf386dfb68993551657d8a16a8d24f2989ed16d2166c17a61cb2a93f78e
-sdk/python/bittensor/snapshot.py -> vendor/upstream/src/sdk/python/bittensor/snapshot.py; bc742a81ae77deaeb3fb1627aa456a5961a8ee7de21596c45768056b1bbb6019
+sdk/python/bittensor/snapshot.py -> vendor/upstream/src/sdk/python/bittensor/snapshot.py; 84b512d7423ea2f231d05e0cca351ccc9449847206973644ea7757c6919a1116
 sdk/python/bittensor/sp_core.py -> vendor/upstream/src/sdk/python/bittensor/sp_core.py; a391c9a5b043a62248d75cc7f272ddc3a9204f2cdf56ccbd1ca6ea0a00c3fee8
-sdk/python/bittensor/sync.py -> vendor/upstream/src/sdk/python/bittensor/sync.py; bdc5c31cecd4cb5871278c7579623dd5f11fad53cba00b0922589c4e63b96b9e
+sdk/python/bittensor/sync.py -> vendor/upstream/src/sdk/python/bittensor/sync.py; 26a445a9434c8a71aeff23f7473086ed9b2579cead8596e3ebd11e9c8290dc2d
 sdk/python/bittensor/timelock.py -> vendor/upstream/src/sdk/python/bittensor/timelock.py; 9f8da405231045826aec39e31bde593c78ca1989d586af0794e50ff50517410a
 sdk/python/bittensor/vault/__init__.py -> vendor/upstream/src/sdk/python/bittensor/vault/__init__.py; 258ee7e8cc2dec9a8a0124fdb16a9eeda7fef88a98217f63ecc7c55234d17d44
 sdk/python/bittensor/vault/qr.py -> vendor/upstream/src/sdk/python/bittensor/vault/qr.py; 9a78633fa287e9725030617af6513500466a539d38cebd7e486ff9ca851c2e10
@@ -497,7 +499,7 @@ sdk/python/bittensor/wallet_registration.py -> vendor/upstream/src/sdk/python/bi
 sdk/python/bittensor/wallets.py -> vendor/upstream/src/sdk/python/bittensor/wallets.py; ed686a73580f3975defbfec735ca6d74ce6a2d1ed029656fe17e56c62025c1ab
 sdk/python/codegen/__init__.py -> vendor/upstream/src/sdk/python/codegen/__init__.py; 783d1deadc99586c9fa1cd9820a726dadf1cc82800674738a851223e91198a25
 sdk/python/codegen/__main__.py -> vendor/upstream/src/sdk/python/codegen/__main__.py; eba2d889b3df80597a04b923cb8966bcb1e8061cc832e32a95b7c0fa3d20f6d8
-sdk/python/codegen/check.py -> vendor/upstream/src/sdk/python/codegen/check.py; 59940e1a92494b416d2bf8492389f655ace3919672cb2a0e57be0691751dc109
+sdk/python/codegen/check.py -> vendor/upstream/src/sdk/python/codegen/check.py; 64238594f41090996dfcc4bf0346921ee7518e4afe5139a1004a715080ca8f24
 sdk/python/codegen/emit_namespaces.py -> vendor/upstream/src/sdk/python/codegen/emit_namespaces.py; ec29c416d24c395413ff074652a2e91e09806b3aa9b97cc2e34c991dee3c49d0
 sdk/python/codegen/emit_python.py -> vendor/upstream/src/sdk/python/codegen/emit_python.py; b48644e5cf34f608206a127779d6f60a3cde17237d89d8b8e789bccc4e6b4f90
 sdk/python/codegen/metadata.py -> vendor/upstream/src/sdk/python/codegen/metadata.py; 472e7ee19a2ee743e7abd401dcd9ff4ec91ab12eaedc63d43eaa6a4dc1e8c185
@@ -542,14 +544,15 @@ sdk/python/tests/harness/__init__.py -> vendor/upstream/src/sdk/python/tests/har
 sdk/python/tests/harness/fake_node.py -> vendor/upstream/src/sdk/python/tests/harness/fake_node.py; d6957fd1deff6099432398a5cd737b7bb87c46539aff06fa3278bb73f79ba7cb
 sdk/python/tests/harness/fake_substrate.py -> vendor/upstream/src/sdk/python/tests/harness/fake_substrate.py; 6b94d5777c8f52962ce5d04a33242d5108fd12dd517c852f215a5a011083ae95
 sdk/python/tests/harness/receiving.py -> vendor/upstream/src/sdk/python/tests/harness/receiving.py; f25e5fd4314e95368e0fd656048545c3d729dfea1dea09737cd856af5843f01b
-sdk/python/tests/harness/samples.py -> vendor/upstream/src/sdk/python/tests/harness/samples.py; 768c4eea992a27f4dc726131e195acb68b1a64bcd80b362af50ed0bbc0355926
+sdk/python/tests/harness/samples.py -> vendor/upstream/src/sdk/python/tests/harness/samples.py; a4f207f73d135672bbd52536374de15884fc62c67a17ab585e9f5ac3b1f19b42
 sdk/python/tests/unit/__init__.py -> vendor/upstream/src/sdk/python/tests/unit/__init__.py; e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 sdk/python/tests/unit/test_announced_batch_safety.py -> vendor/upstream/src/sdk/python/tests/unit/test_announced_batch_safety.py; 7c0f54869f688ab99a5078e0be48dba05f4eddc5cdd0eac0dbcece4c6f95ba49
 sdk/python/tests/unit/test_announced_execution_policy.py -> vendor/upstream/src/sdk/python/tests/unit/test_announced_execution_policy.py; 2805a2f6ece24a1f506c6d5a059dfda82ab46857b82ab5baaa5cde89912796ed
 sdk/python/tests/unit/test_announcement_cancel.py -> vendor/upstream/src/sdk/python/tests/unit/test_announcement_cancel.py; c1d517b6d4561bc24072e28605f6a4a7566a4b19f87ea1f1ce09923f3aa7081f
 sdk/python/tests/unit/test_balance_properties.py -> vendor/upstream/src/sdk/python/tests/unit/test_balance_properties.py; f6f5c1fbb9ab5029b1849a15e8a61ecb030406be1cb30116f06d60a142de883a
+sdk/python/tests/unit/test_channel_commitments_and_weight_delegates.py -> vendor/upstream/src/sdk/python/tests/unit/test_channel_commitments_and_weight_delegates.py; 2b4c74ff99c63ce0f6b22f4b5f69a3fb2b31cd0194a78733c402a89f8f983e60
 sdk/python/tests/unit/test_cli.py -> vendor/upstream/src/sdk/python/tests/unit/test_cli.py; 8e3539d6b52a5cc768141e0c90c31a556cc81400e9f7dbc4bd49b8589e8fd2e3
-sdk/python/tests/unit/test_cli_commands.py -> vendor/upstream/src/sdk/python/tests/unit/test_cli_commands.py; 9d601777ddee8bedcfe5ee7d890d4e057c4b8c8cd3a849cc005b69490483ddf9
+sdk/python/tests/unit/test_cli_commands.py -> vendor/upstream/src/sdk/python/tests/unit/test_cli_commands.py; 26aeb35343283c133136a9f2361004622d7c50dc8ecbfd144620f768027fb942
 sdk/python/tests/unit/test_cli_intent_prompts.py -> vendor/upstream/src/sdk/python/tests/unit/test_cli_intent_prompts.py; c1c5320dd9034e0c81f92a4b33d16fc7ccd9c9a693228c43493acc03089726d2
 sdk/python/tests/unit/test_cli_null_pruning.py -> vendor/upstream/src/sdk/python/tests/unit/test_cli_null_pruning.py; fa70ee7d34c59afe294041e92face56dc8c3f9c59c0127712f8aa547c53d1c40
 sdk/python/tests/unit/test_codec_golden.py -> vendor/upstream/src/sdk/python/tests/unit/test_codec_golden.py; 08480833d05a868d1baaed0748ab408c24ee2b1508a749407d413eb8b566acdc
@@ -643,7 +646,7 @@ sdk/python/tests/unit/test_wallet_pair_atomicity.py -> vendor/upstream/src/sdk/p
 sdk/python/tests/unit/test_wallet_registration.py -> vendor/upstream/src/sdk/python/tests/unit/test_wallet_registration.py; 82861d4befcf10eb650fc84d616c80be4f305b99b241c8c4eaaf5528b311a27e
 sdk/python/tests/unit/test_wallet_review_regressions.py -> vendor/upstream/src/sdk/python/tests/unit/test_wallet_review_regressions.py; 856072c2a22de09cf245d63d7f96d09647b3c868b1e146dd142ab5674031cccf
 sdk/python/tests/unit/test_wallet_security_swarm.py -> vendor/upstream/src/sdk/python/tests/unit/test_wallet_security_swarm.py; a92574c1a0928245bf5725f69c2a30ee5867f9b30f18a7b8e2f79e140a6ff60b
-website/apps/bittensor-website/public/catalog/errors.json -> vendor/upstream/catalog/errors.json; 1a65a957e851d94a2ee1d58234049e367b32e9e340572fe5bf6db7ab2688c650
-website/apps/bittensor-website/public/catalog/intents.json -> vendor/upstream/catalog/intents.json; 0396dbf116fa8b09e602dd32bd7147457602dd47e16fdad0beccd4c380d6baa5
-website/apps/bittensor-website/public/catalog/reads.json -> vendor/upstream/catalog/reads.json; 46538073414d58b6676f50175c17d1dcf862af4f6fa7ee6d3d7642eb4ca63fe1
+website/apps/bittensor-website/public/catalog/errors.json -> vendor/upstream/catalog/errors.json; 13a0d8e8b5dc726028e03758a943854bb68e7114ad90158dfd70458b71f57115
+website/apps/bittensor-website/public/catalog/intents.json -> vendor/upstream/catalog/intents.json; d2afb1dc4fc403b2ffd3f81c5cdad63e6eb581cebd6cd93548c92969a0d5ac91
+website/apps/bittensor-website/public/catalog/reads.json -> vendor/upstream/catalog/reads.json; b1339f46e97b9af0353bcedf99dc558c563641cab71b29eb77a18d781d251ecb
 END cargo xtask import-upstream attribution

@@ -87,7 +87,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Staking<'_, V> {
-    #[doc = "A validator's `swap_basket` trading status: gates and the turnover bucket.\n\n`enabled` is the network-wide gate, `frozen` the per-hotkey governance freeze.\nThe turnover budget is a token bucket: `budget_tao` is its capacity\n(`BasketDailyTurnoverCap` share of the fund's guarded NAV — each holding at\nthe lower of its realizable value and its slow-moving-price value, so a\npumped pool cannot enlarge it), `remaining_tao` what a trade right\nnow could push through the fund, `used_tao` the difference, and the bucket\nrefills by `refill_per_block_tao` every block (`budget_tao / refill_blocks`,\na full refill over `refill_blocks` = 7200 blocks)."]
+    #[doc = "A validator's `swap_basket` trading status: gates and the turnover bucket.\n\n`enabled` is the network-wide gate, `frozen` the per-hotkey governance freeze.\nThe turnover budget is a token bucket: `budget_tao` is its capacity\n(`BasketDailyTurnoverCap` share of the fund's guarded NAV — each holding at\nthe lower of its realizable value and its slow-moving-price value, so a\npumped pool cannot enlarge it), `remaining_tao` what a trade right\nnow could push through the fund, `used_tao` the difference, and the bucket\nrefills by `refill_per_block_tao` every block (`budget_tao / refill_blocks`,\na full refill over the configured `refill_blocks`, 7200 by default)."]
     pub async fn basket_trading_status(
         &self,
         hotkey_ss58: rtao_primitives::AccountId,
@@ -157,6 +157,18 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
         super::interfaces::burn(self.view, netuid).await
     }
 }
+impl<V: rtao_client::View + ?Sized> super::namespaces::Identity<'_, V> {
+    #[doc = "One hotkey's independent channel commitment, or None when absent.\n\nReads the v2 runtime API and decodes the returned SCALE registration. On a\nnode without v2, reads the equivalent channel storage instead; both paths\ndistinguish this target from the legacy `commitment` read. The `revealed`\nlist reports plaintext and reveal blocks even after the active record is removed."]
+    pub async fn channel_commitment(
+        &self,
+        netuid: rtao_primitives::NetUid,
+        mechid: rtao_primitives::MechId,
+        channel: i64,
+        hotkey_ss58: Option<rtao_primitives::AccountId>,
+    ) -> Result<serde_json::Value, crate::ReadError> {
+        super::interfaces::channel_commitment(self.view, netuid, mechid, channel, hotkey_ss58).await
+    }
+}
 impl<V: rtao_client::View + ?Sized> super::namespaces::Delegation<'_, V> {
     #[doc = "Whether a parent hotkey's child relations are currently inert.\n\nThe chain re-checks a parent's total stake against the childkey stake\nthreshold (`StakeThreshold`) whenever that stake changes. A parent that\nhas dropped below it is flagged here: its `children` and `parents` rows\nstay stored, but stake inheritance and dividend routing ignore them on\nevery subnet the parent does not own. The flag clears on its own once the\nparent's stake meets the threshold again."]
     pub async fn childkey_threshold_suspended(
@@ -202,6 +214,17 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Collateral<'_, V> {
         netuid: rtao_primitives::NetUid,
     ) -> Result<crate::reads::m6_locks::CollateralPolicy, crate::ReadError> {
         super::interfaces::collateral_policy(self.view, netuid).await
+    }
+}
+impl<V: rtao_client::View + ?Sized> super::namespaces::Identity<'_, V> {
+    #[doc = "Live decayed channel burn price and its stored configuration.\n\n`burn` is the price a commitment would pay now, or None when the burn is\ndisabled/unconfigured. The runtime API returns no record when disabled, so\nthis read also inspects `CommitBurnConfig` to show `enabled` and the other\nparameters. Direct storage readers should not treat stored `burn` as live:\ndecay is lazy; this read's `price_is_decayed` marks the runtime quote."]
+    pub async fn commit_burn(
+        &self,
+        netuid: rtao_primitives::NetUid,
+        mechid: rtao_primitives::MechId,
+        channel: i64,
+    ) -> Result<serde_json::Value, crate::ReadError> {
+        super::interfaces::commit_burn(self.view, netuid, mechid, channel).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {
@@ -456,6 +479,17 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Hyperparameters<'_, V> {
         netuid: rtao_primitives::NetUid,
     ) -> Result<u16, crate::ReadError> {
         super::interfaces::max_weight_limit(self.view, Some(netuid)).await
+    }
+}
+impl<V: rtao_client::View + ?Sized> super::namespaces::Weights<'_, V> {
+    #[doc = "The account authorized to set weights for this hotkey/mechanism, or None."]
+    pub async fn mech_weight_delegate(
+        &self,
+        netuid: rtao_primitives::NetUid,
+        mechid: rtao_primitives::MechId,
+        hotkey_ss58: Option<rtao_primitives::AccountId>,
+    ) -> Result<serde_json::Value, crate::ReadError> {
+        super::interfaces::mech_weight_delegate(self.view, netuid, mechid, hotkey_ss58).await
     }
 }
 impl<V: rtao_client::View + ?Sized> super::namespaces::Subnets<'_, V> {

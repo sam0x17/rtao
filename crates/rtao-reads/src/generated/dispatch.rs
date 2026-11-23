@@ -288,6 +288,28 @@ pub async fn dispatch(
                 detail: error.to_string(),
             })
         }
+        ReadName::ChannelCommitment => {
+            let args: super::interfaces::ChannelCommitmentParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::channel_commitment(
+                view,
+                args.netuid,
+                args.mechid,
+                args.channel,
+                args.hotkey_ss58,
+            )
+            .await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
         ReadName::ChildkeyThresholdSuspended => {
             let args: super::interfaces::ChildkeyThresholdSuspendedParams =
                 serde_json::from_value(Value::Object(params)).map_err(|error| {
@@ -361,6 +383,23 @@ pub async fn dispatch(
                 })?;
             let _ = &args;
             let value = super::interfaces::collateral_policy(view, args.netuid).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::CommitBurn => {
+            let args: super::interfaces::CommitBurnParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value =
+                super::interfaces::commit_burn(view, args.netuid, args.mechid, args.channel)
+                    .await?;
             serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
                 descriptor: "read result",
                 detail: error.to_string(),
@@ -790,6 +829,27 @@ pub async fn dispatch(
                 })?;
             let _ = &args;
             let value = super::interfaces::max_weight_limit(view, args.netuid).await?;
+            serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
+                descriptor: "read result",
+                detail: error.to_string(),
+            })
+        }
+        ReadName::MechWeightDelegate => {
+            let args: super::interfaces::MechWeightDelegateParams =
+                serde_json::from_value(Value::Object(params)).map_err(|error| {
+                    ReadError::InvalidParam {
+                        name: name.as_str().into(),
+                        reason: error.to_string(),
+                    }
+                })?;
+            let _ = &args;
+            let value = super::interfaces::mech_weight_delegate(
+                view,
+                args.netuid,
+                args.mechid,
+                args.hotkey_ss58,
+            )
+            .await?;
             serde_json::to_value(value).map_err(|error| ReadError::SurfaceChanged {
                 descriptor: "read result",
                 detail: error.to_string(),

@@ -849,6 +849,7 @@ async fn cr_version_gate(ln: &Localnet, fixture: &FrameworkFixture) -> Result<()
         netuid: fixture.netuid,
         mechid: MechId(0),
         version_key: fixture.version,
+        for_hotkey: None,
         raw_u16: false,
         uids: Some(vec![fixture.miner_uid]),
         weights: Some(rtao_intents::WeightsArg::List(vec![Ratio::new(1.0)?])),

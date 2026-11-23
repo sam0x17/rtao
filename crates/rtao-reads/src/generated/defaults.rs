@@ -44,6 +44,21 @@ pub mod bonds {
 }
 /// Extracted defaults for `burn`.
 pub mod burn {}
+/// Extracted defaults for `channel_commitment`.
+pub mod channel_commitment {
+    /// Authenticated default for `mechid`.
+    pub fn mechid() -> rtao_primitives::MechId {
+        rtao_primitives::MechId(0)
+    }
+    /// Authenticated default for `channel`.
+    pub fn channel() -> i64 {
+        0
+    }
+    /// Authenticated default for `hotkey_ss58`.
+    pub fn hotkey_ss58() -> Option<rtao_primitives::AccountId> {
+        None
+    }
+}
 /// Extracted defaults for `childkey_threshold_suspended`.
 pub mod childkey_threshold_suspended {}
 /// Extracted defaults for `children`.
@@ -54,6 +69,17 @@ pub mod coldkey_lock {}
 pub mod coldkey_swap_announcement {}
 /// Extracted defaults for `collateral_policy`.
 pub mod collateral_policy {}
+/// Extracted defaults for `commit_burn`.
+pub mod commit_burn {
+    /// Authenticated default for `mechid`.
+    pub fn mechid() -> rtao_primitives::MechId {
+        rtao_primitives::MechId(0)
+    }
+    /// Authenticated default for `channel`.
+    pub fn channel() -> i64 {
+        0
+    }
+}
 /// Extracted defaults for `commit_reveal_enabled`.
 pub mod commit_reveal_enabled {}
 /// Extracted defaults for `commitment`.
@@ -122,6 +148,17 @@ pub mod locks_for_hotkey {}
 pub mod max_weight_limit {
     /// Authenticated default for `netuid`.
     pub fn netuid() -> Option<rtao_primitives::NetUid> {
+        None
+    }
+}
+/// Extracted defaults for `mech_weight_delegate`.
+pub mod mech_weight_delegate {
+    /// Authenticated default for `mechid`.
+    pub fn mechid() -> rtao_primitives::MechId {
+        rtao_primitives::MechId(0)
+    }
+    /// Authenticated default for `hotkey_ss58`.
+    pub fn hotkey_ss58() -> Option<rtao_primitives::AccountId> {
         None
     }
 }

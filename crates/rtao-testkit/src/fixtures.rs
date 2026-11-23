@@ -7,8 +7,11 @@ use std::{collections::BTreeMap, error::Error, fmt, fs, path::Path};
 
 use rtao_core::{
     CoreError,
-    codec::decode::{Cursor, compact_len},
-    runtime::Runtime,
+    codec::{
+        decode::{Cursor, compact_len},
+        value::to_corpus_json,
+    },
+    runtime::{Runtime, TypeSpec},
 };
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -106,7 +109,24 @@ pub fn pinned_finney_metadata() -> Result<&'static (Vec<u8>, u32), FixtureError>
 /// Parse the pinned Finney metadata ([`pinned_finney_metadata`]).
 pub fn pinned_finney_runtime() -> Result<Runtime, FixtureError> {
     let (bytes, spec) = pinned_finney_metadata()?;
-    Ok(Runtime::parse(bytes, *spec, 1, 42)?)
+    let mut runtime = Runtime::parse(bytes, *spec, 0, 42)?;
+    let version = runtime
+        .constant("System", "Version")
+        .ok_or_else(|| FixtureError::Invalid("pinned metadata lacks System.Version".into()))?;
+    let version =
+        to_corpus_json(&runtime.decode_spec(&TypeSpec::Id(version.ty), &version.value, true)?);
+    if version["spec_version"].as_u64() != Some(u64::from(*spec)) {
+        return Err(FixtureError::Invalid(
+            "pinned System.Version spec does not match upstream.toml".into(),
+        ));
+    }
+    runtime.transaction_version = version["transaction_version"]
+        .as_u64()
+        .and_then(|value| value.try_into().ok())
+        .ok_or_else(|| {
+            FixtureError::Invalid("pinned System.Version has no valid transaction version".into())
+        })?;
+    Ok(runtime)
 }
 
 /// Decode a recorder's hex field, requiring the `0x` prefix.

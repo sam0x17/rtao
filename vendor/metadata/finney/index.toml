@@ -133,3 +133,14 @@ finalized_head = "0x43d6c2cb48b0f3887cef8cc5cc91a585c1544abfd91e8f662ab7a17f8171
 endpoint = "https://entrypoint-finney.opentensor.ai:443"
 v15 = { path = "493.v15.scale", sha256 = "89f3e67a94db5f9a155678122b5a5daff5b2ddbb1f179ac669df996bd3332a98", bytes = 440323 }
 v16 = { path = "493.v16.scale", sha256 = "f2abf59406a8534d40ce5f9c78988caf471665bf73e88851d523a8bf93040bf3", bytes = 444509 }
+
+[[runtimes]]
+spec = 494
+code_hash = "0x1735bc231789bead3ab3edfa583f3c9a95aaf7643adcc906ea224a7761a303ca"
+genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
+tag = "v494"
+commit = "a68c6e8c65411a842fbf69269dc385aa13041391"
+finalized_head = "0x7f42842b286f69544479863f7b47270e339bc422f8621882144b53ab57266ff6"
+endpoint = "https://entrypoint-finney.opentensor.ai:443"
+v15 = { path = "494.v15.scale", sha256 = "80df15954eca22bf5349a687563ccc9ec03ef101c9916779a4e8782143aa5c1c", bytes = 452055 }
+v16 = { path = "494.v16.scale", sha256 = "b3b79502e1fb81a3f5c1db33aef41e2ff1ab8562d46469dfdf7e756a2e00f33e", bytes = 456274 }

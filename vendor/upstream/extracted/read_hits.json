@@ -1,8 +1,8 @@
 {
   "format": 1,
   "parity": {
-    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
-    "tag": "v493"
+    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+    "tag": "v494"
   },
   "reads": [
     {
@@ -180,9 +180,9 @@
       "name": "basket_position",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -200,9 +200,9 @@
       "name": "basket_trading_status",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -342,6 +342,34 @@
     },
     {
       "helpers": [
+        "_commitment_record",
+        "_decode_commitment_data",
+        "_decode_commitment_registration",
+        "channel_commitment"
+      ],
+      "hits": [
+        {
+          "container": "Commitments",
+          "kind": "storage",
+          "name": "ChannelCommitmentOf"
+        },
+        {
+          "container": "Commitments",
+          "kind": "storage",
+          "name": "ChannelRevealedCommitments"
+        }
+      ],
+      "name": "channel_commitment",
+      "pinning": "pinned",
+      "provenance": {
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+        "path": "sdk/python/bittensor/reads/identity.py",
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
         "childkey_threshold_suspended"
       ],
       "hits": [
@@ -469,6 +497,23 @@
     },
     {
       "helpers": [
+        "_burn_parameters",
+        "_fixed_number",
+        "_tao_field",
+        "commit_burn"
+      ],
+      "hits": [],
+      "name": "commit_burn",
+      "pinning": "pinned",
+      "provenance": {
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+        "path": "sdk/python/bittensor/reads/identity.py",
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
         "commit_reveal_enabled"
       ],
       "hits": [
@@ -502,9 +547,9 @@
       "name": "commitment",
       "pinning": "single",
       "provenance": {
-        "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
         "path": "sdk/python/bittensor/reads/identity.py",
-        "sha256": "e7851e4c776ba3a73ce45d042f6e11e042def8b3fd9b07716986b69ed5bd3d1f"
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
       },
       "render": null
     },
@@ -517,9 +562,9 @@
       "name": "commitments",
       "pinning": "single",
       "provenance": {
-        "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
         "path": "sdk/python/bittensor/reads/identity.py",
-        "sha256": "e7851e4c776ba3a73ce45d042f6e11e042def8b3fd9b07716986b69ed5bd3d1f"
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
       },
       "render": null
     },
@@ -866,9 +911,9 @@
       "name": "hotkey_identities",
       "pinning": "pinned",
       "provenance": {
-        "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
         "path": "sdk/python/bittensor/reads/identity.py",
-        "sha256": "e7851e4c776ba3a73ce45d042f6e11e042def8b3fd9b07716986b69ed5bd3d1f"
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
       },
       "render": null
     },
@@ -906,9 +951,9 @@
       "name": "identity",
       "pinning": "single",
       "provenance": {
-        "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
         "path": "sdk/python/bittensor/reads/identity.py",
-        "sha256": "e7851e4c776ba3a73ce45d042f6e11e042def8b3fd9b07716986b69ed5bd3d1f"
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
       },
       "render": null
     },
@@ -1087,6 +1132,20 @@
         "blob": "3070a2a32afa65bfb81f09a5128557a83e9fff95",
         "path": "sdk/python/bittensor/reads/hyperparameters.py",
         "sha256": "208b24e4921e93e1047aeafb0870b5267c7145b9b1370f40a366c890c9a2d9dc"
+      },
+      "render": null
+    },
+    {
+      "helpers": [
+        "mech_weight_delegate"
+      ],
+      "hits": [],
+      "name": "mech_weight_delegate",
+      "pinning": "single",
+      "provenance": {
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+        "path": "sdk/python/bittensor/reads/identity.py",
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
       },
       "render": null
     },
@@ -1540,9 +1599,9 @@
       "name": "revealed_commitment",
       "pinning": "single",
       "provenance": {
-        "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
+        "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
         "path": "sdk/python/bittensor/reads/identity.py",
-        "sha256": "e7851e4c776ba3a73ce45d042f6e11e042def8b3fd9b07716986b69ed5bd3d1f"
+        "sha256": "f498d59d0efa6b73657e295fc1dc69e75fad3a2f1112179e5ca8e5007a42e796"
       },
       "render": null
     },
@@ -1560,9 +1619,9 @@
       "name": "root_basket_owed",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -1580,9 +1639,9 @@
       "name": "root_basket_owed_breakdown",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -1601,9 +1660,9 @@
       "name": "root_basket_portfolio",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -1621,9 +1680,9 @@
       "name": "root_basket_total_nav",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -1656,9 +1715,9 @@
       "name": "root_baskets",
       "pinning": "pinned",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -1677,9 +1736,9 @@
       "name": "root_claim_threshold",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -2609,9 +2668,9 @@
       "name": "validator_basket",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -2629,9 +2688,9 @@
       "name": "validator_basket_nav",
       "pinning": "single",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },
@@ -2663,9 +2722,9 @@
       "name": "validator_basket_summary",
       "pinning": "pinned",
       "provenance": {
-        "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+        "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
         "path": "sdk/python/bittensor/reads/root.py",
-        "sha256": "8a6385945e643470231fa64e63733c03a678e74a146e6ccbc198772a9df95ebd"
+        "sha256": "0c09d4f464b2309ffad54a82db74f9388a4224b599155ef6d676d9087c058897"
       },
       "render": null
     },

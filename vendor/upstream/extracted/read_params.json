@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
+    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
     "path": "website/apps/bittensor-website/public/catalog/reads.json",
-    "sha256": "46538073414d58b6676f50175c17d1dcf862af4f6fa7ee6d3d7642eb4ca63fe1",
-    "tag": "v493"
+    "sha256": "b1339f46e97b9af0353bcedf99dc558c563641cab71b29eb77a18d781d251ecb",
+    "tag": "v494"
   },
   "format": 1,
   "modules": {
@@ -19,8 +19,8 @@
     ]
   },
   "parity": {
-    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
-    "tag": "v493"
+    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+    "tag": "v494"
   },
   "reads": [
     {
@@ -389,7 +389,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 10771,
             "end_line": 246,
             "line": 246,
@@ -407,7 +407,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 10790,
             "end_line": 246,
             "line": 246,
@@ -419,7 +419,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 10722,
           "end_line": 245,
           "line": 237,
@@ -427,7 +427,7 @@
           "start_byte": 10460
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 11724,
           "end_line": 264,
           "line": 246,
@@ -449,7 +449,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 16961,
             "end_line": 395,
             "line": 395,
@@ -461,7 +461,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 16906,
           "end_line": 394,
           "line": 389,
@@ -469,8 +469,8 @@
           "start_byte": 16726
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
-          "end_byte": 18437,
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
+          "end_byte": 18455,
           "end_line": 420,
           "line": 395,
           "path": "sdk/python/bittensor/reads/root.py",
@@ -800,6 +800,105 @@
       }
     },
     {
+      "category": "Identity & commitments",
+      "name": "channel_commitment",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 8965,
+            "end_line": 246,
+            "line": 246,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 8954
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "mechid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 8982,
+            "end_line": 246,
+            "line": 246,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 8967
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "channel",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 9000,
+            "end_line": 246,
+            "line": 246,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 8984
+          },
+          "required": false
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 9035,
+            "end_line": 246,
+            "line": 246,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 9002
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 8913,
+          "end_line": 244,
+          "line": 234,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 8466
+        },
+        "fetch": {
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 10946,
+          "end_line": 293,
+          "line": 245,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 8914
+        }
+      }
+    },
+    {
       "category": "Delegation",
       "name": "childkey_threshold_suspended",
       "params": [
@@ -1046,6 +1145,86 @@
       }
     },
     {
+      "category": "Identity & commitments",
+      "name": "commit_burn",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 5703,
+            "end_line": 165,
+            "line": 165,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 5692
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "mechid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 5720,
+            "end_line": 165,
+            "line": 165,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 5705
+          },
+          "required": false
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "channel",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 5738,
+            "end_line": 165,
+            "line": 165,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 5722
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 5663,
+          "end_line": 164,
+          "line": 155,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 5313
+        },
+        "fetch": {
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 6832,
+          "end_line": 189,
+          "line": 165,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 5664
+        }
+      }
+    },
+    {
       "category": "Subnets",
       "name": "commit_reveal_enabled",
       "params": [
@@ -1100,12 +1279,12 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-            "end_byte": 2944,
-            "end_line": 90,
-            "line": 90,
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 3294,
+            "end_line": 100,
+            "line": 100,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 2933
+            "start_byte": 3283
           },
           "required": true
         },
@@ -1118,32 +1297,32 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-            "end_byte": 2962,
-            "end_line": 90,
-            "line": 90,
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 3312,
+            "end_line": 100,
+            "line": 100,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 2946
+            "start_byte": 3296
           },
           "required": false
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 2905,
-          "end_line": 89,
-          "line": 81,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 3255,
+          "end_line": 99,
+          "line": 91,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 2640
+          "start_byte": 2990
         },
         "fetch": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 3455,
-          "end_line": 101,
-          "line": 90,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 3805,
+          "end_line": 111,
+          "line": 100,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 2906
+          "start_byte": 3256
         }
       }
     },
@@ -1160,32 +1339,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-            "end_byte": 4625,
-            "end_line": 139,
-            "line": 139,
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 11586,
+            "end_line": 317,
+            "line": 317,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 4614
+            "start_byte": 11575
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 4585,
-          "end_line": 138,
-          "line": 133,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 11546,
+          "end_line": 316,
+          "line": 311,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 4429
+          "start_byte": 11390
         },
         "fetch": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 5684,
-          "end_line": 162,
-          "line": 139,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 12645,
+          "end_line": 340,
+          "line": 317,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 4586
+          "start_byte": 11547
         }
       }
     },
@@ -1822,32 +2001,32 @@
           "name": "hotkey_ss58s",
           "own_key": false,
           "provenance": {
-            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-            "end_byte": 1272,
-            "end_line": 43,
-            "line": 43,
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 1597,
+            "end_line": 53,
+            "line": 53,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 1249
+            "start_byte": 1574
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 1214,
-          "end_line": 42,
-          "line": 37,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 1539,
+          "end_line": 52,
+          "line": 47,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 1041
+          "start_byte": 1366
         },
         "fetch": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 2160,
-          "end_line": 65,
-          "line": 43,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 2485,
+          "end_line": 75,
+          "line": 53,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 1215
+          "start_byte": 1540
         }
       }
     },
@@ -1906,32 +2085,32 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-            "end_byte": 783,
-            "end_line": 31,
-            "line": 31,
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 1108,
+            "end_line": 41,
+            "line": 41,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 766
+            "start_byte": 1091
           },
           "required": false
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 740,
-          "end_line": 30,
-          "line": 25,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 1065,
+          "end_line": 40,
+          "line": 35,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 578
+          "start_byte": 903
         },
         "fetch": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 1037,
-          "end_line": 34,
-          "line": 31,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 1362,
+          "end_line": 44,
+          "line": 41,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 741
+          "start_byte": 1066
         }
       }
     },
@@ -2282,6 +2461,86 @@
           "line": 161,
           "path": "sdk/python/bittensor/reads/base.py",
           "start_byte": 5846
+        }
+      }
+    },
+    {
+      "category": "Weights & bonds",
+      "name": "mech_weight_delegate",
+      "params": [
+        {
+          "annotation": "int",
+          "default": {
+            "present": false
+          },
+          "json_type": "integer",
+          "name": "netuid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 7243,
+            "end_line": 203,
+            "line": 203,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 7232
+          },
+          "required": true
+        },
+        {
+          "annotation": "int",
+          "default": {
+            "present": true,
+            "value": 0
+          },
+          "json_type": "integer",
+          "name": "mechid",
+          "own_key": false,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 7260,
+            "end_line": 203,
+            "line": 203,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 7245
+          },
+          "required": false
+        },
+        {
+          "annotation": "Optional[str]",
+          "default": {
+            "present": true,
+            "value": null
+          },
+          "json_type": "string",
+          "name": "hotkey_ss58",
+          "own_key": true,
+          "provenance": {
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 7295,
+            "end_line": 203,
+            "line": 203,
+            "path": "sdk/python/bittensor/reads/identity.py",
+            "start_byte": 7262
+          },
+          "required": false
+        }
+      ],
+      "provenance": {
+        "declaration": {
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 7189,
+          "end_line": 201,
+          "line": 192,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 6836
+        },
+        "fetch": {
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 7695,
+          "end_line": 212,
+          "line": 202,
+          "path": "sdk/python/bittensor/reads/identity.py",
+          "start_byte": 7190
         }
       }
     },
@@ -3377,12 +3636,12 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-            "end_byte": 3781,
-            "end_line": 113,
-            "line": 113,
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 4131,
+            "end_line": 123,
+            "line": 123,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 3770
+            "start_byte": 4120
           },
           "required": true
         },
@@ -3395,32 +3654,32 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-            "end_byte": 3799,
-            "end_line": 113,
-            "line": 113,
+            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "end_byte": 4149,
+            "end_line": 123,
+            "line": 123,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 3783
+            "start_byte": 4133
           },
           "required": false
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 3733,
-          "end_line": 112,
-          "line": 104,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 4083,
+          "end_line": 122,
+          "line": 114,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 3459
+          "start_byte": 3809
         },
         "fetch": {
-          "blob": "bc990ef15644d4278b3e5c4802288746199a41c1",
-          "end_byte": 3985,
-          "end_line": 115,
-          "line": 113,
+          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "end_byte": 4335,
+          "end_line": 125,
+          "line": 123,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 3734
+          "start_byte": 4084
         }
       }
     },
@@ -3437,7 +3696,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 7594,
             "end_line": 172,
             "line": 172,
@@ -3449,7 +3708,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 7543,
           "end_line": 171,
           "line": 166,
@@ -3457,7 +3716,7 @@
           "start_byte": 7373
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 8325,
           "end_line": 184,
           "line": 172,
@@ -3479,7 +3738,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 8575,
             "end_line": 193,
             "line": 193,
@@ -3491,7 +3750,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 8514,
           "end_line": 192,
           "line": 187,
@@ -3499,7 +3758,7 @@
           "start_byte": 8329
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 9265,
           "end_line": 209,
           "line": 193,
@@ -3521,7 +3780,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 11952,
             "end_line": 273,
             "line": 273,
@@ -3533,7 +3792,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 11896,
           "end_line": 272,
           "line": 267,
@@ -3541,7 +3800,7 @@
           "start_byte": 11728
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 12690,
           "end_line": 286,
           "line": 273,
@@ -3556,20 +3815,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
-          "end_byte": 18509,
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
+          "end_byte": 18527,
           "end_line": 427,
           "line": 423,
           "path": "sdk/python/bittensor/reads/root.py",
-          "start_byte": 18441
+          "start_byte": 18459
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
-          "end_byte": 18850,
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
+          "end_byte": 18868,
           "end_line": 434,
           "line": 428,
           "path": "sdk/python/bittensor/reads/root.py",
-          "start_byte": 18510
+          "start_byte": 18528
         }
       }
     },
@@ -3579,7 +3838,7 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 15111,
           "end_line": 351,
           "line": 347,
@@ -3587,7 +3846,7 @@
           "start_byte": 15052
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 16260,
           "end_line": 374,
           "line": 352,
@@ -3602,20 +3861,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
-          "end_byte": 18921,
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
+          "end_byte": 18939,
           "end_line": 441,
           "line": 437,
           "path": "sdk/python/bittensor/reads/root.py",
-          "start_byte": 18854
+          "start_byte": 18872
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
-          "end_byte": 19425,
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
+          "end_byte": 19443,
           "end_line": 451,
           "line": 442,
           "path": "sdk/python/bittensor/reads/root.py",
-          "start_byte": 18922
+          "start_byte": 18940
         }
       }
     },
@@ -4914,7 +5173,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 12904,
             "end_line": 295,
             "line": 295,
@@ -4926,7 +5185,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 12854,
           "end_line": 294,
           "line": 289,
@@ -4934,7 +5193,7 @@
           "start_byte": 12694
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 13580,
           "end_line": 310,
           "line": 295,
@@ -4956,7 +5215,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 16483,
             "end_line": 383,
             "line": 383,
@@ -4968,7 +5227,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 16429,
           "end_line": 382,
           "line": 377,
@@ -4976,7 +5235,7 @@
           "start_byte": 16264
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 16722,
           "end_line": 386,
           "line": 383,
@@ -4998,7 +5257,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+            "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
             "end_byte": 13815,
             "end_line": 319,
             "line": 319,
@@ -5010,7 +5269,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 13757,
           "end_line": 318,
           "line": 313,
@@ -5018,7 +5277,7 @@
           "start_byte": 13584
         },
         "fetch": {
-          "blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0",
+          "blob": "e005f03f92a8b653609e8874d871efc00de5a476",
           "end_byte": 15048,
           "end_line": 344,
           "line": 319,

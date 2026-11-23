@@ -398,6 +398,21 @@ runs. All three passed together on the same binary with their original
 assertions. The final client run still recorded two failures before
 that focused repeat. The Python oracle comparison remains unverified.
 
+## 2026-11-23 Finney spec 494
+
+Finney finalized spec 494 at block 9,570,771. Four public endpoints
+agreed on the finalized block, runtime code and V15/V16 metadata.
+The v494 release wasm matched the on-chain code. The parity pin moves
+from v493 to v494 at `a68c6e8c65411a842fbf69269dc385aa13041391`.
+
+The V15/V16 comparison classifies `System.Version` as breaking.
+The transaction version advances from 1 to 2. D-297 records the signing
+regression and delegated weight checks. The rebuilt CLI read the
+existential deposit, timestamp and subnet 1 hyperparameters from Finney.
+The porting report re-derives 13 source entries and lists 33 hand ports
+due. The SDK uses core v490 and reports an empty validation range.
+Python oracle comparison remains pending.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

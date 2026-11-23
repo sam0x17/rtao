@@ -16,6 +16,11 @@
         "rtao": "generated"
       },
       {
+        "name": "AccountNotAuthorized",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
         "name": "AccountPolicyViolation",
         "oracle": "unverified",
         "rtao": "generated"
@@ -236,6 +241,11 @@
         "rtao": "generated"
       },
       {
+        "name": "BurnPriceLimitExceeded",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
         "name": "BurnRecycleEmissionAboveMaximum",
         "oracle": "unverified",
         "rtao": "generated"
@@ -312,6 +322,11 @@
       },
       {
         "name": "ChangePending",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "ChannelMigrationPending",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -707,6 +722,11 @@
       },
       {
         "name": "FirstEmissionBlockNumberAlreadySet",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "FreeCommitmentDisabled",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -1452,6 +1472,11 @@
       },
       {
         "name": "NotGammaDepositSpender",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
+        "name": "NotMechWeightDelegate",
         "oracle": "unverified",
         "rtao": "generated"
       },
@@ -6129,6 +6154,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.CommitWeightHash",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.CommitWeights",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
@@ -6393,6 +6424,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.SetChannelCommitment",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.SetChildkeyTake",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
@@ -6400,6 +6437,12 @@
       {
         "oracle": "unverified",
         "python": "bittensor.SetChildren",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.SetCommitBurn",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
       },
@@ -6424,6 +6467,12 @@
       {
         "oracle": "unverified",
         "python": "bittensor.SetIdentity",
+        "rtao": "module_map",
+        "source": "sdk/python/bittensor/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.SetMechWeightDelegate",
         "rtao": "module_map",
         "source": "sdk/python/bittensor/__init__.py"
       },
@@ -7317,6 +7366,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.intents.CommitWeightHash",
+        "rtao": "pending",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.intents.CommitWeights",
         "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
@@ -7599,6 +7654,12 @@
       },
       {
         "oracle": "unverified",
+        "python": "bittensor.intents.SetChannelCommitment",
+        "rtao": "pending",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
         "python": "bittensor.intents.SetChildkeyTake",
         "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
@@ -7607,6 +7668,12 @@
         "oracle": "unverified",
         "python": "bittensor.intents.SetChildren",
         "rtao": "decision",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.intents.SetCommitBurn",
+        "rtao": "pending",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -7631,6 +7698,12 @@
         "oracle": "unverified",
         "python": "bittensor.intents.SetIdentity",
         "rtao": "decision",
+        "source": "sdk/python/bittensor/intents/__init__.py"
+      },
+      {
+        "oracle": "unverified",
+        "python": "bittensor.intents.SetMechWeightDelegate",
+        "rtao": "pending",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -8341,7 +8414,7 @@
           "codegen/frozen_models.toml",
           "rtao_runtime::models (metadata projections and authenticated basket_info freeze_struct layout tripwires)"
         ],
-        "synced_blob": "af7094b2d8bad0f2e242203b793d18682d5cbc21"
+        "synced_blob": "97c37a52497b6dd67e3b80a3555771b478cd93f3"
       },
       {
         "kind": "extracted",
@@ -9107,7 +9180,7 @@
         "rust": [
           "`rtao_runtime::generated::calls`"
         ],
-        "synced_blob": "5b2f6199e9ac3da8c299dacaaac0a4c836372937"
+        "synced_blob": "15cece82b7765bc9834b9b273de72697a6ef631e"
       },
       {
         "kind": "generated",
@@ -9129,7 +9202,7 @@
         "rust": [
           "`rtao_runtime::generated::errors::MODULE_ERRORS`"
         ],
-        "synced_blob": "74b0f166a95b4e3496e5afc7a06411ca42730c14"
+        "synced_blob": "243c5a7436421bb86efa18f3af2983f4154959a3"
       },
       {
         "kind": "generated",
@@ -9140,7 +9213,7 @@
         "rust": [
           "`rtao_runtime::generated::runtime_apis`"
         ],
-        "synced_blob": "d22b9e08be9054142a58b4825d9b8a830044704c"
+        "synced_blob": "95d516a63a44d168c499e25ff2ae2884c545a9c2"
       },
       {
         "kind": "generated",
@@ -9151,7 +9224,7 @@
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "a5d6ace510fe6828c355e73305a18ca5da882fc2"
+        "synced_blob": "dbcf1d981d27bdcf38014eee8c2407b66c1ba3e1"
       },
       {
         "kind": "n/a",
@@ -10145,7 +10218,7 @@
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "f0981187bed232497e11aa075d566264d544dc3f"
+        "synced_blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619"
       },
       {
         "kind": "generated",
@@ -10299,7 +10372,7 @@
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "aaae23c67aa0dccafb085eb9dfae021b6e11c91e"
+        "synced_blob": "123a887ceb9f8446599b33736ac428861ea3b257"
       },
       {
         "kind": "generated",
@@ -10354,7 +10427,7 @@
         "rust": [
           "rtao_catalog::errors::{ErrorCode, CHAIN_ERRORS}; rtao_catalog::py"
         ],
-        "synced_blob": "f9d766026910de77ffaee60a3bfb61d5f5bc95b7"
+        "synced_blob": "aaa2b3e25da4a9cab6d18dbfcaf171b310d51883"
       },
       {
         "kind": "n/a",
@@ -11757,7 +11830,7 @@
           "rtao_catalog::py::PYTHON_TABLES",
           "xtask/src/parity_catalog.rs"
         ],
-        "synced_blob": "42ea2744203969fd37d6254f9bdac9eb265e711e"
+        "synced_blob": "39dd20bcf8f0aeb65b47ed4fb4f29be9f67b9b59"
       },
       {
         "kind": "n/a",
@@ -11983,7 +12056,7 @@
           "crates/rtao-intents/tests/intent_plans.rs",
           "crates/rtao-reads/tests/catalog_samples.rs"
         ],
-        "synced_blob": "6d5c186c310b9553cd68894497b66d7378c3f374"
+        "synced_blob": "c94a9b38a90f3e60185c9795f551b111c2a05777"
       },
       {
         "kind": "n/a",
@@ -12453,7 +12526,7 @@
           "vendor/upstream/catalog/errors.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "d5f479c17029b0275884f23e9769e9f4f87b61de"
+        "synced_blob": "083823f25f609f890adf670da4ed72cd187515de"
       },
       {
         "kind": "vendored",
@@ -12465,7 +12538,7 @@
           "vendor/upstream/catalog/intents.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "e13b55633d35558808351ec7e67ad917872cc792"
+        "synced_blob": "e271ceaf900e8491d95b6a4054d5f7a3dddc496a"
       },
       {
         "kind": "vendored",
@@ -12477,7 +12550,7 @@
           "vendor/upstream/catalog/reads.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "7fa51a54e0f67bdf291b97d3ce79328f25497caf"
+        "synced_blob": "5efa802d8c0d8bd28131721f30da6e4251b39498"
       },
       {
         "kind": "extracted",
@@ -13913,6 +13986,39 @@
           "crates/rtao-reads/tests/m6_locks.rs"
         ],
         "synced_blob": "f8feb21e939ef834a0a5d97aee412a1b450e1edc"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/bittensor/cli/commands/commitments.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v494, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/bittensor/intents/commitments.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v494, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_channel_commitments_and_weight_delegates.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v494, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
       }
     ],
     "intents": [
@@ -14011,6 +14117,12 @@
         "oracle": "missing",
         "python_class": "CloseGammaDeposit",
         "rtao": "implemented"
+      },
+      {
+        "name": "commit_weight_hash",
+        "oracle": "missing",
+        "python_class": "CommitWeightHash",
+        "rtao": "pending"
       },
       {
         "name": "commit_weights",
@@ -14277,6 +14389,12 @@
         "rtao": "implemented"
       },
       {
+        "name": "set_channel_commitment",
+        "oracle": "missing",
+        "python_class": "SetChannelCommitment",
+        "rtao": "pending"
+      },
+      {
         "name": "set_childkey_take",
         "oracle": "missing",
         "python_class": "SetChildkeyTake",
@@ -14287,6 +14405,12 @@
         "oracle": "missing",
         "python_class": "SetChildren",
         "rtao": "implemented"
+      },
+      {
+        "name": "set_commit_burn",
+        "oracle": "missing",
+        "python_class": "SetCommitBurn",
+        "rtao": "pending"
       },
       {
         "name": "set_crowdloan_max_contribution",
@@ -14311,6 +14435,12 @@
         "oracle": "missing",
         "python_class": "SetIdentity",
         "rtao": "implemented"
+      },
+      {
+        "name": "set_mech_weight_delegate",
+        "oracle": "missing",
+        "python_class": "SetMechWeightDelegate",
+        "rtao": "pending"
       },
       {
         "name": "set_mechanism_count",
@@ -14610,6 +14740,11 @@
         "rtao": "implemented"
       },
       {
+        "name": "channel_commitment",
+        "oracle": "missing",
+        "rtao": "pending"
+      },
+      {
         "name": "childkey_threshold_suspended",
         "oracle": "missing",
         "rtao": "implemented"
@@ -14633,6 +14768,11 @@
         "name": "collateral_policy",
         "oracle": "missing",
         "rtao": "implemented"
+      },
+      {
+        "name": "commit_burn",
+        "oracle": "missing",
+        "rtao": "pending"
       },
       {
         "name": "commit_reveal_enabled",
@@ -14773,6 +14913,11 @@
         "name": "max_weight_limit",
         "oracle": "missing",
         "rtao": "implemented"
+      },
+      {
+        "name": "mech_weight_delegate",
+        "oracle": "missing",
+        "rtao": "pending"
       },
       {
         "name": "mechanism_count",
@@ -15189,8 +15334,8 @@
     ]
   },
   "pin": {
-    "commit": "8b407e40988ea7a251abb6dbc07a9ab7d602b740",
-    "tag": "v493"
+    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+    "tag": "v494"
   },
   "schema": 1,
   "status_semantics": {

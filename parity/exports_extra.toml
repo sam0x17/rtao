@@ -2083,3 +2083,31 @@ home = "rtao_intents::SetSubnetGammaEmissionWhitelisted"
 reason = "Public typed root intent reexport (feature root). D-207 checks its registry construction, call bytes, summaries and all-subnet effect."
 source = "sdk/python/bittensor/intents/__init__.py"
 pinning_tests = ["rtao_intents::root::tests::gamma_whitelist_matches_python_and_encodes_inner_call"]
+
+[[export]]
+python = "bittensor.intents.CommitWeightHash"
+home = "pending: new public export at v494"
+reason = "Added by the v494 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v494 adoption"
+
+[[export]]
+python = "bittensor.intents.SetChannelCommitment"
+home = "pending: new public export at v494"
+reason = "Added by the v494 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v494 adoption"
+
+[[export]]
+python = "bittensor.intents.SetCommitBurn"
+home = "pending: new public export at v494"
+reason = "Added by the v494 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v494 adoption"
+
+[[export]]
+python = "bittensor.intents.SetMechWeightDelegate"
+home = "pending: new public export at v494"
+reason = "Added by the v494 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+source = "sdk/python/bittensor/intents/__init__.py"
+pending = "v494 adoption"
