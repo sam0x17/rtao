@@ -4,7 +4,7 @@
 
 [package]
 name = "rtao-upstream-macros"
-version = "0.490.0"
+version = "0.490.1"
 edition = "2024"
 description = "Unofficial republish of subtensor-macros from RaoFoundation/subtensor v490, for rtao; not affiliated with or endorsed by its authors."
 license = "MIT"
@@ -28,7 +28,7 @@ bench = false
 syn = { version = "2.0.106", default-features = false, features = ["full", "visit-mut", "visit", "clone-impls", "extra-traits", "parsing", "printing", "proc-macro"] }
 proc-macro2 = { version = "1", default-features = false }
 quote = { version = "1", default-features = false }
-ahash = { version = "0.8", default-features = false }
+ahash = { version = "=0.8.12", default-features = false }
 
 [lints.rust]
 deprecated = "allow"
