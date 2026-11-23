@@ -292,6 +292,35 @@ fn fmt_g_precision(x: f64, precision: i32) -> String {
     with_sign(body, x)
 }
 
+/// Render U64F64 with Python Decimal's default 28 significant digits and `f` format.
+pub fn fmt_u64f64_decimal(value: crate::U64F64) -> String {
+    const PRECISION: usize = 28;
+    let exact = value.to_string();
+    let (integer, fraction) = exact.split_once('.').unwrap_or((&exact, ""));
+    let decimals = fraction.trim_start_matches('0');
+    let (significant, mut exponent) = if integer == "0" {
+        (
+            decimals.len(),
+            decimals.len() as i32 - fraction.len() as i32 - 1,
+        )
+    } else {
+        (integer.len() + fraction.len(), integer.len() as i32 - 1)
+    };
+    if significant <= PRECISION {
+        return exact;
+    }
+    let precision = PRECISION as i32;
+    let numerator = BigUint::from(value.bits);
+    let denominator = BigUint::from(1_u8) << 64_usize;
+    let rounded = rounded_decimal(&numerator, &denominator, precision - 1 - exponent);
+    let mut digits = rounded.to_str_radix(10);
+    if digits.len() > PRECISION {
+        digits.pop();
+        exponent += 1;
+    }
+    fixed_digits(&digits, exponent, false)
+}
+
 fn special_value(x: f64) -> Option<&'static str> {
     if x.is_nan() {
         Some("nan")
@@ -339,6 +368,20 @@ fn rounded_decimal(numerator: &BigUint, denominator: &BigUint, places: i32) -> B
         quotient += 1_u8;
     }
     quotient
+}
+
+#[cfg(test)]
+#[test]
+fn u64f64_decimal_matches_python_decimal_precision() {
+    for (bits, expected) in [
+        (0, "0"),
+        (5_u128 << 62, "1.25"),
+        (1, "0.00000000000000000005421010862427522170037264004"),
+        ((1_u128 << 64) / 3, "0.3333333333333333333152632971"),
+        (u128::MAX, "18446744073709551616.00000000"),
+    ] {
+        assert_eq!(fmt_u64f64_decimal(crate::U64F64::from_bits(bits)), expected);
+    }
 }
 
 fn compare_power(numerator: &BigUint, denominator: &BigUint, exponent: i32) -> std::cmp::Ordering {

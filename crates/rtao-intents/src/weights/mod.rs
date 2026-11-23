@@ -4,7 +4,7 @@ mod commit;
 mod intents;
 mod math;
 
-pub use crate::{CommitWeights, RevealWeights, SetWeights};
+pub use crate::{CommitWeights, RevealWeights, SetMechWeightDelegate, SetWeights};
 
 pub use commit::{
     CommitError, CommitSizeLimit, PreparedWeightCommit, TimelockCommitRequest, TimelockCommitter,

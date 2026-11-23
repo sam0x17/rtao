@@ -301,9 +301,9 @@ InterfaceMetadata{name:"set_identity",feature:"identity",compiled:true,implement
 #[cfg(not(feature="identity"))]
 InterfaceMetadata{name:"set_identity",feature:"identity",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "weights")]
-InterfaceMetadata{name:"set_mech_weight_delegate",feature:"weights",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetMechWeightDelegate>()),role:Some(std::any::type_name::<<super::interfaces::SetMechWeightDelegate as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetMechWeightDelegate as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_mech_weight_delegate",feature:"weights",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetMechWeightDelegate>()),role:Some(std::any::type_name::<<super::interfaces::SetMechWeightDelegate as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetMechWeightDelegate as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="weights"))]
-InterfaceMetadata{name:"set_mech_weight_delegate",feature:"weights",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_mech_weight_delegate",feature:"weights",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "governance")]
 InterfaceMetadata{name:"set_mechanism_count",feature:"governance",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetMechanismCount>()),role:Some(std::any::type_name::<<super::interfaces::SetMechanismCount as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetMechanismCount as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="governance"))]

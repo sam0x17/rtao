@@ -292,15 +292,13 @@ pub struct ChannelCommitmentParams {
 #[doc = "One hotkey's independent channel commitment, or None when absent.\n\nReads the v2 runtime API and decodes the returned SCALE registration. On a\nnode without v2, reads the equivalent channel storage instead; both paths\ndistinguish this target from the legacy `commitment` read. The `revealed`\nlist reports plaintext and reveal blocks even after the active record is removed."]
 #[doc(alias = "bittensor.reads.channel_commitment")]
 pub async fn channel_commitment<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _mechid: rtao_primitives::MechId,
-    _channel: i64,
-    _hotkey_ss58: Option<rtao_primitives::AccountId>,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ChannelCommitment,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    mechid: rtao_primitives::MechId,
+    channel: i64,
+    hotkey_ss58: Option<rtao_primitives::AccountId>,
+) -> Result<Option<crate::reads::m6_accounts::ChannelCommitment>, crate::ReadError> {
+    crate::reads::m6_accounts::channel_commitment(view, netuid, mechid, channel, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `childkey_threshold_suspended`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -399,14 +397,12 @@ pub struct CommitBurnParams {
 #[doc = "Live decayed channel burn price and its stored configuration.\n\n`burn` is the price a commitment would pay now, or None when the burn is\ndisabled/unconfigured. The runtime API returns no record when disabled, so\nthis read also inspects `CommitBurnConfig` to show `enabled` and the other\nparameters. Direct storage readers should not treat stored `burn` as live:\ndecay is lazy; this read's `price_is_decayed` marks the runtime quote."]
 #[doc(alias = "bittensor.reads.commit_burn")]
 pub async fn commit_burn<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _mechid: rtao_primitives::MechId,
-    _channel: i64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::CommitBurn,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    mechid: rtao_primitives::MechId,
+    channel: i64,
+) -> Result<Option<crate::reads::m6_accounts::CommitBurn>, crate::ReadError> {
+    crate::reads::m6_accounts::commit_burn(view, netuid, mechid, channel).await
 }
 #[doc = "Typed parameters for `commit_reveal_enabled`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
