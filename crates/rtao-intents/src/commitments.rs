@@ -11,13 +11,170 @@
 //! `rtao_tx::timelock::Timelocked::commitment_field`.
 
 use rtao_client::{View, ViewExt};
-use rtao_primitives::{Money, NetUid, TaoBalance, U64F64, hyperparams::burn_increase_multiplier};
-use rtao_runtime::calls::admin_utils;
+use rtao_primitives::{
+    Amount, Balance, DynBalance, Money, NetUid, Spend, Tao, TaoBalance, U64F64, UnitError,
+    hyperparams::burn_increase_multiplier,
+};
+use rtao_runtime::calls::{admin_utils, commitments as calls};
 use rtao_runtime::models::{CommitmentInfo, Data};
+use rtao_runtime::runtime_apis::subnet_registration_runtime_api::GET_COMMIT_BURN;
+use rtao_tx::timelock::{Reveal, seal_at};
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentInterface, PreflightCx};
 use serde_json::{Value, json};
 
-pub use crate::SetCommitBurn;
+pub use crate::{SetChannelCommitment, SetCommitBurn};
+
+impl SetChannelCommitment {
+    fn max_burn(&self) -> Result<Balance<Tao>, IntentError> {
+        match &self.max_burn_tao {
+            Amount::Exact(amount) => Ok(amount.resolve(NetUid::ROOT)?.tao()?),
+            Amount::All => Err(UnitError::AllNotAllowed.into()),
+        }
+    }
+
+    fn payload(&self) -> Result<Vec<u8>, IntentError> {
+        let bytes = match self.encoding.as_str() {
+            "utf8" => self.data.as_bytes().to_vec(),
+            "hex" => rtao_primitives::pyfmt::bytes_fromhex(
+                self.data.strip_prefix("0x").unwrap_or(&self.data),
+            )
+            .map_err(|_| {
+                IntentError::validation(
+                    "Commitment data must be valid hexadecimal with encoding='hex'.",
+                )
+            })?,
+            _ => {
+                return Err(IntentError::validation(
+                    "Commitment encoding must be 'utf8' or 'hex'.",
+                ));
+            }
+        };
+        if self.reveal_round.is_some() {
+            if bytes.is_empty() {
+                return Err(IntentError::validation(
+                    "A timelocked commitment cannot have an empty payload.",
+                ));
+            }
+        } else if bytes.len() > MAX_BIG_RAW_BYTES {
+            return Err(IntentError::validation(
+                "A raw channel commitment is limited to 512 bytes. Use timelock encryption or a content hash.",
+            ));
+        }
+        Ok(bytes)
+    }
+}
+
+impl Intent for SetChannelCommitment {
+    fn summary(&self) -> String {
+        let mode = if self.reveal_round.is_some() {
+            "timelocked"
+        } else {
+            "plaintext"
+        };
+        format!(
+            "publish {mode} commitment on netuid {}, mechanism {}, channel {}",
+            self.netuid, self.mechid, self.channel
+        )
+    }
+
+    fn validate(&self) -> Result<(), IntentError> {
+        self.max_burn()?;
+        self.payload()?;
+        Ok(())
+    }
+
+    fn spend(&self) -> Spend {
+        self.max_burn().map_or(Spend::Unbounded, Spend::Bounded)
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        let max_burn = self.max_burn()?;
+        let payload = self.payload()?;
+        let hotkey = cx.hotkey_address(
+            self.hotkey_ss58
+                .as_ref()
+                .map(rtao_primitives::Ss58Address::account),
+        )?;
+        let fields = match self.reveal_round {
+            Some(round) => {
+                let seal = seal_at(payload, Reveal::Round(round), cx.clock.now())
+                    .await
+                    .map_err(|error| IntentError::validation(error.to_string()))?;
+                vec![
+                    seal.commitment_field()
+                        .await
+                        .map_err(|error| IntentError::validation(error.to_string()))?,
+                ]
+            }
+            None if payload.is_empty() => vec![],
+            None if payload.len() <= MAX_RAW_BYTES => vec![Data::Raw(payload)],
+            None => vec![Data::BigRaw(payload)],
+        };
+        let call = calls::set_commitment_to(
+            self.netuid,
+            self.mechid,
+            self.channel,
+            hotkey,
+            CommitmentInfo { fields },
+            TaoBalance(max_burn.rao()),
+        );
+        let mut built = Built::new(call.compose(cx.runtime)?);
+        if let Some(round) = self.reveal_round {
+            built.extras.insert("reveal_round".into(), json!(round));
+        }
+        Ok(built)
+    }
+
+    async fn effects<V: View + ?Sized>(
+        &self,
+        cx: &PreflightCx<'_, V>,
+    ) -> Result<Vec<String>, IntentError> {
+        let quote = cx
+            .view
+            .call(&GET_COMMIT_BURN, (self.netuid, self.mechid, self.channel))
+            .await?;
+        let maximum = format!(
+            "maximum accepted burn: {}",
+            DynBalance::from(self.max_burn()?)
+        );
+        let mut lines = vec![self.summary()];
+        if let Some(quote) = quote {
+            let quote = quote.to_json();
+            let burn = quote
+                .get("burn")
+                .and_then(|value| {
+                    value.as_u64().or_else(|| {
+                        value
+                            .get("amount")
+                            .or_else(|| value.get("value"))
+                            .and_then(Value::as_u64)
+                    })
+                })
+                .ok_or_else(|| {
+                    IntentError::validation("The commitment burn quote has no native TAO amount.")
+                })?;
+            let price = DynBalance::from_rao(burn, NetUid::ROOT);
+            lines.push(format!(
+                "current commitment burn: {price} (the execution-time price may differ)"
+            ));
+            lines.push(maximum);
+        } else {
+            lines.push(maximum);
+            lines.push(
+                "commitment burn is disabled or unconfigured; only the transaction fee applies"
+                    .into(),
+            );
+        }
+        Ok(lines)
+    }
+
+    async fn warnings<V: View + ?Sized>(
+        &self,
+        _cx: &PreflightCx<'_, V>,
+    ) -> Result<Vec<String>, IntentError> {
+        Ok(vec!["max_burn is only a price limit, not a tip: the runtime charges its current decayed price and never retains the unused difference".into()])
+    }
+}
 
 enum BurnParameter {
     Enabled(bool),
@@ -326,6 +483,208 @@ mod tests {
         let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
         let snapshot = client.at(BlockRef::Finalized).await?;
         Ok((chain, client, snapshot))
+    }
+
+    #[tokio::test]
+    async fn channel_commitment_uses_coldkey_policy_and_pinned_target_fields() -> anyhow::Result<()>
+    {
+        let (chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let coldkey = AccountId([8; 32]);
+        struct Wallet;
+        impl rtao_signer::KeyView for Wallet {
+            fn hotkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
+                Ok(HOTKEY)
+            }
+            fn hotkey_public_key(&self) -> Result<[u8; 32], rtao_signer::SignerError> {
+                Ok(HOTKEY.0)
+            }
+            fn coldkey_address(&self) -> Result<AccountId, rtao_signer::SignerError> {
+                Ok(AccountId([8; 32]))
+            }
+        }
+        let cases = [
+            ("".to_owned(), "utf8", vec![], None),
+            (
+                "é".to_owned(),
+                "utf8",
+                vec![Data::Raw(vec![0xc3, 0xa9])],
+                None,
+            ),
+            (
+                "0x00 ff".to_owned(),
+                "hex",
+                vec![Data::Raw(vec![0, 255])],
+                Some(AccountId([6; 32])),
+            ),
+            (
+                "x".repeat(128),
+                "utf8",
+                vec![Data::Raw(vec![b'x'; 128])],
+                None,
+            ),
+            (
+                "y".repeat(129),
+                "utf8",
+                vec![Data::BigRaw(vec![b'y'; 129])],
+                None,
+            ),
+            (
+                "z".repeat(512),
+                "utf8",
+                vec![Data::BigRaw(vec![b'z'; 512])],
+                None,
+            ),
+        ];
+        let before = chain.requests().len();
+        for (data, encoding, fields, explicit) in cases {
+            let args = json!({"netuid":3, "mechid":2, "channel":7, "data":data, "encoding":encoding,
+                "max_burn_tao":"0.5", "hotkey_ss58":explicit.map(|id| id.to_ss58(42))});
+            let crate::AnyIntent::SetChannelCommitment(intent) =
+                crate::AnyIntent::from_tool("set_channel_commitment", args)?
+            else {
+                anyhow::bail!("expected the typed channel commitment intent");
+            };
+            let origin =
+                explicit.map_or(OriginView::Keys(&Wallet), |_| OriginView::Account(coldkey));
+            let built = intent
+                .build(&BuildCx {
+                    view: &snapshot,
+                    origin,
+                    runtime,
+                    clock: &SystemClock,
+                    spec: SetChannelCommitment::SPEC,
+                })
+                .await?;
+            let expected = calls::set_commitment_to(
+                NetUid(3),
+                rtao_primitives::MechId(2),
+                7,
+                explicit.unwrap_or(HOTKEY),
+                CommitmentInfo { fields },
+                TaoBalance(500_000_000),
+            )
+            .compose(runtime)?;
+            assert_eq!(built.call.as_bytes(), expected.as_bytes());
+            assert_eq!(&built.call.as_bytes()[..6], &[18, 3, 3, 0, 2, 7]);
+            assert_eq!(&built.call.as_bytes()[6..38], &explicit.unwrap_or(HOTKEY).0);
+            assert_eq!(
+                intent.spend(),
+                Spend::Bounded(Balance::from_rao(500_000_000))
+            );
+            assert!(built.extras.is_empty());
+        }
+        assert_eq!(chain.requests().len(), before);
+        for invalid in [
+            json!({"netuid":3,"encoding":"base64"}),
+            json!({"netuid":3,"encoding":"hex","data":"0 x"}),
+            json!({"netuid":3,"data":"x".repeat(513)}),
+            json!({"netuid":3,"reveal_round":5}),
+            json!({"netuid":3,"max_burn_tao":"all"}),
+            json!({"netuid":3,"max_burn_tao":-1}),
+            json!({"netuid":3,"channel":256}),
+        ] {
+            assert!(crate::AnyIntent::from_tool("set_channel_commitment", invalid).is_err());
+        }
+        assert_eq!(SetChannelCommitment::SPEC.signer, "coldkey");
+        assert_eq!(
+            SetChannelCommitment::SPEC.verify,
+            Some("channel_commitment")
+        );
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn channel_commitment_builds_native_timelock_and_reads_the_pinned_burn_quote()
+    -> anyhow::Result<()> {
+        use std::time::{Duration, SystemTime, UNIX_EPOCH};
+        struct Clock;
+        impl rtao_tx::Clock for Clock {
+            fn now(&self) -> SystemTime {
+                UNIX_EPOCH + Duration::from_secs(1_752_076_800)
+            }
+        }
+        let (chain, client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let coldkey = AccountId([8; 32]);
+        let round = rtao_tx::timelock::current_round(Some(1_752_076_800.0))? + 20;
+        let crate::AnyIntent::SetChannelCommitment(mut intent) = crate::AnyIntent::from_tool(
+            "set_channel_commitment",
+            json!({"netuid":3, "mechid":2, "channel":7, "data":"trial", "reveal_round":round,
+                   "hotkey_ss58":HOTKEY.to_ss58(42), "max_burn_tao":"0.5"}),
+        )?
+        else {
+            anyhow::bail!("expected the typed channel commitment intent");
+        };
+        let context = BuildCx {
+            view: &snapshot,
+            origin: OriginView::Account(coldkey),
+            runtime,
+            clock: &Clock,
+            spec: SetChannelCommitment::SPEC,
+        };
+        let built = intent.build(&context).await?;
+        let decoded = decode(&built.call, runtime)?;
+        assert_eq!(decoded["call_function"], "set_commitment_to");
+        let encrypted = &decoded["call_args"][4]["value"]["fields"][0]["TimelockEncrypted"];
+        assert_eq!(encrypted["reveal_round"], round, "{decoded}");
+        let ciphertext = encrypted["encrypted"]
+            .as_str()
+            .and_then(|text| text.strip_prefix("0x"))
+            .and_then(|text| hex::decode(text).ok())
+            .ok_or_else(|| anyhow::anyhow!("invalid inner ciphertext"))?;
+        assert!(ciphertext.ends_with(b"AES_GCM_"));
+        assert_eq!(built.extras.get("reveal_round"), Some(&json!(round)));
+
+        let preview = PreflightCx {
+            view: &snapshot,
+            runtime,
+            clock: &Clock,
+            spec: SetChannelCommitment::SPEC,
+            client: &client,
+            dispatch_origin: coldkey,
+            fee_payer: coldkey,
+            call: &built.call,
+        };
+        for (quote, expected) in [
+            (
+                json!({"enabled":true,"burn":2_000_000_000u64,"min_burn":500_000_000u64,
+                  "max_burn":10_000_000_000u64,"half_life":360,
+                  "increase_mult":{"bits":5u128<<62},"last_update_block":100}),
+                "current commitment burn",
+            ),
+            (Value::Null, "burn is disabled or unconfigured"),
+        ] {
+            chain.mutate_state(|state| {
+                state.seed_runtime("SubnetRegistrationRuntimeApi", "get_commit_burn", quote)
+            })?;
+            let effects = intent.effects(&preview).await?;
+            assert!(effects.iter().any(|line| line.contains(expected)));
+            assert!(
+                effects
+                    .iter()
+                    .any(|line| line == "maximum accepted burn: τ0.500000000")
+            );
+            assert_eq!(intent.warnings(&preview).await?.len(), 1);
+        }
+        let hash = format!("0x{}", hex::encode(snapshot.block().hash.0));
+        assert!(
+            chain
+                .requests()
+                .iter()
+                .any(|request| request.method == "state_call"
+                    && request.params
+                        == json!([
+                            "SubnetRegistrationRuntimeApi_get_commit_burn",
+                            "0x03000207",
+                            hash
+                        ]))
+        );
+        intent.reveal_round = Some(round - 20);
+        assert!(intent.build(&context).await.is_err());
+        client.close().await;
+        Ok(())
     }
 
     #[tokio::test]

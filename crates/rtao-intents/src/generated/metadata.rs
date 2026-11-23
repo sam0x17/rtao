@@ -269,9 +269,9 @@ InterfaceMetadata{name:"set_auto_stake",feature:"staking",compiled:true,implemen
 #[cfg(not(feature="staking"))]
 InterfaceMetadata{name:"set_auto_stake",feature:"staking",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "commitments")]
-InterfaceMetadata{name:"set_channel_commitment",feature:"commitments",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetChannelCommitment>()),role:Some(std::any::type_name::<<super::interfaces::SetChannelCommitment as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetChannelCommitment as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_channel_commitment",feature:"commitments",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetChannelCommitment>()),role:Some(std::any::type_name::<<super::interfaces::SetChannelCommitment as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetChannelCommitment as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="commitments"))]
-InterfaceMetadata{name:"set_channel_commitment",feature:"commitments",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_channel_commitment",feature:"commitments",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "children")]
 InterfaceMetadata{name:"set_childkey_take",feature:"children",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetChildkeyTake>()),role:Some(std::any::type_name::<<super::interfaces::SetChildkeyTake as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetChildkeyTake as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="children"))]
