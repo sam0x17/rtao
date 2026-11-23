@@ -848,7 +848,7 @@ impl SyncWeights<'_> {
         netuid: rtao_primitives::NetUid,
         mechid: rtao_primitives::MechId,
         hotkey_ss58: Option<rtao_primitives::AccountId>,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<Option<rtao_primitives::AccountId>, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::mech_weight_delegate(
                 &view,

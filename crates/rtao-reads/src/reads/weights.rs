@@ -1,15 +1,33 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/weights.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-//! Sparse mechanism weight matrices.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/identity.py @ a68c6e8c65411a842fbf69269dc385aa13041391 (Apache-2.0); modified by rtao.
+//! Mechanism weights and delegates.
 
 use crate::ReadError;
 use futures::TryStreamExt;
 use rtao_client::{View, ViewExt};
-use rtao_primitives::{MechId, NetUid, NetUidStorageIndex, Uid};
+use rtao_primitives::{AccountId, MechId, NetUid, NetUidStorageIndex, Uid};
+use rtao_runtime::runtime_apis::subnet_registration_runtime_api::GET_MECH_WEIGHT_DELEGATE;
 use rtao_runtime::storage::subtensor_module as st;
 use std::collections::BTreeMap;
 
 /// Sparse normalized weights, preserving validators with zero-weight rows.
 pub type WeightMatrix = BTreeMap<Uid, BTreeMap<Uid, f64>>;
+
+/// Read the account authorized to set a validator's weights on this mechanism.
+pub async fn mech_weight_delegate<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+    mechid: MechId,
+    hotkey_ss58: Option<AccountId>,
+) -> Result<Option<AccountId>, ReadError> {
+    let hotkey = hotkey_ss58.ok_or_else(|| ReadError::InvalidParam {
+        name: "hotkey_ss58".into(),
+        reason: "a validator hotkey is required".into(),
+    })?;
+    Ok(view
+        .call(&GET_MECH_WEIGHT_DELEGATE, (netuid, mechid, hotkey))
+        .await?)
+}
 
 /// Normalize each sparse validator weight row by its complete sum.
 /// Duplicate targets retain their last value while all values count in the sum.

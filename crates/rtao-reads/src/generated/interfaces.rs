@@ -871,14 +871,12 @@ pub struct MechWeightDelegateParams {
 #[doc = "The account authorized to set weights for this hotkey/mechanism, or None."]
 #[doc(alias = "bittensor.reads.mech_weight_delegate")]
 pub async fn mech_weight_delegate<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _mechid: rtao_primitives::MechId,
-    _hotkey_ss58: Option<rtao_primitives::AccountId>,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::MechWeightDelegate,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    mechid: rtao_primitives::MechId,
+    hotkey_ss58: Option<rtao_primitives::AccountId>,
+) -> Result<Option<rtao_primitives::AccountId>, crate::ReadError> {
+    crate::reads::weights::mech_weight_delegate(view, netuid, mechid, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `mechanism_count`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

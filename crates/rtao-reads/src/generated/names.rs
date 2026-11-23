@@ -790,7 +790,7 @@ impl ReadName {
             Self::LocksForColdkey => true,
             Self::LocksForHotkey => true,
             Self::MaxWeightLimit => true,
-            Self::MechWeightDelegate => false,
+            Self::MechWeightDelegate => true,
             Self::MechanismCount => true,
             Self::MechanismEmissionSplit => true,
             Self::Metagraph => true,
@@ -1173,10 +1173,10 @@ impl ReadName {
                 output_type_name: std::any::type_name::<u16>(),
             },
             Self::MechWeightDelegate => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::MechWeightDelegateParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<Option<rtao_primitives::AccountId>>(),
             },
             Self::MechanismCount => ReadInterfaceMetadata {
                 implemented: true,

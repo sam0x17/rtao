@@ -70,6 +70,88 @@ fn params(value: Value) -> Map<String, Value> {
     value.as_object().unwrap().clone()
 }
 
+#[tokio::test]
+async fn mechanism_delegate_read_uses_the_exact_pinned_runtime_call() {
+    let target = AccountId([7; 32]);
+    let delegate = AccountId([8; 32]);
+    let method = "SubnetRegistrationRuntimeApi_get_mech_weight_delegate";
+    let mut input = [42, 0, 3].to_vec();
+    input.extend(target.0);
+    let mut default_mechanism_input = input.clone();
+    default_mechanism_input[2] = 0;
+    let mut output = vec![1];
+    output.extend(delegate.0);
+    let mut state = FakeState::default();
+    state.seed_runtime_encoded(method, input.clone(), output);
+    state.seed_runtime_encoded(method, default_mechanism_input.clone(), vec![0]);
+    let (client, chain) = client(state).await;
+    let snapshot = client.at(BlockRef::Best).await.unwrap();
+    chain.advance(2).unwrap();
+
+    let start = chain.requests().len();
+    let missing = dispatch(
+        &snapshot,
+        ReadName::MechWeightDelegate,
+        &params(json!({"netuid": 42})),
+    )
+    .await;
+    assert!(matches!(
+        missing,
+        Err(ReadError::InvalidParam { name, .. }) if name == "hotkey_ss58"
+    ));
+    assert_eq!(chain.requests().len(), start);
+    assert_eq!(
+        snapshot
+            .weights()
+            .mech_weight_delegate(NetUid(42), MechId(3), Some(target))
+            .await
+            .unwrap(),
+        Some(delegate)
+    );
+    assert_eq!(
+        dispatch(
+            &snapshot,
+            ReadName::MechWeightDelegate,
+            &params(json!({"netuid": 42, "mechid": 3, "hotkey_ss58": target})),
+        )
+        .await
+        .unwrap(),
+        json!(delegate.to_string())
+    );
+    assert!(
+        dispatch(
+            &snapshot,
+            ReadName::MechWeightDelegate,
+            &params(json!({"netuid": 42, "hotkey_ss58": target})),
+        )
+        .await
+        .unwrap()
+        .is_null()
+    );
+    let calls: Vec<_> = chain
+        .requests()
+        .into_iter()
+        .skip(start)
+        .filter(|request| request.method == "state_call")
+        .map(|request| request.params)
+        .collect();
+    let hash = format!("0x{}", hex::encode(snapshot.block().hash.0));
+    let expected = json!([method, format!("0x{}", hex::encode(input)), &hash]);
+    assert_eq!(
+        calls,
+        [
+            expected.clone(),
+            expected,
+            json!([
+                method,
+                format!("0x{}", hex::encode(default_mechanism_input)),
+                &hash
+            ]),
+        ]
+    );
+    client.close().await;
+}
+
 #[test]
 fn all_read_names_have_authenticated_defaults_and_parameters() {
     assert_eq!(ReadName::ALL.len(), rtao_catalog::READS.len());

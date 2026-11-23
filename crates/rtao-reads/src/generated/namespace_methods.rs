@@ -488,7 +488,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Weights<'_, V> {
         netuid: rtao_primitives::NetUid,
         mechid: rtao_primitives::MechId,
         hotkey_ss58: Option<rtao_primitives::AccountId>,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<rtao_primitives::AccountId>, crate::ReadError> {
         super::interfaces::mech_weight_delegate(self.view, netuid, mechid, hotkey_ss58).await
     }
 }

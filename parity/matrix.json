@@ -14917,7 +14917,7 @@
       {
         "name": "mech_weight_delegate",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "mechanism_count",
