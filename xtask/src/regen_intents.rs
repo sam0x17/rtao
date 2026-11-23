@@ -412,7 +412,7 @@ fn field_type(
             "list[int]" => "Vec<u64>".into(),
             "list[float]" => "Vec<rtao_primitives::Ratio>".into(),
             "list" | "list[dict]" => "Vec<serde_json::Value>".into(),
-            "dict" | "int | float | str" => "serde_json::Value".into(),
+            "dict" | "int | float | str" | "bool | int | float | str" => "serde_json::Value".into(),
             _ => bail!("unmapped intent annotation {key}: {annotation}"),
         }
     };

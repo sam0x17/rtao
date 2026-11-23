@@ -27,6 +27,11 @@ architecture requires for derived tables. Its exact generator AST must match
 setter. The output records the derivation and the referenced table's source
 span/blob. Arbitrary comprehensions remain outside the evaluator.
 
+`SetCommitBurn.wraps` uses the same provenance format for
+`COMMIT_BURN_METHODS`. The extractor requires one unfiltered
+`tuple(("AdminUtils", method) for method in COMMIT_BURN_METHODS.values())`
+generator and preserves the resolved dictionary's value order and duplicates.
+
 Storage descriptors must have the expected literal `Item` payload and target.
 Their targets are checked against authenticated Finney V15 metadata. The output
 retains both `source_value_type_ident` and the metadata's `value_type_ident`.

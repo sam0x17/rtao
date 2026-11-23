@@ -2069,17 +2069,32 @@ impl<'a> Resolver<'a> {
                             module
                                 .escaped
                                 .insert(key.clone(), dependencies(&field.value, bindings)?);
-                            let evaluated = if path
-                                == "sdk/python/bittensor/intents/hyperparameters.py"
-                                && key == "SetHyperparameter.wraps"
-                            {
-                                let (start, end) = module
-                                    .locations
-                                    .get("OWNER_HYPERPARAMETERS")
-                                    .copied()
-                                    .unwrap_or((0, 0));
-                                module.derived.insert(key.clone(),json!({"kind":"unique_owner_setters","input":{"path":path,"table":"OWNER_HYPERPARAMETERS","line":start,"end_line":end,"blob":self.tree.get(path)}}));
-                                derive_hyperparam_wraps(&field.value, bindings)
+                            let derivation = match (path, key.as_str()) {
+                                (
+                                    "sdk/python/bittensor/intents/hyperparameters.py",
+                                    "SetHyperparameter.wraps",
+                                ) => Some((
+                                    "unique_owner_setters",
+                                    "OWNER_HYPERPARAMETERS",
+                                    derive_hyperparam_wraps
+                                        as fn(&ast::Expr, &Bindings) -> Result<Binding>,
+                                )),
+                                (
+                                    "sdk/python/bittensor/intents/commitments.py",
+                                    "SetCommitBurn.wraps",
+                                ) => Some((
+                                    "commit_burn_setters",
+                                    "COMMIT_BURN_METHODS",
+                                    derive_commit_burn_wraps
+                                        as fn(&ast::Expr, &Bindings) -> Result<Binding>,
+                                )),
+                                _ => None,
+                            };
+                            let evaluated = if let Some((kind, table, derive)) = derivation {
+                                let (start, end) =
+                                    module.locations.get(table).copied().unwrap_or((0, 0));
+                                module.derived.insert(key.clone(),json!({"kind":kind,"input":{"path":path,"table":table,"line":start,"end_line":end,"blob":self.tree.get(path)}}));
+                                derive(&field.value, bindings)
                             } else {
                                 self.eval_binding(&field.value, bindings, path, 0)
                             };
@@ -3029,6 +3044,63 @@ fn derive_hyperparam_wraps(expr: &ast::Expr, bindings: &Bindings) -> Result<Bind
             wraps.push(pair);
         }
     }
+    Ok(Binding::Value(Literal::Tuple(wraps)))
+}
+
+fn derive_commit_burn_wraps(expr: &ast::Expr, bindings: &Bindings) -> Result<Binding> {
+    let ast::Expr::Call(tuple) = expr else {
+        bail!("derived commitment wraps must call tuple");
+    };
+    ensure!(
+        call_path(&tuple.func).as_deref() == Some("tuple") && !bindings.contains_key("tuple"),
+        "derived commitment wraps must use the builtin tuple"
+    );
+    let ast::Expr::GeneratorExp(generator) = one_argument(tuple)? else {
+        bail!("derived commitment wraps must use a generator");
+    };
+    let [iteration] = generator.generators.as_slice() else {
+        bail!("derived commitment wraps requires one generator");
+    };
+    let (ast::Expr::Name(method), ast::Expr::Call(values)) = (&iteration.target, &iteration.iter)
+    else {
+        bail!("derived commitment wraps must bind one setter name");
+    };
+    ensure!(
+        !iteration.is_async
+            && iteration.ifs.is_empty()
+            && call_path(&values.func).as_deref() == Some("COMMIT_BURN_METHODS.values")
+            && values.args.is_empty()
+            && values.keywords.is_empty(),
+        "derived commitment wraps must iterate unfiltered COMMIT_BURN_METHODS values"
+    );
+    let ast::Expr::Tuple(pair) = &*generator.elt else {
+        bail!("derived commitment wraps must emit a pair");
+    };
+    ensure!(
+        matches!(pair.elts.as_slice(), [ast::Expr::Constant(pallet), ast::Expr::Name(setter)]
+            if matches!(&pallet.value, ast::Constant::Str(name) if name == "AdminUtils")
+                && setter.id == method.id),
+        "derived commitment wraps must emit AdminUtils and the bound setter"
+    );
+    let Some(Binding::Value(Literal::Dict(methods))) = bindings.get("COMMIT_BURN_METHODS") else {
+        bail!("derived commitment wraps needs the resolved COMMIT_BURN_METHODS table");
+    };
+    ensure!(
+        methods.len() <= MAX_CONTAINER_ITEMS,
+        "commitment setter table exceeds item limit"
+    );
+    let wraps = methods
+        .iter()
+        .map(|(_, value)| {
+            let Literal::Str(setter) = value else {
+                bail!("commitment setter is not a string");
+            };
+            Ok(Literal::Tuple(vec![
+                Literal::Str("AdminUtils".into()),
+                Literal::Str(setter.clone()),
+            ]))
+        })
+        .collect::<Result<Vec<_>>>()?;
     Ok(Binding::Value(Literal::Tuple(wraps)))
 }
 
@@ -4275,6 +4347,46 @@ mod tests {
                 "{changed}"
             );
         }
+        Ok(())
+    }
+
+    #[test]
+    fn commitment_wraps_use_the_resolved_setters_in_python_order() -> Result<()> {
+        const PATH: &str = "sdk/python/bittensor/intents/commitments.py";
+        const WRAPS: &str = "SetCommitBurn.wraps";
+        let root = root()?;
+        let methods = "COMMIT_BURN_METHODS = {'z': 'set_z', 'a': 'set_a', 'b': 'set_z'}";
+        let expression = "tuple(('AdminUtils', method) for method in COMMIT_BURN_METHODS.values())";
+        let values = |table: &str, expr: &str| {
+            let mut resolver = Resolver::new(&root)?;
+            resolver.sources.insert(
+                PATH.into(),
+                format!("{table}\nclass SetCommitBurn:\n    wraps = {expr}\n"),
+            );
+            resolver.values(PATH, &[WRAPS])
+        };
+        let table = values(methods, expression)?;
+        assert_eq!(
+            table[WRAPS]["value"],
+            json!({"tuple":[
+                {"tuple":["AdminUtils","set_z"]},
+                {"tuple":["AdminUtils","set_a"]},
+                {"tuple":["AdminUtils","set_z"]}
+            ]})
+        );
+        assert_eq!(
+            table[WRAPS]["derived"]["input"]["table"],
+            "COMMIT_BURN_METHODS"
+        );
+        for changed in [
+            expression.replace("'AdminUtils'", "'Other'"),
+            expression.replace(".values()", ".values() if method"),
+            expression.replace(".values()", ".keys()"),
+            expression.replace("Utils', method", "Utils', method.lower()"),
+        ] {
+            assert!(values(methods, &changed).is_err(), "{changed}");
+        }
+        assert!(values(&format!("{methods}\ntuple = None"), expression).is_err());
         Ok(())
     }
 
