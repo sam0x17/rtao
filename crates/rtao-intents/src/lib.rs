@@ -150,6 +150,7 @@ pub mod staking_trades;
     feature = "children",
     feature = "coldkey",
     feature = "collateral",
+    feature = "commitments",
     feature = "crowdloan",
     feature = "emission_weights",
     feature = "evm",
