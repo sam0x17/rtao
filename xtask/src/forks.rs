@@ -1004,13 +1004,24 @@ impl Context_<'_> {
         } else if let Some(fork) = self.patched(&package)? {
             Target::Fork(fork)
         } else {
-            Target::Registry(
-                resolved
-                    .get("version")
-                    .and_then(Value::as_str)
-                    .with_context(|| format!("{name} has no version"))?
-                    .to_owned(),
-            )
+            let mut version = resolved
+                .get("version")
+                .and_then(Value::as_str)
+                .with_context(|| format!("{name} has no version"))?
+                .to_owned();
+            if self.fork.key == "macros" && package == "ahash" {
+                let frozen = semver::Version::new(0, 8, 12);
+                ensure!(
+                    semver::VersionReq::parse(&version)?.matches(&frozen),
+                    "upstream changed the freeze_struct hash dependency to ahash {version}; review the frozen hashes"
+                );
+                // Keep the algorithm used to compute the recorded hashes.
+                version = format!("={frozen}");
+                notes.push(format!(
+                    "[dependencies]: ahash constrained to {version} to preserve the existing freeze_struct hashes"
+                ));
+            }
+            Target::Registry(version)
         };
         let mut out = InlineTable::new();
         match target {

@@ -1274,6 +1274,8 @@ Classes: `stricter` (rtao refuses something Python allows), `improved`, `kept` (
 | D-296 | Confirm derived EVM aliases at finality | The recipient resolver pins the alias and authority reads together. A finalized sibling snapshot must bind the same H160 to the same native account and identify it as a derived authority before the resolver returns its plain account address. This supersedes the derived-alias refusal in D-154. | adopted |
 | D-297 | Adopt Finney 494 with transaction version 2 | Four public RPCs agreed on the finalized v494 code and both metadata versions at block 9,570,771. The release wasm matched. The independent metadata diff flagged `System.Version`. The signing regression uses the two pinned metadata versions. A v493 signature produces zero submission RPCs after the runtime changes. A new signature verifies against transaction version 2. The existing submission reconciliation still applies to unresolved broadcasts. The weight intents verify the delegate and target at one snapshot, use the target key for timelocked commits and preserve the legacy mechanism-zero reveal. | Runtime pin and signing checks |
 
+| D-298 | Pin the hash implementation used by `freeze_struct` | Hosted run 45256817849 resolved aHash 0.8.13 in a generated downstream project. The same four frozen structs compile with 0.8.12 and produce the hosted hash mismatches with 0.8.13. Constrain the republished macros to 0.8.12 and revise the macros and core packages together. The source layouts and stored hash attributes are identical. |
+
 ## 9. Testing strategy
 
 ### 9.1 Layers

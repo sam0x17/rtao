@@ -4,7 +4,7 @@
 
 [package]
 name = "rtao-upstream-core"
-version = "0.490.0"
+version = "0.490.1"
 edition = "2021"
 description = "Unofficial republish of bittensor-core from RaoFoundation/subtensor v490 with rtao's reviewed core patch (the Ed25519 erasure repair and the injectable Ledger transport), for rtao; not affiliated with or endorsed by its authors."
 license = "Apache-2.0"
@@ -57,7 +57,7 @@ frame-metadata = { version = "23.0.0", default-features = false, features = ["cu
 merkleized-metadata = { version = "0.5.1" }
 rayon = { version = "1.10", optional = true }
 scale-info = { version = "2.11.2", default-features = false, features = ["std", "serde"] }
-subtensor-macros = { package = "rtao-upstream-macros", version = "=0.490.0", path = "../macros", default-features = false }
+subtensor-macros = { package = "rtao-upstream-macros", version = "=0.490.1", path = "../macros", default-features = false }
 ledger-apdu = { version = "0.11", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]

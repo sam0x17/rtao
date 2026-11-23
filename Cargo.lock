@@ -6661,7 +6661,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-upstream-core"
-version = "0.490.0"
+version = "0.490.1"
 dependencies = [
  "ansible-vault",
  "ark-serialize 0.4.2",
@@ -6732,7 +6732,7 @@ dependencies = [
 
 [[package]]
 name = "rtao-upstream-macros"
-version = "0.490.0"
+version = "0.490.1"
 dependencies = [
  "ahash",
  "proc-macro2",
