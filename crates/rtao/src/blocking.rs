@@ -32,6 +32,7 @@ use rtao_client::{
 };
 use rtao_core::{DynValue, codec::Value};
 use rtao_primitives::{AccountId, CryptoType, DynBalance, MechId, NetUid};
+use rtao_runtime::models::CommitmentRegistration;
 use rtao_signer::{DynKeySource, KeySource, Role, SignerRole};
 use rtao_tx::{
     ExecuteOptions, ExtrinsicResult, Intent, IntentPreflight, Plan, PlanOptions, Policy,
@@ -617,6 +618,19 @@ impl SyncClient {
         })
     }
 
+    /// Decode a channel registration at the selected block or current best block.
+    pub fn decode_commitment_registration(
+        &self,
+        bytes: Vec<u8>,
+        block: Option<BlockRef>,
+    ) -> Result<CommitmentRegistration, Error> {
+        self.view.with_view(move |view| async move {
+            view.client()
+                .decode_commitment_registration(&bytes, block)
+                .await
+        })
+    }
+
     /// Follow new headers, blocking only while the iterator requests an item.
     pub fn blocks(&self, finality: Finality) -> Result<Blocks, Error> {
         self.blocks_with(finality, rtao_client::Backfill::Complete)
@@ -1084,6 +1098,19 @@ impl SyncSnapshot {
     /// The immutable block identity and its parent-selected runtime.
     pub fn block(&self) -> &PinnedBlock {
         &self.block
+    }
+
+    /// Decode a channel registration using this snapshot's pinned metadata.
+    pub fn decode_commitment_registration(
+        &self,
+        bytes: Vec<u8>,
+    ) -> Result<CommitmentRegistration, Error> {
+        self.view.with_view(move |view| async move {
+            view.pin()
+                .await?
+                .decode_commitment_registration(&bytes)
+                .await
+        })
     }
 
     /// Clone this snapshot, or resolve a sibling from the same connection.

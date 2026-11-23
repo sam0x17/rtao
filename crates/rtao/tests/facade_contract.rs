@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_facades.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py @ a68c6e8c65411a842fbf69269dc385aa13041391 (Apache-2.0); modified by rtao.
 //! Compile-time correspondence for the pinned Python facade's async surface.
 //!
 //! `xtask` compares every public Python coroutine/async-generator signature to
@@ -26,6 +27,7 @@ use rtao_core::{DynValue, codec::Value};
 use rtao_intents::transfer::Transfer;
 use rtao_primitives::{AccountId, AccountMode, Balance, CryptoType, NetUid, Tao};
 use rtao_reads::ReadName;
+use rtao_runtime::models::CommitmentRegistration;
 use rtao_signer::{Coldkey, KeypairSigner, MultiSignature};
 use rtao_tx::{
     ExecuteOptions, ExtrinsicResult, IntentPreflight, Plan, PlanOptions, PrepareOptions,
@@ -59,6 +61,7 @@ facade_contract! {
     "runtime" ["method", "params", "block"] => SyncClient::runtime : fn(&SyncClient, String, String, Vec<Value>) -> FacadeResult<DynValue>;
     "constant" ["item"] => SyncClient::constant : fn(&SyncClient, String, String) -> FacadeResult<DynValue>;
     "decode_scale" ["type_string", "data"] => SyncClient::decode_scale : fn(&SyncClient, String, Vec<u8>) -> FacadeResult<DynValue>;
+    "decode_commitment_registration" ["data", "block"] => SyncClient::decode_commitment_registration : fn(&SyncClient, Vec<u8>, Option<BlockRef>) -> FacadeResult<CommitmentRegistration>;
     "read" ["name", "params"] => SyncClient::read : fn(&SyncClient, ReadName, JsonArguments) -> FacadeResult<serde_json::Value>;
     "blocks" ["finalized"] => SyncClient::blocks : fn(&SyncClient, Finality) -> FacadeResult<Blocks>;
     #[cfg(feature = "pow")]
@@ -97,6 +100,7 @@ facade_contract! {
     "query_map" ["item", "params"] => SyncSnapshot::query_map : fn(&SyncSnapshot, String, String, Vec<Value>) -> FacadeResult<MapRows>;
     "query_batch" ["item", "param_sets"] => SyncSnapshot::query_batch : fn(&SyncSnapshot, String, String, ParamSets) -> FacadeResult<Vec<DynValue>>;
     "runtime" ["method", "params"] => SyncSnapshot::runtime : fn(&SyncSnapshot, String, String, Vec<Value>) -> FacadeResult<DynValue>;
+    "decode_commitment_registration" ["data"] => SyncSnapshot::decode_commitment_registration : fn(&SyncSnapshot, Vec<u8>) -> FacadeResult<CommitmentRegistration>;
     "constant" ["item"] => SyncSnapshot::constant : fn(&SyncSnapshot, String, String) -> FacadeResult<DynValue>;
     "read" ["name", "params"] => SyncSnapshot::read : fn(&SyncSnapshot, ReadName, JsonArguments) -> FacadeResult<serde_json::Value>;
     "timestamp" [] => SyncSnapshot::timestamp : fn(&SyncSnapshot) -> FacadeResult<SystemTime>;
@@ -114,6 +118,64 @@ fn finney_construction_and_close_stay_cold() -> TestResult {
     assert!(!client.is_started());
     client.close()?;
     assert!(!client.is_started());
+    Ok(())
+}
+
+#[test]
+fn blocking_commitment_decoders_share_the_selected_runtime() -> TestResult {
+    use rtao_client::{Client, ClientConfig, Network};
+    use rtao_core::runtime::TypeSpec;
+    use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+
+    let state = FakeState::try_default()?;
+    let item = state
+        .runtime
+        .storage_entry("Commitments", "ChannelCommitmentOf");
+    assert!(item.is_some());
+    let item = item.ok_or("channel storage metadata missing")?;
+    let bytes = state.runtime.encode_spec(
+        &TypeSpec::Id(item.value_type),
+        &Value::record(vec![
+            ("deposit".into(), Value::Uint(15)),
+            ("block".into(), Value::Uint(80)),
+            (
+                "info".into(),
+                Value::record(vec![("fields".into(), Value::List(vec![]))]),
+            ),
+        ]),
+    )?;
+    let chain = FakeChain::from_state(state);
+    let rpc = chain.clone();
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = SyncClient::with_connector(config, move |config| {
+        let rpc = rpc.clone();
+        async move { Client::from_rpc(RpcClient::new(rpc), config).await }
+    });
+    let snapshot = client.at(BlockRef::Best)?;
+    let reads = chain.requests().len();
+    let decoded = snapshot.decode_commitment_registration(bytes.clone())?;
+    assert_eq!(decoded.block, 80);
+    assert_eq!(decoded.deposit.0, 15);
+    assert!(decoded.info.fields.is_empty());
+    assert_eq!(reads, chain.requests().len());
+    assert_eq!(
+        client.decode_commitment_registration(
+            bytes.clone(),
+            Some(BlockRef::Hash(snapshot.block().hash))
+        )?,
+        decoded
+    );
+    assert_eq!(
+        client.decode_commitment_registration(bytes.clone(), None)?,
+        decoded
+    );
+    let mut trailing = bytes;
+    trailing.push(0);
+    assert!(snapshot.decode_commitment_registration(trailing).is_err());
+    client.close()?;
     Ok(())
 }
 

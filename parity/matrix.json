@@ -9251,9 +9251,10 @@
           "crates/rtao-client/src/block_info.rs",
           "crates/rtao-tx/src/output.rs",
           "crates/rtao-tx/src/executor.rs",
-          "crates/rtao-jsonrpc/src/session.rs"
+          "crates/rtao-jsonrpc/src/session.rs",
+          "crates/rtao-client/src/decode.rs"
         ],
-        "synced_blob": "8e173e1362a6328370784326f00aa0f5b0ee42c7"
+        "synced_blob": "90f15f25ff356a12ff86547a284b50d99811c47a"
       },
       {
         "kind": "ported",
@@ -9357,9 +9358,10 @@
           "crates/rtao-client/src/submit.rs",
           "crates/rtao-client/src/compose.rs",
           "crates/rtao-core-ext/src/ops/fee.rs",
-          "crates/rtao-core-ext/src/ops/extrinsic_lookup.rs"
+          "crates/rtao-core-ext/src/ops/extrinsic_lookup.rs",
+          "crates/rtao-client/src/decode.rs"
         ],
-        "synced_blob": "1491f32a59605e4b4be0164ef5f046de0888beb5"
+        "synced_blob": "fc711dde049857e0770d5f4bad37dc6bb50bb6f9"
       },
       {
         "kind": "n/a",
@@ -10148,9 +10150,10 @@
         "python": "sdk/python/bittensor/client.py",
         "rtao": "reconciled",
         "rust": [
-          "rtao_client::{Client,BlockHeader,BlockInfo,EpochEvent,WaitError}; rtao::blocking::SyncClient"
+          "rtao_client::{Client,BlockHeader,BlockInfo,EpochEvent,WaitError}; rtao::blocking::SyncClient",
+          "rtao_client::Client::decode_commitment_registration"
         ],
-        "synced_blob": "a20c5a4cb61d18b052ca57f82ffab8584541d786"
+        "synced_blob": "3924157eb6eee730f6a21fbac4a41d14cfb23706"
       },
       {
         "kind": "ported",
@@ -11646,9 +11649,10 @@
         "rtao": "reconciled",
         "rust": [
           "rtao_client::view::{Snapshot,View,ViewExt}",
-          "crates/rtao-client/tests/snapshot.rs"
+          "crates/rtao-client/tests/snapshot.rs",
+          "rtao_client::Snapshot::decode_commitment_registration"
         ],
-        "synced_blob": "1df277924db3939470e959c1f3901af035bbf708"
+        "synced_blob": "fad69f52a2ff5c2d8901acb3b9de774e34057482"
       },
       {
         "kind": "n/a",
@@ -11668,9 +11672,10 @@
         "python": "sdk/python/bittensor/sync.py",
         "rtao": "reconciled",
         "rust": [
-          "rtao::blocking::{SyncClient,SyncSnapshot,SyncView,Blocks,SyncMultisig}"
+          "rtao::blocking::{SyncClient,SyncSnapshot,SyncView,Blocks,SyncMultisig}",
+          "crates/rtao/tests/facade_contract.rs"
         ],
-        "synced_blob": "e6c93496802b43aaae09ee551a054e9317f6bcc1"
+        "synced_blob": "67af9c8da82562f6b9258cd6ec58616b5d3d825d"
       },
       {
         "kind": "ported",

@@ -308,9 +308,12 @@ pub async fn channel_commitment<V: View + ?Sized>(
         )
         .await
     {
+        Ok(Some(bytes)) if active_storage.is_some() => {
+            Some(snapshot.decode_commitment_registration(&bytes).await?)
+        }
         Ok(Some(bytes)) => {
-            let registration = active_storage
-                .or_else(|| runtime.storage_entry("Commitments", "CommitmentOf"))
+            let registration = runtime
+                .storage_entry("Commitments", "CommitmentOf")
                 .ok_or_else(|| surface("get_channel_commitment", "registration type is absent"))?;
             Some(decode_typed::<CommitmentRegistration>(
                 runtime,

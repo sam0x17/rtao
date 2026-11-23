@@ -29,22 +29,6 @@ tag = "v494"
 symbols = []
 
 [[file]]
-py = "sdk/python/bittensor/_substrate.py"
-kind = "ported"
-from = "8e173e1362a6328370784326f00aa0f5b0ee42c7"
-to = "90f15f25ff356a12ff86547a284b50d99811c47a"
-tag = "v494"
-symbols = ["bittensor._substrate.RpcSubstrate", "bittensor._substrate.RpcSubstrate.decode_commitment_registration", "bittensor._substrate.Substrate", "bittensor._substrate.Substrate.decode_commitment_registration"]
-
-[[file]]
-py = "sdk/python/bittensor/_transport/interface.py"
-kind = "ported"
-from = "1491f32a59605e4b4be0164ef5f046de0888beb5"
-to = "fc711dde049857e0770d5f4bad37dc6bb50bb6f9"
-tag = "v494"
-symbols = ["bittensor._transport.interface.SubstrateConnection", "bittensor._transport.interface.SubstrateConnection.decode_commitment_registration"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/misc.py"
 kind = "ported"
 from = "d1e70356c68e48b9ceb2ae559e1b2e473d4f125a"
@@ -141,14 +125,6 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/client.py"
-kind = "ported"
-from = "a20c5a4cb61d18b052ca57f82ffab8584541d786"
-to = "3924157eb6eee730f6a21fbac4a41d14cfb23706"
-tag = "v494"
-symbols = ["bittensor.client.Client", "bittensor.client.Client.decode_commitment_registration"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/proxy.py"
 kind = "ported"
 from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
@@ -171,22 +147,6 @@ from = "fded4d4c5796b1f0c82f6422350e03897baffd18"
 to = "1b3f59298f4a074c5c83b0ab09fe8c140561f594"
 tag = "v494"
 symbols = []
-
-[[file]]
-py = "sdk/python/bittensor/snapshot.py"
-kind = "ported"
-from = "1df277924db3939470e959c1f3901af035bbf708"
-to = "fad69f52a2ff5c2d8901acb3b9de774e34057482"
-tag = "v494"
-symbols = ["bittensor.snapshot.Snapshot", "bittensor.snapshot.Snapshot.decode_commitment_registration"]
-
-[[file]]
-py = "sdk/python/bittensor/sync.py"
-kind = "ported"
-from = "e6c93496802b43aaae09ee551a054e9317f6bcc1"
-to = "67af9c8da82562f6b9258cd6ec58616b5d3d825d"
-tag = "v494"
-symbols = ["bittensor.sync.SyncClient", "bittensor.sync.SyncClient.decode_commitment_registration", "bittensor.sync.SyncSnapshot", "bittensor.sync.SyncSnapshot.decode_commitment_registration"]
 
 [[file]]
 py = "sdk/python/tests/unit/test_cli_commands.py"

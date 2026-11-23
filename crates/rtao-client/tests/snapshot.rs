@@ -41,6 +41,105 @@ async fn setup() -> (Client, FakeChain) {
     (client, chain)
 }
 
+#[tokio::test]
+async fn commitment_decoder_uses_selected_metadata_and_refuses_trailing_bytes() {
+    use rtao_core::{codec::Value as WireValue, runtime::TypeSpec};
+    use rtao_runtime::models::Data;
+    use std::sync::Arc;
+
+    let (client, chain) = setup().await;
+    let current = client.at(BlockRef::Best).await.unwrap();
+    let runtime = current.block().runtime.core();
+    let item = runtime
+        .storage_entry("Commitments", "ChannelCommitmentOf")
+        .unwrap();
+    let raw = runtime
+        .encode_spec(
+            &TypeSpec::Id(item.value_type),
+            &WireValue::record(vec![
+                ("deposit".into(), WireValue::Uint(15)),
+                ("block".into(), WireValue::Uint(80)),
+                (
+                    "info".into(),
+                    WireValue::record(vec![(
+                        "fields".into(),
+                        WireValue::List(vec![WireValue::record(vec![(
+                            "BigRaw".into(),
+                            WireValue::Bytes(b"0x61".to_vec()),
+                        )])]),
+                    )]),
+                ),
+            ]),
+        )
+        .unwrap();
+    let old = Arc::new(
+        rtao_core::runtime::Runtime::parse(
+            include_bytes!("../../../vendor/metadata/finney/491.v15.scale"),
+            491,
+            1,
+            42,
+        )
+        .unwrap(),
+    );
+    assert!(
+        old.storage_entry("Commitments", "ChannelCommitmentOf")
+            .is_none()
+    );
+    chain.mutate_state(|state| {
+        let parent = state.block_hash(89).unwrap();
+        state.set_runtime_at(parent, old);
+    });
+    let historical = client.at(BlockRef::Number(90)).await.unwrap();
+    assert_eq!(historical.block().runtime.spec_version(), 491);
+    let reads = chain.requests().len();
+    let decoded = current.decode_commitment_registration(&raw).await.unwrap();
+    assert_eq!(decoded.deposit.0, 15);
+    assert_eq!(decoded.block, 80);
+    assert_eq!(decoded.info.fields, vec![Data::BigRaw(b"0x61".to_vec())]);
+    let mut trailing = raw.clone();
+    trailing.push(0);
+    assert!(
+        current
+            .decode_commitment_registration(&trailing)
+            .await
+            .is_err()
+    );
+    assert!(
+        current
+            .decode_commitment_registration(&raw[..raw.len() - 1])
+            .await
+            .is_err()
+    );
+    assert!(
+        historical
+            .decode_commitment_registration(&raw)
+            .await
+            .is_err()
+    );
+    assert_eq!(chain.requests().len(), reads);
+    assert_eq!(
+        client
+            .decode_commitment_registration(&raw, Some(BlockRef::Hash(current.block().hash)))
+            .await
+            .unwrap(),
+        decoded
+    );
+    assert_eq!(
+        client
+            .decode_commitment_registration(&raw, None)
+            .await
+            .unwrap(),
+        decoded
+    );
+    assert!(
+        client
+            .decode_commitment_registration(&raw, Some(BlockRef::Number(90)))
+            .await
+            .is_err()
+    );
+    client.close().await;
+}
+
 // pyt: bittensor/snapshot.py::Snapshot.at preserves self for an omitted or
 // equal height, and creates a sibling for another height. Native views retain
 // the resolved hash and carry their descriptor observer into that sibling.
