@@ -89,9 +89,9 @@ InterfaceMetadata{name:"close_gamma_deposit",feature:"gamma",compiled:true,imple
 #[cfg(not(feature="gamma"))]
 InterfaceMetadata{name:"close_gamma_deposit",feature:"gamma",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "weights")]
-InterfaceMetadata{name:"commit_weight_hash",feature:"weights",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::CommitWeightHash>()),role:Some(std::any::type_name::<<super::interfaces::CommitWeightHash as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CommitWeightHash as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"commit_weight_hash",feature:"weights",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CommitWeightHash>()),role:Some(std::any::type_name::<<super::interfaces::CommitWeightHash as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CommitWeightHash as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="weights"))]
-InterfaceMetadata{name:"commit_weight_hash",feature:"weights",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"commit_weight_hash",feature:"weights",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "weights")]
 InterfaceMetadata{name:"commit_weights",feature:"weights",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::CommitWeights>()),role:Some(std::any::type_name::<<super::interfaces::CommitWeights as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::CommitWeights as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="weights"))]

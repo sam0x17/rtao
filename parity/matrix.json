@@ -7367,7 +7367,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.CommitWeightHash",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -14122,7 +14122,7 @@
         "name": "commit_weight_hash",
         "oracle": "missing",
         "python_class": "CommitWeightHash",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "commit_weights",

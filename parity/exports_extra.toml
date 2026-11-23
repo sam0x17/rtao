@@ -2086,10 +2086,10 @@ pinning_tests = ["rtao_intents::root::tests::gamma_whitelist_matches_python_and_
 
 [[export]]
 python = "bittensor.intents.CommitWeightHash"
-home = "pending: new public export at v494"
-reason = "Added by the v494 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::CommitWeightHash"
+reason = "Public hotkey intent for the legacy commitment hash (feature weights). Pinned v494 dispatch and delegate authorization are checked."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v494 adoption"
+pinning_tests = ["rtao_intents::weights::intents::tests::legacy_weight_hash_preserves_call_bytes_and_checks_the_effective_delegate"]
 
 [[export]]
 python = "bittensor.intents.SetChannelCommitment"

@@ -1,5 +1,5 @@
 # Operations awaiting behavior ports. The set only shrinks, except that a
 # parity pin bump adds operations new to the upstream catalog (D-128).
-intents = ["commit_weight_hash", "set_channel_commitment", "set_commit_burn"]
+intents = ["set_channel_commitment", "set_commit_burn"]
 
 reads = []

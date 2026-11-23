@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/weights.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
-// Weight delegation follows the same upstream file at a68c6e8c65411a842fbf69269dc385aa13041391.
+// Weight delegation and legacy hash commits use the same upstream file at a68c6e8c65411a842fbf69269dc385aa13041391.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Weight intent behavior, with state checks performed before signing.
 
@@ -7,14 +7,16 @@ use std::time::SystemTime;
 
 use rtao_catalog::ErrorCode;
 use rtao_client::{Snapshot, View, ViewExt};
-use rtao_primitives::{AccountId, MechId, NetUid, NetUidStorageIndex, Ratio, Uid};
+use rtao_primitives::{AccountId, H256, MechId, NetUid, NetUidStorageIndex, Ratio, Uid};
 use rtao_runtime::runtime_apis::subnet_registration_runtime_api::GET_MECH_WEIGHT_DELEGATE;
 use rtao_runtime::{calls::subtensor_module as calls, storage::subtensor_module as st};
 use rtao_tx::{BuildCx, Built, ChainError, Intent, IntentError, PreflightCx};
 use serde_json::json;
 
 use super::{ConformState, TimelockCommitRequest, WeightsError};
-use crate::{CommitWeights, RevealWeights, SetMechWeightDelegate, SetWeights, WeightsArg};
+use crate::{
+    CommitWeightHash, CommitWeights, RevealWeights, SetMechWeightDelegate, SetWeights, WeightsArg,
+};
 
 struct CheckedState {
     conform: ConformState,
@@ -129,6 +131,21 @@ async fn checked(
     })
 }
 
+async fn delegate_at(
+    snapshot: &Snapshot,
+    netuid: NetUid,
+    mechid: MechId,
+    hotkey: &str,
+) -> Result<(AccountId, Option<AccountId>), IntentError> {
+    let target: AccountId = hotkey
+        .parse()
+        .map_err(|error| IntentError::Validation(format!("Invalid validator hotkey: {error}")))?;
+    let delegate = snapshot
+        .call(&GET_MECH_WEIGHT_DELEGATE, (netuid, mechid, target))
+        .await?;
+    Ok((target, delegate))
+}
+
 async fn authorized_target(
     snapshot: &Snapshot,
     signer: AccountId,
@@ -136,12 +153,7 @@ async fn authorized_target(
     mechid: MechId,
     hotkey: &str,
 ) -> Result<AccountId, IntentError> {
-    let target: AccountId = hotkey
-        .parse()
-        .map_err(|error| IntentError::Validation(format!("Invalid validator hotkey: {error}")))?;
-    let delegate = snapshot
-        .call(&GET_MECH_WEIGHT_DELEGATE, (netuid, mechid, target))
-        .await?;
+    let (target, delegate) = delegate_at(snapshot, netuid, mechid, hotkey).await?;
     if delegate != Some(signer) {
         return Err(semantic(
             format!(
@@ -486,6 +498,65 @@ impl Intent for RevealWeights {
     }
 }
 
+impl CommitWeightHash {
+    fn parsed_hash(&self) -> Result<H256, IntentError> {
+        let invalid = || IntentError::validation("commit_hash must be a 0x-prefixed H256");
+        let hash = self.commit_hash.strip_prefix("0x").ok_or_else(invalid)?;
+        let mut bytes = [0; 32];
+        hex::decode_to_slice(hash, &mut bytes).map_err(|_| invalid())?;
+        Ok(H256(bytes))
+    }
+}
+
+impl Intent for CommitWeightHash {
+    fn summary(&self) -> String {
+        format!(
+            "commit weight hash on netuid {}, mechanism {}",
+            self.netuid, self.mechid
+        )
+    }
+
+    fn validate(&self) -> Result<(), IntentError> {
+        self.parsed_hash().map(|_| ())
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        let hash = self.parsed_hash()?;
+        let call = match self.for_hotkey.as_deref() {
+            Some(hotkey) => {
+                let snapshot = View::pin(cx.view).await?;
+                let signer = cx.hotkey_address(None)?;
+                let target =
+                    authorized_target(&snapshot, signer, self.netuid, self.mechid, hotkey).await?;
+                calls::commit_mechanism_weights_for(self.netuid, self.mechid, target, hash)
+            }
+            None => calls::commit_mechanism_weights(self.netuid, self.mechid, hash),
+        };
+        Ok(Built::new(call.compose(cx.runtime)?))
+    }
+
+    async fn warnings<V: View + ?Sized>(
+        &self,
+        cx: &PreflightCx<'_, V>,
+    ) -> Result<Vec<String>, IntentError> {
+        let Some(hotkey) = self.for_hotkey.as_deref() else {
+            return Ok(vec![]);
+        };
+        let snapshot = View::pin(cx.view).await?;
+        let (_, delegate) = delegate_at(&snapshot, self.netuid, self.mechid, hotkey).await?;
+        if delegate == Some(cx.dispatch_origin) {
+            return Ok(vec![]);
+        }
+        let delegate = delegate.map_or_else(|| "none".to_owned(), |account| account.to_ss58(42));
+        Ok(vec![format!(
+            "{} is not the current weight delegate for {hotkey} on netuid {}, mechanism {} (delegate: {delegate}); the chain will reject the call",
+            cx.dispatch_origin.to_ss58(42),
+            self.netuid,
+            self.mechid
+        )])
+    }
+}
+
 impl Intent for SetMechWeightDelegate {
     fn summary(&self) -> String {
         let action = match self
@@ -719,6 +790,91 @@ mod tests {
             Some("mech_weight_delegate")
         );
         assert!(fake.requests().is_empty());
+    }
+
+    #[tokio::test]
+    async fn legacy_weight_hash_preserves_call_bytes_and_checks_the_effective_delegate() {
+        use rtao_tx::IntentInterface;
+
+        let (snapshot, fake) = fixture(false, false).await;
+        let crate::AnyIntent::CommitWeightHash(mut intent) = crate::AnyIntent::from_tool(
+            "commit_weight_hash",
+            json!({"netuid": NETUID.0, "commit_hash": format!("0x{}", "ab".repeat(32))}),
+        )
+        .unwrap() else {
+            panic!("expected the legacy weight hash intent");
+        };
+        let mut direct_bytes = vec![7, 115, 3, 0, 0];
+        direct_bytes.extend([0xab; 32]);
+        let direct = build(&intent, &snapshot).await.unwrap();
+        assert_eq!(direct.call.as_bytes(), direct_bytes);
+        assert_eq!(
+            intent.summary(),
+            "commit weight hash on netuid 3, mechanism 0"
+        );
+        assert_eq!(CommitWeightHash::SPEC.signer, "hotkey");
+        assert!(fake.requests().is_empty());
+
+        let target = AccountId([9; 32]);
+        let address = target.to_ss58(42);
+        intent.mechid = MECHID;
+        intent.for_hotkey = Some(address.clone());
+        let mut input = NETUID.0.to_le_bytes().to_vec();
+        input.push(MECHID.0);
+        input.extend(target.0);
+        let method = "SubnetRegistrationRuntimeApi_get_mech_weight_delegate";
+        let mut delegated_bytes = vec![7, 172, 3, 0, 1];
+        delegated_bytes.extend(target.0);
+        delegated_bytes.extend([0xab; 32]);
+
+        let runtime = View::runtime(&snapshot).await.unwrap();
+        let preview = PreflightCx {
+            view: &snapshot,
+            runtime: &runtime,
+            clock: &FixedClock,
+            spec: CommitWeightHash::SPEC,
+            client: snapshot.client(),
+            dispatch_origin: HOTKEY,
+            fee_payer: HOTKEY,
+            call: &direct.call,
+        };
+        for delegate in [Some(HOTKEY), Some(AccountId([6; 32])), None] {
+            let mut reply = vec![u8::from(delegate.is_some())];
+            if let Some(account) = delegate {
+                reply.extend(account.0);
+            }
+            fake.mutate_state(|state| state.seed_runtime_encoded(method, input.clone(), reply));
+            let built = build(&intent, &snapshot).await;
+            let warnings = intent.warnings(&preview).await.unwrap();
+            if delegate == Some(HOTKEY) {
+                assert_eq!(built.unwrap().call.as_bytes(), delegated_bytes);
+                assert!(warnings.is_empty());
+            } else {
+                assert_eq!(built.unwrap_err().code(), ErrorCode::NotAuthorized);
+                let current = delegate.map_or_else(|| "none".to_owned(), |value| value.to_ss58(42));
+                assert_eq!(
+                    warnings,
+                    [format!(
+                        "{} is not the current weight delegate for {address} on netuid 3, mechanism 1 (delegate: {current}); the chain will reject the call",
+                        HOTKEY.to_ss58(42)
+                    )]
+                );
+            }
+        }
+        let reads = fake.requests().len();
+        for invalid in [
+            "ab".repeat(32),
+            "0x01".to_owned(),
+            format!("0x{}", "gg".repeat(32)),
+        ] {
+            intent.commit_hash = invalid;
+            assert!(matches!(intent.validate(), Err(IntentError::Validation(_))));
+            assert!(matches!(
+                build(&intent, &snapshot).await,
+                Err(IntentError::Validation(_))
+            ));
+        }
+        assert_eq!(fake.requests().len(), reads);
     }
 
     #[tokio::test]
