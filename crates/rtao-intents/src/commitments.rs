@@ -1,4 +1,5 @@
-//! Typed `Commitments.set_commitment` (D-114).
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/commitments.py @ a68c6e8c65411a842fbf69269dc385aa13041391 (Apache-2.0); modified by rtao.
+//! Typed `Commitments.set_commitment` (D-114) and channel burn configuration.
 //!
 //! A neuron publishes up to `Commitments.MaxFields` data fields for its
 //! hotkey on a subnet: raw bytes, a hash, a timelocked ciphertext or the bonds
@@ -10,10 +11,139 @@
 //! `rtao_tx::timelock::Timelocked::commitment_field`.
 
 use rtao_client::{View, ViewExt};
-use rtao_primitives::NetUid;
+use rtao_primitives::{Money, NetUid, TaoBalance, U64F64, hyperparams::burn_increase_multiplier};
+use rtao_runtime::calls::admin_utils;
 use rtao_runtime::models::{CommitmentInfo, Data};
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentInterface, PreflightCx};
 use serde_json::{Value, json};
+
+pub use crate::SetCommitBurn;
+
+enum BurnParameter {
+    Enabled(bool),
+    Minimum(TaoBalance),
+    Maximum(TaoBalance),
+    HalfLife(u16),
+    Increase(U64F64),
+}
+
+impl SetCommitBurn {
+    fn parameter(&self) -> Result<BurnParameter, IntentError> {
+        let value = &self.value;
+        match self.name.as_str() {
+            "enabled" => {
+                let enabled = match value {
+                    Value::Bool(enabled) => Some(*enabled),
+                    Value::Number(number) => match number.as_u64() {
+                        Some(0) => Some(false),
+                        Some(1) => Some(true),
+                        _ => None,
+                    },
+                    Value::String(text) => match text.trim().to_ascii_lowercase().as_str() {
+                        "true" | "yes" | "1" => Some(true),
+                        "false" | "no" | "0" => Some(false),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                enabled.map(BurnParameter::Enabled).ok_or_else(|| {
+                    IntentError::validation("Commit-burn enabled must be true/false or 1/0.")
+                })
+            }
+            "min_burn" | "max_burn" => {
+                let amount: Money = serde_json::from_value(value.clone())
+                    .map_err(|err| IntentError::validation(err.to_string()))?;
+                let amount = TaoBalance(amount.rao()?);
+                Ok(match self.name.as_str() {
+                    "min_burn" => BurnParameter::Minimum(amount),
+                    _ => BurnParameter::Maximum(amount),
+                })
+            }
+            "half_life" => {
+                let count = match value {
+                    Value::Number(number) => number.as_u64().and_then(|n| u16::try_from(n).ok()),
+                    Value::String(text) => {
+                        let text = text.trim();
+                        text.parse::<u16>().ok().filter(|n| n.to_string() == text)
+                    }
+                    _ => None,
+                };
+                count
+                    .filter(|n| *n > 0)
+                    .map(BurnParameter::HalfLife)
+                    .ok_or_else(|| {
+                        IntentError::validation("half_life must be an integer in 1..65535 blocks.")
+                    })
+            }
+            "increase_mult" => {
+                let multiplier = match value {
+                    Value::Number(number) if number.is_f64() => number.as_f64().and_then(|value| {
+                        burn_increase_multiplier(&rtao_primitives::pyfmt::float_repr(value))
+                    }),
+                    Value::Number(number) => number
+                        .as_u128()
+                        .filter(|bits| ((1u128 << 64)..=(3u128 << 64)).contains(bits))
+                        .map(U64F64::from_bits),
+                    Value::String(text) => burn_increase_multiplier(text),
+                    _ => None,
+                };
+                multiplier.map(BurnParameter::Increase).ok_or_else(|| {
+                    IntentError::validation(
+                        "increase_mult must be a decimal in 1..3 or an exact raw U64F64 integer.",
+                    )
+                })
+            }
+            other => Err(IntentError::validation(format!(
+                "Unknown commit-burn parameter {other:?}. Choose enabled, min_burn, max_burn, half_life, or increase_mult."
+            ))),
+        }
+    }
+}
+
+impl Intent for SetCommitBurn {
+    fn summary(&self) -> String {
+        let value = match self.parameter() {
+            Ok(BurnParameter::Enabled(true)) => "True".to_owned(),
+            Ok(BurnParameter::Enabled(false)) => "False".to_owned(),
+            Ok(BurnParameter::Minimum(value) | BurnParameter::Maximum(value)) => {
+                value.0.to_string()
+            }
+            Ok(BurnParameter::HalfLife(value)) => value.to_string(),
+            Ok(BurnParameter::Increase(value)) => value.bits.to_string(),
+            Err(_) => self.value.to_string(),
+        };
+        format!(
+            "set commit burn {}={value} on netuid {}, mechanism {}, channel {}",
+            self.name, self.netuid, self.mechid, self.channel
+        )
+    }
+
+    fn validate(&self) -> Result<(), IntentError> {
+        self.parameter().map(|_| ())
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        let (netuid, mechid, channel) = (self.netuid, self.mechid, self.channel);
+        let call = match self.parameter()? {
+            BurnParameter::Enabled(value) => {
+                admin_utils::sudo_set_commit_burn_enabled(netuid, mechid, channel, value)
+            }
+            BurnParameter::Minimum(value) => {
+                admin_utils::sudo_set_commit_burn_min(netuid, mechid, channel, value)
+            }
+            BurnParameter::Maximum(value) => {
+                admin_utils::sudo_set_commit_burn_max(netuid, mechid, channel, value)
+            }
+            BurnParameter::HalfLife(value) => {
+                admin_utils::sudo_set_commit_burn_half_life(netuid, mechid, channel, value)
+            }
+            BurnParameter::Increase(value) => {
+                admin_utils::sudo_set_commit_burn_increase_mult(netuid, mechid, channel, value)
+            }
+        };
+        Ok(Built::new(call.compose(cx.runtime)?))
+    }
+}
 
 /// Most bytes a [`Data::Raw`] field holds.
 pub const MAX_RAW_BYTES: usize = 128;
@@ -196,6 +326,119 @@ mod tests {
         let client = Client::from_rpc(RpcClient::new(chain.clone()), config).await?;
         let snapshot = client.at(BlockRef::Finalized).await?;
         Ok((chain, client, snapshot))
+    }
+
+    #[tokio::test]
+    async fn commit_burn_uses_owner_calls_with_exact_amounts_and_multiplier_bits()
+    -> anyhow::Result<()> {
+        let (chain, _client, snapshot) = fixture().await?;
+        let runtime = &snapshot.block().runtime;
+        let calls = chain.requests().len();
+        const ONE: u128 = 1 << 64;
+        let cases = [
+            ("enabled", json!(" YES "), 123, vec![1], "True".to_owned()),
+            ("enabled", json!(0), 123, vec![0], "False".to_owned()),
+            (
+                "min_burn",
+                json!("0.5"),
+                124,
+                500_000_000u64.to_le_bytes().to_vec(),
+                "500000000".to_owned(),
+            ),
+            (
+                "max_burn",
+                json!(2),
+                125,
+                2_000_000_000u64.to_le_bytes().to_vec(),
+                "2000000000".to_owned(),
+            ),
+            (
+                "half_life",
+                json!("360"),
+                126,
+                360u16.to_le_bytes().to_vec(),
+                "360".to_owned(),
+            ),
+            (
+                "increase_mult",
+                json!(1.25),
+                127,
+                (5 * (ONE / 4)).to_le_bytes().to_vec(),
+                (5 * (ONE / 4)).to_string(),
+            ),
+            (
+                "increase_mult",
+                json!("1.26"),
+                127,
+                (63 * ONE / 50).to_le_bytes().to_vec(),
+                (63 * ONE / 50).to_string(),
+            ),
+            (
+                "increase_mult",
+                json!("1.0000000000000000001"),
+                127,
+                (ONE + 1).to_le_bytes().to_vec(),
+                (ONE + 1).to_string(),
+            ),
+            (
+                "increase_mult",
+                json!(3 * ONE),
+                127,
+                (3 * ONE).to_le_bytes().to_vec(),
+                (3 * ONE).to_string(),
+            ),
+        ];
+        for (name, value, call_index, payload, summary_value) in cases {
+            let args = json!({"netuid":3, "mechid":2, "channel":7, "name":name, "value":value});
+            let crate::AnyIntent::SetCommitBurn(intent) =
+                crate::AnyIntent::from_tool("set_commit_burn", args)?
+            else {
+                anyhow::bail!("expected the typed commit burn intent");
+            };
+            let built = intent
+                .build(&BuildCx {
+                    view: &snapshot,
+                    origin: OriginView::Account(HOTKEY),
+                    runtime,
+                    clock: &SystemClock,
+                    spec: SetCommitBurn::SPEC,
+                })
+                .await?;
+            let mut expected = vec![19, call_index, 3, 0, 2, 7];
+            expected.extend(payload);
+            assert_eq!(built.call.as_bytes(), expected);
+            assert_eq!(
+                intent.summary(),
+                format!(
+                    "set commit burn {name}={summary_value} on netuid 3, mechanism 2, channel 7"
+                )
+            );
+            assert_eq!(intent.spend(), rtao_primitives::Spend::None);
+        }
+        for (name, value) in [
+            ("unknown", json!(0)),
+            ("enabled", json!(1.0)),
+            ("enabled", json!("on")),
+            ("min_burn", json!(-1)),
+            ("max_burn", json!("18446744073.709551616")),
+            ("half_life", json!(0)),
+            ("half_life", json!(360.0)),
+            ("half_life", json!("0360")),
+            ("increase_mult", json!(1)),
+            ("increase_mult", json!(true)),
+            ("increase_mult", json!(3 * ONE + 1)),
+            ("increase_mult", json!("3.00000000000000000001")),
+            ("increase_mult", json!("1e-1000000000")),
+            ("increase_mult", json!("Infinity")),
+        ] {
+            let args = json!({"netuid":3, "name":name, "value":value});
+            assert!(crate::AnyIntent::from_tool("set_commit_burn", args).is_err());
+        }
+        assert_eq!(SetCommitBurn::SPEC.signer, "coldkey");
+        assert_eq!(SetCommitBurn::SPEC.origin, "subnet_owner");
+        assert_eq!(SetCommitBurn::SPEC.verify, Some("commit_burn"));
+        assert_eq!(chain.requests().len(), calls);
+        Ok(())
     }
 
     fn decode(call: &CallBytes, runtime: &RuntimeHandle) -> anyhow::Result<serde_json::Value> {

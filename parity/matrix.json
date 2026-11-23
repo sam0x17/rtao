@@ -7673,7 +7673,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetCommitBurn",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -14410,7 +14410,7 @@
         "name": "set_commit_burn",
         "oracle": "missing",
         "python_class": "SetCommitBurn",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_crowdloan_max_contribution",

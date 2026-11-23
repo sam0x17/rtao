@@ -281,9 +281,9 @@ InterfaceMetadata{name:"set_children",feature:"children",compiled:true,implement
 #[cfg(not(feature="children"))]
 InterfaceMetadata{name:"set_children",feature:"children",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "commitments")]
-InterfaceMetadata{name:"set_commit_burn",feature:"commitments",compiled:true,implemented:false,type_name:Some(std::any::type_name::<super::interfaces::SetCommitBurn>()),role:Some(std::any::type_name::<<super::interfaces::SetCommitBurn as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetCommitBurn as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
+InterfaceMetadata{name:"set_commit_burn",feature:"commitments",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetCommitBurn>()),role:Some(std::any::type_name::<<super::interfaces::SetCommitBurn as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetCommitBurn as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="commitments"))]
-InterfaceMetadata{name:"set_commit_burn",feature:"commitments",compiled:false,implemented:false,type_name:None,role:None,output:None,json_number_fields:&[]},
+InterfaceMetadata{name:"set_commit_burn",feature:"commitments",compiled:false,implemented:true,type_name:None,role:None,output:None,json_number_fields:&[]},
 #[cfg(feature = "crowdloan")]
 InterfaceMetadata{name:"set_crowdloan_max_contribution",feature:"crowdloan",compiled:true,implemented:true,type_name:Some(std::any::type_name::<super::interfaces::SetCrowdloanMaxContribution>()),role:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Role>()),output:Some(std::any::type_name::<<super::interfaces::SetCrowdloanMaxContribution as rtao_tx::IntentInterface>::Output>()),json_number_fields:&[]},
 #[cfg(not(feature="crowdloan"))]

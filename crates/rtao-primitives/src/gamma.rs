@@ -11,6 +11,8 @@ use std::fmt;
 use num_bigint::{BigInt, Sign};
 use num_traits::{ToPrimitive, Zero};
 
+use crate::python::{parse_decimal, ten_pow};
+
 /// Chain units per gamma (`settings.GAMMA_UNITS`).
 pub const GAMMA_UNITS: u128 = 1_000_000_000;
 
@@ -35,71 +37,6 @@ impl fmt::Display for GammaAmountError {
 }
 
 impl std::error::Error for GammaAmountError {}
-
-/// An exact decimal `coefficient * 10^exponent`, parsed as Python's `Decimal`.
-struct Exact {
-    coefficient: BigInt,
-    exponent: i64,
-}
-
-// Python's `Decimal(str)`: surrounding whitespace, a sign, digits with an
-// optional point (and `_` separators between digits) and an optional exponent.
-// Infinity and NaN parse in Python but are refused as non-finite below.
-fn parse_decimal(text: &str) -> Option<Exact> {
-    let text = text.trim();
-    let (negative, body) = match text.as_bytes().first() {
-        Some(b'-') => (true, &text[1..]),
-        Some(b'+') => (false, &text[1..]),
-        _ => (false, text),
-    };
-    let (mantissa, exponent) = match body.find(['e', 'E']) {
-        Some(index) => (&body[..index], Some(&body[index + 1..])),
-        None => (body, None),
-    };
-    let (whole, fraction) = match mantissa.split_once('.') {
-        Some((whole, fraction)) => (whole, fraction),
-        None => (mantissa, ""),
-    };
-    let digits = |part: &str| {
-        !part.starts_with('_')
-            && !part.ends_with('_')
-            && !part.contains("__")
-            && part.chars().all(|c| c.is_ascii_digit() || c == '_')
-    };
-    if whole.is_empty() && fraction.is_empty() || !digits(whole) || !digits(fraction) {
-        return None;
-    }
-    let whole: String = whole.chars().filter(char::is_ascii_digit).collect();
-    let fraction: String = fraction.chars().filter(char::is_ascii_digit).collect();
-    let mut exponent = match exponent {
-        Some(text) => {
-            let (sign, digits_text) = match text.as_bytes().first() {
-                Some(b'-') => (-1, &text[1..]),
-                Some(b'+') => (1, &text[1..]),
-                _ => (1, text),
-            };
-            if digits_text.is_empty() || !digits(digits_text) {
-                return None;
-            }
-            let digits_text: String = digits_text.chars().filter(char::is_ascii_digit).collect();
-            sign * digits_text.parse::<i64>().ok()?
-        }
-        None => 0,
-    };
-    exponent = exponent.checked_sub(i64::try_from(fraction.len()).ok()?)?;
-    let mut coefficient: BigInt = format!("{whole}{fraction}").parse().ok()?;
-    if negative {
-        coefficient = -coefficient;
-    }
-    Some(Exact {
-        coefficient,
-        exponent,
-    })
-}
-
-fn ten_pow(exponent: u64) -> Option<BigInt> {
-    Some(BigInt::from(10u8).pow(u32::try_from(exponent).ok()?))
-}
 
 // `format(Decimal(...).normalize(), "f")` for a non-negative exact value:
 // trailing zeros dropped, no exponent, `"0"` for zero.

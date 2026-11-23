@@ -5,6 +5,29 @@
 mod table;
 pub use table::{Hyperparam, HyperparamError, HyperparamStorage, HyperparamTable, RawInteger};
 
+/// Convert an exact decimal in 1..=3 to a burn increase multiplier, rounding down.
+pub fn burn_increase_multiplier(text: &str) -> Option<crate::U64F64> {
+    use num_bigint::Sign;
+    use num_traits::ToPrimitive;
+
+    let decimal = crate::python::parse_decimal(text)?;
+    if decimal.coefficient.sign() != Sign::Plus || decimal.exponent > 0 {
+        return None;
+    }
+    let places = decimal.exponent.unsigned_abs();
+    // In 1..=3, the positive coefficient has exactly one integral digit.
+    // Reject enormous exponents before allocating the power of ten.
+    if decimal.coefficient.to_str_radix(10).len() as u64 != places.checked_add(1)? {
+        return None;
+    }
+    let denominator = crate::python::ten_pow(places)?;
+    if decimal.coefficient > &denominator * 3u8 {
+        return None;
+    }
+    let bits = ((decimal.coefficient << 64usize) / denominator).to_u128()?;
+    Some(crate::U64F64::from_bits(bits))
+}
+
 use std::{borrow::Cow, fmt};
 
 use num_bigint::BigInt;
