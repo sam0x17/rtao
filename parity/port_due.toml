@@ -5,22 +5,6 @@
 # strict parity reports them as due.
 
 [[file]]
-py = "eco-tests/Cargo.toml"
-kind = "n/a"
-from = "d485228e5ab6e64080fc68b554c21ec1964b5e18"
-to = "3089920b85fac2482422743526966671ca7617c1"
-tag = "v494"
-symbols = []
-
-[[file]]
-py = "eco-tests/src/mock.rs"
-kind = "n/a"
-from = "f33db71a70da0e1a117f16dfd0c94642bf079e38"
-to = "d344a44ab4e2cd5df56622b2f81cfdd93a155d37"
-tag = "v494"
-symbols = []
-
-[[file]]
 py = "pallets/admin-utils/src/lib.rs"
 kind = "ported"
 from = "a81c0740bd8d8555c095ccc5cea744a635eb451d"
@@ -77,22 +61,6 @@ tag = "v491"
 symbols = ["bittensor.cli.commands.proxy.app", "bittensor.cli.commands.proxy.cancel_announcement", "bittensor.cli.commands.proxy.execute_announced", "bittensor.cli.commands.proxy.fund_controller", "bittensor.cli.commands.proxy.protect_account", "bittensor.cli.commands.proxy.rotate_controller", "bittensor.cli.commands.proxy.run_cancel", "bittensor.cli.commands.proxy.run_execute_protected", "bittensor.cli.commands.proxy.run_fund", "bittensor.cli.commands.proxy.run_protect", "bittensor.cli.commands.proxy.run_rotate", "bittensor.cli.commands.proxy.run_rotate_finalize", "bittensor.cli.commands.proxy.run_show", "bittensor.cli.commands.proxy.show_protected"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/root_swap.py"
-kind = "ported"
-from = "03cffc1dd3ec5b6cde29674af4a156edb947be2d"
-to = "491e2cf0c7fc7d501c603538a75efdac5d6b6102"
-tag = "v494"
-symbols = ["bittensor.cli.commands.root_swap._swap_review", "bittensor.cli.commands.root_swap.root_swap"]
-
-[[file]]
-py = "sdk/python/bittensor/cli/commands/subnet_emission.py"
-kind = "ported"
-from = "1a3276f0839f0dd6687e556e6a3a35d5f00c3cba"
-to = "11788e5fbe76f1daf40faae8ea32beae960382ef"
-tag = "v494"
-symbols = ["bittensor.cli.commands.subnet_emission.app"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/subnets.py"
 kind = "ported"
 from = "b875a85679360670e6425eac88ab830f9994fed8"
@@ -131,14 +99,6 @@ from = "759bb059868b44dc147a31dc3f8a957522ae930e"
 to = "621f04a9bbff4a8bdfcb7f4f2eb9c18d9182867f"
 tag = "v491"
 symbols = ["bittensor.cli.globals._TX_FLOW", "bittensor.cli.globals.apply", "bittensor.cli.globals.parse_controller_refill"]
-
-[[file]]
-py = "sdk/python/bittensor/cli/help_theme.py"
-kind = "n/a"
-from = "80cef0daa7b7c4bb0a2aded4a6f7b09763c83b35"
-to = "9ffb48e89267977ab836ab1939122e82abc76e11"
-tag = "v494"
-symbols = []
 
 [[file]]
 py = "sdk/python/bittensor/cli/main.py"
@@ -205,14 +165,6 @@ tag = "v491"
 symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.PROXY_TYPE_HELP", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/staking.py"
-kind = "ported"
-from = "ebbef6a1d24c000b5d4a0b003addfba8a8d1e0b8"
-to = "e39920564c6dfa0ce054d9893681dd8cc229ccaf"
-tag = "v494"
-symbols = ["bittensor.intents.staking.SwapBasket", "bittensor.intents.staking.SwapBasket.min_amount_out"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/weights.py"
 kind = "ported"
 from = "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c"
@@ -235,14 +187,6 @@ from = "bc990ef15644d4278b3e5c4802288746199a41c1"
 to = "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35"
 tag = "v494"
 symbols = ["bittensor.reads.identity.ChannelCommitment", "bittensor.reads.identity.ChannelCommitment.revealed", "bittensor.reads.identity.Decimal", "bittensor.reads.identity.GLOBAL_MAX_SUBNET_COUNT", "bittensor.reads.identity.StorageFunctionNotFound", "bittensor.reads.identity._burn_parameters", "bittensor.reads.identity._commitment_record", "bittensor.reads.identity._decode_commitment_data", "bittensor.reads.identity._decode_commitment_registration", "bittensor.reads.identity._fixed_number", "bittensor.reads.identity._tao_field", "bittensor.reads.identity.channel_commitment", "bittensor.reads.identity.commit_burn", "bittensor.reads.identity.dataclass", "bittensor.reads.identity.field", "bittensor.reads.identity.mech_weight_delegate"]
-
-[[file]]
-py = "sdk/python/bittensor/reads/root.py"
-kind = "ported"
-from = "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0"
-to = "e005f03f92a8b653609e8874d871efc00de5a476"
-tag = "v494"
-symbols = ["bittensor.reads.root.basket_trading_status"]
 
 [[file]]
 py = "sdk/python/bittensor/snapshot.py"

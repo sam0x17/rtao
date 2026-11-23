@@ -127,6 +127,9 @@ pub fn command() -> Result<Command, CliError> {
         .subcommand(
             Command::new("swap")
                 .about("Rebalance a validator basket between subnet holdings.")
+                .long_about(
+                    "Rebalance a validator basket between subnet holdings. Each AMM leg must fill within the configured band of its price reference. TAO traded between the sell and buy legs counts against the fund's turnover budget, and the destination holding must stay within the concentration cap.",
+                )
                 .arg(hotkey())
                 .arg(
                     Arg::new("origin_netuid")
@@ -145,6 +148,9 @@ pub fn command() -> Result<Command, CliError> {
                     Arg::new("max_slippage")
                         .long("max-slippage")
                         .default_value("1")
+                        .help(
+                            "Maximum percent below the quoted output. The trade rolls back below that floor. Use 100 to disable the floor. The chain's configured per-leg price band still applies.",
+                        )
                         .value_parser(clap::builder::ValueParser::new(slippage)),
                 ),
         )
@@ -1558,7 +1564,10 @@ async fn prepare_transaction_inner(
                     )),
                 ));
             } else {
-                rows.push(("warning",json!("no quote available: minimum out is 0, so only the 2% protocol band bounds this trade")));
+                rows.push((
+                    "warning",
+                    json!("No quote available. The minimum output is 0 and the configured protocol price band still applies."),
+                ));
             }
             if let Some(status) = status {
                 rows.push((
@@ -1575,7 +1584,10 @@ async fn prepare_transaction_inner(
                     rows.push(("warning", json!("trading is frozen for this validator")));
                 }
             }
-            rows.push(("note",json!("each leg must fill within 2% of both moving and spot price; TAO through the middle counts against the daily turnover budget")));
+            rows.push((
+                "note",
+                json!("Each AMM leg must fill within the configured band of its price reference. TAO traded between the sell and buy legs counts against the fund's turnover budget."),
+            ));
             if let Some(wallet) = signing_wallet_row(ctx) {
                 rows.insert(0, ("wallet", wallet));
             }

@@ -8291,7 +8291,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "d485228e5ab6e64080fc68b554c21ec1964b5e18"
+        "synced_blob": "3089920b85fac2482422743526966671ca7617c1"
       },
       {
         "kind": "n/a",
@@ -8324,7 +8324,7 @@
         "rust": [
           "none needed"
         ],
-        "synced_blob": "f33db71a70da0e1a117f16dfd0c94642bf079e38"
+        "synced_blob": "d344a44ab4e2cd5df56622b2f81cfdd93a155d37"
       },
       {
         "kind": "n/a",
@@ -9796,7 +9796,7 @@
         "rust": [
           "rtao_cli::commands::root"
         ],
-        "synced_blob": "03cffc1dd3ec5b6cde29674af4a156edb947be2d"
+        "synced_blob": "491e2cf0c7fc7d501c603538a75efdac5d6b6102"
       },
       {
         "kind": "ported",
@@ -9818,7 +9818,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/subnet_emission.rs"
         ],
-        "synced_blob": "1a3276f0839f0dd6687e556e6a3a35d5f00c3cba"
+        "synced_blob": "11788e5fbe76f1daf40faae8ea32beae960382ef"
       },
       {
         "kind": "ported",
@@ -9923,9 +9923,9 @@
         "python": "sdk/python/bittensor/cli/help_theme.py",
         "rtao": "reconciled",
         "rust": [
-          "`rtao-cli` application::clap_error and tests/m8_help_theme.rs"
+          "`rtao-cli` application::clap_error and crates/rtao/tests/m8_help_theme.rs"
         ],
-        "synced_blob": "80cef0daa7b7c4bb0a2aded4a6f7b09763c83b35"
+        "synced_blob": "9ffb48e89267977ab836ab1939122e82abc76e11"
       },
       {
         "kind": "ported",
@@ -11235,7 +11235,7 @@
           "crates/rtao-intents/src/lock.rs",
           "crates/rtao-intents/src/arguments.rs"
         ],
-        "synced_blob": "ebbef6a1d24c000b5d4a0b003addfba8a8d1e0b8"
+        "synced_blob": "e39920564c6dfa0ce054d9893681dd8cc229ccaf"
       },
       {
         "kind": "ported",
@@ -11556,7 +11556,7 @@
           "rtao_reads::reads::m6_root::{basket_position, root_basket_portfolio, root_basket_owed_breakdown, validator_basket, validator_basket_nav, root_basket_total_nav, root_baskets, basket_trading_status}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "db2e5f6e8d1a32208494645e6a1ee07d160aa0e0"
+        "synced_blob": "e005f03f92a8b653609e8874d871efc00de5a476"
       },
       {
         "kind": "ported",
