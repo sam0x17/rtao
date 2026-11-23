@@ -2107,7 +2107,7 @@ pending = "v494 adoption"
 
 [[export]]
 python = "bittensor.intents.SetMechWeightDelegate"
-home = "pending: new public export at v494"
-reason = "Added by the v494 runtime adoption (D-128); no Rust counterpart is reviewed yet."
+home = "rtao_intents::SetMechWeightDelegate"
+reason = "Public typed hotkey intent (feature weights). Pinned v494 call encoding covers delegation and revocation."
 source = "sdk/python/bittensor/intents/__init__.py"
-pending = "v494 adoption"
+pinning_tests = ["rtao_intents::weights::intents::tests::weight_delegate_authorization_and_revocation_encode_on_the_hotkey_intent"]

@@ -7703,7 +7703,7 @@
       {
         "oracle": "unverified",
         "python": "bittensor.intents.SetMechWeightDelegate",
-        "rtao": "pending",
+        "rtao": "decision",
         "source": "sdk/python/bittensor/intents/__init__.py"
       },
       {
@@ -14440,7 +14440,7 @@
         "name": "set_mech_weight_delegate",
         "oracle": "missing",
         "python_class": "SetMechWeightDelegate",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "set_mechanism_count",

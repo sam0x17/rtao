@@ -46,20 +46,3 @@ impl rtao_tx::Intent for super::interfaces::SetCommitBurn {
         self
     }
 }
-#[cfg(feature = "weights")]
-impl rtao_tx::Intent for super::interfaces::SetMechWeightDelegate {
-    fn summary(&self) -> String {
-        <Self as rtao_tx::IntentInterface>::SPEC.summary.to_owned()
-    }
-    async fn build<V: rtao_client::View + ?Sized>(
-        &self,
-        _cx: &rtao_tx::BuildCx<'_, V>,
-    ) -> Result<rtao_tx::Built, rtao_tx::IntentError> {
-        Err(rtao_tx::IntentError::NotYetPorted(
-            "set_mech_weight_delegate",
-        ))
-    }
-    fn semantic_intent(&self) -> &dyn rtao_tx::DynIntent {
-        self
-    }
-}

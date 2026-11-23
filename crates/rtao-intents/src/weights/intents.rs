@@ -1,4 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/intents/weights.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Weight delegation follows the same upstream file at a68c6e8c65411a842fbf69269dc385aa13041391.
 // Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_intents_table.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Weight intent behavior, with state checks performed before signing.
 
@@ -13,7 +14,7 @@ use rtao_tx::{BuildCx, Built, ChainError, Intent, IntentError, PreflightCx};
 use serde_json::json;
 
 use super::{ConformState, TimelockCommitRequest, WeightsError};
-use crate::{CommitWeights, RevealWeights, SetWeights, WeightsArg};
+use crate::{CommitWeights, RevealWeights, SetMechWeightDelegate, SetWeights, WeightsArg};
 
 struct CheckedState {
     conform: ConformState,
@@ -485,6 +486,34 @@ impl Intent for RevealWeights {
     }
 }
 
+impl Intent for SetMechWeightDelegate {
+    fn summary(&self) -> String {
+        let action = match self
+            .delegate
+            .as_deref()
+            .filter(|address| !address.is_empty())
+        {
+            Some(address) => format!("authorize {address}"),
+            None => "revoke weight delegate".into(),
+        };
+        format!(
+            "{action} for the signing hotkey on netuid {}, mechanism {}",
+            self.netuid, self.mechid
+        )
+    }
+
+    async fn build<V: View + ?Sized>(&self, cx: &BuildCx<'_, V>) -> Result<Built, IntentError> {
+        let delegate = self
+            .delegate
+            .as_deref()
+            .map(str::parse::<AccountId>)
+            .transpose()
+            .map_err(|err| IntentError::Validation(format!("Invalid weight delegate: {err}")))?;
+        let call = calls::set_mech_weight_delegate(self.netuid, self.mechid, delegate);
+        Ok(Built::new(call.compose(cx.runtime)?))
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -635,6 +664,61 @@ mod tests {
                 spec: I::SPEC,
             })
             .await
+    }
+
+    #[tokio::test]
+    async fn weight_delegate_authorization_and_revocation_encode_on_the_hotkey_intent() {
+        use rtao_tx::IntentInterface;
+
+        let (snapshot, fake) = fixture(false, false).await;
+        let delegate = AccountId([9; 32]);
+        let address = delegate.to_ss58(42);
+        for args in [
+            json!({"netuid":3,"mechid":1,"delegate":address}),
+            json!({"netuid":3,"mechid":1,"delegate":null}),
+            json!({"netuid":3}),
+        ] {
+            let operation = "set_mech_weight_delegate";
+            let dynamic = crate::AnyIntent::from_tool(operation, args.clone()).unwrap();
+            let crate::AnyIntent::SetMechWeightDelegate(intent) = dynamic else {
+                panic!("expected the typed weight delegation intent");
+            };
+            let (option, action) = match args.get("delegate").and_then(serde_json::Value::as_str) {
+                Some(_) => (1, format!("authorize {address}")),
+                None => (0, "revoke weight delegate".to_owned()),
+            };
+            let mechanism = if args.get("mechid").is_some() { 1 } else { 0 };
+            // Pinned SCALE layout: pallet/call, subnet u16, mechanism u8, Option<AccountId32>.
+            let mut expected = vec![7, 170, 3, 0, mechanism, option];
+            if option == 1 {
+                expected.extend_from_slice(&delegate.0);
+            }
+            assert_eq!(
+                build(&intent, &snapshot).await.unwrap().call.as_bytes(),
+                expected
+            );
+            assert_eq!(
+                intent.summary(),
+                format!("{action} for the signing hotkey on netuid 3, mechanism {mechanism}")
+            );
+        }
+        for address in ["", "bad address"] {
+            let invalid = SetMechWeightDelegate {
+                netuid: NETUID,
+                mechid: MECHID,
+                delegate: Some(address.into()),
+            };
+            assert!(matches!(
+                build(&invalid, &snapshot).await,
+                Err(IntentError::Validation(_))
+            ));
+        }
+        assert_eq!(SetMechWeightDelegate::SPEC.signer, "hotkey");
+        assert_eq!(
+            SetMechWeightDelegate::SPEC.verify,
+            Some("mech_weight_delegate")
+        );
+        assert!(fake.requests().is_empty());
     }
 
     #[tokio::test]
