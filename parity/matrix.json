@@ -14742,7 +14742,7 @@
       {
         "name": "channel_commitment",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "childkey_threshold_suspended",

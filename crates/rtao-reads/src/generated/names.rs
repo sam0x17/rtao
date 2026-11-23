@@ -755,7 +755,7 @@ impl ReadName {
             Self::BlocksUntilNextEpoch => true,
             Self::Bonds => true,
             Self::Burn => true,
-            Self::ChannelCommitment => false,
+            Self::ChannelCommitment => true,
             Self::ChildkeyThresholdSuspended => true,
             Self::Children => true,
             Self::ColdkeyLock => true,
@@ -970,10 +970,12 @@ impl ReadName {
                 output_type_name: std::any::type_name::<rtao_primitives::DynBalance>(),
             },
             Self::ChannelCommitment => ReadInterfaceMetadata {
-                implemented: false,
+                implemented: true,
                 params_type_name: std::any::type_name::<super::interfaces::ChannelCommitmentParams>(
                 ),
-                output_type_name: std::any::type_name::<serde_json::Value>(),
+                output_type_name: std::any::type_name::<
+                    Option<crate::reads::m6_accounts::ChannelCommitment>,
+                >(),
             },
             Self::ChildkeyThresholdSuspended => ReadInterfaceMetadata {
                 implemented: true,

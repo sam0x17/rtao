@@ -456,7 +456,7 @@ impl SyncIdentity<'_> {
         mechid: rtao_primitives::MechId,
         channel: i64,
         hotkey_ss58: Option<rtao_primitives::AccountId>,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<Option<rtao_reads::reads::m6_accounts::ChannelCommitment>, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::channel_commitment(
                 &view,

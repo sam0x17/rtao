@@ -292,15 +292,13 @@ pub struct ChannelCommitmentParams {
 #[doc = "One hotkey's independent channel commitment, or None when absent.\n\nReads the v2 runtime API and decodes the returned SCALE registration. On a\nnode without v2, reads the equivalent channel storage instead; both paths\ndistinguish this target from the legacy `commitment` read. The `revealed`\nlist reports plaintext and reveal blocks even after the active record is removed."]
 #[doc(alias = "bittensor.reads.channel_commitment")]
 pub async fn channel_commitment<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _mechid: rtao_primitives::MechId,
-    _channel: i64,
-    _hotkey_ss58: Option<rtao_primitives::AccountId>,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::ChannelCommitment,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    mechid: rtao_primitives::MechId,
+    channel: i64,
+    hotkey_ss58: Option<rtao_primitives::AccountId>,
+) -> Result<Option<crate::reads::m6_accounts::ChannelCommitment>, crate::ReadError> {
+    crate::reads::m6_accounts::channel_commitment(view, netuid, mechid, channel, hotkey_ss58).await
 }
 #[doc = "Typed parameters for `childkey_threshold_suspended`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

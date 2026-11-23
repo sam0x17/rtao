@@ -7,13 +7,18 @@
 //! Account, commitment and neuron catalog reads at immutable state identities.
 
 use futures::TryStreamExt;
-use rtao_client::{View, ViewExt};
+use rtao_client::{ClientError, View, ViewExt, decode_typed};
 use rtao_core::codec::Value;
+use rtao_core::codec::value::to_corpus_json;
 use rtao_core::value_ext::{as_bool, as_u128, field};
 use rtao_primitives::{
     AccountId, DefaultAccount, DynBalance, MechId, NetUid, NetUidStorageIndex, Symbol, U64F64, Uid,
 };
-use rtao_runtime::{constants, models::MultisigTimepoint, runtime_apis, storage as st};
+use rtao_runtime::{
+    constants,
+    models::{CommitmentRegistration, Data, MultisigTimepoint, ToDynamic, bytes_dynamic},
+    runtime_apis, storage as st,
+};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 
@@ -239,6 +244,129 @@ pub struct Commitment {
     pub fields: Vec<JsonValue>,
 }
 
+/// A channel's active commitment and independently retained reveal history.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ChannelCommitment {
+    /// Active data, zero or empty when only reveals remain.
+    #[serde(flatten)]
+    pub active: Commitment,
+    /// Plaintext reveals in storage order.
+    pub revealed: Vec<ChannelCommitmentReveal>,
+}
+
+/// One plaintext entry from the channel's reveal history.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ChannelCommitmentReveal {
+    /// Decoded plaintext or 0x hex for non-UTF-8 bytes.
+    pub data: String,
+    /// Block that recorded the reveal.
+    pub block: u64,
+}
+
+/// Read a hotkey's commitment and reveals for one mechanism channel.
+// py: sdk/python/bittensor/reads/identity.py:215-293
+pub async fn channel_commitment<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+    mechid: MechId,
+    channel: i64,
+    hotkey_ss58: Option<AccountId>,
+) -> Result<Option<ChannelCommitment>, ReadError> {
+    let (index, channel) = commitment_channel(netuid, mechid, channel)?;
+    let hotkey = hotkey_ss58.ok_or_else(|| ReadError::InvalidParam {
+        name: "hotkey_ss58".into(),
+        reason: "hotkey_ss58 is required".into(),
+    })?;
+    let snapshot = view.pin().await?;
+    let runtime = &snapshot.block().runtime;
+    let active_storage = runtime.storage_entry("Commitments", "ChannelCommitmentOf");
+    let key = (index, hotkey, channel);
+    let active = match snapshot
+        .call(
+            &runtime_apis::subnet_registration_runtime_api::GET_CHANNEL_COMMITMENT,
+            (netuid, mechid, channel, hotkey),
+        )
+        .await
+    {
+        Ok(Some(bytes)) => {
+            let registration = active_storage
+                .or_else(|| runtime.storage_entry("Commitments", "CommitmentOf"))
+                .ok_or_else(|| surface("get_channel_commitment", "registration type is absent"))?;
+            Some(decode_typed::<CommitmentRegistration>(
+                runtime,
+                registration.value_type,
+                &bytes,
+            )?)
+        }
+        Ok(None) => None,
+        Err(ClientError::RuntimeApiUnavailable { .. } | ClientError::ApiVersion { .. }) => {
+            if active_storage.is_none() {
+                return Ok(None);
+            }
+            snapshot
+                .storage(&st::commitments::CHANNEL_COMMITMENT_OF, key)
+                .await?
+        }
+        Err(error) => return Err(error.into()),
+    };
+    let history = if runtime
+        .storage_entry("Commitments", "ChannelRevealedCommitments")
+        .is_some()
+    {
+        snapshot
+            .storage(&st::commitments::CHANNEL_REVEALED_COMMITMENTS, key)
+            .await?
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    if active.is_none() && history.is_empty() {
+        return Ok(None);
+    }
+    let mut revealed = Vec::with_capacity(history.len());
+    for (bytes, block) in history {
+        let text = super::subnets::utf8_text(to_corpus_json(&bytes_dynamic(&bytes)))?;
+        let JsonValue::String(data) = text else {
+            return Err(surface(
+                "Commitments.ChannelRevealedCommitments",
+                "reveal text is not a string",
+            ));
+        };
+        revealed.push(ChannelCommitmentReveal { data, block });
+    }
+    let active = active.map_or_else(
+        || Commitment {
+            block: 0,
+            deposit: DynBalance::from_rao(0, NetUid::ROOT),
+            data: String::new(),
+            fields: Vec::new(),
+        },
+        |record| {
+            let fields = record.info.fields;
+            let raw: Vec<u8> = fields
+                .iter()
+                .filter_map(|field| match field {
+                    Data::Raw(bytes) | Data::BigRaw(bytes) => Some(bytes.as_slice()),
+                    _ => None,
+                })
+                .flatten()
+                .copied()
+                .collect();
+            Commitment {
+                block: u64::from(record.block),
+                deposit: DynBalance::from_rao(record.deposit.0, NetUid::ROOT),
+                data: String::from_utf8(raw)
+                    .unwrap_or_else(|error| format!("0x{}", hex::encode(error.into_bytes()))),
+                fields: fields
+                    .iter()
+                    .map(|field| to_corpus_json(&field.to_dynamic()))
+                    .collect(),
+            }
+        },
+    );
+    Ok(Some(ChannelCommitment { active, revealed }))
+}
+
 /// Commitment burn parameters from the runtime quote or stored configuration.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct CommitBurn {
@@ -269,15 +397,7 @@ pub async fn commit_burn<V: View + ?Sized>(
     mechid: MechId,
     channel: i64,
 ) -> Result<Option<CommitBurn>, ReadError> {
-    let channel = u8::try_from(channel).map_err(|_| ReadError::InvalidParam {
-        name: "channel".into(),
-        reason: "channel must be in 0..255".into(),
-    })?;
-    let index =
-        NetUidStorageIndex::new(netuid, mechid).map_err(|error| ReadError::InvalidParam {
-            name: "netuid/mechid".into(),
-            reason: error.to_string(),
-        })?;
+    let (index, channel) = commitment_channel(netuid, mechid, channel)?;
     let snapshot = view.pin().await?;
     let (live, stored) = futures::try_join!(
         snapshot.call(
@@ -296,6 +416,23 @@ pub async fn commit_burn<V: View + ?Sized>(
     stored
         .map(|value| burn_parameters(value.as_core(), false, "Commitments.CommitBurnConfig"))
         .transpose()
+}
+
+fn commitment_channel(
+    netuid: NetUid,
+    mechid: MechId,
+    channel: i64,
+) -> Result<(NetUidStorageIndex, u8), ReadError> {
+    let channel = u8::try_from(channel).map_err(|_| ReadError::InvalidParam {
+        name: "channel".into(),
+        reason: "channel must be in 0..255".into(),
+    })?;
+    let index =
+        NetUidStorageIndex::new(netuid, mechid).map_err(|error| ReadError::InvalidParam {
+            name: "netuid/mechid".into(),
+            reason: error.to_string(),
+        })?;
+    Ok((index, channel))
 }
 
 fn burn_parameters(

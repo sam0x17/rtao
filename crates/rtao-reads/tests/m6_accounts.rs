@@ -3,8 +3,8 @@
 
 use std::collections::BTreeSet;
 
-use rtao_client::{BlockRef, Client, ClientConfig, Network, ReadKind, View};
-use rtao_primitives::{AccountId, NetUid, Uid};
+use rtao_client::{BlockRef, Client, ClientConfig, ClientError, Network, ReadKind, View};
+use rtao_primitives::{AccountId, MechId, NetUid, Uid};
 use rtao_reads::{ReadError, ReadName, reads::m6_accounts as reads};
 use rtao_testkit::{FakeChain, FakeState, RecordingView, rpc::RpcClient};
 use serde_json::{Value, json};
@@ -25,6 +25,191 @@ async fn setup_client(state: FakeState) -> (Client, FakeChain) {
         .await
         .unwrap();
     (client, chain)
+}
+
+#[tokio::test]
+async fn channel_commitment_decodes_pinned_registration_and_reveal_history() {
+    use rtao_core::{codec::Value as Wire, runtime::TypeSpec};
+    use rtao_reads::Namespaces;
+
+    let mut state = FakeState::default();
+    let item = state
+        .runtime
+        .storage_entry("Commitments", "ChannelCommitmentOf")
+        .unwrap();
+    let fields = Wire::List(vec![
+        Wire::record(vec![("Raw5".into(), Wire::Bytes(b"hello".to_vec()))]),
+        Wire::record(vec![("BigRaw".into(), Wire::Bytes(b" 0x6869".to_vec()))]),
+    ]);
+    let record = Wire::record(vec![
+        ("deposit".into(), Wire::Uint(15)),
+        ("block".into(), Wire::Uint(100)),
+        ("info".into(), Wire::record(vec![("fields".into(), fields)])),
+    ]);
+    let encoded = state
+        .runtime
+        .encode_spec(&TypeSpec::Id(item.value_type), &record)
+        .unwrap();
+    state
+        .seed_runtime(
+            "SubnetRegistrationRuntimeApi",
+            "get_channel_commitment",
+            json!(format!("0x{}", hex::encode(&encoded))),
+        )
+        .unwrap();
+    state
+        .seed_python(
+            "Commitments",
+            "ChannelRevealedCommitments",
+            &[json!(8234), json!(HOT), json!(7)],
+            json!([["0x307836383639", 101], ["0xff", 102]]),
+        )
+        .unwrap();
+    let (client, chain) = setup_client(state).await;
+    let pinned = client.at(BlockRef::Best).await.unwrap();
+    let hash = pinned.block().hash;
+    let observed = RecordingView::new(pinned);
+    chain.advance(2).unwrap();
+    let value = observed
+        .identity()
+        .channel_commitment(NET, MechId(2), 7, Some(HOT))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(value.active.block, 100);
+    assert_eq!(value.active.deposit.rao, 15);
+    assert_eq!(value.active.data, "hello 0x6869");
+    assert_eq!(
+        value.active.fields,
+        [
+            json!({"Raw5": "0x68656c6c6f"}),
+            json!({"BigRaw": " 0x6869"})
+        ]
+    );
+    assert_eq!(
+        serde_json::to_value(&value).unwrap()["revealed"],
+        json!([
+            {"data":"hi", "block":101}, {"data":"0xff", "block":102}
+        ])
+    );
+    assert_eq!(observed.block_hashes(), BTreeSet::from([hash]));
+    assert!(
+        observed
+            .touches()
+            .iter()
+            .any(|touch| touch.item == "get_channel_commitment")
+    );
+    assert!(
+        observed
+            .touches()
+            .iter()
+            .any(|touch| touch.item == "ChannelRevealedCommitments")
+    );
+    assert!(
+        !observed
+            .touches()
+            .iter()
+            .any(|touch| touch.item == "ChannelCommitmentOf")
+    );
+
+    chain.mutate_state(|state| {
+        state
+            .seed_runtime(
+                "SubnetRegistrationRuntimeApi",
+                "get_channel_commitment",
+                json!(format!("0x{}00", hex::encode(&encoded))),
+            )
+            .unwrap();
+    });
+    assert!(matches!(
+        reads::channel_commitment(&client, NET, MechId(2), 7, Some(HOT)).await,
+        Err(ReadError::Client(ClientError::Decode { .. }))
+    ));
+    chain.mutate_state(|state| {
+        state
+            .seed_runtime(
+                "SubnetRegistrationRuntimeApi",
+                "get_channel_commitment",
+                Value::Null,
+            )
+            .unwrap();
+    });
+    let reveal_only = reads::channel_commitment(&client, NET, MechId(2), 7, Some(HOT))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(reveal_only.active.block, 0);
+    assert!(reveal_only.active.fields.is_empty());
+    assert_eq!(reveal_only.revealed, value.revealed);
+    assert!(
+        reads::channel_commitment(&client, NET, MechId(2), 8, Some(HOT))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    let before = chain.requests().len();
+    assert!(
+        matches!(reads::channel_commitment(&client, NET, MechId(2), 256, Some(HOT)).await,
+        Err(ReadError::InvalidParam { name, .. }) if name == "channel")
+    );
+    assert!(
+        matches!(reads::channel_commitment(&client, NET, MechId(2), 7, None).await,
+        Err(ReadError::InvalidParam { name, .. }) if name == "hotkey_ss58")
+    );
+    assert_eq!(chain.requests().len(), before);
+    client.close().await;
+}
+
+#[tokio::test]
+async fn channel_commitment_uses_channel_storage_when_v2_method_is_absent() {
+    let mut state = FakeState::default();
+    state
+        .patch_metadata(|metadata| {
+            let api = metadata
+                .apis
+                .iter_mut()
+                .find(|api| api.name == "SubnetRegistrationRuntimeApi")
+                .unwrap();
+            api.methods
+                .retain(|method| method.name != "get_channel_commitment");
+            let pallet = metadata
+                .pallets
+                .iter_mut()
+                .find(|pallet| pallet.name == "Commitments")
+                .unwrap();
+            pallet
+                .storage
+                .as_mut()
+                .unwrap()
+                .entries
+                .retain(|entry| entry.name != "ChannelRevealedCommitments");
+        })
+        .unwrap();
+    state
+        .seed_python(
+            "Commitments",
+            "ChannelCommitmentOf",
+            &[json!(8234), json!(HOT), json!(255)],
+            json!({"deposit":33,"block":123,"info":{"fields":[{"Raw1":"0xff"}]}}),
+        )
+        .unwrap();
+    let (client, _) = setup_client(state).await;
+    let observed = RecordingView::new(client.at(BlockRef::Best).await.unwrap());
+    let candidate = rtao_reads::dispatch(
+        &observed,
+        ReadName::ChannelCommitment,
+        json!({"netuid":NET,"mechid":2,"channel":255,"hotkey_ss58":HOT})
+            .as_object()
+            .unwrap(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(candidate["block"], 123);
+    assert_eq!(candidate["data"], "0xff");
+    assert_eq!(candidate["revealed"], json!([]));
+    assert_eq!(observed.touches().len(), 1);
+    assert_eq!(observed.touches()[0].item, "ChannelCommitmentOf");
+    client.close().await;
 }
 
 fn neuron(uid: u16, hotkey: AccountId, stake: Value) -> Value {
