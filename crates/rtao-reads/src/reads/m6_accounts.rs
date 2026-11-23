@@ -1,6 +1,7 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/{accounts,chain,identity,neurons}.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/accounts.py @ 8cf229f8ef969389d054a4c161b53ffd164a041f (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/identity.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/identity.py @ a68c6e8c65411a842fbf69269dc385aa13041391 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/neurons.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/reads/chain.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 //! Account, commitment and neuron catalog reads at immutable state identities.
@@ -8,8 +9,11 @@
 use futures::TryStreamExt;
 use rtao_client::{View, ViewExt};
 use rtao_core::codec::Value;
-use rtao_primitives::{AccountId, DefaultAccount, DynBalance, NetUid, Symbol, Uid};
-use rtao_runtime::{constants, models::MultisigTimepoint, storage as st};
+use rtao_core::value_ext::{as_bool, as_u128, field};
+use rtao_primitives::{
+    AccountId, DefaultAccount, DynBalance, MechId, NetUid, NetUidStorageIndex, Symbol, U64F64, Uid,
+};
+use rtao_runtime::{constants, models::MultisigTimepoint, runtime_apis, storage as st};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 
@@ -233,6 +237,109 @@ pub struct Commitment {
     pub data: String,
     /// Original Python-shaped decoded field variants.
     pub fields: Vec<JsonValue>,
+}
+
+/// Commitment burn parameters from the runtime quote or stored configuration.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct CommitBurn {
+    /// Whether the channel's burn is enabled in the returned parameters.
+    pub enabled: bool,
+    /// Burn amount when enabled, including the current quote when available.
+    pub burn: Option<DynBalance>,
+    /// Burn field from the selected parameters, matching the upstream read.
+    pub stored_burn: DynBalance,
+    /// Minimum burn for the channel.
+    pub min_burn: DynBalance,
+    /// Maximum burn for the channel.
+    pub max_burn: DynBalance,
+    /// Decay half-life in blocks.
+    pub half_life: u64,
+    /// Increase multiplier rendered as a fixed decimal string.
+    pub increase_mult: String,
+    /// Block number recorded in the selected parameters.
+    pub last_update_block: u64,
+    /// Whether the parameters came from the runtime's decayed quote.
+    pub price_is_decayed: bool,
+}
+
+/// Read the live burn quote and stored configuration at the same block.
+pub async fn commit_burn<V: View + ?Sized>(
+    view: &V,
+    netuid: NetUid,
+    mechid: MechId,
+    channel: i64,
+) -> Result<Option<CommitBurn>, ReadError> {
+    let channel = u8::try_from(channel).map_err(|_| ReadError::InvalidParam {
+        name: "channel".into(),
+        reason: "channel must be in 0..255".into(),
+    })?;
+    let index =
+        NetUidStorageIndex::new(netuid, mechid).map_err(|error| ReadError::InvalidParam {
+            name: "netuid/mechid".into(),
+            reason: error.to_string(),
+        })?;
+    let snapshot = view.pin().await?;
+    let (live, stored) = futures::try_join!(
+        snapshot.call(
+            &runtime_apis::subnet_registration_runtime_api::GET_COMMIT_BURN,
+            (netuid, mechid, channel)
+        ),
+        snapshot.storage(&st::commitments::COMMIT_BURN_CONFIG, ((index, channel),)),
+    )?;
+    if let Some(value) = live {
+        return Ok(Some(burn_parameters(
+            value.as_core(),
+            true,
+            "get_commit_burn",
+        )?));
+    }
+    stored
+        .map(|value| burn_parameters(value.as_core(), false, "Commitments.CommitBurnConfig"))
+        .transpose()
+}
+
+fn burn_parameters(
+    value: &Value,
+    live: bool,
+    descriptor: &'static str,
+) -> Result<CommitBurn, ReadError> {
+    let number = |name: &str, aliases: &[&str]| {
+        field(value, name)
+            .and_then(|raw| {
+                as_u128(
+                    aliases
+                        .iter()
+                        .find_map(|alias| field(raw, alias))
+                        .unwrap_or(raw),
+                )
+            })
+            .ok_or_else(|| surface(descriptor, format!("{name} is not an unsigned integer")))
+    };
+    let native = |name, aliases: &[&str]| {
+        u64::try_from(number(name, aliases)?)
+            .map_err(|_| surface(descriptor, format!("{name} exceeds u64")))
+    };
+    let amount = |name| {
+        native(name, &["amount", "value"]).map(|rao| DynBalance::from_rao(rao, NetUid::ROOT))
+    };
+    let enabled = field(value, "enabled")
+        .and_then(as_bool)
+        .ok_or_else(|| surface(descriptor, "enabled is not a boolean"))?;
+    let stored_burn = amount("burn")?;
+    Ok(CommitBurn {
+        enabled,
+        burn: (live || enabled).then(|| stored_burn.clone()),
+        stored_burn,
+        min_burn: amount("min_burn")?,
+        max_burn: amount("max_burn")?,
+        half_life: native("half_life", &[])?,
+        increase_mult: rtao_primitives::pyfmt::fmt_u64f64_decimal(U64F64::from_bits(number(
+            "increase_mult",
+            &["bits"],
+        )?)),
+        last_update_block: native("last_update_block", &[])?,
+        price_is_decayed: live,
+    })
 }
 
 fn raw_commitment_data(fields: &[JsonValue]) -> Result<String, ReadError> {

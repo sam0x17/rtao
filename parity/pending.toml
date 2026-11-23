@@ -2,4 +2,4 @@
 # parity pin bump adds operations new to the upstream catalog (D-128).
 intents = ["commit_weight_hash", "set_channel_commitment", "set_commit_burn", "set_mech_weight_delegate"]
 
-reads = ["channel_commitment", "commit_burn"]
+reads = ["channel_commitment"]

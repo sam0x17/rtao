@@ -152,6 +152,104 @@ async fn mechanism_delegate_read_uses_the_exact_pinned_runtime_call() {
     client.close().await;
 }
 
+#[tokio::test]
+async fn commit_burn_reads_runtime_and_tuple_storage_at_one_block() {
+    let live = json!({
+        "enabled": true, "burn": 2_000_000_000_u64, "min_burn": 500_000_000_u64,
+        "max_burn": 10_000_000_000_u64, "half_life": 360,
+        "increase_mult": {"bits": 5_u128 << 62}, "last_update_block": 100,
+    });
+    let mut stored = live.clone();
+    stored["burn"] = json!(5_000_000_000_u64);
+    let mut disabled = stored.clone();
+    disabled["enabled"] = json!(false);
+    let mut state = FakeState::default();
+    state
+        .seed_runtime("SubnetRegistrationRuntimeApi", "get_commit_burn", live)
+        .unwrap();
+    for (channel, value) in [(7, stored), (8, disabled)] {
+        state
+            .seed_python(
+                "Commitments",
+                "CommitBurnConfig",
+                &[json!([8193, channel])],
+                value,
+            )
+            .unwrap();
+    }
+    let (client, chain) = client(state).await;
+    let snapshot = client.at(BlockRef::Best).await.unwrap();
+    chain.advance(2).unwrap();
+    let start = chain.requests().len();
+    let quote = rtao_reads::reads::m6_accounts::commit_burn(&snapshot, NetUid(1), MechId(2), 7)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(quote.enabled && quote.price_is_decayed);
+    assert_eq!(quote.burn.unwrap().rao, 2_000_000_000);
+    assert_eq!(quote.stored_burn.rao, 2_000_000_000);
+    assert_eq!(quote.increase_mult, "1.25");
+    let hash = format!("0x{}", hex::encode(snapshot.block().hash.0));
+    let calls = chain.requests();
+    assert!(
+        calls[start..]
+            .iter()
+            .any(|request| request.method == "state_call"
+                && request.params
+                    == json!([
+                        "SubnetRegistrationRuntimeApi_get_commit_burn",
+                        "0x01000207",
+                        hash
+                    ]))
+    );
+    let runtime = snapshot.block().runtime.core();
+    let config = runtime
+        .storage_entry("Commitments", "CommitBurnConfig")
+        .unwrap();
+    use rtao_core::codec::Value::{Tuple, Uint};
+    let key = runtime
+        .storage_key(config, &[Tuple(vec![Uint(8193), Uint(7)])])
+        .unwrap();
+    assert!(calls[start..].iter().any(|request| {
+        request.method == "state_queryStorageAt"
+            && request.params == json!([[format!("0x{}", hex::encode(&key))], hash])
+    }));
+
+    chain.mutate_state(|state| {
+        state
+            .seed_runtime(
+                "SubnetRegistrationRuntimeApi",
+                "get_commit_burn",
+                Value::Null,
+            )
+            .unwrap();
+    });
+    let fallback = async |channel| {
+        dispatch(
+            &client,
+            ReadName::CommitBurn,
+            &params(json!({"netuid":1,"mechid":2,"channel":channel})),
+        )
+        .await
+    };
+    let enabled = fallback(7).await.unwrap();
+    assert_eq!(enabled["price_is_decayed"], false);
+    assert_eq!(enabled["burn"], enabled["stored_burn"]);
+    let disabled = fallback(8).await.unwrap();
+    assert_eq!(disabled["enabled"], false);
+    assert_eq!(disabled["stored_burn"], enabled["stored_burn"]);
+    assert_eq!(disabled["burn"], Value::Null);
+    assert_eq!(fallback(9).await.unwrap(), Value::Null);
+    let before_invalid = chain.requests().len();
+    for channel in [-1, 256] {
+        assert!(
+            matches!(fallback(channel).await, Err(ReadError::InvalidParam { name, .. }) if name == "channel")
+        );
+    }
+    assert_eq!(chain.requests().len(), before_invalid);
+    client.close().await;
+}
+
 #[test]
 fn all_read_names_have_authenticated_defaults_and_parameters() {
     assert_eq!(ReadName::ALL.len(), rtao_catalog::READS.len());

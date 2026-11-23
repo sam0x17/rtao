@@ -399,14 +399,12 @@ pub struct CommitBurnParams {
 #[doc = "Live decayed channel burn price and its stored configuration.\n\n`burn` is the price a commitment would pay now, or None when the burn is\ndisabled/unconfigured. The runtime API returns no record when disabled, so\nthis read also inspects `CommitBurnConfig` to show `enabled` and the other\nparameters. Direct storage readers should not treat stored `burn` as live:\ndecay is lazy; this read's `price_is_decayed` marks the runtime quote."]
 #[doc(alias = "bittensor.reads.commit_burn")]
 pub async fn commit_burn<V: rtao_client::View + ?Sized>(
-    _view: &V,
-    _netuid: rtao_primitives::NetUid,
-    _mechid: rtao_primitives::MechId,
-    _channel: i64,
-) -> Result<serde_json::Value, crate::ReadError> {
-    Err(crate::ReadError::NotYetPorted(
-        super::names::ReadName::CommitBurn,
-    ))
+    view: &V,
+    netuid: rtao_primitives::NetUid,
+    mechid: rtao_primitives::MechId,
+    channel: i64,
+) -> Result<Option<crate::reads::m6_accounts::CommitBurn>, crate::ReadError> {
+    crate::reads::m6_accounts::commit_burn(view, netuid, mechid, channel).await
 }
 #[doc = "Typed parameters for `commit_reveal_enabled`."]
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]

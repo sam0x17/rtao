@@ -14772,7 +14772,7 @@
       {
         "name": "commit_burn",
         "oracle": "missing",
-        "rtao": "pending"
+        "rtao": "implemented"
       },
       {
         "name": "commit_reveal_enabled",

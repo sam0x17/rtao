@@ -223,7 +223,7 @@ impl<V: rtao_client::View + ?Sized> super::namespaces::Identity<'_, V> {
         netuid: rtao_primitives::NetUid,
         mechid: rtao_primitives::MechId,
         channel: i64,
-    ) -> Result<serde_json::Value, crate::ReadError> {
+    ) -> Result<Option<crate::reads::m6_accounts::CommitBurn>, crate::ReadError> {
         super::interfaces::commit_burn(self.view, netuid, mechid, channel).await
     }
 }

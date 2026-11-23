@@ -534,7 +534,7 @@ impl SyncIdentity<'_> {
         netuid: rtao_primitives::NetUid,
         mechid: rtao_primitives::MechId,
         channel: i64,
-    ) -> Result<serde_json::Value, super::Error> {
+    ) -> Result<Option<rtao_reads::reads::m6_accounts::CommitBurn>, super::Error> {
         self.view.with_view(move |view| async move {
             rtao_reads::generated::interfaces::commit_burn(&view, netuid, mechid, channel).await
         })
