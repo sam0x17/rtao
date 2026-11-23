@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testnet runtime 494 recorded automatically
+
+- Testnet finalized spec 494 (`:code` `0x1735bc231789bead3ab3edfa583f3c9a95aaf7643adcc906ea224a7761a303ca`) at block 8508571; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `breaking`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45197716366)). No upstream source is recorded: upstream has published no v494 release. The parity pin is unchanged.
+
 ### Finney runtime 493
 
 - Finney finalized spec 493. The parity pin advances from v492 to v493 at upstream commit `8b407e40988ea7a251abb6dbc07a9ab7d602b740`. Three public endpoints agreed on the candidate block, runtime code and V15/V16 metadata at height 9,549,692. The release wasm matched the on-chain code.
