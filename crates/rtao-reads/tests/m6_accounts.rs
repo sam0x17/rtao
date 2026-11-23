@@ -692,9 +692,14 @@ async fn commitment_read_raw_fields_differ_from_metagraph_hash_rendering() {
 }
 
 #[tokio::test]
-async fn raw_commitment_non_utf8_is_hex_and_hash_only_is_empty() {
+async fn raw_commitment_keeps_big_raw_bytes_and_preserves_utf8_and_hex() {
     for (fields, content) in [
         (json!([{"Raw1": "0xff"}, {"Raw1": "0xfe"}]), "0xfffe"),
+        (
+            json!([{"Raw1": "0x61"}, {"BigRaw": "0x307836383639"}, {"BigRaw": "0x62"}]),
+            "a0x6869b",
+        ),
+        (json!([{"Raw1": "0x61"}, {"BigRaw": "0xfffe"}]), "0x61fffe"),
         (json!([{"Sha256": format!("0x{}", "ab".repeat(32))}]), ""),
         (json!([{"Raw0": []}, "None", "ResetBondsFlag"]), ""),
     ] {
@@ -718,6 +723,33 @@ async fn raw_commitment_non_utf8_is_hex_and_hash_only_is_empty() {
         );
         client.close().await;
     }
+}
+
+#[tokio::test]
+async fn legacy_commitment_decodes_with_recorded_finney_491_metadata() {
+    let runtime = rtao_core::runtime::Runtime::parse(
+        include_bytes!("../../../vendor/metadata/finney/491.v15.scale"),
+        491,
+        1,
+        42,
+    )
+    .unwrap();
+    let mut state = FakeState::try_finney(runtime).unwrap();
+    state
+        .seed_python(
+            "Commitments",
+            "CommitmentOf",
+            &[json!(NET), json!(HOT)],
+            json!({"block": 80, "deposit": 15, "info": {"fields": [{"Raw2": "0xcf84"}]}}),
+        )
+        .unwrap();
+    let (client, _) = setup_client(state).await;
+    let record = reads::commitment(&client, NET, HOT).await.unwrap().unwrap();
+    assert_eq!(record.block, 80);
+    assert_eq!(record.deposit.rao, 15);
+    assert_eq!(record.data, "τ");
+    assert_eq!(record.fields, [json!({"Raw2": "0xcf84"})]);
+    client.close().await;
 }
 
 #[tokio::test]

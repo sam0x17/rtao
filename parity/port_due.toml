@@ -149,14 +149,6 @@ tag = "v494"
 symbols = ["bittensor.client.Client", "bittensor.client.Client.decode_commitment_registration"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/__init__.py"
-kind = "n/a"
-from = "1236265dffc92353cfddd8e51c22a9d53cbf3226"
-to = "daf48743b24a4dfb86856c7f6113a15edf681f3f"
-tag = "v494"
-symbols = ["bittensor.intents.CommitWeightHash", "bittensor.intents.CommitWeights", "bittensor.intents.RevealWeights", "bittensor.intents.SetChannelCommitment", "bittensor.intents.SetCommitBurn", "bittensor.intents.SetMechWeightDelegate", "bittensor.intents.SetWeights", "bittensor.intents.__all__", "bittensor.intents.normalize"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/proxy.py"
 kind = "ported"
 from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
@@ -179,14 +171,6 @@ from = "fded4d4c5796b1f0c82f6422350e03897baffd18"
 to = "1b3f59298f4a074c5c83b0ab09fe8c140561f594"
 tag = "v494"
 symbols = []
-
-[[file]]
-py = "sdk/python/bittensor/reads/identity.py"
-kind = "ported"
-from = "bc990ef15644d4278b3e5c4802288746199a41c1"
-to = "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35"
-tag = "v494"
-symbols = ["bittensor.reads.identity.ChannelCommitment", "bittensor.reads.identity.ChannelCommitment.revealed", "bittensor.reads.identity.Decimal", "bittensor.reads.identity.GLOBAL_MAX_SUBNET_COUNT", "bittensor.reads.identity.StorageFunctionNotFound", "bittensor.reads.identity._burn_parameters", "bittensor.reads.identity._commitment_record", "bittensor.reads.identity._decode_commitment_data", "bittensor.reads.identity._decode_commitment_registration", "bittensor.reads.identity._fixed_number", "bittensor.reads.identity._tao_field", "bittensor.reads.identity.channel_commitment", "bittensor.reads.identity.commit_burn", "bittensor.reads.identity.dataclass", "bittensor.reads.identity.field", "bittensor.reads.identity.mech_weight_delegate"]
 
 [[file]]
 py = "sdk/python/bittensor/snapshot.py"

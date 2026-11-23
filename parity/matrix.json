@@ -10947,7 +10947,7 @@
         "rust": [
           "`rtao_intents` crate root"
         ],
-        "synced_blob": "1236265dffc92353cfddd8e51c22a9d53cbf3226"
+        "synced_blob": "daf48743b24a4dfb86856c7f6113a15edf681f3f"
       },
       {
         "kind": "ported",
@@ -11491,9 +11491,11 @@
         "rust": [
           "rtao_reads::reads::owner::{identity, hotkey_identities}",
           "rtao_reads::reads::m6_accounts::{commitment, revealed_commitment, commitments}",
-          "rtao_reads::commitments::{fetch_commitments, NeuronCommitment::to_read_json}"
+          "rtao_reads::commitments::{fetch_commitments, NeuronCommitment::to_read_json}",
+          "rtao_reads::reads::m6_accounts::{channel_commitment, commit_burn}",
+          "rtao_reads::reads::weights::mech_weight_delegate"
         ],
-        "synced_blob": "bc990ef15644d4278b3e5c4802288746199a41c1"
+        "synced_blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35"
       },
       {
         "kind": "ported",

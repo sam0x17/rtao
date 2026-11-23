@@ -238,7 +238,7 @@ pub struct Commitment {
     pub block: u64,
     /// Reserved native TAO deposit.
     pub deposit: DynBalance,
-    /// Concatenated Raw fields, as UTF-8 or 0x hex; hash fields are not included.
+    /// Concatenated Raw and BigRaw fields as UTF-8 or 0x hex.
     pub data: String,
     /// Original Python-shaped decoded field variants.
     pub fields: Vec<JsonValue>,
@@ -261,6 +261,26 @@ pub struct ChannelCommitmentReveal {
     pub data: String,
     /// Block that recorded the reveal.
     pub block: u64,
+}
+
+fn commitment_record(record: CommitmentRegistration) -> Commitment {
+    let fields = record.info.fields;
+    let mut raw = Vec::new();
+    for field in &fields {
+        if let Data::Raw(bytes) | Data::BigRaw(bytes) = field {
+            raw.extend_from_slice(bytes);
+        }
+    }
+    Commitment {
+        block: u64::from(record.block),
+        deposit: DynBalance::from_rao(record.deposit.0, NetUid::ROOT),
+        data: String::from_utf8(raw)
+            .unwrap_or_else(|error| format!("0x{}", hex::encode(error.into_bytes()))),
+        fields: fields
+            .iter()
+            .map(|field| to_corpus_json(&field.to_dynamic()))
+            .collect(),
+    }
 }
 
 /// Read a hotkey's commitment and reveals for one mechanism channel.
@@ -341,28 +361,7 @@ pub async fn channel_commitment<V: View + ?Sized>(
             data: String::new(),
             fields: Vec::new(),
         },
-        |record| {
-            let fields = record.info.fields;
-            let raw: Vec<u8> = fields
-                .iter()
-                .filter_map(|field| match field {
-                    Data::Raw(bytes) | Data::BigRaw(bytes) => Some(bytes.as_slice()),
-                    _ => None,
-                })
-                .flatten()
-                .copied()
-                .collect();
-            Commitment {
-                block: u64::from(record.block),
-                deposit: DynBalance::from_rao(record.deposit.0, NetUid::ROOT),
-                data: String::from_utf8(raw)
-                    .unwrap_or_else(|error| format!("0x{}", hex::encode(error.into_bytes()))),
-                fields: fields
-                    .iter()
-                    .map(|field| to_corpus_json(&field.to_dynamic()))
-                    .collect(),
-            }
-        },
+        commitment_record,
     );
     Ok(Some(ChannelCommitment { active, revealed }))
 }
@@ -479,24 +478,6 @@ fn burn_parameters(
     })
 }
 
-fn raw_commitment_data(fields: &[JsonValue]) -> Result<String, ReadError> {
-    let mut bytes = Vec::new();
-    for field in fields.iter().filter_map(JsonValue::as_object) {
-        for (variant, value) in field {
-            if variant.starts_with("Raw")
-                && let Some(text) = value.as_str()
-            {
-                bytes.extend(commitments::python_fromhex(
-                    text.strip_prefix("0x").unwrap_or(text),
-                    variant,
-                )?);
-            }
-        }
-    }
-    Ok(String::from_utf8(bytes)
-        .unwrap_or_else(|error| format!("0x{}", hex::encode(error.into_bytes()))))
-}
-
 fn integer_or_zero(
     value: Option<&JsonValue>,
     descriptor: &'static str,
@@ -510,42 +491,17 @@ fn integer_or_zero(
     }
 }
 
-/// Return one live commitment; Raw fields retain Python's UTF-8/hex behavior.
+/// Read one live commitment using the registration type declared by the runtime.
 // py: sdk/python/bittensor/reads/identity.py:67-78,90-101
 pub async fn commitment<V: View + ?Sized>(
     view: &V,
     netuid: NetUid,
     hotkey_ss58: AccountId,
 ) -> Result<Option<Commitment>, ReadError> {
-    let value = view
-        .storage_dyn(
-            "Commitments",
-            "CommitmentOf",
-            &[
-                Value::Int(i128::from(netuid.0)),
-                Value::Str(hotkey_ss58.to_string()),
-            ],
-        )
+    Ok(view
+        .storage(&st::commitments::COMMITMENT_OF, (netuid, hotkey_ss58))
         .await?
-        .to_json();
-    if value.is_null() {
-        return Ok(None);
-    }
-    let fields = value
-        .get("info")
-        .and_then(|info| info.get("fields"))
-        .and_then(JsonValue::as_array)
-        .cloned()
-        .unwrap_or_default();
-    Ok(Some(Commitment {
-        block: integer_or_zero(value.get("block"), "Commitments.CommitmentOf", "block")?,
-        deposit: DynBalance::from_rao(
-            integer_or_zero(value.get("deposit"), "Commitments.CommitmentOf", "deposit")?,
-            NetUid::ROOT,
-        ),
-        data: raw_commitment_data(&fields)?,
-        fields,
-    }))
+        .map(commitment_record))
 }
 
 /// Every live or revealed-only commitment, newest first, with status and age.
