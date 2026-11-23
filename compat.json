@@ -10,7 +10,7 @@
         "cargo": "cargo 1.100.0 (3acc79c0c 2026-11-05)",
         "compiler": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1795455558,
+        "measured_unix_seconds": 1795460142,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -20,7 +20,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "2198f11d71b9bdb0caab8a6dfb61429afe7901f860eff6212e96f888e63da752",
+            "feature_graph_sha256": "17865afccd8e28e1a9e8d3271c4924f3e4fb11744efae81e3ab066c7277336fa",
             "features": [],
             "normal_build_packages": 229,
             "package": "rtao-core",
@@ -260,7 +260,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "8f1737dca82468a2c6a573be9d286eaee9dc690b7cddf7f5aa08ebb98de060a2",
+            "feature_graph_sha256": "5d884e15f2631cbf70cc5d8fd3cf0023508b307039aa82978cee81604fc0ab40",
             "features": [
               "validator"
             ],
@@ -374,7 +374,7 @@
               "fn-dsa-vrfy v0.3.0",
               "fnv v1.0.7",
               "foldhash v0.2.0",
-              "form_urlencoded v1.2.2",
+              "form_urlencoded v1.2.3",
               "frame-metadata v23.0.1",
               "fs-err v2.11.0",
               "futures v0.3.34",
@@ -615,7 +615,7 @@
               "unicode-xid v0.2.6",
               "universal-hash v0.5.1",
               "untrusted v0.9.0",
-              "url v2.5.8",
+              "url v2.5.9",
               "utf8_iter v1.0.4",
               "utf8parse v0.2.2",
               "version_check v0.9.5",
@@ -640,7 +640,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "1a0ad9996a98153b622e4533db64b3cece1f9154df0aaa5ee119940b46884e2b",
+            "feature_graph_sha256": "059c462e74db85ae25d21db3b63535858c9ea8e4bb9d546fd4a47029926fd0d8",
             "features": [
               "miner"
             ],
@@ -756,7 +756,7 @@
               "fn-dsa-vrfy v0.3.0",
               "fnv v1.0.7",
               "foldhash v0.2.0",
-              "form_urlencoded v1.2.2",
+              "form_urlencoded v1.2.3",
               "frame-metadata v23.0.1",
               "fs-err v2.11.0",
               "futures v0.3.34",
@@ -999,7 +999,7 @@
               "unicode-xid v0.2.6",
               "universal-hash v0.5.1",
               "untrusted v0.9.0",
-              "url v2.5.8",
+              "url v2.5.9",
               "utf8_iter v1.0.4",
               "utf8parse v0.2.2",
               "version_check v0.9.5",
@@ -1024,7 +1024,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "1ce70d650850565e6df50aa8a28b90f0b629734b990285c2e42314300c76ad26",
+            "feature_graph_sha256": "8efc8413a4c281623b138d0fe984e62160ffe02c683e40f5c1e03b1eef31aa9b",
             "features": [
               "owner"
             ],
@@ -1157,7 +1157,7 @@
               "foldhash v0.2.0",
               "foreign-types v0.3.2",
               "foreign-types-shared v0.1.1",
-              "form_urlencoded v1.2.2",
+              "form_urlencoded v1.2.3",
               "frame-metadata v23.0.1",
               "fs-err v2.11.0",
               "futures v0.3.34",
@@ -1434,7 +1434,7 @@
               "unicode-xid v0.2.6",
               "universal-hash v0.5.1",
               "untrusted v0.9.0",
-              "url v2.5.8",
+              "url v2.5.9",
               "utf8_iter v1.0.4",
               "utf8parse v0.2.2",
               "vcpkg v0.2.15",
@@ -1463,8 +1463,8 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "bf3f6cc58d0b3752cedc9960dd8f220a3ac96c08b941073387752d5edddd998e",
-            "Cargo.toml": "1304b7ccc2e47e38689057e81d2a7792f57a0f6d0d273492f0b08712de05bdb3",
+            "Cargo.lock": "6b07751a084aa25f137fc54e5c40e6d8a65d37f44a3704e695229b2e2944ddec",
+            "Cargo.toml": "4689f573d5eb96731601ee78268a5044090b6cfb71fd1779524f5e5089aacd0f",
             "crates/rtao-arena/Cargo.toml": "b65a3acbbcd90d186c46e3db776336665a38fea5b2cbac7a6cccf8f2ae1833ea",
             "crates/rtao-btauth/Cargo.toml": "650c1ccaa7c178499fb6c63aa3da6a21c03fbeec578c244ba176dc8b7c5a4a5f",
             "crates/rtao-catalog/Cargo.toml": "82ea6c2ca4ac486e020b9c51b07334c7e8f744d8bdfaf118653e187d22928510",
@@ -1492,13 +1492,13 @@
             "upstream.toml": "0d464986996ed5323c7b721b00b55731a865ef73a9b55f7518cfff20f67edba9",
             "xtask/Cargo.toml": "3c4df51eadf75d7d87340251b4bdfc52d31c3ec0bda7c8861cf4a7f01c36b890"
           },
-          "dependency_inputs_sha256": "ff474f5ab0cff3949783e58e3df17d28573eece46e55fa07012daa663876f8ea",
+          "dependency_inputs_sha256": "d07fc263b41bb722413e2b62a626f53436e49109c08e4fcf2950e8da9044b681",
           "dirty": true,
-          "head_commit": "1e52e71b2ae908ca425b40408380be2f31a9904c"
+          "head_commit": "083e89ccce635abc17d19e3a9a4bf05c89f88a02"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "795eeec42f38f049de566f2d81c8e030f5e2e86bf65fad50cc0cf1806de3572d"
+      "sha256": "64863cb2a26139951340e2aa448dc4578799fe35be4ba063161fb805db6d9dbe"
     }
   ],
   "core": {

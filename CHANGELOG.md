@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Require `url` 2.5.9 or later to address [RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html).
+
 ### Finney runtime 494
 
 - The parity pin advances to v494 at upstream commit `a68c6e8c65411a842fbf69269dc385aa13041391`. Four public RPCs agreed on the finalized runtime and V15/V16 metadata at block 9,570,771. The release wasm matched the on-chain code.
