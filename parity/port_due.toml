@@ -141,14 +141,6 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/_root_claim_fee.py"
-kind = "ported"
-from = "f11df3715189489c7b228d7f8480a8852329b408"
-to = "0c2814db22c339a93f22a8346a338d5366517d72"
-tag = "v495"
-symbols = ["bittensor.intents._root_claim_fee.RootClaimAdmission", "bittensor.intents._root_claim_fee.RootClaimAdmission.blocks", "bittensor.intents._root_claim_fee.RootClaimAdmission.queued_new", "bittensor.intents._root_claim_fee.RootClaimAdmission.queued_new_counts", "bittensor.intents._root_claim_fee.RootClaimAdmission.spec_version", "bittensor.intents._root_claim_fee.RootClaimAdmission.too_heavy", "bittensor.intents._root_claim_fee.RootClaimFeeQuote", "bittensor.intents._root_claim_fee.RootClaimFeeQuote.blocks", "bittensor.intents._root_claim_fee.RootClaimFeeQuote.queued_new", "bittensor.intents._root_claim_fee.RootClaimFeeQuote.too_heavy", "bittensor.intents._root_claim_fee._DEBT_SETTLEMENT_BOUND_REF_TIME", "bittensor.intents._root_claim_fee._FUND_SIZED_ROOT_CLAIM_SPEC", "bittensor.intents._root_claim_fee._HOTKEY_CLAIM_COUNTS", "bittensor.intents._root_claim_fee._HOTKEY_CLAIM_COUNT_READS", "bittensor.intents._root_claim_fee._MAX_ROOT_CLAIM_HOTKEY_WORK", "bittensor.intents._root_claim_fee._MAX_ROOT_CLAIM_HOTKEY_WORK_BEFORE_495", "bittensor.intents._root_claim_fee._MIN_ROOT_CLAIM_HOTKEY_WORK", "bittensor.intents._root_claim_fee._admission_blocks", "bittensor.intents._root_claim_fee._existing_network_count", "bittensor.intents._root_claim_fee._flush_quotes_ref_time", "bittensor.intents._root_claim_fee._hotkey_claim_bound_ref_time", "bittensor.intents._root_claim_fee._hotkey_claim_sizing_ref_time", "bittensor.intents._root_claim_fee._quote", "bittensor.intents._root_claim_fee._single_hotkey_claim_counts_queued_rows", "bittensor.intents._root_claim_fee._spent_fee", "bittensor.intents._root_claim_fee.root_claim_admission", "bittensor.intents._root_claim_fee.root_claim_declared_ref_time", "bittensor.intents._root_claim_fee.root_claim_declared_work", "bittensor.intents._root_claim_fee.root_claim_fee_discount_ref_time", "bittensor.intents._root_claim_fee.root_claim_hotkey_declared_ref_time", "bittensor.intents._root_claim_fee.root_claim_hotkey_fee_discount_ref_time"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/governance.py"
 kind = "ported"
 from = "16aa92faf0386a65aa9f58ad51dca09042339f26"
@@ -163,14 +155,6 @@ from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
 to = "781f7a8f14261edc31e4ef11f248cbcec7cbb997"
 tag = "v491"
 symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.PROXY_TYPE_HELP", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/registration.py"
-kind = "ported"
-from = "50aa6c04a1c50b1308829115b8e07cf5d709571c"
-to = "e62eddabebc67c5a857c1052789d42eea0740a0d"
-tag = "v495"
-symbols = ["bittensor.intents.registration.ClaimRootWithHotkey", "bittensor.intents.registration._RootClaimIntent", "bittensor.intents.registration._RootClaimIntent._claim_preflight", "bittensor.intents.registration.quote_root_claim_fee", "bittensor.intents.registration.root_claim_admission", "bittensor.intents.registration.root_claim_declared_work", "bittensor.intents.registration.root_claim_reserve"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/weights.py"
@@ -197,25 +181,9 @@ tag = "v494"
 symbols = ["tests.unit.test_cli_commands.test_colored_help_preserves_literal_long_and_short_options"]
 
 [[file]]
-py = "sdk/python/tests/unit/test_intents_table.py"
-kind = "ported"
-from = "bb18ed8f10f037a48ed6c6b1feb658445191819b"
-to = "404691c5884514f8497c0d89cddadb6bd6d0299f"
-tag = "v495"
-symbols = ["tests.unit.test_intents_table.TestRootClaimOnUnstake", "tests.unit.test_intents_table.TestRootClaimOnUnstake.test_embedded_claim_uses_the_admission_limit_of_runtime_495"]
-
-[[file]]
 py = "sdk/python/tests/unit/test_null_weights.py"
 kind = "ported"
 from = "1124806dc21da09bacae14cd7e4ba90951de924a"
 to = "51cd1e5900ec798b5a76d9bd48e75fe9cd25f411"
 tag = "v495"
 symbols = ["tests.unit.test_null_weights.test_conform_enforces_the_null_row_cap", "tests.unit.test_null_weights.test_null_effective_minimum_allows_capped_row_and_rejects_shorter_row", "tests.unit.test_null_weights.test_null_row_above_the_cap_is_rejected_before_signing_or_encrypting", "tests.unit.test_null_weights.test_weight_preflight_effective_minimum_matches_runtime", "tests.unit.test_null_weights.test_weight_preflight_row_cap_matches_runtime"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_root_claim_fee.py"
-kind = "ported"
-from = "94ee9459724c56ca3344f81fe9f49822ccad1e06"
-to = "d7a10cf714c0d807bc4450792c719d2fff1e4758"
-tag = "v495"
-symbols = ["tests.unit.test_root_claim_fee.ClaimRoot", "tests.unit.test_root_claim_fee.ClaimRootWithHotkey", "tests.unit.test_root_claim_fee._HOTKEY_CLAIM", "tests.unit.test_root_claim_fee._NODE_QUOTES", "tests.unit.test_root_claim_fee._RecordingSubstrate", "tests.unit.test_root_claim_fee._RecordingSubstrate.__init__", "tests.unit.test_root_claim_fee._RecordingSubstrate.query", "tests.unit.test_root_claim_fee._RecordingSubstrate.query_map", "tests.unit.test_root_claim_fee._RecordingSubstrate.runtime_call", "tests.unit.test_root_claim_fee._RecordingSubstrate.spec_version", "tests.unit.test_root_claim_fee._quoted_charged_ref_time", "tests.unit.test_root_claim_fee._quoted_declared_ref_time", "tests.unit.test_root_claim_fee._quoted_discount_ref_time", "tests.unit.test_root_claim_fee._seed_single_fund", "tests.unit.test_root_claim_fee.test_admission_reads_the_fund_and_the_runtime_version_at_one_block", "tests.unit.test_root_claim_fee.test_charged_allowance_is_the_same_for_both_claim_paths", "tests.unit.test_root_claim_fee.test_discount_model_matches_the_release_node_quotes", "tests.unit.test_root_claim_fee.test_plan_blocks_a_fund_that_only_the_old_runtime_refuses", "tests.unit.test_root_claim_fee.test_queued_credits_count_from_runtime_495_only", "tests.unit.test_root_claim_fee.test_single_hotkey_admission_counts_queued_credits_that_open_rows", "tests.unit.test_root_claim_fee.test_single_hotkey_admission_covers_full_subnet_limit_plus_root_basket", "tests.unit.test_root_claim_fee.test_single_hotkey_admission_uses_the_rules_of_the_runtime_version", "tests.unit.test_root_claim_fee.test_single_hotkey_declared_weight_follows_the_fund_size", "tests.unit.test_root_claim_fee.test_single_hotkey_limit_follows_the_runtime_version"]

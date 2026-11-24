@@ -363,6 +363,8 @@ async fn claim_previews<V: View + ?Sized>(
     }
 }
 
+// The spent estimate excludes actual flush work, fund counts, and deferred
+// debt settlement. The node's charged allowance still caps the estimate.
 fn spent_fee(
     reserved: Balance<Tao>,
     hotkeys: u64,
@@ -1285,6 +1287,68 @@ mod tests {
         Ok(quote(&cx, &admitted, &reserved, true).await?)
     }
 
+    // The SDK takes the charged fee from the node, which also computes the
+    // fund-sized declaration. Model that declaration here for parity checks.
+    fn fund_declared_ref_time(rows: u64, queued: u64, new_rows: u64) -> u128 {
+        const READ: u128 = 25_000_000;
+        const WRITE: u128 = 100_000_000;
+        const MAX_BASKET_ROWS: u64 = 256;
+        let flush = |quotes: u64| {
+            u128::from(quotes) * (10_000_000 + 4 * READ)
+                + u128::from(quotes.min(MAX_BASKET_ROWS)) * 7 * READ
+        };
+        let sizing = |rows, queued| {
+            if rows == 0 && queued == 0 {
+                30 * READ
+            } else {
+                u128::from(2 * (rows + queued + 2) + 10) * READ + WRITE
+            }
+        };
+        let bound = |units, queued| {
+            let quotes = if queued == 0 {
+                0
+            } else {
+                4 * queued + 2 * units
+            };
+            claim_root_ref_time(units + 2 * queued)
+                + claim_root_scan_ref_time(units)
+                + flush(quotes)
+        };
+        let debt = u128::from(MAX_WORK + 3) * (READ + WRITE);
+        let units = 1 + rows + new_rows;
+        if units > MAX_HOTKEY_WORK {
+            let ceiling_rows = MAX_HOTKEY_WORK - 1;
+            return bound(MAX_HOTKEY_WORK, ceiling_rows)
+                + sizing(ceiling_rows, ceiling_rows)
+                + debt;
+        }
+        const FLOOR_UNITS: u64 = 4;
+        let floor = claim_root_ref_time(2 * FLOOR_UNITS)
+            + claim_root_scan_ref_time(FLOOR_UNITS)
+            + flush(6 * FLOOR_UNITS)
+            + sizing(FLOOR_UNITS, FLOOR_UNITS);
+        floor.max(bound(units, queued) + sizing(rows, queued)) + debt
+    }
+
+    // pyt: unit/test_root_claim_fee.py::test_single_hotkey_declared_weight_follows_the_fund_size
+    #[test]
+    fn hotkey_claim_declaration_has_the_runtime_floor_ceiling_and_fee_allowance() {
+        let floor = fund_declared_ref_time(0, 0, 0);
+        let ceiling = fund_declared_ref_time(257, 257, 0);
+        assert_eq!(floor, 67_319_612_996);
+        assert_eq!(ceiling, 2_477_436_331_766);
+        assert_eq!(fund_declared_ref_time(1, 0, 0), floor);
+        assert_eq!(fund_declared_ref_time(258, 0, 0), ceiling);
+        assert_eq!(fund_declared_ref_time(200, 58, 58), ceiling);
+        let held = fund_declared_ref_time(129, 0, 0);
+        let with_queue = fund_declared_ref_time(129, 128, 0);
+        assert!(floor < held && held < with_queue && with_queue < ceiling);
+        assert_eq!(
+            charged_ref_time(MAX_WORK),
+            charged_ref_time(MAX_HOTKEY_WORK)
+        );
+    }
+
     #[test]
     fn weight_model_matches_recorded_release_node_quotes_and_rounding() -> anyhow::Result<()> {
         // pyt: unit/test_root_claim_fee.py::test_reserved_fallback_charges_the_fee_allowance_not_the_envelope
@@ -1343,20 +1407,7 @@ mod tests {
             let declared_call = |input: &NodeQuoteLimit| match input {
                 NodeQuoteLimit::Fixed(limit) => (claim_ref_time(*limit, quotes, rows), *limit),
                 NodeQuoteLimit::FundSized(FundSizedQuote::ClaimRootWithHotkey) => {
-                    // A validator without a fund declares the four-unit floor. It includes
-                    // the queue stability reads, two counts, and the debt settlement bound.
-                    let units = FEE_ALLOWANCE;
-                    let flush = u128::from(6 * units) * (10_000_000 + 11 * read);
-                    let sizing = u128::from(2 * (2 * units + 2) + 10) * read + write;
-                    let debt = u128::from(MAX_WORK + 3) * (read + write);
-                    (
-                        claim_root_ref_time(2 * units)
-                            + claim_root_scan_ref_time(units)
-                            + flush
-                            + sizing
-                            + debt,
-                        MAX_HOTKEY_WORK,
-                    )
+                    (fund_declared_ref_time(0, 0, 0), MAX_HOTKEY_WORK)
                 }
             };
             for input in &node.limits {
@@ -1739,6 +1790,7 @@ mod tests {
         Ok(())
     }
 
+    // pyt: unit/test_root_claim_fee.py::test_admission_reads_the_fund_and_the_runtime_version_at_one_block
     #[tokio::test]
     async fn single_hotkey_admission_uses_the_pinned_spec_and_counts_only_new_rows()
     -> anyhow::Result<()> {
@@ -1748,7 +1800,7 @@ mod tests {
             (495, 200, 57, 258, 57, false),
             (495, 200, 58, 258, 58, true),
         ] {
-            let (_chain, client, snapshot) = fixture(|state| {
+            let (chain, client, snapshot) = fixture(|state| {
                 set_claim_test_runtime(state, spec)?;
                 state.seed_runtime(
                     "BetaBasketRuntimeApi",
@@ -1769,11 +1821,20 @@ mod tests {
                 Ok(())
             })
             .await?;
+            let hash = snapshot.block().hash;
+            let start = chain.requests().len();
             let view = RecordingView::new(snapshot);
             let admitted = admission(&view, CLAIMANT, Some(HOTKEY)).await?;
             assert_eq!(admitted.limit, limit, "spec {spec}");
             assert_eq!(admitted.queued_new, new_rows, "spec {spec}");
             assert_eq!(!admitted.blocks()?.is_empty(), blocked, "spec {spec}");
+            let versions: Vec<_> = chain.requests()[start..]
+                .iter()
+                .filter(|request| request.method == "state_getRuntimeVersion")
+                .map(|request| request.params.clone())
+                .collect();
+            assert_eq!(versions, [json!([format!("0x{}", hex::encode(hash.0))])]);
+            assert_eq!(view.block_hashes(), BTreeSet::from([hash]));
             assert_eq!(
                 view.touches()
                     .iter()

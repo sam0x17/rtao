@@ -1493,7 +1493,16 @@ mod tests {
     #[tokio::test]
     async fn merged_claim_previews_preserve_admission_dust_legacy_and_financial_fields()
     -> anyhow::Result<()> {
-        let (chain, client, snapshot) = fixture(|_| Ok(())).await?;
+        let (chain, client, snapshot) = fixture(|state| {
+            state.runtime = Arc::new(rtao_core::runtime::Runtime::parse(
+                include_bytes!("../../../vendor/metadata/finney/494.v15.scale"),
+                494,
+                2,
+                42,
+            )?);
+            Ok(())
+        })
+        .await?;
         for (intent, expected_warning) in [
             (
                 Box::new(remove(
@@ -1579,7 +1588,11 @@ mod tests {
             state.seed_runtime(
                 "BetaBasketRuntimeApi",
                 "get_validator_basket",
-                json!((0..130).map(|_| json!([1, 1, 1])).collect::<Vec<_>>()),
+                json!(
+                    (0u16..130)
+                        .map(|netuid| json!([netuid, 1, 1]))
+                        .collect::<Vec<_>>()
+                ),
             )
         })?;
         let denied = inspect(&intent, &client, &snapshot, &built.call).await?;
@@ -1597,10 +1610,18 @@ mod tests {
     }
 
     // pyt: unit/test_intents_table.py::TestRootClaimOnUnstake::test_embedded_claim_enforces_admission_in_plan_and_shielded_submit
+    // pyt: unit/test_intents_table.py::TestRootClaimOnUnstake::test_embedded_claim_uses_the_admission_limit_of_runtime_495
     #[tokio::test]
     async fn embedded_root_claim_families_enforce_public_plan_and_shield_admission()
     -> anyhow::Result<()> {
-        const EXPECTED: &str = "root claim exceeds the 130-unit admission limit (1 root hotkey + 257 basket holdings = 258); the claim cannot be admitted until this basket's work is reduced";
+        const EXPECTED: &str = "root claim exceeds the 258-unit admission limit (1 root hotkey + 258 basket holdings = 259); the claim cannot be admitted until this basket's work is reduced";
+        let basket = |holdings| {
+            json!(
+                (0u16..holdings)
+                    .map(|netuid| json!([netuid, 1, 1]))
+                    .collect::<Vec<_>>()
+            )
+        };
         let mut sweep = vec![7, 83];
         sweep.extend_from_slice(HOTKEY.as_bytes());
         for (intent, follow_up) in [
@@ -1650,17 +1671,7 @@ mod tests {
                     &[json!(ORIGIN)],
                     json!({"data":{"free":1_000_000_000_000u64}}),
                 )?;
-                // Keep all257 distinct subnet holdings with valid native
-                // (NetUid, shares, balance) tuples instead of Python's pairs.
-                state.seed_runtime(
-                    "BetaBasketRuntimeApi",
-                    "get_validator_basket",
-                    json!(
-                        (0u16..257)
-                            .map(|netuid| json!([netuid, 1, 1]))
-                            .collect::<Vec<_>>()
-                    ),
-                )?;
+                state.seed_runtime("BetaBasketRuntimeApi", "get_validator_basket", basket(257))?;
                 state.seed_runtime(
                     "BetaBasketRuntimeApi",
                     "get_basket_payout",
@@ -1672,16 +1683,16 @@ mod tests {
             let keys = PublicClaimKeys::new(ORIGIN);
             let executor = Executor::new(client.clone());
             let outcome = async {
-                let plan = executor
-                    .plan_dyn(
-                        intent.as_ref(),
-                        &keys,
-                        &PlanOptions {
-                            deadline: Some(Duration::from_secs(5)),
-                            ..Default::default()
-                        },
-                    )
-                    .await?;
+                let options = PlanOptions {
+                    deadline: Some(Duration::from_secs(5)),
+                    ..Default::default()
+                };
+                let admitted = executor.plan_dyn(intent.as_ref(), &keys, &options).await?;
+                assert!(admitted.ok(), "{:?}", admitted.violations);
+                chain.mutate_state(|state| {
+                    state.seed_runtime("BetaBasketRuntimeApi", "get_validator_basket", basket(258))
+                })?;
+                let plan = executor.plan_dyn(intent.as_ref(), &keys, &options).await?;
                 assert_eq!(plan.op, intent.spec().name);
                 assert_eq!(plan.call().as_bytes(), claim_batch(&follow_up));
                 assert_eq!(plan.signer, SignerRole::Coldkey);

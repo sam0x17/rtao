@@ -10980,7 +10980,7 @@
         "rust": [
           "rtao_intents::root_claim"
         ],
-        "synced_blob": "f11df3715189489c7b228d7f8480a8852329b408"
+        "synced_blob": "0c2814db22c339a93f22a8346a338d5366517d72"
       },
       {
         "kind": "ported",
@@ -11192,7 +11192,7 @@
           "rtao_intents::{registration,registration_pow,root_claim,registration_swap}",
           "rtao_cli::context::registration"
         ],
-        "synced_blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c"
+        "synced_blob": "e62eddabebc67c5a857c1052789d42eea0740a0d"
       },
       {
         "kind": "generated",
@@ -12290,7 +12290,7 @@
           "crates/rtao-intents/src/staking_claims.rs",
           "crates/rtao-intents/src/children.rs"
         ],
-        "synced_blob": "bb18ed8f10f037a48ed6c6b1feb658445191819b"
+        "synced_blob": "404691c5884514f8497c0d89cddadb6bd6d0299f"
       },
       {
         "kind": "oracle-only",
@@ -12416,7 +12416,7 @@
         "rust": [
           "rtao_intents::root_claim::tests"
         ],
-        "synced_blob": "94ee9459724c56ca3344f81fe9f49822ccad1e06"
+        "synced_blob": "d7a10cf714c0d807bc4450792c719d2fff1e4758"
       },
       {
         "kind": "ported",

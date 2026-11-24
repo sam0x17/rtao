@@ -2122,8 +2122,8 @@ notes = "Source reconciliation 2026-10-15: Complete pinned helper and all eleven
 py = "sdk/python/bittensor/intents/_root_claim_fee.py"
 rs = ["rtao_intents::root_claim"]
 kind = "ported"
-synced_blob = "f11df3715189489c7b228d7f8480a8852329b408"
-synced_tag = "v494"
+synced_blob = "0c2814db22c339a93f22a8346a338d5366517d72"
+synced_tag = "v495"
 milestone = "M5"
 notes = "v484 source reconciliation: Raise single-hotkey admission envelope from 129 to 130; retain inclusive work counting, four-unit charged allowance, coldkey-wide 256 envelope, refunds and pre-signing hard stops. Rust AST extractor authenticates updated quotes; native boundary test accepts 129 holdings plus one hotkey and refuses 130 holdings before fee reads. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
 
@@ -2284,8 +2284,8 @@ notes = "v482 source mapping 2026-10-22: Adds Validate/Weights, HOTKEY_PROXY_TYP
 py = "sdk/python/bittensor/intents/registration.py"
 rs = ["rtao_intents::{registration,registration_pow,root_claim,registration_swap}", "rtao_cli::context::registration"]
 kind = "ported"
-synced_blob = "50aa6c04a1c50b1308829115b8e07cf5d709571c"
-synced_tag = "v494"
+synced_blob = "e62eddabebc67c5a857c1052789d42eea0740a0d"
+synced_tag = "v495"
 milestone = "M4–M5"
 notes = "v482 source mapping 2026-10-22: Only descriptions change: pool-side emission flag initially true and owner start_call still gates activation. Call shapes and policy declarations remain unchanged under normal extraction; orchestration is not a chain scheduler. Consumers: rtao_intents::registration; rtao_neuron::owner_ops. Exact source/output identities are in parity/v482-sources.json; independent semantic review of the inherited production port remains OPEN. No runtime, oracle or milestone acceptance is established. v484: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v484-sources.json; no oracle/runtime claim. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim."
 
@@ -3120,8 +3120,8 @@ rs = [
   "crates/rtao-intents/src/children.rs",
 ]
 kind = "ported"
-synced_blob = "bb18ed8f10f037a48ed6c6b1feb658445191819b"
-synced_tag = "v494"
+synced_blob = "404691c5884514f8497c0d89cddadb6bd6d0299f"
+synced_tag = "v495"
 milestone = "the milestone of the code each tests"
 notes = "v484 source reconciliation: Expected single-hotkey admission error changes to 130 units. Native embedded-claim and pre-signing refusal fixtures use the new bound; recovery/journal paths remain unchanged. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-134): required Shield routes plan both transactions' fees and gamma intents plan with seeded deposits (rtao-intents intent_plans::all_86_catalog_operations_plan_with_fake_chain)."
 
@@ -3219,8 +3219,8 @@ notes = "Source reconciliation 2026-10-15: all nine test functions and all 103 p
 py = "sdk/python/tests/unit/test_root_claim_fee.py"
 rs = ["rtao_intents::root_claim::tests"]
 kind = "ported"
-synced_blob = "94ee9459724c56ca3344f81fe9f49822ccad1e06"
-synced_tag = "v494"
+synced_blob = "d7a10cf714c0d807bc4450792c719d2fff1e4758"
+synced_tag = "v495"
 milestone = "the milestone of the code each tests"
 notes = "v484 source reconciliation: Review all fixture changes: renamed release-node quote test, adjusted weights, new inclusive 130-unit boundary and updated hard-stop inputs. Keep finite function inventory guard at exactly 34 with explicit new function; normal AST extraction preserves fee/source provenance. Native claim tests consume regenerated fixtures. Exact identities and limitations: parity/v484-sources.json and docs/compat/v484-upgrade.md. v486: exact upstream blob unchanged; prior source scope carried forward, with normal producer checks. See parity/v486-sources.json; no oracle/runtime claim. v488 (D-134, D-149): the shielded claim reserve is quoted from the actual call (rtao-client shield::carrier_probe_is_sized_from_the_actual_inner_call_and_does_not_mutate_nonce) and fee probes price the signer's own scheme (rtao-client authority::fee_probes_price_the_signing_scheme_proof_length, rtao-intents authority_execution); the two PROTECTED_REGRESSION comments change no behavior. Partial: the ML-DSA root-claim policy case is covered generally, not for claim_root."
 

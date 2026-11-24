@@ -173,8 +173,7 @@ fn all_catalog_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip(
             let annotation = field.annotation.unwrap_or("");
             let value = if field.name.ends_with("_ss58") {
                 json!(address)
-            } else if field.name == "call_hash" {
-                // Proxy announcement constructors require a Blake2-256 hash.
+            } else if matches!(field.name, "call_hash" | "commit_hash") {
                 json!(format!("0x{}", "11".repeat(32)))
             } else if annotation == "Money" {
                 json!("1.000000001")
@@ -194,6 +193,10 @@ fn all_catalog_interfaces_preserve_defaults_specs_field_sets_and_tool_roundtrip(
         if matches!(spec.name, "set_weights" | "commit_weights") {
             args.insert("uids".into(), json!([0]));
             args.insert("weights".into(), json!([1.0]));
+        }
+        if spec.name == "set_commit_burn" {
+            args.insert("name".into(), json!("enabled"));
+            args.insert("value".into(), json!(false));
         }
         if spec.name == "pow_register" {
             args.insert("work_hex".into(), json!("00".repeat(32)));
