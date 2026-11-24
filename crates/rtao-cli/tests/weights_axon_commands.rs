@@ -239,7 +239,7 @@ fn weights_native_ranges_duplicates_raw_syntax_and_nonfinite_values_refuse() -> 
 }
 
 #[test]
-fn legacy_reveal_has_independent_salt_and_no_mechanism_or_raw_options() -> TestResult {
+fn legacy_reveal_preserves_salt_and_mechanism() -> TestResult {
     let parsed = tree().try_get_matches_from([
         "rtao",
         "weights",
@@ -254,31 +254,32 @@ fn legacy_reveal_has_independent_salt_and_no_mechanism_or_raw_options() -> TestR
         "7,,65_535,",
         "--version-key",
         "9",
+        "--mechid",
+        "1",
     ])?;
     let request = request(&parsed)?;
     assert_eq!(request.op, "reveal_weights");
     assert_eq!(request.args["salt"], json!([7, 65535]));
     assert_eq!(request.args["version_key"], json!(9));
-    for option in ["--raw-u16", "--mechid"] {
-        assert!(
-            tree()
-                .try_get_matches_from([
-                    "rtao",
-                    "weights",
-                    "reveal",
-                    "--netuid",
-                    "3",
-                    "--uids",
-                    "1",
-                    "--weights",
-                    "1",
-                    "--salt",
-                    "1",
-                    option,
-                ])
-                .is_err()
-        );
-    }
+    assert_eq!(request.args["mechid"], json!(1));
+    assert!(
+        tree()
+            .try_get_matches_from([
+                "rtao",
+                "weights",
+                "reveal",
+                "--netuid",
+                "3",
+                "--uids",
+                "1",
+                "--weights",
+                "1",
+                "--salt",
+                "1",
+                "--raw-u16",
+            ])
+            .is_err()
+    );
     Ok(())
 }
 
@@ -517,6 +518,8 @@ async fn operator_commands_submit_semantic_bytes_with_hotkey_and_requested_era()
             "7,8",
             "--version-key",
             "9",
+            "--mechid",
+            "1",
         ],
         vec![
             "rtao",
@@ -584,8 +587,9 @@ async fn operator_commands_submit_semantic_bytes_with_hotkey_and_requested_era()
                 vec![21845, 43690, 65535],
                 9,
             ),
-            "reveal_weights" => rtao_runtime::calls::subtensor_module::reveal_weights(
+            "reveal_weights" => rtao_runtime::calls::subtensor_module::reveal_mechanism_weights(
                 NETUID,
+                MECHID,
                 vec![2, 0],
                 vec![16384, 65535],
                 vec![7, 8],

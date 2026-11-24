@@ -33,6 +33,14 @@ fn version_key() -> Arg {
         .help("Weights version key; leave 0 unless the subnet owner requires a value.")
 }
 
+fn mechanism() -> Arg {
+    Arg::new("mechid")
+        .long("mechid")
+        .default_value("0")
+        .value_parser(clap::value_parser!(u8))
+        .help("Mechanism index within the subnet; 0 is the default.")
+}
+
 fn period() -> Arg {
     Arg::new("__period")
         .long("period")
@@ -69,13 +77,7 @@ fn weighted(name: &'static str, description: &'static str) -> Command {
                     .value_parser(clap::value_parser!(std::path::PathBuf))
                     .help("Regular JSON file mapping UID to weight (at most 16 MiB); supports full 2,500-UID rows."),
             )
-            .arg(
-                Arg::new("mechid")
-                    .long("mechid")
-                    .default_value("0")
-                    .value_parser(clap::value_parser!(u8))
-                    .help("Mechanism index within the subnet; 0 is the default."),
-            )
+            .arg(mechanism())
             .arg(version_key())
             .arg(period()),
         Tier::Tx,
@@ -123,7 +125,7 @@ pub fn command() -> Command {
                 .about("Reveal a legacy salt-based commit using its original inputs.")
                 .long_about(concat!(
                     "Reveal previously committed weights.\n\n",
-                    "Legacy salt-based commit-reveal: the uids, weights, salt, and version key ",
+                    "Legacy salt-based commit-reveal: the mechanism, uids, weights, salt, and version key ",
                     "must reproduce the earlier commit exactly or the reveal fails. Timelocked ",
                     "commits made by `weights set`/`weights commit` reveal automatically and do ",
                     "not need this command."
@@ -137,6 +139,7 @@ pub fn command() -> Command {
                 )
                 .arg(csv("salt", "Comma-separated salt values used at commit time.").required(true))
                 .arg(version_key().help("Weights version key used at commit time."))
+                .arg(mechanism().help("Mechanism index used at commit time; defaults to 0."))
                 .arg(period()),
             Tier::Tx,
         ))
@@ -230,10 +233,6 @@ fn inputs(
         );
     }
     args.insert("raw_u16".into(), json!(raw));
-    args.insert(
-        "mechid".into(),
-        json!(matches.get_one::<u8>("mechid").copied().unwrap_or(0)),
-    );
     Ok(args)
 }
 
@@ -294,6 +293,10 @@ pub fn request_with_reader(
     args.insert(
         "version_key".into(),
         json!(matches.get_one::<u64>("version_key").copied().unwrap_or(0)),
+    );
+    args.insert(
+        "mechid".into(),
+        json!(matches.get_one::<u8>("mechid").copied().unwrap_or(0)),
     );
     let request = TxRequest {
         op,
