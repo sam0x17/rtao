@@ -39,6 +39,7 @@ version = "0.490.1"
 repo = "https://github.com/RaoFoundation/subtensor.git"
 rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 path = "support/macros"
+checksum = "a2dc5cf1c92de34f92a65acfe2fec1453da1fdf65c484f1fd82d2d285538af95"
 
 [publish.fips204]
 package = "rtao-upstream-fips204"
@@ -78,6 +79,7 @@ version = "0.490.1"
 repo = "https://github.com/sam0x17/subtensor.git"
 rev = "d7fd8762625a93b9837cde28d496b0819a976f0e"
 path = "sdk/bittensor-core"
+checksum = "21cfb73ec1f1b7aae5be4e749c23fbd6396a9eeb9416d091e393f756255ec16e"
 
 [parity]
 tag = "v495"
