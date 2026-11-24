@@ -110,7 +110,7 @@ fn main() -> Result<()> {
   cargo xtask core-surface [--check]\n\
   cargo xtask staged --check\n\
   cargo xtask lint-upstream\n\
-  cargo xtask forks check|write|refresh|verify-packaged|verify-published|order (the rtao-upstream-* packages, D-183)\n\
+  cargo xtask forks check|write|refresh|verify-packaged [key ...]|verify-published|order (the rtao-upstream-* packages, D-183)\n\
   cargo xtask crate-inputs [--check] (copies of workspace files that published crates read)\n\n\
 Ordinary pin --check verifies committed pins without modifying files.\n\
 With --parity --check, pin checks finalized release provenance and refreshes image digests."

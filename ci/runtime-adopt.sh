@@ -1385,11 +1385,12 @@ forks_plan() {
 }
 
 # Read-only job: list what awaits publication; when anything does, check the
-# generated packages against the revisions, package all six (the verifying
-# build, against a local overlay of the unpublished ones), verify each archive
-# against its revision and write the plan.
+# generated packages against the revisions and build the unpublished pending
+# packages together. A published dependency must resolve from the registry
+# so the planned archive uses the same lockfile checksums as the upload job.
 forks_package() {
-  local out=${1:?forks-package <out-dir>} checkout=${RTAO_ADOPT_CHECKOUT:-$root} key args=()
+  local out=${1:?forks-package <out-dir>} checkout=${RTAO_ADOPT_CHECKOUT:-$root}
+  local key package version found rows keys=() unpublished=() held=()
   : "${RTAO_TEMP_ROOT:?task-scoped scratch}"
   mkdir -p "$out"
   cd "$checkout"
@@ -1401,10 +1402,24 @@ forks_package() {
   echo "awaiting publication: $(jq -r 'map("\(.package) \(.version)") | join(", ")' "$out/pending.json")"
   xtask forks check
   xtask forks order >"$out/order.txt"
-  for key in "${fork_order[@]}"; do args+=(-p "rtao-upstream-$key"); done
   # forks verify-packaged reads the archives under the workspace target/.
-  CARGO_TARGET_DIR=$checkout/target cargo package --locked "${args[@]}"
-  xtask forks verify-packaged | tee "$out/verified.txt"
+  rows=$(jq -r '.[] | [.key, .package, .version] | @tsv' "$out/pending.json")
+  while IFS=$'\t' read -r key package version; do
+    keys+=("$key")
+    found=$(index_checksum "$package" "$version") || die "crates.io's index could not be read for $package"
+    if [[ -n "$found" ]]; then
+      held+=("$package")
+    else
+      unpublished+=(-p "$package")
+    fi
+  done <<<"$rows"
+  if ((${#unpublished[@]})); then
+    CARGO_TARGET_DIR=$checkout/target cargo package --locked "${unpublished[@]}"
+  fi
+  for package in "${held[@]}"; do
+    CARGO_TARGET_DIR=$checkout/target cargo package --locked --no-verify -p "$package"
+  done
+  xtask forks verify-packaged "${keys[@]}" | tee "$out/verified.txt"
   forks_plan upstream.toml "$out/order.txt" "$out/verified.txt" "$(git rev-parse HEAD)" "$out/plan.json"
   forks_held "$out/plan.json"
 }

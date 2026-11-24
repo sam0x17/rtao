@@ -672,7 +672,14 @@ pins_with() {
     { print }
   ' "$3"
 }
-pins=$root/upstream.toml
+pins=$work/pins-published.toml
+awk '
+  /^\[/ { inside = ($0 ~ /^\[publish\.[^]]+\]$/) }
+  inside && $1 == "version" { $0 = "version = \"0.490.0\"" }
+  inside && $1 == "checksum" { next }
+  { print }
+  inside && $1 == "path" { printf "checksum = \"%064d\"\n", 1 }
+' "$root/upstream.toml" >"$pins"
 pins_core=$work/pins-core.toml
 pins_core_bump=$work/pins-core-bump.toml
 pins_with core 0.490.1 "$pins" >"$pins_core"
@@ -730,9 +737,18 @@ for argument in "$@"; do
 done
 case "$1" in
   package)
+    echo "$*" >>"$d/package-args"
     mkdir -p "$CARGO_TARGET_DIR/package"
     if [[ -f "$d/repack" ]]; then source=$d/repack; else source=$d/crate; fi
     cp "$source" "$CARGO_TARGET_DIR/package/$package-$(cat "$d/version").crate"
+    ;;
+  run)
+    case "$*" in
+      *'-- forks check') ;;
+      *'-- forks order') cat "$d/order.txt" ;;
+      *'-- forks verify-packaged macros core') cat "$d/verified.txt" ;;
+      *) exit 2 ;;
+    esac
     ;;
   publish)
     response=$(head -1 "$d/responses" 2>/dev/null || true)
@@ -781,6 +797,28 @@ if [[ -f "$FAKE_CARGO/index-down" ]]; then : >"$out"; printf 503; exit 0; fi
 if [[ -f "$FAKE_CARGO/index-$name" ]]; then cp "$FAKE_CARGO/index-$name" "$out"; printf 200; else : >"$out"; printf 404; fi
 CURL
 chmod +x "$pub/bin/cargo" "$pub/bin/curl"
+
+partial=$pub/partial
+mkdir -p "$partial/state" "$partial/tmp"
+git clone -q "$pub/checkout" "$partial/checkout"
+pins_with macros 0.490.1 "$pins_core" >"$partial/checkout/upstream.toml"
+cp "$work/order.txt" "$partial/state/order.txt"
+echo 0.490.1 >"$partial/state/version"
+printf 'core archive' >"$partial/state/crate"
+printf '{"vers":"0.490.1","cksum":"%s"}\n' "$core_sha" >"$partial/state/index-rtao-upstream-macros"
+printf 'rtao-upstream-macros 0.490.1: packaged archive verified, sha256 %s\nrtao-upstream-core 0.490.1: packaged archive verified, sha256 %s\n' \
+  "$core_sha" "$core_sha" >"$partial/state/verified.txt"
+if FAKE_CARGO=$partial/state PATH=$pub/bin:$PATH RTAO_ADOPT_CHECKOUT=$partial/checkout RTAO_TEMP_ROOT=$partial/tmp \
+  bash "$script" forks-package "$partial/out" >"$partial/log" 2>&1 &&
+  diff -u <(printf '%s\n' 'package --locked -p rtao-upstream-core' 'package --locked --no-verify -p rtao-upstream-macros') \
+    "$partial/state/package-args" &&
+  jq -e '[.entries[].key] == ["macros", "core"]' "$partial/out/plan.json" >/dev/null; then
+  echo 'ok   package planning keeps published dependencies out of the overlay'
+else
+  echo "FAIL package planning with a published dependency: $(tail -3 "$partial/log" | tr '\n' ' ')"
+  failures=$((failures + 1))
+fi
+
 # publish_case <name> <expected: pass|refuse> <responses> <index line or ""> <crate bytes> <jq predicate on published.json> [plan edit]
 publish_case() {
   local d=$pub/$1 got=refuse

@@ -1602,10 +1602,17 @@ pub(crate) fn verify_published(root: &Path, pins: &DocumentMut, scratch: &Path) 
 
 /// Before publishing: compare the `.crate` files `cargo package` wrote under
 /// `target/package` with the generated packages, and print each SHA256.
-pub(crate) fn verify_packaged(root: &Path, pins: &DocumentMut, scratch: &Path) -> Result<()> {
+fn verify_packaged(root: &Path, pins: &DocumentMut, scratch: &Path, keys: &[&str]) -> Result<()> {
+    let selected = keys
+        .iter()
+        .map(|key| fork(key).map(|fork| fork.key))
+        .collect::<Result<BTreeSet<_>>>()?;
     let packages = generate(root, pins)?;
     fs::create_dir_all(scratch)?;
     for package in &packages {
+        if !selected.is_empty() && !selected.contains(package.fork.key) {
+            continue;
+        }
         let name = package.fork.package();
         let version = version(pins, &package.fork)?;
         let archive = root
@@ -1844,12 +1851,12 @@ pub(crate) fn run(arguments: Vec<String>) -> Result<()> {
             }
             Ok(())
         }
-        ["verify-packaged"] => {
+        ["verify-packaged", keys @ ..] => {
             let scratch = PathBuf::from(
                 std::env::var_os("RTAO_TEMP_ROOT").context("RTAO_TEMP_ROOT is required")?,
             )
             .join("forks-packaged");
-            verify_packaged(root, &read_document(&pins_path)?, &scratch)?;
+            verify_packaged(root, &read_document(&pins_path)?, &scratch, keys)?;
             if scratch.exists() {
                 fs::remove_dir_all(&scratch)?;
             }
@@ -1862,7 +1869,7 @@ pub(crate) fn run(arguments: Vec<String>) -> Result<()> {
             Ok(())
         }
         _ => bail!(
-            "usage: cargo xtask forks check | write | refresh | verify-packaged | verify-published | order"
+            "usage: cargo xtask forks check | write | refresh | verify-packaged [key ...] | verify-published | order"
         ),
     }
 }
