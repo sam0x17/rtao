@@ -129,6 +129,28 @@ impl Snapshot {
         self.client.state_runtime_at(self.block.hash).await
     }
 
+    /// Read storage using the runtime in this block's resulting state.
+    ///
+    /// Returns `None` if the runtime has no such entry. Entries that exist
+    /// follow their metadata's normal default and presence rules.
+    pub async fn storage_in_state<K: KeyArgs + 'static, V: FromStorage>(
+        &self,
+        descriptor: &StorageDescriptor<K, V>,
+        key: K,
+    ) -> Result<Option<V::Out>, ClientError> {
+        let runtime = self.state_runtime().await?;
+        let surface = descriptor.surface();
+        if runtime
+            .storage_entry(surface.pallet, surface.name)
+            .is_none()
+        {
+            return Ok(None);
+        }
+        let mut view = self.clone();
+        view.block.runtime = runtime;
+        view.storage(descriptor, key).await.map(Some)
+    }
+
     /// Borrow the shared client that owns this view's transport.
     pub fn client(&self) -> &Client {
         &self.client

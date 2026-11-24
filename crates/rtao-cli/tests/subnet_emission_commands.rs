@@ -312,7 +312,7 @@ async fn show_json_has_stable_fields_and_human_output_names_every_range() -> Tes
     assert_eq!(
         record["rate_limit"],
         json!({
-            "limit_blocks": 50_400,
+            "limit_blocks": 360,
             "last_change_block": 0,
             "next_allowed_block": 100,
             "blocks_until_allowed": 0,
@@ -413,7 +413,7 @@ async fn show_reports_a_capped_root_share_and_a_closed_window() -> TestResult {
         "validators after root  0.0000%  nothing: raise the validator share",
         "validator floor  > 6.0000%",
         "validator  6.0000% to 50.0000%",
-        "next owner change  block 50,490",
+        "next owner change  block 450",
         "root is exempt",
     ] {
         assert!(human.stdout.contains(needle), "{needle}\n{}", human.stdout);
@@ -432,7 +432,7 @@ async fn show_reports_a_capped_root_share_and_a_closed_window() -> TestResult {
     assert!((record["baseline_root_share"].as_f64().ok_or("baseline")? - 0.06).abs() < 1e-9);
     assert_eq!(record["validator_share_after_root"], json!(0.0));
     assert_eq!(record["min_validator"], json!(ew::parse_share("6%")? + 1));
-    assert_eq!(record["rate_limit"]["next_allowed_block"], json!(50_490));
+    assert_eq!(record["rate_limit"]["next_allowed_block"], json!(450));
     assert_eq!(record["rate_limit"]["owner_can_change_now"], json!(false));
     client.close().await;
     Ok(())
@@ -1441,7 +1441,7 @@ async fn rate_limited_owner_dry_run_is_blocked_with_exit_1() -> TestResult {
         plan["violations"][0]
             .as_str()
             .ok_or("violation")?
-            .contains("next owner change at block 50,490")
+            .contains("next owner change at block 450")
     );
     assert_eq!(
         plan["preview"]["rate_limit"]["owner_can_change_now"],

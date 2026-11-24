@@ -95,10 +95,7 @@ pub const DEFAULT_OWNER: u64 = fraction(11796, 65535);
 /// paid what it would earn at `V0`.
 pub const DEFAULT_VALIDATOR: u64 = (ONE - DEFAULT_OWNER) / 2;
 
-/// How often a subnet owner may change the vector, in blocks (about 7 days).
-///
-/// Root is exempt and a subnet's first change is always allowed. Mirrors the
-/// chain's `SubnetEmissionWeightsRateLimit`.
+/// Owner change interval for runtimes without `SubnetEmissionWeightsRateLimit`.
 pub const OWNER_RATE_LIMIT_BLOCKS: u64 = 50_400;
 /// Nominal block duration used for human wait estimates.
 pub const BLOCK_SECONDS: u64 = 12;
@@ -1229,7 +1226,8 @@ pub fn preview(before: &Weights, after: &Weights, inputs: &RootInputs) -> Previe
 ///
 /// `last_change_block` is the chain's `LastRateLimitedBlock` entry for the
 /// subnet; zero means never changed, which the chain treats as a free first
-/// change. Root is never limited.
+/// change. `limit` is the interval in blocks, with zero disabling the wait.
+/// Root is never limited.
 pub fn rate_limit_status(
     last_change_block: u64,
     current_block: u64,

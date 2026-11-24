@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use futures::TryStreamExt;
 use num_traits::ToPrimitive;
-use rtao_client::{View, ViewExt};
+use rtao_client::{ClientError, Snapshot, View, ViewExt};
 use rtao_core::{DynValue, codec::Value};
 use rtao_primitives::{NetUid, emission_weights as ew};
 use rtao_runtime::{runtime_apis as api, storage as st};
@@ -101,6 +101,17 @@ pub fn emission_weights_rate_limit_key(netuid: NetUid) -> DynValue {
             Value::Str("EmissionWeights".into()),
         ]),
     )]))
+}
+
+/// The owner's wait between emission-weight changes at the pinned block.
+pub async fn emission_weights_rate_limit_blocks(snapshot: &Snapshot) -> Result<u64, ClientError> {
+    Ok(snapshot
+        .storage_in_state(
+            &st::subtensor_module::SUBNET_EMISSION_WEIGHTS_RATE_LIMIT,
+            (),
+        )
+        .await?
+        .unwrap_or(ew::OWNER_RATE_LIMIT_BLOCKS))
 }
 
 /// The live values root's baseline share of a subnet's emission comes from.
@@ -308,6 +319,8 @@ pub struct SubnetEmissionWeights {
     pub block: u64,
     /// Block of the owner's last change, zero when never changed.
     pub last_change_block: u64,
+    /// The chain's limit between owner changes in blocks, or zero to disable it.
+    pub rate_limit_blocks: u64,
 }
 
 impl SubnetEmissionWeights {
@@ -325,11 +338,7 @@ impl SubnetEmissionWeights {
 
     /// When the subnet owner may next change the vector (root is exempt).
     pub fn rate_limit(&self) -> ew::RateLimitStatus {
-        ew::rate_limit_status(
-            self.last_change_block,
-            self.block,
-            ew::OWNER_RATE_LIMIT_BLOCKS,
-        )
+        ew::rate_limit_status(self.last_change_block, self.block, self.rate_limit_blocks)
     }
 
     /// The preview inputs for a change from this vector.
@@ -479,6 +488,7 @@ pub async fn subnet_emission_weights<V: View + ?Sized>(
             (emission_weights_rate_limit_key(netuid),),
         )
         .await?;
+    let rate_limit_blocks = emission_weights_rate_limit_blocks(&snapshot).await?;
     let weights = info.weights;
     let baseline_parts = info.root_baseline_share;
     let root_parts = info.root_share.min(weights[ew::VALIDATOR]);
@@ -507,6 +517,7 @@ pub async fn subnet_emission_weights<V: View + ?Sized>(
         min_validator: ew::min_validator_parts(baseline_parts),
         block: snapshot.block().number,
         last_change_block: last_change,
+        rate_limit_blocks,
     }))
 }
 

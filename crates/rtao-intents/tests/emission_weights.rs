@@ -353,6 +353,7 @@ async fn intent_plan_blocks_inside_the_owner_rate_limit() -> Result<()> {
     state.block = 60_000;
     state.set_finalized(60_000)?;
     let head = state.block;
+    state.seed(&st::SUBNET_EMISSION_WEIGHTS_RATE_LIMIT, (), 360u64)?;
     state.seed(&st::LAST_RATE_LIMITED_BLOCK, (rate_key(),), head - 10)?;
     let (client, fake) = client(state).await?;
     let set = intent(
@@ -372,22 +373,33 @@ async fn intent_plan_blocks_inside_the_owner_rate_limit() -> Result<()> {
     );
     assert!(blocked.contains(&format!(
         "block {}",
-        rtao_primitives::pyfmt::fmt_grouped(u128::from(head - 10 + 50_400))
+        rtao_primitives::pyfmt::fmt_grouped(u128::from(head - 10 + 360))
     )));
     assert!(blocked.contains("root is exempt"));
     assert_eq!(
         plan.preview["rate_limit"]["blocks_until_allowed"],
-        json!(50_390)
+        json!(350)
     );
 
     // The window has passed: allowed again.
     fake.mutate_state(|state| {
         state
-            .seed(&st::LAST_RATE_LIMITED_BLOCK, (rate_key(),), head - 50_400)
+            .seed(&st::LAST_RATE_LIMITED_BLOCK, (rate_key(),), head - 360)
             .unwrap();
     });
     let plan = self::plan(&client, &set).await;
     assert!(plan.ok(), "{:?}", plan.violations);
+    fake.mutate_state(|state| {
+        state
+            .seed(&st::LAST_RATE_LIMITED_BLOCK, (rate_key(),), head)
+            .unwrap();
+        state
+            .seed(&st::SUBNET_EMISSION_WEIGHTS_RATE_LIMIT, (), 0u64)
+            .unwrap();
+    });
+    let plan = self::plan(&client, &set).await;
+    assert!(plan.ok(), "{:?}", plan.violations);
+    assert_eq!(plan.preview["rate_limit"]["limit_blocks"], json!(0));
     client.close().await;
     Ok(())
 }

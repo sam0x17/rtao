@@ -84,6 +84,58 @@ async fn token_symbols_retains_invalid_utf8_as_hex() {
     client.close().await;
 }
 
+#[tokio::test]
+async fn emission_rate_limit_uses_post_upgrade_metadata_at_activation() {
+    use rtao_client::BlockRef;
+    use rtao_core::runtime::Runtime;
+    use rtao_primitives::emission_weights::OWNER_RATE_LIMIT_BLOCKS;
+    use rtao_runtime::storage::subtensor_module as st;
+    use std::sync::Arc;
+
+    let old = Arc::new(
+        Runtime::parse(
+            include_bytes!("../../../vendor/metadata/finney/493.v15.scale"),
+            493,
+            2,
+            42,
+        )
+        .unwrap(),
+    );
+    let new = Runtime::parse(
+        include_bytes!("../../../vendor/metadata/finney/494.v15.scale"),
+        494,
+        2,
+        42,
+    )
+    .unwrap();
+    let mut state = FakeState::try_finney(new).unwrap();
+    state.set_runtime_at(state.block_hash(98).unwrap(), old.clone());
+    state.set_runtime_at(state.block_hash(99).unwrap(), old);
+    state
+        .seed(&st::SUBNET_EMISSION_WEIGHTS_RATE_LIMIT, (), 720u64)
+        .unwrap();
+    let chain = FakeChain::from_state(state);
+    let client = Client::from_rpc(RpcClient::new(chain), config())
+        .await
+        .unwrap();
+    let before = client.at(BlockRef::Number(99)).await.unwrap();
+    let activation = client.at(BlockRef::Number(100)).await.unwrap();
+    assert_eq!(activation.block().runtime.spec_version(), 493);
+    assert_eq!(
+        subnets::emission_weights_rate_limit_blocks(&before)
+            .await
+            .unwrap(),
+        OWNER_RATE_LIMIT_BLOCKS
+    );
+    assert_eq!(
+        subnets::emission_weights_rate_limit_blocks(&activation)
+            .await
+            .unwrap(),
+        720
+    );
+    client.close().await;
+}
+
 // pyt: unit/test_emission_weights.py::test_read_decodes_runtime_payload
 #[tokio::test]
 async fn subnet_emission_weights_decodes_the_runtime_payload_and_live_root_inputs() {
@@ -211,13 +263,11 @@ async fn subnet_emission_weights_decodes_the_runtime_payload_and_live_root_input
             rate.next_allowed_block,
             rate.blocks_until_allowed
         ),
-        (
-            90,
-            90 + ew::OWNER_RATE_LIMIT_BLOCKS,
-            90 + ew::OWNER_RATE_LIMIT_BLOCKS - 100
-        )
+        (90, 450, 350)
     );
     assert!(!rate.owner_can_change_now);
+    assert_eq!(info.rate_limit_blocks, 360);
+    assert_eq!(record["rate_limit_blocks"], json!(360));
     // The root subnet and missing subnets have no vector.
     chain.mutate_state(|state| {
         state

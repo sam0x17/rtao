@@ -386,11 +386,14 @@ fn hours(blocks: u64) -> String {
 
 // py: sdk/python/bittensor/cli/commands/subnet_emission.py:107-116
 fn next_change(rate: &ew::RateLimitStatus) -> (String, String) {
+    if rate.limit_blocks == 0 {
+        return ("now".into(), "the rate limit is disabled".into());
+    }
     if rate.owner_can_change_now {
         let why = if rate.last_change_block == 0 {
             "first change"
         } else {
-            "the weekly window has passed"
+            "the rate limit has passed"
         };
         return (
             "now".into(),

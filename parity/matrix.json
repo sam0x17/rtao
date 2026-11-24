@@ -9825,7 +9825,7 @@
         "rust": [
           "crates/rtao-cli/src/commands/subnet_emission.rs"
         ],
-        "synced_blob": "11788e5fbe76f1daf40faae8ea32beae960382ef"
+        "synced_blob": "b70391fc716cf69b4bd7e56a5ed35111cede9079"
       },
       {
         "kind": "ported",
@@ -10182,7 +10182,7 @@
         "rust": [
           "crates/rtao-primitives/src/emission_weights.rs"
         ],
-        "synced_blob": "4bae9eaffc09442d74252cf9a39df29e0f796c0a"
+        "synced_blob": "8edaa770bbd6fac12e76da28a10df3457fb4085b"
       },
       {
         "kind": "generated",
@@ -11069,7 +11069,7 @@
         "rust": [
           "crates/rtao-intents/src/emission_weights.rs"
         ],
-        "synced_blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f"
+        "synced_blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a"
       },
       {
         "kind": "ported",
@@ -11594,7 +11594,7 @@
           "rtao_reads::reads::m6_root::{subnet, subnets, subnet_tao_flows, subnet_registration_cost}",
           "rtao_reads::generated::{dispatch, interfaces}"
         ],
-        "synced_blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559"
+        "synced_blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d"
       },
       {
         "kind": "ported",
@@ -12180,7 +12180,7 @@
           "crates/rtao-cli/tests/subnet_emission_commands.rs",
           "crates/rtao-cli/tests/generated_commands.rs"
         ],
-        "synced_blob": "1e45c18a8f4da99f95b35c7275a89728b0b9e6a1"
+        "synced_blob": "6bac50300f5ff7e1b0bee03bf16d0a124cb76a89"
       },
       {
         "kind": "ported",

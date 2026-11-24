@@ -6,16 +6,16 @@
 //! with `AdminUtils.sudo_set_subnet_emission_weights_v2`, replacing the whole
 //! split, including gamma shares. The chain enforces the rules
 //! in [`rtao_primitives::emission_weights`] and rate-limits owners to one
-//! change per week per subnet (root is exempt; the first change on a subnet is
+//! change per configured interval per subnet (root is exempt; the first change is
 //! always allowed). Read the current vector and its bounds with the
 //! `subnet_emission_weights` read.
 
 use rtao_client::{View, ViewExt};
 use rtao_primitives::{AccountId, NetUid, emission_weights as ew, pyfmt::fmt_grouped};
 use rtao_reads::reads::subnets::{
-    RootPreservationInputs, SubnetEmissionWeightsInfo, emission_weights_rate_limit_key,
-    gamma_emission_shares, gamma_emission_targets, root_preservation_inputs,
-    subnet_emission_weights_info,
+    RootPreservationInputs, SubnetEmissionWeightsInfo, emission_weights_rate_limit_blocks,
+    emission_weights_rate_limit_key, gamma_emission_shares, gamma_emission_targets,
+    root_preservation_inputs, subnet_emission_weights_info,
 };
 use rtao_runtime::storage::subtensor_module as st;
 use rtao_tx::{BuildCx, Built, Intent, IntentError, IntentPreflight, PreflightCx};
@@ -233,6 +233,7 @@ struct Inputs {
     current: SubnetEmissionWeightsInfo,
     root: RootPreservationInputs,
     last_change_block: u64,
+    rate_limit_blocks: u64,
     block: u64,
     owner: Option<AccountId>,
     gamma_before: BTreeMap<u16, u64>,
@@ -289,10 +290,12 @@ async fn inputs<V: View + ?Sized>(
             st::SUBNET_OWNER.at((netuid,)),
         ))
         .await?;
+    let rate_limit_blocks = emission_weights_rate_limit_blocks(&snapshot).await?;
     Ok(Some(Inputs {
         current,
         root,
         last_change_block,
+        rate_limit_blocks,
         block: snapshot.block().number,
         owner: owner.get().copied(),
         gamma_before,
@@ -388,7 +391,7 @@ impl SetSubnetEmissionWeights {
         let rate = ew::rate_limit_status(
             inputs.last_change_block,
             inputs.block,
-            ew::OWNER_RATE_LIMIT_BLOCKS,
+            inputs.rate_limit_blocks,
         );
         if !rate.owner_can_change_now {
             let hours = rate.blocks_until_allowed as f64 * ew::BLOCK_SECONDS as f64 / 3600.0;

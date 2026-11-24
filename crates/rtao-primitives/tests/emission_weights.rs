@@ -646,6 +646,7 @@ fn rate_limit_status() {
         })
     );
     assert!(ew::rate_limit_status(900, 51_300, ew::OWNER_RATE_LIMIT_BLOCKS).owner_can_change_now);
+    assert!(ew::rate_limit_status(1_000, 1_000, 0).owner_can_change_now);
 }
 
 #[test]

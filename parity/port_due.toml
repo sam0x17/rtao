@@ -61,14 +61,6 @@ tag = "v491"
 symbols = ["bittensor.cli.commands.proxy.app", "bittensor.cli.commands.proxy.cancel_announcement", "bittensor.cli.commands.proxy.execute_announced", "bittensor.cli.commands.proxy.fund_controller", "bittensor.cli.commands.proxy.protect_account", "bittensor.cli.commands.proxy.rotate_controller", "bittensor.cli.commands.proxy.run_cancel", "bittensor.cli.commands.proxy.run_execute_protected", "bittensor.cli.commands.proxy.run_fund", "bittensor.cli.commands.proxy.run_protect", "bittensor.cli.commands.proxy.run_rotate", "bittensor.cli.commands.proxy.run_rotate_finalize", "bittensor.cli.commands.proxy.run_show", "bittensor.cli.commands.proxy.show_protected"]
 
 [[file]]
-py = "sdk/python/bittensor/cli/commands/subnet_emission.py"
-kind = "ported"
-from = "11788e5fbe76f1daf40faae8ea32beae960382ef"
-to = "b70391fc716cf69b4bd7e56a5ed35111cede9079"
-tag = "v495"
-symbols = ["bittensor.cli.commands.subnet_emission._next_change"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/subnets.py"
 kind = "ported"
 from = "b875a85679360670e6425eac88ab830f9994fed8"
@@ -149,28 +141,12 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/emission_weights.py"
-kind = "ported"
-from = "4bae9eaffc09442d74252cf9a39df29e0f796c0a"
-to = "8edaa770bbd6fac12e76da28a10df3457fb4085b"
-tag = "v495"
-symbols = ["bittensor.emission_weights.rate_limit_status"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/_root_claim_fee.py"
 kind = "ported"
 from = "f11df3715189489c7b228d7f8480a8852329b408"
 to = "0c2814db22c339a93f22a8346a338d5366517d72"
 tag = "v495"
 symbols = ["bittensor.intents._root_claim_fee.RootClaimAdmission", "bittensor.intents._root_claim_fee.RootClaimAdmission.blocks", "bittensor.intents._root_claim_fee.RootClaimAdmission.queued_new", "bittensor.intents._root_claim_fee.RootClaimAdmission.queued_new_counts", "bittensor.intents._root_claim_fee.RootClaimAdmission.spec_version", "bittensor.intents._root_claim_fee.RootClaimAdmission.too_heavy", "bittensor.intents._root_claim_fee.RootClaimFeeQuote", "bittensor.intents._root_claim_fee.RootClaimFeeQuote.blocks", "bittensor.intents._root_claim_fee.RootClaimFeeQuote.queued_new", "bittensor.intents._root_claim_fee.RootClaimFeeQuote.too_heavy", "bittensor.intents._root_claim_fee._DEBT_SETTLEMENT_BOUND_REF_TIME", "bittensor.intents._root_claim_fee._FUND_SIZED_ROOT_CLAIM_SPEC", "bittensor.intents._root_claim_fee._HOTKEY_CLAIM_COUNTS", "bittensor.intents._root_claim_fee._HOTKEY_CLAIM_COUNT_READS", "bittensor.intents._root_claim_fee._MAX_ROOT_CLAIM_HOTKEY_WORK", "bittensor.intents._root_claim_fee._MAX_ROOT_CLAIM_HOTKEY_WORK_BEFORE_495", "bittensor.intents._root_claim_fee._MIN_ROOT_CLAIM_HOTKEY_WORK", "bittensor.intents._root_claim_fee._admission_blocks", "bittensor.intents._root_claim_fee._existing_network_count", "bittensor.intents._root_claim_fee._flush_quotes_ref_time", "bittensor.intents._root_claim_fee._hotkey_claim_bound_ref_time", "bittensor.intents._root_claim_fee._hotkey_claim_sizing_ref_time", "bittensor.intents._root_claim_fee._quote", "bittensor.intents._root_claim_fee._single_hotkey_claim_counts_queued_rows", "bittensor.intents._root_claim_fee._spent_fee", "bittensor.intents._root_claim_fee.root_claim_admission", "bittensor.intents._root_claim_fee.root_claim_declared_ref_time", "bittensor.intents._root_claim_fee.root_claim_declared_work", "bittensor.intents._root_claim_fee.root_claim_fee_discount_ref_time", "bittensor.intents._root_claim_fee.root_claim_hotkey_declared_ref_time", "bittensor.intents._root_claim_fee.root_claim_hotkey_fee_discount_ref_time"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/emission_weights.py"
-kind = "ported"
-from = "06b1d7d749969b1fad313e938e63d0c14ec8db6f"
-to = "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a"
-tag = "v495"
-symbols = ["bittensor.intents.emission_weights.SetSubnetEmissionWeights", "bittensor.intents.emission_weights.SetSubnetEmissionWeights._inputs", "bittensor.intents.emission_weights.SetSubnetEmissionWeights.preflight", "bittensor.intents.emission_weights.emission_weights_rate_limit_blocks", "bittensor.intents.emission_weights.emission_weights_rate_limit_key", "bittensor.intents.emission_weights.gamma_emission_shares", "bittensor.intents.emission_weights.gamma_emission_targets", "bittensor.intents.emission_weights.root_preservation_inputs"]
 
 [[file]]
 py = "sdk/python/bittensor/intents/governance.py"
@@ -213,28 +189,12 @@ tag = "v494"
 symbols = []
 
 [[file]]
-py = "sdk/python/bittensor/reads/subnets.py"
-kind = "ported"
-from = "6dfe3616b353b751a8a843e3ea22d7e51c865559"
-to = "49dd2c9b9b34dc2555ce67740ed3320ba426117d"
-tag = "v495"
-symbols = ["bittensor.reads.subnets.DEFAULT_OWNER", "bittensor.reads.subnets.OWNER_RATE_LIMIT_BLOCKS", "bittensor.reads.subnets.Rules", "bittensor.reads.subnets.SLOT_NAMES", "bittensor.reads.subnets.StorageFunctionNotFound", "bittensor.reads.subnets.SubnetEmissionWeights", "bittensor.reads.subnets.SubnetEmissionWeights.rate_limit", "bittensor.reads.subnets.SubnetEmissionWeights.rate_limit_blocks", "bittensor.reads.subnets.emission_weights_rate_limit_blocks", "bittensor.reads.subnets.min_validator_parts", "bittensor.reads.subnets.normalize_weights", "bittensor.reads.subnets.rate_limit_status", "bittensor.reads.subnets.share_to_float", "bittensor.reads.subnets.subnet_emission_weights"]
-
-[[file]]
 py = "sdk/python/tests/unit/test_cli_commands.py"
 kind = "ported"
 from = "b327a7e65000b30bd4e0de9fb6f15e04a2cf1477"
 to = "ac777b7f0eb9ae56dee3aba76787dce7251c79ee"
 tag = "v494"
 symbols = ["tests.unit.test_cli_commands.test_colored_help_preserves_literal_long_and_short_options"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_emission_weights.py"
-kind = "ported"
-from = "1e45c18a8f4da99f95b35c7275a89728b0b9e6a1"
-to = "6bac50300f5ff7e1b0bee03bf16d0a124cb76a89"
-tag = "v495"
-symbols = ["tests.unit.test_emission_weights.RATE_LIMIT_ITEM", "tests.unit.test_emission_weights.test_cli_show_reports_the_chain_rate_limit", "tests.unit.test_emission_weights.test_intent_plan_follows_the_chain_rate_limit", "tests.unit.test_emission_weights.test_rate_limit_falls_back_on_a_runtime_without_the_storage_item", "tests.unit.test_emission_weights.test_rate_limit_status_takes_the_chain_limit", "tests.unit.test_emission_weights.test_read_reports_the_chain_rate_limit"]
 
 [[file]]
 py = "sdk/python/tests/unit/test_intents_table.py"
