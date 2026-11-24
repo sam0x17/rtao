@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Finney runtime 495
+
+- Pin the Finney SDK surface to upstream v495 at `e536e6bf4`. Verify the
+  finalized code hash and V15 and V16 metadata on four endpoints and match
+  the code hash to the released WASM. The metadata drift is additive.
+- Select the single-hotkey root-claim admission limit from the pinned
+  runtime. From spec 495, count queued dividend credits that open basket
+  rows. For Null weight rows, apply the mechanism-specific cap after
+  normalization, before building a plaintext or timelocked submission.
+- Regenerate the runtime descriptors, catalogs, and authenticated root-claim
+  fixtures. Remaining upstream hand ports are tracked in
+  `parity/port_due.toml`.
+
 ### Testnet runtime 495 recorded automatically
 
 - Testnet finalized spec 495 (`:code` `0x7f4f60f27f1cbdb92a8413d8280217789229f54189e48a501ada2d25f4c7edf7`) at block 8516370; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45440871330)). No upstream source is recorded: upstream has published no v495 release. The parity pin is unchanged.

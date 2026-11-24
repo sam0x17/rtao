@@ -4,14 +4,14 @@
     "sdk/python/bittensor/_generated/errors.py": {
       "format": 1,
       "provenance": {
-        "blob": "243c5a7436421bb86efa18f3af2983f4154959a3",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "7a2d9980039329fc7488198b19aca482ab36ef7f",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/_generated/errors.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "ERRORS": {
-          "end_line": 486,
+          "end_line": 487,
           "line": 14,
           "value": {
             "dict": [
@@ -3017,7 +3017,7 @@
                 {
                   "constructor": "ErrorInfo",
                   "fields": {
-                    "docs": "A root claim would process more root hotkeys and basket rows than the fixed admission envelope. Use `claim_root_with_hotkey` per validator so admission weight matches the holdings actually walked.",
+                    "docs": "A root claim would process more root hotkeys and basket rows than the admission envelope. Use `claim_root_with_hotkey` per validator so admission weight matches the holdings actually walked. A `claim_root_with_hotkey` also fails with this error when a `swap_basket` buy or a hotkey swap gave the same fund a new row earlier in the same transaction; send the claim in a later transaction.",
                     "name": "RootClaimTooHeavy",
                     "pallet": "SubtensorModule"
                   }
@@ -3803,6 +3803,22 @@
                   "fields": {
                     "docs": "The signer is not the validator's delegate for this exact mechanism.",
                     "name": "NotMechWeightDelegate",
+                    "pallet": "SubtensorModule"
+                  }
+                }
+              ],
+              [
+                {
+                  "tuple": [
+                    7,
+                    209
+                  ]
+                },
+                {
+                  "constructor": "ErrorInfo",
+                  "fields": {
+                    "docs": "A Null weight row exceeds the total row budget divided by mechanism count.",
+                    "name": "TooManyWeightsForNullMechanism",
                     "pallet": "SubtensorModule"
                   }
                 }
@@ -7560,9 +7576,9 @@
       "format": 1,
       "provenance": {
         "blob": "1b9adfbb52f1dcd6e8a1b5ec16d63f52be89dc23",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/_transport/extrinsics.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "MAX_SHIELDED_CIPHERTEXT_BYTES": {
@@ -7576,9 +7592,9 @@
       "format": 1,
       "provenance": {
         "blob": "76101e5247da8356118e4bb179aadf77b2f14c34",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/_transport/runtime.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "_DISK_CACHE_MAX_FILES": {
@@ -7614,9 +7630,9 @@
       "format": 1,
       "provenance": {
         "blob": "4c33d256550a45a951e9c75c6e3b74b7dd0fa0d3",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/_transport/utils/receipt.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "_NESTED_RESULT_EVENTS": {
@@ -7687,9 +7703,9 @@
       "format": 1,
       "provenance": {
         "blob": "cf591495eef97141ca0ffc53155898b8e8f2cb4b",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/basket_index_data.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "BASELINES": {
@@ -9987,9 +10003,9 @@
       "format": 1,
       "provenance": {
         "blob": "4c4a26ae8ca1be99c9ee834c7fb6184c89d888b8",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/config.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "DEFAULT_ADDRESSES_PATH": {
@@ -10163,15 +10179,15 @@
     "sdk/python/bittensor/error_map.py": {
       "format": 1,
       "provenance": {
-        "blob": "aaa2b3e25da4a9cab6d18dbfcaf171b310d51883",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "5e7d6f784fbdc14b3be1a2e919a9412a3681611e",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/error_map.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "CUSTOM_TRANSACTION_ERRORS": {
-          "end_line": 583,
-          "line": 553,
+          "end_line": 584,
+          "line": 554,
           "value": {
             "dict": [
               [
@@ -10294,8 +10310,8 @@
           }
         },
         "DISPATCH_ERRORS": {
-          "end_line": 861,
-          "line": 620,
+          "end_line": 862,
+          "line": 621,
           "value": {
             "dict": [
               [
@@ -10770,8 +10786,8 @@
           }
         },
         "INVALID_TRANSACTION_ERRORS": {
-          "end_line": 606,
-          "line": 589,
+          "end_line": 607,
+          "line": 590,
           "value": {
             "tuple": [
               {
@@ -10874,7 +10890,7 @@
           }
         },
         "NAME_TO_CODE": {
-          "end_line": 541,
+          "end_line": 542,
           "line": 46,
           "value": {
             "dict": [
@@ -11124,6 +11140,10 @@
               ],
               [
                 "UidsLengthExceedUidsInSubNet",
+                "limit_exceeded"
+              ],
+              [
+                "TooManyWeightsForNullMechanism",
                 "limit_exceeded"
               ],
               [
@@ -12695,9 +12715,9 @@
       "format": 1,
       "provenance": {
         "blob": "e9ee94d16ddb1b89bf94dd94ec63f1484b5d06d7",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/evm/networks.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "EVM_NETWORKS": {
@@ -12781,9 +12801,9 @@
       "format": 1,
       "provenance": {
         "blob": "ce5b43be2cb6c1477b970858bb9992bff348855e",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/evm/precompiles.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "CALLER_ROLES": {
@@ -13316,9 +13336,9 @@
       "format": 1,
       "provenance": {
         "blob": "d2ed00f7bbff3529efc57a847c92fad3901e1b35",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/executor.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "_SHIELDED_FINALITY_RPC_RETRIES": {
@@ -13348,9 +13368,9 @@
       "format": 1,
       "provenance": {
         "blob": "63ba35b88b039dfe547b29f30561c90dec09967d",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/fee_filters.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "COLDKEY_FEE_WARNING": {
@@ -13473,10 +13493,10 @@
     "sdk/python/bittensor/hyperparams.py": {
       "format": 1,
       "provenance": {
-        "blob": "772977590e33f80c932eefa3611dbac6e425b3da",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "c9636176716f6b994c8f3127aebdb75928879d81",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/hyperparams.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "FIXED128_ONE": {
@@ -14005,7 +14025,7 @@
                   "constructor": "Hyperparam",
                   "fields": {
                     "bits": null,
-                    "doc": "Maximum neuron slots (UIDs) on the subnet; registrations beyond this prune the lowest-scoring neuron. Capacity shares a budget of 256 under Yuma or 2500 under Null across emission mechanisms.",
+                    "doc": "Maximum neuron slots (UIDs) on the subnet; registrations beyond this prune the lowest-scoring neuron. Under Yuma, this value times the mechanism count is at most 256. Under Null, it is at most 2500 for any mechanism count.",
                     "kind": "int",
                     "maximum": null,
                     "minimum": null,
@@ -15028,9 +15048,9 @@
       "format": 1,
       "provenance": {
         "blob": "f45a39a4852703d52d91776ffbc216ed5b9a5dbd",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/_money.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "_FALLBACK_AMOUNT_UNITS": {
@@ -15233,9 +15253,9 @@
       "format": 1,
       "provenance": {
         "blob": "ab08e652c1c01e15f157bfcf1b7ca00bf820788c",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/association.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "AssociateEvmKey.block_number": {
@@ -15325,9 +15345,9 @@
       "format": 1,
       "provenance": {
         "blob": "c7d9d5ddea5988c1ff2809d454af10eb4e3347ed",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/base.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "Intent.all_amount_fields": {
@@ -15375,9 +15395,9 @@
       "format": 1,
       "provenance": {
         "blob": "42465794f5f27077b356427dac8c46a16187f590",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/batch.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "Batch.intents": {
@@ -15412,9 +15432,9 @@
       "format": 1,
       "provenance": {
         "blob": "42392f29c930b80fc79c6c7d8a216a0ad01d5b93",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/children.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "DecreaseTake.hotkey_ss58": {
@@ -15623,9 +15643,9 @@
       "format": 1,
       "provenance": {
         "blob": "3b54511c6ff5e6ac7e9155cb676968007c901110",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/coldkey.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "AnnounceColdkeySwap.hashed_descriptor": {
@@ -15773,9 +15793,9 @@
       "format": 1,
       "provenance": {
         "blob": "08fb440799bf16dbfb3552133512a7dfaa54db4c",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/collateral.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "AddCollateral.all_amount_fields": {
@@ -15894,9 +15914,9 @@
       "format": 1,
       "provenance": {
         "blob": "3de38f2c6c0b5fe7221891370905e51035d24289",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/commitments.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "SetChannelCommitment.channel": {
@@ -16075,9 +16095,9 @@
       "format": 1,
       "provenance": {
         "blob": "2ad3b7c537e42f77d421c2275ddf4893f1981506",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/crowdloan.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "ContributeCrowdloan.all_amount_fields": {
@@ -16447,68 +16467,68 @@
     "sdk/python/bittensor/intents/emission_weights.py": {
       "format": 1,
       "provenance": {
-        "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/emission_weights.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "SetSubnetEmissionWeights.gamma": {
-          "end_line": 134,
-          "line": 134,
+          "end_line": 138,
+          "line": 138,
           "value": {
             "dict": []
           }
         },
         "SetSubnetEmissionWeights.netuid": {
-          "end_line": 130,
-          "line": 130,
+          "end_line": 134,
+          "line": 134,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.op": {
-          "end_line": 124,
-          "line": 124,
+          "end_line": 128,
+          "line": 128,
           "value": "set_subnet_emission_weights"
         },
         "SetSubnetEmissionWeights.origin": {
-          "end_line": 126,
-          "line": 126,
+          "end_line": 130,
+          "line": 130,
           "value": "subnet_owner"
         },
         "SetSubnetEmissionWeights.renormalize": {
-          "end_line": 133,
-          "line": 133,
+          "end_line": 137,
+          "line": 137,
           "value": false
         },
         "SetSubnetEmissionWeights.signer": {
-          "end_line": 125,
-          "line": 125,
+          "end_line": 129,
+          "line": 129,
           "value": "coldkey"
         },
         "SetSubnetEmissionWeights.slots": {
-          "end_line": 131,
-          "line": 131,
+          "end_line": 135,
+          "line": 135,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.values": {
-          "end_line": 132,
-          "line": 132,
+          "end_line": 136,
+          "line": 136,
           "value": {
             "required": true
           }
         },
         "SetSubnetEmissionWeights.verify": {
-          "end_line": 127,
-          "line": 127,
+          "end_line": 131,
+          "line": 131,
           "value": "subnet_emission_weights"
         },
         "SetSubnetEmissionWeights.wraps": {
-          "end_line": 128,
-          "line": 128,
+          "end_line": 132,
+          "line": 132,
           "value": {
             "tuple": [
               {
@@ -16526,9 +16546,9 @@
       "format": 1,
       "provenance": {
         "blob": "c6b3ea2027049a41c8ff00eba419637e0e3929bc",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/evm.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "EvmWithdraw.all_amount_fields": {
@@ -16630,9 +16650,9 @@
       "format": 1,
       "provenance": {
         "blob": "50cc2991df4260a8749905bca1efbf751ef35569",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/gamma.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "CloseGammaDeposit.hotkey_ss58": {
@@ -16963,44 +16983,44 @@
     "sdk/python/bittensor/intents/governance.py": {
       "format": 1,
       "provenance": {
-        "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/governance.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "SetMechanismCount.mechanism_count": {
-          "end_line": 183,
-          "line": 183,
+          "end_line": 188,
+          "line": 188,
           "value": {
             "required": true
           }
         },
         "SetMechanismCount.netuid": {
-          "end_line": 182,
-          "line": 182,
+          "end_line": 187,
+          "line": 187,
           "value": {
             "required": true
           }
         },
         "SetMechanismCount.op": {
-          "end_line": 177,
-          "line": 177,
+          "end_line": 182,
+          "line": 182,
           "value": "set_mechanism_count"
         },
         "SetMechanismCount.origin": {
-          "end_line": 179,
-          "line": 179,
+          "end_line": 184,
+          "line": 184,
           "value": "subnet_owner"
         },
         "SetMechanismCount.signer": {
-          "end_line": 178,
-          "line": 178,
+          "end_line": 183,
+          "line": 183,
           "value": "coldkey"
         },
         "SetMechanismCount.wraps": {
-          "end_line": 180,
-          "line": 180,
+          "end_line": 185,
+          "line": 185,
           "value": {
             "tuple": [
               {
@@ -17157,37 +17177,37 @@
           }
         },
         "UpdateSymbol.netuid": {
-          "end_line": 217,
-          "line": 215,
+          "end_line": 222,
+          "line": 220,
           "value": {
             "required": true
           }
         },
         "UpdateSymbol.op": {
-          "end_line": 210,
-          "line": 210,
+          "end_line": 215,
+          "line": 215,
           "value": "update_symbol"
         },
         "UpdateSymbol.origin": {
-          "end_line": 212,
-          "line": 212,
+          "end_line": 217,
+          "line": 217,
           "value": "subnet_owner"
         },
         "UpdateSymbol.signer": {
-          "end_line": 211,
-          "line": 211,
+          "end_line": 216,
+          "line": 216,
           "value": "coldkey"
         },
         "UpdateSymbol.symbol": {
-          "end_line": 223,
-          "line": 218,
+          "end_line": 228,
+          "line": 223,
           "value": {
             "required": true
           }
         },
         "UpdateSymbol.wraps": {
-          "end_line": 213,
-          "line": 213,
+          "end_line": 218,
+          "line": 218,
           "value": {
             "tuple": [
               {
@@ -17205,9 +17225,9 @@
       "format": 1,
       "provenance": {
         "blob": "898812ed48595a20cb343a80297728d759b5cf2e",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/hyperparameters.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "OWNER_HYPERPARAMETERS": {
@@ -17798,9 +17818,9 @@
       "format": 1,
       "provenance": {
         "blob": "a4a2167fcbb2db93d649935c32705e5d6612b1e9",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/identity.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "SetIdentity.additional": {
@@ -17948,9 +17968,9 @@
       "format": 1,
       "provenance": {
         "blob": "c1bf79b7bb6a5ebcec925010679de8b87f700115",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/leasing.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "RegisterLeasedNetwork.emissions_share": {
@@ -18031,9 +18051,9 @@
       "format": 1,
       "provenance": {
         "blob": "9a3d299c1f5938a89bf37e27162279c8e9222329",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/limit_orders.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "AuthorizeOrder.op": {
@@ -18164,9 +18184,9 @@
       "format": 1,
       "provenance": {
         "blob": "05c03b46d80f556a6bbc08b963f15248e69c19d2",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/lock.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "LockStake.all_amount_fields": {
@@ -18334,9 +18354,9 @@
       "format": 1,
       "provenance": {
         "blob": "70dd6b22c6ee4788fa96e628eb33eff586dcc22a",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/multisig.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "MultisigApprove.account_mode": {
@@ -18625,9 +18645,9 @@
       "format": 1,
       "provenance": {
         "blob": "781f7a8f14261edc31e4ef11f248cbcec7cbb997",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/proxy.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "AddProxy.delay": {
@@ -19091,47 +19111,47 @@
     "sdk/python/bittensor/intents/registration.py": {
       "format": 1,
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/registration.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "BurnedRegister.hotkey_ss58": {
-          "end_line": 147,
-          "line": 144,
+          "end_line": 146,
+          "line": 143,
           "value": null
         },
         "BurnedRegister.mev_shield_default": {
-          "end_line": 137,
-          "line": 137,
+          "end_line": 136,
+          "line": 136,
           "value": true
         },
         "BurnedRegister.mev_shield_required": {
-          "end_line": 141,
-          "line": 141,
+          "end_line": 140,
+          "line": 140,
           "value": true
         },
         "BurnedRegister.netuid": {
-          "end_line": 143,
-          "line": 143,
+          "end_line": 142,
+          "line": 142,
           "value": {
             "required": true
           }
         },
         "BurnedRegister.op": {
-          "end_line": 134,
-          "line": 134,
+          "end_line": 133,
+          "line": 133,
           "value": "burned_register"
         },
         "BurnedRegister.signer": {
-          "end_line": 135,
-          "line": 135,
+          "end_line": 134,
+          "line": 134,
           "value": "coldkey"
         },
         "BurnedRegister.wraps": {
-          "end_line": 136,
-          "line": 136,
+          "end_line": 135,
+          "line": 135,
           "value": {
             "tuple": [
               {
@@ -19144,25 +19164,25 @@
           }
         },
         "ClaimRoot.op": {
-          "end_line": 457,
-          "line": 457,
+          "end_line": 455,
+          "line": 455,
           "value": "claim_root"
         },
         "ClaimRoot.signer": {
-          "end_line": 458,
-          "line": 458,
+          "end_line": 456,
+          "line": 456,
           "value": "coldkey"
         },
         "ClaimRoot.subnets": {
-          "end_line": 467,
-          "line": 461,
+          "end_line": 465,
+          "line": 459,
           "value": [
             0
           ]
         },
         "ClaimRoot.wraps": {
-          "end_line": 459,
-          "line": 459,
+          "end_line": 457,
+          "line": 457,
           "value": {
             "tuple": [
               {
@@ -19175,25 +19195,25 @@
           }
         },
         "ClaimRootWithHotkey.hotkey_ss58": {
-          "end_line": 526,
-          "line": 524,
+          "end_line": 527,
+          "line": 525,
           "value": {
             "required": true
           }
         },
         "ClaimRootWithHotkey.op": {
-          "end_line": 520,
-          "line": 520,
+          "end_line": 521,
+          "line": 521,
           "value": "claim_root_with_hotkey"
         },
         "ClaimRootWithHotkey.signer": {
-          "end_line": 521,
-          "line": 521,
+          "end_line": 522,
+          "line": 522,
           "value": "coldkey"
         },
         "ClaimRootWithHotkey.wraps": {
-          "end_line": 522,
-          "line": 522,
+          "end_line": 523,
+          "line": 523,
           "value": {
             "tuple": [
               {
@@ -19206,76 +19226,76 @@
           }
         },
         "PowRegister.hotkey_ss58": {
-          "end_line": 73,
-          "line": 73,
+          "end_line": 72,
+          "line": 72,
           "value": null
         },
         "PowRegister.mev_shield_default": {
-          "end_line": 67,
-          "line": 67,
+          "end_line": 66,
+          "line": 66,
           "value": false
         },
         "PowRegister.mining_backend": {
-          "end_line": 82,
-          "line": 82,
+          "end_line": 81,
+          "line": 81,
           "value": "auto"
         },
         "PowRegister.mining_device_ids": {
-          "end_line": 85,
-          "line": 83,
+          "end_line": 84,
+          "line": 82,
           "value": null
         },
         "PowRegister.mining_timeout": {
-          "end_line": 80,
-          "line": 78,
+          "end_line": 79,
+          "line": 77,
           "value": 300
         },
         "PowRegister.mining_workers": {
-          "end_line": 77,
-          "line": 75,
+          "end_line": 76,
+          "line": 74,
           "value": 4
         },
         "PowRegister.netuid": {
-          "end_line": 69,
-          "line": 69,
+          "end_line": 68,
+          "line": 68,
           "value": {
             "required": true
           }
         },
         "PowRegister.nonce": {
-          "end_line": 71,
-          "line": 71,
-          "value": {
-            "required": true
-          }
-        },
-        "PowRegister.op": {
-          "end_line": 64,
-          "line": 64,
-          "value": "pow_register"
-        },
-        "PowRegister.signer": {
-          "end_line": 65,
-          "line": 65,
-          "value": "coldkey"
-        },
-        "PowRegister.work_block": {
           "end_line": 70,
           "line": 70,
           "value": {
             "required": true
           }
         },
+        "PowRegister.op": {
+          "end_line": 63,
+          "line": 63,
+          "value": "pow_register"
+        },
+        "PowRegister.signer": {
+          "end_line": 64,
+          "line": 64,
+          "value": "coldkey"
+        },
+        "PowRegister.work_block": {
+          "end_line": 69,
+          "line": 69,
+          "value": {
+            "required": true
+          }
+        },
         "PowRegister.work_hex": {
-          "end_line": 72,
-          "line": 72,
+          "end_line": 71,
+          "line": 71,
           "value": {
             "required": true
           }
         },
         "PowRegister.wraps": {
-          "end_line": 66,
-          "line": 66,
+          "end_line": 65,
+          "line": 65,
           "value": {
             "tuple": [
               {
@@ -19288,23 +19308,23 @@
           }
         },
         "RegisterSubnet.hotkey_ss58": {
-          "end_line": 211,
-          "line": 206,
+          "end_line": 210,
+          "line": 205,
           "value": null
         },
         "RegisterSubnet.op": {
-          "end_line": 202,
-          "line": 202,
+          "end_line": 201,
+          "line": 201,
           "value": "register_subnet"
         },
         "RegisterSubnet.signer": {
-          "end_line": 203,
-          "line": 203,
+          "end_line": 202,
+          "line": 202,
           "value": "coldkey"
         },
         "RegisterSubnet.wraps": {
-          "end_line": 204,
-          "line": 204,
+          "end_line": 203,
+          "line": 203,
           "value": {
             "tuple": [
               {
@@ -19317,28 +19337,28 @@
           }
         },
         "RootRegister.cli_example": {
-          "end_line": 285,
-          "line": 285,
+          "end_line": 284,
+          "line": 284,
           "value": "btcli root register"
         },
         "RootRegister.hotkey_ss58": {
-          "end_line": 292,
-          "line": 287,
+          "end_line": 291,
+          "line": 286,
           "value": null
         },
         "RootRegister.op": {
-          "end_line": 280,
-          "line": 280,
+          "end_line": 279,
+          "line": 279,
           "value": "root_register"
         },
         "RootRegister.signer": {
-          "end_line": 281,
-          "line": 281,
+          "end_line": 280,
+          "line": 280,
           "value": "coldkey"
         },
         "RootRegister.wraps": {
-          "end_line": 282,
-          "line": 282,
+          "end_line": 281,
+          "line": 281,
           "value": {
             "tuple": [
               {
@@ -19351,30 +19371,30 @@
           }
         },
         "StartCall.netuid": {
-          "end_line": 248,
-          "line": 248,
+          "end_line": 247,
+          "line": 247,
           "value": {
             "required": true
           }
         },
         "StartCall.op": {
-          "end_line": 243,
-          "line": 243,
+          "end_line": 242,
+          "line": 242,
           "value": "start_call"
         },
         "StartCall.origin": {
-          "end_line": 245,
-          "line": 245,
+          "end_line": 244,
+          "line": 244,
           "value": "subnet_owner"
         },
         "StartCall.signer": {
-          "end_line": 244,
-          "line": 244,
+          "end_line": 243,
+          "line": 243,
           "value": "coldkey"
         },
         "StartCall.wraps": {
-          "end_line": 246,
-          "line": 246,
+          "end_line": 245,
+          "line": 245,
           "value": {
             "tuple": [
               {
@@ -19387,35 +19407,35 @@
           }
         },
         "SwapHotkey.hotkey_ss58": {
-          "end_line": 576,
-          "line": 573,
+          "end_line": 577,
+          "line": 574,
           "value": null
         },
         "SwapHotkey.netuid": {
-          "end_line": 580,
-          "line": 577,
+          "end_line": 581,
+          "line": 578,
           "value": null
         },
         "SwapHotkey.new_hotkey_ss58": {
-          "end_line": 572,
-          "line": 568,
+          "end_line": 573,
+          "line": 569,
           "value": {
             "required": true
           }
         },
         "SwapHotkey.op": {
-          "end_line": 564,
-          "line": 564,
+          "end_line": 565,
+          "line": 565,
           "value": "swap_hotkey"
         },
         "SwapHotkey.signer": {
-          "end_line": 565,
-          "line": 565,
+          "end_line": 566,
+          "line": 566,
           "value": "coldkey"
         },
         "SwapHotkey.wraps": {
-          "end_line": 566,
-          "line": 566,
+          "end_line": 567,
+          "line": 567,
           "value": {
             "tuple": [
               {
@@ -19433,9 +19453,9 @@
       "format": 1,
       "provenance": {
         "blob": "90293d19d3b80a8e195262916b22ab9f4769240d",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/root.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "SetRootClaimThreshold.op": {
@@ -19599,9 +19619,9 @@
       "format": 1,
       "provenance": {
         "blob": "df6efb9d7c7ae962370056e6a01f0450e601c61c",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/serving.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "ResetAxon.netuid": {
@@ -19851,9 +19871,9 @@
       "format": 1,
       "provenance": {
         "blob": "e39920564c6dfa0ce054d9893681dd8cc229ccaf",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/staking.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "AddStake.all_amount_fields": {
@@ -20889,9 +20909,9 @@
       "format": 1,
       "provenance": {
         "blob": "89321c66fae0860b180ba4aef88d888aa158e48f",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/transfer.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "Transfer.all_amount_fields": {
@@ -21009,49 +21029,49 @@
     "sdk/python/bittensor/intents/weights.py": {
       "format": 1,
       "provenance": {
-        "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/intents/weights.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "CommitWeightHash.commit_hash": {
-          "end_line": 689,
-          "line": 689,
+          "end_line": 728,
+          "line": 728,
           "value": {
             "required": true
           }
         },
         "CommitWeightHash.for_hotkey": {
-          "end_line": 691,
-          "line": 691,
+          "end_line": 730,
+          "line": 730,
           "value": null
         },
         "CommitWeightHash.mechid": {
-          "end_line": 690,
-          "line": 690,
+          "end_line": 729,
+          "line": 729,
           "value": 0
         },
         "CommitWeightHash.netuid": {
-          "end_line": 688,
-          "line": 688,
+          "end_line": 727,
+          "line": 727,
           "value": {
             "required": true
           }
         },
         "CommitWeightHash.op": {
-          "end_line": 681,
-          "line": 681,
+          "end_line": 720,
+          "line": 720,
           "value": "commit_weight_hash"
         },
         "CommitWeightHash.signer": {
-          "end_line": 682,
-          "line": 682,
+          "end_line": 721,
+          "line": 721,
           "value": "hotkey"
         },
         "CommitWeightHash.wraps": {
-          "end_line": 686,
-          "line": 683,
+          "end_line": 725,
+          "line": 722,
           "value": {
             "tuple": [
               {
@@ -21070,60 +21090,60 @@
           }
         },
         "CommitWeights.commit_reveal_version": {
-          "end_line": 557,
-          "line": 551,
+          "end_line": 596,
+          "line": 590,
           "value": 4
         },
         "CommitWeights.for_hotkey": {
-          "end_line": 544,
-          "line": 544,
+          "end_line": 583,
+          "line": 583,
           "value": null
         },
         "CommitWeights.mechid": {
-          "end_line": 542,
-          "line": 542,
+          "end_line": 581,
+          "line": 581,
           "value": 0
         },
         "CommitWeights.netuid": {
-          "end_line": 539,
-          "line": 539,
+          "end_line": 578,
+          "line": 578,
           "value": {
             "required": true
           }
         },
         "CommitWeights.op": {
-          "end_line": 532,
-          "line": 532,
+          "end_line": 571,
+          "line": 571,
           "value": "commit_weights"
         },
         "CommitWeights.raw_u16": {
-          "end_line": 550,
-          "line": 545,
+          "end_line": 589,
+          "line": 584,
           "value": false
         },
         "CommitWeights.signer": {
-          "end_line": 533,
-          "line": 533,
+          "end_line": 572,
+          "line": 572,
           "value": "hotkey"
         },
         "CommitWeights.uids": {
-          "end_line": 540,
-          "line": 540,
+          "end_line": 579,
+          "line": 579,
           "value": null
         },
         "CommitWeights.version_key": {
-          "end_line": 543,
-          "line": 543,
+          "end_line": 582,
+          "line": 582,
           "value": 0
         },
         "CommitWeights.weights": {
-          "end_line": 541,
-          "line": 541,
+          "end_line": 580,
+          "line": 580,
           "value": null
         },
         "CommitWeights.wraps": {
-          "end_line": 537,
-          "line": 534,
+          "end_line": 576,
+          "line": 573,
           "value": {
             "tuple": [
               {
@@ -21142,61 +21162,61 @@
           }
         },
         "RevealWeights.for_hotkey": {
-          "end_line": 637,
-          "line": 637,
+          "end_line": 676,
+          "line": 676,
           "value": null
         },
         "RevealWeights.mechid": {
-          "end_line": 636,
-          "line": 636,
+          "end_line": 675,
+          "line": 675,
           "value": 0
         },
         "RevealWeights.netuid": {
-          "end_line": 623,
-          "line": 623,
+          "end_line": 662,
+          "line": 662,
           "value": {
             "required": true
           }
         },
         "RevealWeights.op": {
-          "end_line": 615,
-          "line": 615,
+          "end_line": 654,
+          "line": 654,
           "value": "reveal_weights"
         },
         "RevealWeights.salt": {
-          "end_line": 632,
-          "line": 630,
+          "end_line": 671,
+          "line": 669,
           "value": {
             "required": true
           }
         },
         "RevealWeights.signer": {
-          "end_line": 616,
-          "line": 616,
+          "end_line": 655,
+          "line": 655,
           "value": "hotkey"
         },
         "RevealWeights.uids": {
-          "end_line": 626,
-          "line": 624,
+          "end_line": 665,
+          "line": 663,
           "value": {
             "required": true
           }
         },
         "RevealWeights.version_key": {
-          "end_line": 635,
-          "line": 633,
+          "end_line": 674,
+          "line": 672,
           "value": 0
         },
         "RevealWeights.weights": {
-          "end_line": 629,
-          "line": 627,
+          "end_line": 668,
+          "line": 666,
           "value": {
             "required": true
           }
         },
         "RevealWeights.wraps": {
-          "end_line": 621,
-          "line": 617,
+          "end_line": 660,
+          "line": 656,
           "value": {
             "tuple": [
               {
@@ -21221,40 +21241,40 @@
           }
         },
         "SetMechWeightDelegate.delegate": {
-          "end_line": 744,
-          "line": 738,
+          "end_line": 783,
+          "line": 777,
           "value": null
         },
         "SetMechWeightDelegate.mechid": {
-          "end_line": 737,
-          "line": 737,
+          "end_line": 776,
+          "line": 776,
           "value": 0
         },
         "SetMechWeightDelegate.netuid": {
-          "end_line": 736,
-          "line": 736,
+          "end_line": 775,
+          "line": 775,
           "value": {
             "required": true
           }
         },
         "SetMechWeightDelegate.op": {
-          "end_line": 731,
-          "line": 731,
+          "end_line": 770,
+          "line": 770,
           "value": "set_mech_weight_delegate"
         },
         "SetMechWeightDelegate.signer": {
-          "end_line": 732,
-          "line": 732,
+          "end_line": 771,
+          "line": 771,
           "value": "hotkey"
         },
         "SetMechWeightDelegate.verify": {
-          "end_line": 733,
-          "line": 733,
+          "end_line": 772,
+          "line": 772,
           "value": "mech_weight_delegate"
         },
         "SetMechWeightDelegate.wraps": {
-          "end_line": 734,
-          "line": 734,
+          "end_line": 773,
+          "line": 773,
           "value": {
             "tuple": [
               {
@@ -21267,55 +21287,55 @@
           }
         },
         "SetWeights.for_hotkey": {
-          "end_line": 449,
-          "line": 449,
+          "end_line": 488,
+          "line": 488,
           "value": null
         },
         "SetWeights.mechid": {
-          "end_line": 447,
-          "line": 447,
+          "end_line": 486,
+          "line": 486,
           "value": 0
         },
         "SetWeights.netuid": {
-          "end_line": 444,
-          "line": 444,
+          "end_line": 483,
+          "line": 483,
           "value": {
             "required": true
           }
         },
         "SetWeights.op": {
-          "end_line": 435,
-          "line": 435,
+          "end_line": 474,
+          "line": 474,
           "value": "set_weights"
         },
         "SetWeights.raw_u16": {
-          "end_line": 455,
-          "line": 450,
+          "end_line": 494,
+          "line": 489,
           "value": false
         },
         "SetWeights.signer": {
-          "end_line": 436,
-          "line": 436,
+          "end_line": 475,
+          "line": 475,
           "value": "hotkey"
         },
         "SetWeights.uids": {
-          "end_line": 445,
-          "line": 445,
+          "end_line": 484,
+          "line": 484,
           "value": null
         },
         "SetWeights.version_key": {
-          "end_line": 448,
-          "line": 448,
+          "end_line": 487,
+          "line": 487,
           "value": 0
         },
         "SetWeights.weights": {
-          "end_line": 446,
-          "line": 446,
+          "end_line": 485,
+          "line": 485,
           "value": null
         },
         "SetWeights.wraps": {
-          "end_line": 442,
-          "line": 437,
+          "end_line": 481,
+          "line": 476,
           "value": {
             "tuple": [
               {
@@ -21351,9 +21371,9 @@
       "format": 1,
       "provenance": {
         "blob": "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/multisig.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "_FEE_ALLOWANCE_RAO": {
@@ -21367,9 +21387,9 @@
       "format": 1,
       "provenance": {
         "blob": "e07f33c7287a3472e6b4dd9ff56ddb74566648a9",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/bittensor/result.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "EXPLANATIONS": {
@@ -21864,9 +21884,9 @@
       "format": 1,
       "provenance": {
         "blob": "39dd20bcf8f0aeb65b47ed4fb4f29be9f67b9b59",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/codegen/check.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "COVERED_PALLETS": {
@@ -22157,10 +22177,10 @@
     "sdk/python/tests/harness/fake_substrate.py": {
       "format": 1,
       "provenance": {
-        "blob": "05b1e82817671e41d2dcc8186d16f88d740fccce",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "blob": "37df982b736d60c3d80376117d1dd93a1f86fa99",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/tests/harness/fake_substrate.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "DEFAULT_CONSTANTS": {
@@ -22568,9 +22588,9 @@
       "format": 1,
       "provenance": {
         "blob": "c94a9b38a90f3e60185c9795f551b111c2a05777",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/tests/harness/samples.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "ALICE": {
@@ -26050,9 +26070,9 @@
       "format": 1,
       "provenance": {
         "blob": "0705e3c90e593202712a08d9ec9ed21a82d622a3",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/tests/unit/test_cli_null_pruning.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "test_invalid_requests_never_submit.parametrize": {
@@ -26327,9 +26347,9 @@
       "format": 1,
       "provenance": {
         "blob": "47ecc619720512a599ed8107f947f2dbee7d71f8",
-        "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
         "path": "sdk/python/tests/unit/test_rpc.py",
-        "tag": "v494"
+        "tag": "v495"
       },
       "values": {
         "test_provider_defined_code_without_policy_contract_is_not_terminal.parametrize": {

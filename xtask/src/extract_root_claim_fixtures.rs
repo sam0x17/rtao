@@ -498,10 +498,24 @@ fn annotation(expr: &ast::Expr) -> bool {
 }
 
 /// Fixed-source module envelope. Unknown top-level code may mutate declarations.
-fn envelope(suite: &[ast::Stmt]) -> Result<()> {
+const FUND_SIZED_FIXTURE_FUNCTIONS: &[&str] = &[
+    "_quoted_declared_ref_time",
+    "_quoted_discount_ref_time",
+    "_quoted_charged_ref_time",
+    "test_single_hotkey_declared_weight_follows_the_fund_size",
+    "test_single_hotkey_admission_counts_queued_credits_that_open_rows",
+    "_seed_single_fund",
+    "test_single_hotkey_limit_follows_the_runtime_version",
+    "test_single_hotkey_admission_uses_the_rules_of_the_runtime_version",
+    "test_queued_credits_count_from_runtime_495_only",
+    "test_admission_reads_the_fund_and_the_runtime_version_at_one_block",
+    "test_plan_blocks_a_fund_that_only_the_old_runtime_refuses",
+];
+
+fn envelope(suite: &[ast::Stmt], fund_sized: bool) -> Result<()> {
     // One entry per reviewed import statement; v488 imports from
     // bittensor.intents twice (Policy for a new test) and adds Keypair.
-    let expected_imports = [
+    let mut expected_imports = [
         ("__future__", vec![("annotations", "annotations")]),
         ("bittensor.balance", vec![("Balance", "Balance")]),
         ("bittensor.client", vec![("Client", "Client")]),
@@ -528,10 +542,16 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
             ],
         ),
     ];
+    if fund_sized {
+        expected_imports[5]
+            .1
+            .push(("ClaimRootWithHotkey", "ClaimRootWithHotkey"));
+    }
     let mut imports = BTreeSet::new();
     let mut declarations = BTreeSet::new();
     let mut functions = BTreeSet::new();
     let mut pytest = false;
+    let mut recording_substrate = false;
     for (index, stmt) in suite.iter().enumerate() {
         match stmt {
             ast::Stmt::Expr(node) if index == 0 && string(&node.value).is_ok() => {}
@@ -577,7 +597,8 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
                     bail!("fixture declaration target changed")
                 };
                 ensure!(
-                    matches!(target.id.as_str(), "_EXTENSION_REF_TIME" | "_NODE_QUOTES")
+                    (matches!(target.id.as_str(), "_EXTENSION_REF_TIME" | "_NODE_QUOTES")
+                        || (fund_sized && target.id.as_str() == "_HOTKEY_CLAIM"))
                         && declarations.insert(target.id.as_str()),
                     "extra/rebound fixture declaration"
                 );
@@ -602,15 +623,66 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
                     "duplicate fixture function"
                 );
             }
+            ast::Stmt::ClassDef(node)
+                if fund_sized && node.name.as_str() == "_RecordingSubstrate" =>
+            {
+                ensure!(
+                    !recording_substrate
+                        && node.keywords.is_empty()
+                        && node.decorator_list.is_empty()
+                        && node.type_params.is_empty()
+                        && node.bases.len() == 1
+                        && name(&node.bases[0], "FakeSubstrate"),
+                    "unexpected recording substrate declaration"
+                );
+                let mut methods = BTreeSet::new();
+                for (index, entry) in node.body.iter().enumerate() {
+                    match entry {
+                        ast::Stmt::Expr(stmt) if index == 0 && string(&stmt.value).is_ok() => {}
+                        ast::Stmt::FunctionDef(method) if method.decorator_list.is_empty() => {
+                            ensure!(
+                                methods.insert(method.name.as_str()),
+                                "duplicate fixture method"
+                            );
+                        }
+                        ast::Stmt::AsyncFunctionDef(method) if method.decorator_list.is_empty() => {
+                            ensure!(
+                                methods.insert(method.name.as_str()),
+                                "duplicate fixture method"
+                            );
+                        }
+                        _ => bail!("executable recording substrate declaration"),
+                    }
+                }
+                ensure!(
+                    methods
+                        == BTreeSet::from([
+                            "__init__",
+                            "spec_version",
+                            "runtime_call",
+                            "query",
+                            "query_map"
+                        ]),
+                    "recording substrate methods changed"
+                );
+                recording_substrate = true;
+            }
             _ => bail!("unexpected top-level fixture code; reviewed extraction update required"),
         }
     }
     ensure!(
-        pytest && imports.len() == expected_imports.len() && declarations.len() == 2,
+        pytest
+            && imports.len() == expected_imports.len()
+            && declarations.len() == if fund_sized { 3 } else { 2 }
+            && recording_substrate == fund_sized,
         "fixture imports/declarations missing"
     );
     ensure!(
-        functions.len() == 36
+        functions.len() == if fund_sized { 47 } else { 36 }
+            && (!fund_sized
+                || FUND_SIZED_FIXTURE_FUNCTIONS
+                    .iter()
+                    .all(|name| functions.contains(name)))
             && functions
                 .contains("test_single_hotkey_admission_covers_full_subnet_limit_plus_root_basket")
             && functions.contains("_seed_claim_quote")
@@ -618,6 +690,10 @@ fn envelope(suite: &[ast::Stmt]) -> Result<()> {
         "fixture function inventory changed; source review required"
     );
     for wanted in functions {
+        // The newly reviewed helpers and tests do not feed the existing fixture projections.
+        if fund_sized && FUND_SIZED_FIXTURE_FUNCTIONS.contains(&wanted) {
+            continue;
+        }
         ensure!(
             wanted.starts_with("test_") || matches!(wanted, "_preview" | "_seed_claim_quote"),
             "fixture function shadows a protected name"
@@ -1119,7 +1195,10 @@ fn project(resolver: &mut Resolver<'_>, pins: &DocumentMut) -> Result<Value> {
     let fees = resolver.source(FEES)?;
     let suite =
         ast::Suite::parse(&test, TEST).map_err(|error| anyhow::anyhow!("{TEST}: {error}"))?;
-    envelope(&suite)?;
+    let fund_sized = pins["parity"]["spec_version"]
+        .as_integer()
+        .is_some_and(|spec| spec >= 495);
+    envelope(&suite, fund_sized)?;
     preview_shape(&suite)?;
     let mut inputs = Vec::new();
     for (path, source) in [(TEST, &test), (FEES, &fees)] {
@@ -1148,6 +1227,12 @@ fn project(resolver: &mut Resolver<'_>, pins: &DocumentMut) -> Result<Value> {
         constants.insert((*constant).into(), json!({"source":source,"value":value}));
     }
     let bindings = Bindings::from([("fees".into(), Binding::Module(FEES.into()))]);
+    if fund_sized {
+        ensure!(
+            string(assignment(&suite, "_HOTKEY_CLAIM")?)? == "claim_root_with_hotkey",
+            "unknown fund-sized node quote marker"
+        );
+    }
     let node_expr = assignment(&suite, "_NODE_QUOTES")?;
     let node_param = parameter(
         &suite,
@@ -1162,8 +1247,12 @@ fn project(resolver: &mut Resolver<'_>, pins: &DocumentMut) -> Result<Value> {
     for row in list(node_expr)? {
         let items = tuple(row, 4)?;
         let limits=list(&items[3])?.iter().map(|expr| {
-            ensure!(matches!(expr,ast::Expr::Attribute(node) if name(&node.value,"fees") && matches!(node.attr.as_str(),"_MAX_ROOT_CLAIM_WORK"|"_MAX_ROOT_CLAIM_HOTKEY_WORK")),"node envelope reference changed");
-            literal(resolver,&bindings,expr)
+            if fund_sized && name(expr, "_HOTKEY_CLAIM") {
+                Ok(json!("claim_root_with_hotkey"))
+            } else {
+                ensure!(matches!(expr,ast::Expr::Attribute(node) if name(&node.value,"fees") && matches!(node.attr.as_str(),"_MAX_ROOT_CLAIM_WORK"|"_MAX_ROOT_CLAIM_HOTKEY_WORK")),"node envelope reference changed");
+                literal(resolver,&bindings,expr)
+            }
         }).collect::<Result<Vec<_>>>()?;
         ensure!(
             !limits.is_empty() && limits.len() <= 2,
@@ -1459,7 +1548,16 @@ mod tests {
                 .len(),
             3
         );
-        assert_eq!(document["node_quotes"]["value"][0]["limits"], json!([130]));
+        let fund_sized =
+            document["constants"]["_MAX_ROOT_CLAIM_HOTKEY_WORK"]["value"] == json!(258);
+        assert_eq!(
+            document["node_quotes"]["value"][0]["limits"],
+            if fund_sized {
+                json!(["claim_root_with_hotkey"])
+            } else {
+                json!([130])
+            },
+        );
         assert_eq!(
             document["node_quotes"]["value"][2]["weight_fee"],
             json!(16_481_677)
@@ -1536,7 +1634,14 @@ mod tests {
             document["model_cases"][MODELS[6]]["value"][1]["scan_holdings"],
             json!(5)
         );
-        assert_eq!(document["allowance_units"]["value"], json!([256, 130, 2]));
+        assert_eq!(
+            document["allowance_units"]["value"],
+            if fund_sized {
+                json!([256, 258, 2])
+            } else {
+                json!([256, 130, 2])
+            },
+        );
         assert_eq!(
             document["helper_threshold_bits"]["value"],
             json!(500_000u64 << 32)
@@ -1557,6 +1662,11 @@ mod tests {
     #[test]
     fn rejects_fixture_mutation_and_unreviewed_executable_shapes() -> Result<()> {
         let original = fs::read_to_string(root()?.join("vendor/upstream/src").join(TEST))?;
+        let node_limit = if original.contains("[_HOTKEY_CLAIM]),") {
+            "_HOTKEY_CLAIM]),"
+        } else {
+            "fees._MAX_ROOT_CLAIM_HOTKEY_WORK]),"
+        };
         for (from, to) in [
             ("_root_claim_fee as fees", "_root_claim_fee as other"),
             ("import pytest", "import pytest as other"),
@@ -1573,7 +1683,7 @@ mod tests {
                 "(\"name\", \"weight\", \"weight_fee\", \"limits\"), _NODE_QUOTES",
                 "(\"name\", \"weight\", \"weight_fee\", \"limits\"), []",
             ),
-            ("fees._MAX_ROOT_CLAIM_HOTKEY_WORK]),", "fees.UNKNOWN]),"),
+            (node_limit, "fees.UNKNOWN]),"),
             ("for i in range(257)", "for i in range(257) if i"),
             ("for i in range(257)", "for i in range(1000000)"),
             ("f\"hotkey-{i}\"", "f\"hotkey-{i!r}\""),
@@ -1631,10 +1741,7 @@ mod tests {
     #[test]
     fn literal_update_reextracts_and_artifact_hash_tampering_fails() -> Result<()> {
         let original = fs::read_to_string(root()?.join("vendor/upstream/src").join(TEST))?;
-        let changed = original.replace(
-            "8_224_263, [fees._MAX_ROOT_CLAIM_HOTKEY_WORK]",
-            "8_224_264, [fees._MAX_ROOT_CLAIM_HOTKEY_WORK]",
-        );
+        let changed = original.replacen("8_224_263, [", "8_224_264, [", 1);
         ensure!(changed != original, "literal update needle missing");
         let document = inspect(Some(changed.clone()))?;
         assert_eq!(

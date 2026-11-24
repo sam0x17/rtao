@@ -24,7 +24,9 @@ use rtao_primitives::IntoCoreValue;
 use rtao_tx::{BuildCx, Built, Intent};
 
 const MAX_WORK: u64 = 256;
-const MAX_HOTKEY_WORK: u64 = 130;
+const MAX_HOTKEY_WORK_BEFORE_495: u64 = 130;
+const MAX_HOTKEY_WORK: u64 = 258;
+const FUND_SIZED_CLAIM_SPEC: u32 = 495;
 const FEE_ALLOWANCE: u64 = 4;
 const DEFAULT_THRESHOLD_RAO: u64 = 500_000;
 
@@ -83,6 +85,7 @@ fn native_sum(values: impl IntoIterator<Item = u64>) -> Result<u64, IntentError>
 struct Admission {
     hotkeys: Vec<AccountId>,
     holding_counts: Vec<u64>,
+    queued_new: u64,
     limit: u64,
     selection_scans: u64,
 }
@@ -96,6 +99,7 @@ impl Admission {
         admission_blocks(
             self.hotkeys.len() as u64,
             self.holdings()?,
+            self.queued_new,
             self.limit,
             self.selection_scans,
         )
@@ -105,10 +109,11 @@ impl Admission {
 fn admission_blocks(
     hotkeys: u64,
     holdings: u64,
+    queued_new: u64,
     limit: u64,
     selection_scans: u64,
 ) -> Result<Vec<String>, IntentError> {
-    let work = native_sum([hotkeys, holdings])?;
+    let work = native_sum([hotkeys, holdings, queued_new])?;
     if work <= limit && selection_scans <= limit {
         return Ok(vec![]);
     }
@@ -121,8 +126,13 @@ fn admission_blocks(
     if work > limit {
         let hotkey_label = if hotkeys == 1 { "hotkey" } else { "hotkeys" };
         let holding_label = if holdings == 1 { "holding" } else { "holdings" };
+        let queued = match queued_new {
+            0 => String::new(),
+            1 => " + 1 queued new row".to_owned(),
+            count => format!(" + {count} queued new rows"),
+        };
         reasons.push(format!(
-            "{hotkeys} root {hotkey_label} + {holdings} basket {holding_label} = {work}"
+            "{hotkeys} root {hotkey_label} + {holdings} basket {holding_label}{queued} = {work}"
         ));
     }
     if selection_scans > limit {
@@ -172,16 +182,48 @@ async fn admission<V: View + ?Sized>(
             .collect();
         (selected, scans)
     };
-    let holding_counts = stream::iter(selected.iter().copied().map(|hotkey| async move {
-        Ok::<_, IntentError>(
-            view.call(&basket::GET_VALIDATOR_BASKET, (hotkey,))
-                .await?
-                .len() as u64,
-        )
-    }))
-    .buffered(16)
-    .try_collect()
-    .await?;
+    let holdings: Vec<Vec<NetUid>> =
+        stream::iter(selected.iter().copied().map(|hotkey| async move {
+            Ok::<_, IntentError>(
+                view.call(&basket::GET_VALIDATOR_BASKET, (hotkey,))
+                    .await?
+                    .into_iter()
+                    .map(|(netuid, _, _)| netuid)
+                    .collect(),
+            )
+        }))
+        .buffered(16)
+        .try_collect()
+        .await?;
+    let (limit, queued_new) = match hotkey {
+        Some(hotkey) if view.runtime().await?.spec_version() >= FUND_SIZED_CLAIM_SPEC => {
+            let held: BTreeSet<_> = holdings[0].iter().copied().collect();
+            let deposits = view.storage_iter(
+                &storage::subtensor_module::PENDING_BASKET_DEPOSITS,
+                (hotkey,),
+            );
+            futures::pin_mut!(deposits);
+            let mut queued = 0;
+            while let Some((keys, _)) = deposits.try_next().await? {
+                let [netuid] = keys.as_slice() else {
+                    return Err(IntentError::validation(
+                        "unexpected PendingBasketDeposits key",
+                    ));
+                };
+                let netuid = netuid
+                    .as_u128()
+                    .and_then(|key| u16::try_from(key).ok())
+                    .ok_or_else(|| {
+                        IntentError::validation("invalid PendingBasketDeposits netuid")
+                    })?;
+                queued += u64::from(!held.contains(&NetUid(netuid)));
+            }
+            (MAX_HOTKEY_WORK, queued)
+        }
+        Some(_) => (MAX_HOTKEY_WORK_BEFORE_495, 0),
+        None => (MAX_WORK, 0),
+    };
+    let holding_counts = holdings.into_iter().map(|rows| rows.len() as u64).collect();
     // Python still verifies NetworksAdded, although network count is no longer
     // used by admission or any displayed fact. A failed scan must still refuse.
     let networks = view.storage_iter(&storage::subtensor_module::NETWORKS_ADDED, ());
@@ -190,11 +232,8 @@ async fn admission<V: View + ?Sized>(
     Ok(Admission {
         hotkeys: selected,
         holding_counts,
-        limit: if hotkey.is_some() {
-            MAX_HOTKEY_WORK
-        } else {
-            MAX_WORK
-        },
+        queued_new,
+        limit,
         selection_scans,
     })
 }
@@ -730,7 +769,20 @@ mod tests {
         name: String,
         weight: u128,
         weight_fee: u128,
-        limits: Vec<u64>,
+        limits: Vec<NodeQuoteLimit>,
+    }
+
+    #[derive(serde::Deserialize)]
+    #[serde(untagged)]
+    enum NodeQuoteLimit {
+        Fixed(u64),
+        FundSized(FundSizedQuote),
+    }
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "snake_case")]
+    enum FundSizedQuote {
+        ClaimRootWithHotkey,
     }
 
     #[derive(serde::Deserialize)]
@@ -1243,7 +1295,10 @@ mod tests {
         let data = fixture_data()?;
         let constant = |name| extracted(&data.constants, name).copied();
         assert_eq!(MAX_WORK, constant("_MAX_ROOT_CLAIM_WORK")?);
-        assert_eq!(MAX_HOTKEY_WORK, constant("_MAX_ROOT_CLAIM_HOTKEY_WORK")?);
+        assert!(matches!(
+            constant("_MAX_ROOT_CLAIM_HOTKEY_WORK")?,
+            MAX_HOTKEY_WORK_BEFORE_495 | MAX_HOTKEY_WORK
+        ));
         assert_eq!(FEE_ALLOWANCE, constant("_ROOT_CLAIM_FEE_ALLOWANCE")?);
         assert_eq!(DEFAULT_THRESHOLD_RAO, constant("_DEFAULT_THRESHOLD_RAO")?);
         let read = u128::from(constant("_ROCKSDB_READ_PS")?);
@@ -1283,8 +1338,27 @@ mod tests {
         for node in &data.node_quotes.value {
             anyhow::ensure!(!node.limits.is_empty(), "node quote has no claim limits");
             let mut discount = 0;
-            for &limit in &node.limits {
-                let declared = claim_ref_time(limit, quotes, rows);
+            let declared_call = |input: &NodeQuoteLimit| match input {
+                NodeQuoteLimit::Fixed(limit) => (claim_ref_time(*limit, quotes, rows), *limit),
+                NodeQuoteLimit::FundSized(FundSizedQuote::ClaimRootWithHotkey) => {
+                    // A validator without a fund declares the four-unit floor. It includes
+                    // the queue stability reads, two counts, and the debt settlement bound.
+                    let units = FEE_ALLOWANCE;
+                    let flush = u128::from(6 * units) * (10_000_000 + 11 * read);
+                    let sizing = u128::from(2 * (2 * units + 2) + 10) * read + write;
+                    let debt = u128::from(MAX_WORK + 3) * (read + write);
+                    (
+                        claim_root_ref_time(2 * units)
+                            + claim_root_scan_ref_time(units)
+                            + flush
+                            + sizing
+                            + debt,
+                        MAX_HOTKEY_WORK,
+                    )
+                }
+            };
+            for input in &node.limits {
+                let (declared, limit) = declared_call(input);
                 let units = limit.min(FEE_ALLOWANCE);
                 assert_eq!(
                     charged_ref_time(limit),
@@ -1299,15 +1373,11 @@ mod tests {
                 "{}",
                 node.name
             );
-            if let [limit] = node.limits.as_slice() {
+            if let [input] = node.limits.as_slice() {
+                let (declared, limit) = declared_call(input);
+                assert_eq!(declared + extension, node.weight, "{}", node.name);
                 assert_eq!(
-                    claim_ref_time(*limit, quotes, rows) + extension,
-                    node.weight,
-                    "{}",
-                    node.name
-                );
-                assert_eq!(
-                    charged_ref_time(*limit) + extension,
+                    charged_ref_time(limit) + extension,
                     node.weight - discount,
                     "{}",
                     node.name
@@ -1327,7 +1397,7 @@ mod tests {
         assert_eq!(charged_ref_time(129), claim_ref_time(4, 24, 4));
         assert_eq!(charged_ref_time(129), charged_ref_time(256));
         let discount = |limit| claim_ref_time(limit, quotes, rows) - charged_ref_time(limit);
-        assert!(discount(MAX_HOTKEY_WORK) < discount(MAX_WORK));
+        assert!(discount(MAX_HOTKEY_WORK_BEFORE_495) < discount(MAX_WORK));
         for (function, expected) in [
             ("test_spent_caps_at_the_fee_allowance", 8_209_263u64),
             ("test_spent_keeps_non_weight_base_fee", 1_509_587),
@@ -1496,11 +1566,28 @@ mod tests {
         Ok(())
     }
 
+    fn set_claim_test_runtime(state: &mut FakeState, spec: u32) -> anyhow::Result<()> {
+        let metadata = std::fs::read(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join(format!("../../vendor/metadata/finney/{spec}.v15.scale")),
+        )?;
+        state.runtime = Arc::new(rtao_core::runtime::Runtime::parse(&metadata, spec, 2, 42)?);
+        Ok(())
+    }
+
     #[tokio::test]
     async fn admission_boundaries_stop_before_fee_and_optional_yield_reads() -> anyhow::Result<()> {
-        for (holdings, allowed) in [(129, true), (130, false)] {
-            let (chain, client, snapshot) =
-                fixture(|state| seed_admission(state, &[HOTKEY], &[HOTKEY], holdings)).await?;
+        for (spec, limit, holdings, allowed) in [
+            (494, 130, 129, true),
+            (494, 130, 130, false),
+            (495, 258, 257, true),
+            (495, 258, 258, false),
+        ] {
+            let (chain, client, snapshot) = fixture(|state| {
+                set_claim_test_runtime(state, spec)?;
+                seed_admission(state, &[HOTKEY], &[HOTKEY], holdings)
+            })
+            .await?;
             let intent = single();
             let built = build(&intent, &snapshot).await?;
             let preview =
@@ -1516,9 +1603,10 @@ mod tests {
                 assert_eq!(preview.effects, [intent.summary()]);
                 assert_eq!(
                     preview.blocks,
-                    [
-                        "root claim exceeds the 130-unit admission limit (1 root hotkey + 130 basket holdings = 131); the claim cannot be admitted until this basket's work is reduced"
-                    ]
+                    [format!(
+                        "root claim exceeds the {limit}-unit admission limit (1 root hotkey + {holdings} basket holdings = {}); the claim cannot be admitted until this basket's work is reduced",
+                        holdings + 1
+                    )]
                 );
                 assert!(preview.required_free.is_none());
                 assert!(
@@ -1530,9 +1618,9 @@ mod tests {
             }
             client.close().await;
         }
-        assert!(admission_blocks(1, 255, 256, 256)?.is_empty());
+        assert!(admission_blocks(1, 255, 0, 256, 256)?.is_empty());
         assert!(
-            admission_blocks(1, 256, 256, 256)?[0]
+            admission_blocks(1, 256, 0, 256, 256)?[0]
                 .contains("1 root hotkey + 256 basket holdings = 257")
         );
         let (chain, client, snapshot) =
@@ -1644,6 +1732,52 @@ mod tests {
                         .any(|request| request.params[0] == "TransactionPaymentApi_query_info")
                 );
             }
+            client.close().await;
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn single_hotkey_admission_uses_the_pinned_spec_and_counts_only_new_rows()
+    -> anyhow::Result<()> {
+        for (spec, held, queued, limit, new_rows, blocked) in [
+            (494, 129, 200, 130, 0, false),
+            (494, 200, 0, 130, 0, true),
+            (495, 200, 57, 258, 57, false),
+            (495, 200, 58, 258, 58, true),
+        ] {
+            let (_chain, client, snapshot) = fixture(|state| {
+                set_claim_test_runtime(state, spec)?;
+                state.seed_runtime(
+                    "BetaBasketRuntimeApi",
+                    "get_validator_basket",
+                    json!(
+                        (0..held)
+                            .map(|netuid| json!([netuid, 1, 1]))
+                            .collect::<Vec<_>>()
+                    ),
+                )?;
+                for netuid in (held..held + queued).chain(0..1) {
+                    state.seed(
+                        &storage::subtensor_module::PENDING_BASKET_DEPOSITS,
+                        (HOTKEY, NetUid(netuid)),
+                        rtao_primitives::AlphaBalance(1),
+                    )?;
+                }
+                Ok(())
+            })
+            .await?;
+            let view = RecordingView::new(snapshot);
+            let admitted = admission(&view, CLAIMANT, Some(HOTKEY)).await?;
+            assert_eq!(admitted.limit, limit, "spec {spec}");
+            assert_eq!(admitted.queued_new, new_rows, "spec {spec}");
+            assert_eq!(!admitted.blocks()?.is_empty(), blocked, "spec {spec}");
+            assert_eq!(
+                view.touches()
+                    .iter()
+                    .any(|entry| entry.item == "PendingBasketDeposits"),
+                spec >= 495
+            );
             client.close().await;
         }
         Ok(())

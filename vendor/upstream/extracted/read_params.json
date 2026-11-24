@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
     "path": "website/apps/bittensor-website/public/catalog/reads.json",
-    "sha256": "b1339f46e97b9af0353bcedf99dc558c563641cab71b29eb77a18d781d251ecb",
-    "tag": "v494"
+    "sha256": "54ac7313d6842c85308f3094c3569e9a9d7e7f2b20e263c91bb4398de5fcbd08",
+    "tag": "v495"
   },
   "format": 1,
   "modules": {
@@ -19,8 +19,8 @@
     ]
   },
   "parity": {
-    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
-    "tag": "v494"
+    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "tag": "v495"
   },
   "reads": [
     {
@@ -770,32 +770,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 6871,
-            "end_line": 201,
-            "line": 201,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 6956,
+            "end_line": 203,
+            "line": 203,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 6860
+            "start_byte": 6945
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 6838,
-          "end_line": 200,
-          "line": 195,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 6923,
+          "end_line": 202,
+          "line": 197,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 6721
+          "start_byte": 6806
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 7051,
-          "end_line": 204,
-          "line": 201,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 7136,
+          "end_line": 206,
+          "line": 203,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 6839
+          "start_byte": 6924
         }
       }
     },
@@ -812,7 +812,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 8965,
             "end_line": 246,
             "line": 246,
@@ -831,7 +831,7 @@
           "name": "mechid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 8982,
             "end_line": 246,
             "line": 246,
@@ -850,7 +850,7 @@
           "name": "channel",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 9000,
             "end_line": 246,
             "line": 246,
@@ -869,7 +869,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 9035,
             "end_line": 246,
             "line": 246,
@@ -881,7 +881,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 8913,
           "end_line": 244,
           "line": 234,
@@ -889,9 +889,9 @@
           "start_byte": 8466
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
-          "end_byte": 10946,
-          "end_line": 293,
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
+          "end_byte": 11369,
+          "end_line": 304,
           "line": 245,
           "path": "sdk/python/bittensor/reads/identity.py",
           "start_byte": 8914
@@ -1157,7 +1157,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 5703,
             "end_line": 165,
             "line": 165,
@@ -1176,7 +1176,7 @@
           "name": "mechid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 5720,
             "end_line": 165,
             "line": 165,
@@ -1195,7 +1195,7 @@
           "name": "channel",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 5738,
             "end_line": 165,
             "line": 165,
@@ -1207,7 +1207,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 5663,
           "end_line": 164,
           "line": 155,
@@ -1215,7 +1215,7 @@
           "start_byte": 5313
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 6832,
           "end_line": 189,
           "line": 165,
@@ -1237,32 +1237,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 8516,
-            "end_line": 242,
-            "line": 242,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 8601,
+            "end_line": 244,
+            "line": 244,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 8505
+            "start_byte": 8590
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 8466,
-          "end_line": 241,
-          "line": 236,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 8551,
+          "end_line": 243,
+          "line": 238,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 8332
+          "start_byte": 8417
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 8700,
-          "end_line": 245,
-          "line": 242,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 8785,
+          "end_line": 247,
+          "line": 244,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 8467
+          "start_byte": 8552
         }
       }
     },
@@ -1279,7 +1279,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 3294,
             "end_line": 100,
             "line": 100,
@@ -1297,7 +1297,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 3312,
             "end_line": 100,
             "line": 100,
@@ -1309,7 +1309,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 3255,
           "end_line": 99,
           "line": 91,
@@ -1317,7 +1317,7 @@
           "start_byte": 2990
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 3805,
           "end_line": 111,
           "line": 100,
@@ -1339,32 +1339,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
-            "end_byte": 11586,
-            "end_line": 317,
-            "line": 317,
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
+            "end_byte": 12009,
+            "end_line": 328,
+            "line": 328,
             "path": "sdk/python/bittensor/reads/identity.py",
-            "start_byte": 11575
+            "start_byte": 11998
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
-          "end_byte": 11546,
-          "end_line": 316,
-          "line": 311,
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
+          "end_byte": 11969,
+          "end_line": 327,
+          "line": 322,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 11390
+          "start_byte": 11813
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
-          "end_byte": 12645,
-          "end_line": 340,
-          "line": 317,
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
+          "end_byte": 13068,
+          "end_line": 351,
+          "line": 328,
           "path": "sdk/python/bittensor/reads/identity.py",
-          "start_byte": 11547
+          "start_byte": 11970
         }
       }
     },
@@ -2001,7 +2001,7 @@
           "name": "hotkey_ss58s",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 1597,
             "end_line": 53,
             "line": 53,
@@ -2013,7 +2013,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 1539,
           "end_line": 52,
           "line": 47,
@@ -2021,7 +2021,7 @@
           "start_byte": 1366
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 2485,
           "end_line": 75,
           "line": 53,
@@ -2085,7 +2085,7 @@
           "name": "coldkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 1108,
             "end_line": 41,
             "line": 41,
@@ -2097,7 +2097,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 1065,
           "end_line": 40,
           "line": 35,
@@ -2105,7 +2105,7 @@
           "start_byte": 903
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 1362,
           "end_line": 44,
           "line": 41,
@@ -2477,7 +2477,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 7243,
             "end_line": 203,
             "line": 203,
@@ -2496,7 +2496,7 @@
           "name": "mechid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 7260,
             "end_line": 203,
             "line": 203,
@@ -2515,7 +2515,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 7295,
             "end_line": 203,
             "line": 203,
@@ -2527,7 +2527,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 7189,
           "end_line": 201,
           "line": 192,
@@ -2535,7 +2535,7 @@
           "start_byte": 6836
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 7695,
           "end_line": 212,
           "line": 202,
@@ -2557,32 +2557,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 21246,
-            "end_line": 553,
-            "line": 553,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 22250,
+            "end_line": 574,
+            "line": 574,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 21235
+            "start_byte": 22239
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 21202,
-          "end_line": 552,
-          "line": 547,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 22206,
+          "end_line": 573,
+          "line": 568,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 21074
+          "start_byte": 22078
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 21422,
-          "end_line": 556,
-          "line": 553,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 22426,
+          "end_line": 577,
+          "line": 574,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 21203
+          "start_byte": 22207
         }
       }
     },
@@ -2599,32 +2599,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 21616,
-            "end_line": 565,
-            "line": 565,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 22620,
+            "end_line": 586,
+            "line": 586,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 21605
+            "start_byte": 22609
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 21563,
-          "end_line": 564,
-          "line": 559,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 22567,
+          "end_line": 585,
+          "line": 580,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 21426
+          "start_byte": 22430
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 21946,
-          "end_line": 572,
-          "line": 565,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 22950,
+          "end_line": 593,
+          "line": 586,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 21564
+          "start_byte": 22568
         }
       }
     },
@@ -2641,32 +2641,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 18105,
-            "end_line": 469,
-            "line": 469,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 19109,
+            "end_line": 490,
+            "line": 490,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 18094
+            "start_byte": 19098
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 18067,
-          "end_line": 468,
-          "line": 463,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 19071,
+          "end_line": 489,
+          "line": 484,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 17929
+          "start_byte": 18933
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 18798,
-          "end_line": 483,
-          "line": 469,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 19802,
+          "end_line": 504,
+          "line": 490,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 18068
+          "start_byte": 19072
         }
       }
     },
@@ -3636,7 +3636,7 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 4131,
             "end_line": 123,
             "line": 123,
@@ -3654,7 +3654,7 @@
           "name": "hotkey_ss58",
           "own_key": true,
           "provenance": {
-            "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+            "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
             "end_byte": 4149,
             "end_line": 123,
             "line": 123,
@@ -3666,7 +3666,7 @@
       ],
       "provenance": {
         "declaration": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 4083,
           "end_line": 122,
           "line": 114,
@@ -3674,7 +3674,7 @@
           "start_byte": 3809
         },
         "fetch": {
-          "blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35",
+          "blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c",
           "end_byte": 4335,
           "end_line": 125,
           "line": 123,
@@ -3891,32 +3891,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 22537,
-            "end_line": 592,
-            "line": 592,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 23541,
+            "end_line": 613,
+            "line": 613,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 22526
+            "start_byte": 23530
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 22500,
-          "end_line": 591,
-          "line": 586,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 23504,
+          "end_line": 612,
+          "line": 607,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 22365
+          "start_byte": 23369
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 23478,
-          "end_line": 614,
-          "line": 592,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 24482,
+          "end_line": 635,
+          "line": 613,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 22501
+          "start_byte": 23505
         }
       }
     },
@@ -4341,32 +4341,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 4776,
-            "end_line": 144,
-            "line": 144,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 4861,
+            "end_line": 146,
+            "line": 146,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 4765
+            "start_byte": 4850
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 4741,
-          "end_line": 143,
-          "line": 138,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 4826,
+          "end_line": 145,
+          "line": 140,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 4622
+          "start_byte": 4707
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 5510,
-          "end_line": 161,
-          "line": 144,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 5595,
+          "end_line": 163,
+          "line": 146,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 4742
+          "start_byte": 4827
         }
       }
     },
@@ -4526,32 +4526,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 15307,
-            "end_line": 402,
-            "line": 402,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 16183,
+            "end_line": 420,
+            "line": 420,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 15296
+            "start_byte": 16172
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 15255,
-          "end_line": 401,
-          "line": 396,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 16131,
+          "end_line": 419,
+          "line": 414,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 15091
+          "start_byte": 15967
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 17925,
-          "end_line": 460,
-          "line": 402,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 18929,
+          "end_line": 481,
+          "line": 420,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 15256
+          "start_byte": 16132
         }
       }
     },
@@ -4627,32 +4627,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 9843,
-            "end_line": 278,
-            "line": 278,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 9928,
+            "end_line": 280,
+            "line": 280,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 9832
+            "start_byte": 9917
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 9792,
-          "end_line": 277,
-          "line": 272,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 9877,
+          "end_line": 279,
+          "line": 274,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 9657
+          "start_byte": 9742
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 10429,
-          "end_line": 289,
-          "line": 278,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 10514,
+          "end_line": 291,
+          "line": 280,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 9793
+          "start_byte": 9878
         }
       }
     },
@@ -4669,32 +4669,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 18988,
-            "end_line": 492,
-            "line": 492,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 19992,
+            "end_line": 513,
+            "line": 513,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 18977
+            "start_byte": 19981
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 18944,
-          "end_line": 491,
-          "line": 486,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 19948,
+          "end_line": 512,
+          "line": 507,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 18802
+          "start_byte": 19806
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 19214,
-          "end_line": 495,
-          "line": 492,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 20218,
+          "end_line": 516,
+          "line": 513,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 18945
+          "start_byte": 19949
         }
       }
     },
@@ -4704,20 +4704,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 19262,
-          "end_line": 498,
-          "line": 498,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 20266,
+          "end_line": 519,
+          "line": 519,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 19218
+          "start_byte": 20222
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 19666,
-          "end_line": 507,
-          "line": 499,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 20670,
+          "end_line": 528,
+          "line": 520,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 19263
+          "start_byte": 20267
         }
       }
     },
@@ -4727,20 +4727,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 22006,
-          "end_line": 575,
-          "line": 575,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 23010,
+          "end_line": 596,
+          "line": 596,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 21950
+          "start_byte": 22954
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 22361,
-          "end_line": 583,
-          "line": 576,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 23365,
+          "end_line": 604,
+          "line": 597,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 22007
+          "start_byte": 23011
         }
       }
     },
@@ -4757,32 +4757,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 20371,
-            "end_line": 528,
-            "line": 528,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 21375,
+            "end_line": 549,
+            "line": 549,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 20360
+            "start_byte": 21364
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 20321,
-          "end_line": 527,
-          "line": 522,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 21325,
+          "end_line": 548,
+          "line": 543,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 20187
+          "start_byte": 21191
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 21070,
-          "end_line": 544,
-          "line": 528,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 22074,
+          "end_line": 565,
+          "line": 549,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 20322
+          "start_byte": 21326
         }
       }
     },
@@ -4799,32 +4799,32 @@
           "name": "netuid",
           "own_key": false,
           "provenance": {
-            "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-            "end_byte": 2971,
-            "end_line": 101,
-            "line": 101,
+            "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+            "end_byte": 3056,
+            "end_line": 103,
+            "line": 103,
             "path": "sdk/python/bittensor/reads/subnets.py",
-            "start_byte": 2960
+            "start_byte": 3045
           },
           "required": true
         }
       ],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 2930,
-          "end_line": 100,
-          "line": 95,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 3015,
+          "end_line": 102,
+          "line": 97,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 2779
+          "start_byte": 2864
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 3401,
-          "end_line": 108,
-          "line": 101,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 3486,
+          "end_line": 110,
+          "line": 103,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 2931
+          "start_byte": 3016
         }
       }
     },
@@ -4834,20 +4834,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 3450,
-          "end_line": 111,
-          "line": 111,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 3535,
+          "end_line": 113,
+          "line": 113,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 3405
+          "start_byte": 3490
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 4618,
-          "end_line": 135,
-          "line": 112,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 4703,
+          "end_line": 137,
+          "line": 114,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 3451
+          "start_byte": 3536
         }
       }
     },
@@ -4857,20 +4857,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 7329,
-          "end_line": 214,
-          "line": 214,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 7414,
+          "end_line": 216,
+          "line": 216,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 7281
+          "start_byte": 7366
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 8328,
-          "end_line": 233,
-          "line": 215,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 8413,
+          "end_line": 235,
+          "line": 217,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 7330
+          "start_byte": 7415
         }
       }
     },
@@ -4880,20 +4880,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 5553,
-          "end_line": 164,
-          "line": 164,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 5638,
+          "end_line": 166,
+          "line": 166,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 5514
+          "start_byte": 5599
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 6717,
-          "end_line": 192,
-          "line": 165,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 6802,
+          "end_line": 194,
+          "line": 167,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 5554
+          "start_byte": 5639
         }
       }
     },
@@ -5010,20 +5010,20 @@
       "params": [],
       "provenance": {
         "declaration": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 19715,
-          "end_line": 510,
-          "line": 510,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 20719,
+          "end_line": 531,
+          "line": 531,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 19670
+          "start_byte": 20674
         },
         "fetch": {
-          "blob": "6dfe3616b353b751a8a843e3ea22d7e51c865559",
-          "end_byte": 20183,
-          "end_line": 519,
-          "line": 511,
+          "blob": "49dd2c9b9b34dc2555ce67740ed3320ba426117d",
+          "end_byte": 21187,
+          "end_line": 540,
+          "line": 532,
           "path": "sdk/python/bittensor/reads/subnets.py",
-          "start_byte": 19716
+          "start_byte": 20720
         }
       }
     },

@@ -18,9 +18,39 @@ use crate::{
     CommitWeightHash, CommitWeights, RevealWeights, SetMechWeightDelegate, SetWeights, WeightsArg,
 };
 
+const NULL_ROW_CAP_SPEC: u32 = 495;
+const NULL_TOTAL_WEIGHTS: u16 = 2500;
+
 struct CheckedState {
     conform: ConformState,
     commit_reveal: bool,
+    max_row_len: Option<u16>,
+}
+
+impl CheckedState {
+    fn conform_row(
+        &self,
+        uids: &[Uid],
+        weights: &[f64],
+        netuid: NetUid,
+        raw_u16: bool,
+    ) -> Result<(Vec<Uid>, Vec<u16>), IntentError> {
+        let row =
+            super::conform(uids, weights, self.conform, netuid, raw_u16).map_err(math_error)?;
+        if let Some(cap) = self.max_row_len
+            && row.0.len() > usize::from(cap)
+        {
+            return Err(IntentError::Chain(ChainError::with_code(
+                format!(
+                    "Null subnet {netuid} accepts at most {cap} weights in one row at its current mechanism count; {} are nonzero after normalization.",
+                    row.0.len(),
+                ),
+                Some("TooManyWeightsForNullMechanism".into()),
+                ErrorCode::LimitExceeded,
+            )));
+        }
+        Ok(row)
+    }
 }
 
 struct CommitRow {
@@ -94,8 +124,8 @@ async fn checked(
             ErrorCode::NotRegistered,
         )
     })?;
-    let mode = mode.to_json();
-    if null_mode(&mode, true) {
+    let is_null = null_mode(&mode.to_json(), true);
+    if is_null {
         let permits = snapshot.storage(&st::VALIDATOR_PERMIT, (netuid,)).await?;
         if !permits.get(usize::from(uid)).copied().unwrap_or(false) {
             return Err(semantic(
@@ -106,6 +136,19 @@ async fn checked(
             ));
         }
     }
+    let (min, max_row_len) =
+        if is_null && snapshot.block().runtime.spec_version() >= NULL_ROW_CAP_SPEC {
+            let (mechanisms, subnet_n) = snapshot
+                .fetch((
+                    st::MECHANISM_COUNT_CURRENT.at((netuid,)),
+                    st::SUBNETWORK_N.at((netuid,)),
+                ))
+                .await?;
+            let cap = (NULL_TOTAL_WEIGHTS / u16::from(mechanisms.0.max(1))).max(1);
+            (min.min(cap).min(subnet_n), Some(cap))
+        } else {
+            (min, None)
+        };
     if rate != 0
         && let Some(&last) = last.get(usize::from(uid)).filter(|last| **last > 0)
     {
@@ -128,6 +171,7 @@ async fn checked(
             max_weight_limit: max,
         },
         commit_reveal: enabled,
+        max_row_len,
     })
 }
 
@@ -329,8 +373,7 @@ impl Intent for SetWeights {
         if self.raw_u16 {
             ensure_raw_null(&snapshot, self.netuid).await?;
         }
-        let row = super::conform(&uids, &weights, state.conform, self.netuid, self.raw_u16)
-            .map_err(math_error)?;
+        let row = state.conform_row(&uids, &weights, self.netuid, self.raw_u16)?;
         if state.commit_reveal {
             timelocked(
                 cx,
@@ -413,8 +456,7 @@ impl Intent for CommitWeights {
         if self.raw_u16 {
             ensure_raw_null(&snapshot, self.netuid).await?;
         }
-        let row = super::conform(&uids, &weights, state.conform, self.netuid, self.raw_u16)
-            .map_err(math_error)?;
+        let row = state.conform_row(&uids, &weights, self.netuid, self.raw_u16)?;
         timelocked(
             cx,
             &snapshot,
@@ -941,6 +983,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn null_row_cap_checks_nonzero_weights_before_call_or_encryption() {
+        let (snapshot, chain) = fixture(true, false).await;
+        chain.mutate_state(|state| {
+            state.seed(&st::SUBNETWORK_N, (NETUID,), 2500u16).unwrap();
+        });
+        let mut weights = vec![1.0; 1251];
+        let error = build(&input(&weights), &snapshot).await.unwrap_err();
+        assert_eq!(error.code(), ErrorCode::LimitExceeded);
+
+        let (snapshot, chain) = fixture(true, true).await;
+        chain.mutate_state(|state| {
+            state.seed(&st::SUBNETWORK_N, (NETUID,), 2500u16).unwrap();
+        });
+        let error = build(&input(&weights), &snapshot).await.unwrap_err();
+        assert_eq!(error.code(), ErrorCode::LimitExceeded);
+
+        weights[1250] = 0.0;
+        let (snapshot, chain) = fixture(true, false).await;
+        chain.mutate_state(|state| {
+            state.seed(&st::SUBNETWORK_N, (NETUID,), 2500u16).unwrap();
+        });
+        assert!(build(&input(&weights), &snapshot).await.is_ok());
+    }
+
+    #[tokio::test]
     async fn raw_null_ratios_are_retained_and_yuma_is_refused() {
         let (snapshot, _) = fixture(true, false).await;
         let mut intent = input(&[1.0, 2.0, 3.0]);
@@ -1123,7 +1190,7 @@ mod tests {
                 touch.item
             })
             .collect::<std::collections::BTreeSet<_>>();
-        let expected = [
+        let mut expected: std::collections::BTreeSet<String> = [
             "BlocksSinceLastStep",
             "CommitRevealWeightsEnabled",
             "CommitRevealWeightsVersion",
@@ -1143,6 +1210,12 @@ mod tests {
         .into_iter()
         .map(String::from)
         .collect();
+        if snapshot.block().runtime.spec_version() >= NULL_ROW_CAP_SPEC {
+            expected.extend([
+                String::from("MechanismCountCurrent"),
+                String::from("SubnetworkN"),
+            ]);
+        }
         assert_eq!(actual, expected);
         assert!(
             fake.requests()

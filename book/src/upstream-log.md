@@ -413,6 +413,18 @@ The porting report re-derives 13 source entries and lists 33 hand ports
 due. The SDK uses core v490 and reports an empty validation range.
 Python oracle comparison remains pending.
 
+## 2026-11-24: Finney runtime 495
+
+Finney activated spec 495 at block 9,578,500. This moves the parity pin to
+`v495` (`e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900`). Four endpoints
+agreed on the runtime code and both metadata versions. The v495 release
+WASM matched the on-chain code hash. The core source and signing envelope
+match the prior pins. Metadata changes are additive.
+
+The Rust root-claim and Null weight preflights use the rules of the
+runtime at the pinned block. The remaining hand ports are listed in
+`parity/port_due.toml`.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

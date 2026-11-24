@@ -106,7 +106,10 @@ mod null_weights {
     // pyt: sdk/python/tests/unit/test_null_weights.py::test_full_row_intent_composes_exact_values
     #[tokio::test]
     async fn full_row_intent_composes_exact_values_in_both_branches() {
-        let (uids, weights) = full_row();
+        let (mut uids, mut weights) = full_row();
+        // Two mechanisms each admit half the total Null weight budget.
+        uids.truncate(1250);
+        weights.truncate(1250);
         let values = weights.iter().copied().map(f64::from).collect::<Vec<_>>();
         for commit_reveal in [false, true] {
             // The shared fixture uses netuid 3, mechanism 1 and validator UID 2.

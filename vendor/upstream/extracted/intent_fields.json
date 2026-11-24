@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
     "path": "website/apps/bittensor-website/public/catalog/intents.json",
-    "sha256": "d2afb1dc4fc403b2ffd3f81c5cdad63e6eb581cebd6cd93548c92969a0d5ac91",
-    "tag": "v494"
+    "sha256": "b4147c6e5e237a9733e5c2f2d2115d7509c42bf9c77ef04384c1a35f08a810bd",
+    "tag": "v495"
   },
   "format": 1,
   "intents": [
@@ -716,12 +716,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 5984,
-            "end_line": 143,
-            "line": 143,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 5954,
+            "end_line": 142,
+            "line": 142,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 5920
+            "start_byte": 5890
           },
           "required": true
         },
@@ -734,24 +734,24 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 6145,
-            "end_line": 147,
-            "line": 144,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 6115,
+            "end_line": 146,
+            "line": 143,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 5989
+            "start_byte": 5959
           },
           "required": false
         }
       ],
       "name": "burned_register",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 7182,
-        "end_line": 173,
-        "line": 116,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 7152,
+        "end_line": 172,
+        "line": 115,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 4531
+        "start_byte": 4501
       },
       "python_class": "BurnedRegister"
     },
@@ -836,24 +836,24 @@
           },
           "name": "subnets",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 18642,
-            "end_line": 467,
-            "line": 461,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 18556,
+            "end_line": 465,
+            "line": 459,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 18392
+            "start_byte": 18306
           },
           "required": false
         }
       ],
       "name": "claim_root",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 19085,
-        "end_line": 479,
-        "line": 429,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 18999,
+        "end_line": 477,
+        "line": 427,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 16855
+        "start_byte": 16769
       },
       "python_class": "ClaimRoot"
     },
@@ -868,24 +868,24 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 21658,
-            "end_line": 526,
-            "line": 524,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 21814,
+            "end_line": 527,
+            "line": 525,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 21550
+            "start_byte": 21706
           },
           "required": true
         }
       ],
       "name": "claim_root_with_hotkey",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 22203,
-        "end_line": 539,
-        "line": 484,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 22359,
+        "end_line": 540,
+        "line": 482,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 19109
+        "start_byte": 19023
       },
       "python_class": "ClaimRootWithHotkey"
     },
@@ -963,12 +963,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 29232,
-            "end_line": 688,
-            "line": 688,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 31130,
+            "end_line": 727,
+            "line": 727,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 29181
+            "start_byte": 31079
           },
           "required": true
         },
@@ -981,12 +981,12 @@
           },
           "name": "commit_hash",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 29329,
-            "end_line": 689,
-            "line": 689,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 31227,
+            "end_line": 728,
+            "line": 728,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 29237
+            "start_byte": 31135
           },
           "required": true
         },
@@ -999,12 +999,12 @@
           },
           "name": "mechid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 29396,
-            "end_line": 690,
-            "line": 690,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 31294,
+            "end_line": 729,
+            "line": 729,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 29334
+            "start_byte": 31232
           },
           "required": false
         },
@@ -1017,24 +1017,24 @@
           },
           "name": "for_hotkey",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 29484,
-            "end_line": 691,
-            "line": 691,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 31382,
+            "end_line": 730,
+            "line": 730,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 29401
+            "start_byte": 31299
           },
           "required": false
         }
       ],
       "name": "commit_weight_hash",
       "provenance": {
-        "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-        "end_byte": 30315,
-        "end_line": 714,
-        "line": 670,
+        "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+        "end_byte": 32213,
+        "end_line": 753,
+        "line": 709,
         "path": "sdk/python/bittensor/intents/weights.py",
-        "start_byte": 28411
+        "start_byte": 30309
       },
       "python_class": "CommitWeightHash"
     },
@@ -1049,12 +1049,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23101,
-            "end_line": 539,
-            "line": 539,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 24999,
+            "end_line": 578,
+            "line": 578,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23050
+            "start_byte": 24948
           },
           "required": true
         },
@@ -1067,12 +1067,12 @@
           },
           "name": "uids",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23183,
-            "end_line": 540,
-            "line": 540,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 25081,
+            "end_line": 579,
+            "line": 579,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23106
+            "start_byte": 25004
           },
           "required": false
         },
@@ -1085,12 +1085,12 @@
           },
           "name": "weights",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23273,
-            "end_line": 541,
-            "line": 541,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 25171,
+            "end_line": 580,
+            "line": 580,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23188
+            "start_byte": 25086
           },
           "required": false
         },
@@ -1103,12 +1103,12 @@
           },
           "name": "mechid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23340,
-            "end_line": 542,
-            "line": 542,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 25238,
+            "end_line": 581,
+            "line": 581,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23278
+            "start_byte": 25176
           },
           "required": false
         },
@@ -1121,12 +1121,12 @@
           },
           "name": "version_key",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23417,
-            "end_line": 543,
-            "line": 543,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 25315,
+            "end_line": 582,
+            "line": 582,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23345
+            "start_byte": 25243
           },
           "required": false
         },
@@ -1139,12 +1139,12 @@
           },
           "name": "for_hotkey",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23505,
-            "end_line": 544,
-            "line": 544,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 25403,
+            "end_line": 583,
+            "line": 583,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23422
+            "start_byte": 25320
           },
           "required": false
         },
@@ -1157,12 +1157,12 @@
           },
           "name": "raw_u16",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23688,
-            "end_line": 550,
-            "line": 545,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 25586,
+            "end_line": 589,
+            "line": 584,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23510
+            "start_byte": 25408
           },
           "required": false
         },
@@ -1175,24 +1175,24 @@
           },
           "name": "commit_reveal_version",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 23966,
-            "end_line": 557,
-            "line": 551,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 25864,
+            "end_line": 596,
+            "line": 590,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 23693
+            "start_byte": 25591
           },
           "required": false
         }
       ],
       "name": "commit_weights",
       "provenance": {
-        "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-        "end_byte": 25466,
-        "end_line": 595,
-        "line": 519,
+        "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+        "end_byte": 27364,
+        "end_line": 634,
+        "line": 558,
         "path": "sdk/python/bittensor/intents/weights.py",
-        "start_byte": 22177
+        "start_byte": 24075
       },
       "python_class": "CommitWeights"
     },
@@ -3248,12 +3248,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 2520,
-            "end_line": 69,
-            "line": 69,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 2490,
+            "end_line": 68,
+            "line": 68,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 2445
+            "start_byte": 2415
           },
           "required": true
         },
@@ -3266,12 +3266,12 @@
           },
           "name": "work_block",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 2607,
-            "end_line": 70,
-            "line": 70,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 2577,
+            "end_line": 69,
+            "line": 69,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 2525
+            "start_byte": 2495
           },
           "required": true
         },
@@ -3284,12 +3284,12 @@
           },
           "name": "nonce",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 2684,
-            "end_line": 71,
-            "line": 71,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 2654,
+            "end_line": 70,
+            "line": 70,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 2612
+            "start_byte": 2582
           },
           "required": true
         },
@@ -3302,12 +3302,12 @@
           },
           "name": "work_hex",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 2775,
-            "end_line": 72,
-            "line": 72,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 2745,
+            "end_line": 71,
+            "line": 71,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 2689
+            "start_byte": 2659
           },
           "required": true
         },
@@ -3320,12 +3320,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 2876,
-            "end_line": 73,
-            "line": 73,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 2846,
+            "end_line": 72,
+            "line": 72,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 2780
+            "start_byte": 2750
           },
           "required": false
         },
@@ -3338,12 +3338,12 @@
           },
           "name": "mining_workers",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 3005,
-            "end_line": 77,
-            "line": 75,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 2975,
+            "end_line": 76,
+            "line": 74,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 2882
+            "start_byte": 2852
           },
           "required": false
         },
@@ -3356,12 +3356,12 @@
           },
           "name": "mining_timeout",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 3127,
-            "end_line": 80,
-            "line": 78,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 3097,
+            "end_line": 79,
+            "line": 77,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 3010
+            "start_byte": 2980
           },
           "required": false
         },
@@ -3374,12 +3374,12 @@
           },
           "name": "mining_backend",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 3224,
-            "end_line": 82,
-            "line": 82,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 3194,
+            "end_line": 81,
+            "line": 81,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 3133
+            "start_byte": 3103
           },
           "required": false
         },
@@ -3392,24 +3392,24 @@
           },
           "name": "mining_device_ids",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 3365,
-            "end_line": 85,
-            "line": 83,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 3335,
+            "end_line": 84,
+            "line": 82,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 3229
+            "start_byte": 3199
           },
           "required": false
         }
       ],
       "name": "pow_register",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 4507,
-        "end_line": 111,
-        "line": 54,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 4477,
+        "end_line": 110,
+        "line": 53,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 1837
+        "start_byte": 1807
       },
       "python_class": "PowRegister"
     },
@@ -3506,24 +3506,24 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 9027,
-            "end_line": 211,
-            "line": 206,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 8997,
+            "end_line": 210,
+            "line": 205,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 8839
+            "start_byte": 8809
           },
           "required": false
         }
       ],
       "name": "register_subnet",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 9469,
-        "end_line": 225,
-        "line": 178,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 9439,
+        "end_line": 224,
+        "line": 177,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 7206
+        "start_byte": 7176
       },
       "python_class": "RegisterSubnet"
     },
@@ -4027,12 +4027,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 26664,
-            "end_line": 623,
-            "line": 623,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 28562,
+            "end_line": 662,
+            "line": 662,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 26613
+            "start_byte": 28511
           },
           "required": true
         },
@@ -4045,12 +4045,12 @@
           },
           "name": "uids",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 26792,
-            "end_line": 626,
-            "line": 624,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 28690,
+            "end_line": 665,
+            "line": 663,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 26669
+            "start_byte": 28567
           },
           "required": true
         },
@@ -4063,12 +4063,12 @@
           },
           "name": "weights",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 26919,
-            "end_line": 629,
-            "line": 627,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 28817,
+            "end_line": 668,
+            "line": 666,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 26797
+            "start_byte": 28695
           },
           "required": true
         },
@@ -4081,12 +4081,12 @@
           },
           "name": "salt",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 27041,
-            "end_line": 632,
-            "line": 630,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 28939,
+            "end_line": 671,
+            "line": 669,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 26924
+            "start_byte": 28822
           },
           "required": true
         },
@@ -4099,12 +4099,12 @@
           },
           "name": "version_key",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 27160,
-            "end_line": 635,
-            "line": 633,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 29058,
+            "end_line": 674,
+            "line": 672,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 27046
+            "start_byte": 28944
           },
           "required": false
         },
@@ -4117,12 +4117,12 @@
           },
           "name": "mechid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 27227,
-            "end_line": 636,
-            "line": 636,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 29125,
+            "end_line": 675,
+            "line": 675,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 27165
+            "start_byte": 29063
           },
           "required": false
         },
@@ -4135,24 +4135,24 @@
           },
           "name": "for_hotkey",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 27315,
-            "end_line": 637,
-            "line": 637,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 29213,
+            "end_line": 676,
+            "line": 676,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 27232
+            "start_byte": 29130
           },
           "required": false
         }
       ],
       "name": "reveal_weights",
       "provenance": {
-        "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-        "end_byte": 28387,
-        "end_line": 665,
-        "line": 600,
+        "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+        "end_byte": 30285,
+        "end_line": 704,
+        "line": 639,
         "path": "sdk/python/bittensor/intents/weights.py",
-        "start_byte": 25490
+        "start_byte": 27388
       },
       "python_class": "RevealWeights"
     },
@@ -4167,24 +4167,24 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 12304,
-            "end_line": 292,
-            "line": 287,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 12274,
+            "end_line": 291,
+            "line": 286,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 12116
+            "start_byte": 12086
           },
           "required": false
         }
       ],
       "name": "root_register",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 13034,
-        "end_line": 311,
-        "line": 259,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 13004,
+        "end_line": 310,
+        "line": 258,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 10621
+        "start_byte": 10591
       },
       "python_class": "RootRegister"
     },
@@ -5303,12 +5303,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 31231,
-            "end_line": 736,
-            "line": 736,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 33129,
+            "end_line": 775,
+            "line": 775,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 31150
+            "start_byte": 33048
           },
           "required": true
         },
@@ -5321,12 +5321,12 @@
           },
           "name": "mechid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 31298,
-            "end_line": 737,
-            "line": 737,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 33196,
+            "end_line": 776,
+            "line": 776,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 31236
+            "start_byte": 33134
           },
           "required": false
         },
@@ -5339,24 +5339,24 @@
           },
           "name": "delegate",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 31573,
-            "end_line": 744,
-            "line": 738,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 33471,
+            "end_line": 783,
+            "line": 777,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 31303
+            "start_byte": 33201
           },
           "required": false
         }
       ],
       "name": "set_mech_weight_delegate",
       "provenance": {
-        "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-        "end_byte": 32105,
-        "end_line": 757,
-        "line": 719,
+        "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+        "end_byte": 34003,
+        "end_line": 796,
+        "line": 758,
         "path": "sdk/python/bittensor/intents/weights.py",
-        "start_byte": 30339
+        "start_byte": 32237
       },
       "python_class": "SetMechWeightDelegate"
     },
@@ -5371,12 +5371,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-            "end_byte": 7524,
-            "end_line": 182,
-            "line": 182,
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
+            "end_byte": 7924,
+            "end_line": 187,
+            "line": 187,
             "path": "sdk/python/bittensor/intents/governance.py",
-            "start_byte": 7432
+            "start_byte": 7832
           },
           "required": true
         },
@@ -5389,21 +5389,21 @@
           },
           "name": "mechanism_count",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-            "end_byte": 7623,
-            "end_line": 183,
-            "line": 183,
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
+            "end_byte": 8023,
+            "end_line": 188,
+            "line": 188,
             "path": "sdk/python/bittensor/intents/governance.py",
-            "start_byte": 7529
+            "start_byte": 7929
           },
           "required": true
         }
       ],
       "name": "set_mechanism_count",
       "provenance": {
-        "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-        "end_byte": 7986,
-        "end_line": 193,
+        "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
+        "end_byte": 8386,
+        "end_line": 198,
         "line": 164,
         "path": "sdk/python/bittensor/intents/governance.py",
         "start_byte": 6607
@@ -5753,12 +5753,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
-            "end_byte": 5608,
-            "end_line": 130,
-            "line": 130,
+            "blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a",
+            "end_byte": 5913,
+            "end_line": 134,
+            "line": 134,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 5516
+            "start_byte": 5821
           },
           "required": true
         },
@@ -5771,12 +5771,12 @@
           },
           "name": "slots",
           "provenance": {
-            "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
-            "end_byte": 5674,
-            "end_line": 131,
-            "line": 131,
+            "blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a",
+            "end_byte": 5979,
+            "end_line": 135,
+            "line": 135,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 5613
+            "start_byte": 5918
           },
           "required": true
         },
@@ -5789,12 +5789,12 @@
           },
           "name": "values",
           "provenance": {
-            "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
-            "end_byte": 5750,
-            "end_line": 132,
-            "line": 132,
+            "blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a",
+            "end_byte": 6055,
+            "end_line": 136,
+            "line": 136,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 5679
+            "start_byte": 5984
           },
           "required": true
         },
@@ -5807,12 +5807,12 @@
           },
           "name": "renormalize",
           "provenance": {
-            "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
-            "end_byte": 5832,
-            "end_line": 133,
-            "line": 133,
+            "blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a",
+            "end_byte": 6137,
+            "end_line": 137,
+            "line": 137,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 5755
+            "start_byte": 6060
           },
           "required": false
         },
@@ -5827,24 +5827,24 @@
           },
           "name": "gamma",
           "provenance": {
-            "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
-            "end_byte": 5909,
-            "end_line": 134,
-            "line": 134,
+            "blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a",
+            "end_byte": 6214,
+            "end_line": 138,
+            "line": 138,
             "path": "sdk/python/bittensor/intents/emission_weights.py",
-            "start_byte": 5837
+            "start_byte": 6142
           },
           "required": false
         }
       ],
       "name": "set_subnet_emission_weights",
       "provenance": {
-        "blob": "06b1d7d749969b1fad313e938e63d0c14ec8db6f",
-        "end_byte": 16315,
-        "end_line": 353,
-        "line": 106,
+        "blob": "a6a21afb11be4c77ce4686c5b90e06e085b3dd2a",
+        "end_byte": 16848,
+        "end_line": 362,
+        "line": 108,
         "path": "sdk/python/bittensor/intents/emission_weights.py",
-        "start_byte": 4266
+        "start_byte": 4398
       },
       "python_class": "SetSubnetEmissionWeights"
     },
@@ -6135,12 +6135,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 19265,
-            "end_line": 444,
-            "line": 444,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 21163,
+            "end_line": 483,
+            "line": 483,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 19214
+            "start_byte": 21112
           },
           "required": true
         },
@@ -6153,12 +6153,12 @@
           },
           "name": "uids",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 19347,
-            "end_line": 445,
-            "line": 445,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 21245,
+            "end_line": 484,
+            "line": 484,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 19270
+            "start_byte": 21168
           },
           "required": false
         },
@@ -6171,12 +6171,12 @@
           },
           "name": "weights",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 19437,
-            "end_line": 446,
-            "line": 446,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 21335,
+            "end_line": 485,
+            "line": 485,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 19352
+            "start_byte": 21250
           },
           "required": false
         },
@@ -6189,12 +6189,12 @@
           },
           "name": "mechid",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 19504,
-            "end_line": 447,
-            "line": 447,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 21402,
+            "end_line": 486,
+            "line": 486,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 19442
+            "start_byte": 21340
           },
           "required": false
         },
@@ -6207,12 +6207,12 @@
           },
           "name": "version_key",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 19581,
-            "end_line": 448,
-            "line": 448,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 21479,
+            "end_line": 487,
+            "line": 487,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 19509
+            "start_byte": 21407
           },
           "required": false
         },
@@ -6225,12 +6225,12 @@
           },
           "name": "for_hotkey",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 19669,
-            "end_line": 449,
-            "line": 449,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 21567,
+            "end_line": 488,
+            "line": 488,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 19586
+            "start_byte": 21484
           },
           "required": false
         },
@@ -6243,24 +6243,24 @@
           },
           "name": "raw_u16",
           "provenance": {
-            "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-            "end_byte": 19852,
-            "end_line": 455,
-            "line": 450,
+            "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+            "end_byte": 21750,
+            "end_line": 494,
+            "line": 489,
             "path": "sdk/python/bittensor/intents/weights.py",
-            "start_byte": 19674
+            "start_byte": 21572
           },
           "required": false
         }
       ],
       "name": "set_weights",
       "provenance": {
-        "blob": "aa129e32390e469f41072f2af52c1ec71d5279f3",
-        "end_byte": 22153,
-        "end_line": 514,
-        "line": 415,
+        "blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41",
+        "end_byte": 24051,
+        "end_line": 553,
+        "line": 451,
         "path": "sdk/python/bittensor/intents/weights.py",
-        "start_byte": 17618
+        "start_byte": 19317
       },
       "python_class": "SetWeights"
     },
@@ -6343,7 +6343,7 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 4883,
             "end_line": 116,
             "line": 116,
@@ -6361,7 +6361,7 @@
           },
           "name": "amount_tao",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 5006,
             "end_line": 119,
             "line": 117,
@@ -6379,7 +6379,7 @@
           },
           "name": "limit_price",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 5286,
             "end_line": 126,
             "line": 120,
@@ -6397,7 +6397,7 @@
           },
           "name": "rate_tolerance",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 5557,
             "end_line": 133,
             "line": 127,
@@ -6415,7 +6415,7 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 5723,
             "end_line": 137,
             "line": 134,
@@ -6427,7 +6427,7 @@
       ],
       "name": "stake_burn",
       "provenance": {
-        "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+        "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
         "end_byte": 6583,
         "end_line": 159,
         "line": 95,
@@ -6497,24 +6497,24 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 10373,
-            "end_line": 248,
-            "line": 248,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 10343,
+            "end_line": 247,
+            "line": 247,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 10282
+            "start_byte": 10252
           },
           "required": true
         }
       ],
       "name": "start_call",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 10597,
-        "end_line": 254,
-        "line": 230,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 10567,
+        "end_line": 253,
+        "line": 229,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 9493
+        "start_byte": 9463
       },
       "python_class": "StartCall"
     },
@@ -6715,12 +6715,12 @@
           },
           "name": "new_hotkey_ss58",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 23630,
-            "end_line": 572,
-            "line": 568,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 23786,
+            "end_line": 573,
+            "line": 569,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 23467
+            "start_byte": 23623
           },
           "required": true
         },
@@ -6733,12 +6733,12 @@
           },
           "name": "hotkey_ss58",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 23784,
-            "end_line": 576,
-            "line": 573,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 23940,
+            "end_line": 577,
+            "line": 574,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 23635
+            "start_byte": 23791
           },
           "required": false
         },
@@ -6751,24 +6751,24 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-            "end_byte": 23941,
-            "end_line": 580,
-            "line": 577,
+            "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+            "end_byte": 24097,
+            "end_line": 581,
+            "line": 578,
             "path": "sdk/python/bittensor/intents/registration.py",
-            "start_byte": 23789
+            "start_byte": 23945
           },
           "required": false
         }
       ],
       "name": "swap_hotkey",
       "provenance": {
-        "blob": "50aa6c04a1c50b1308829115b8e07cf5d709571c",
-        "end_byte": 24580,
-        "end_line": 595,
-        "line": 544,
+        "blob": "e62eddabebc67c5a857c1052789d42eea0740a0d",
+        "end_byte": 24736,
+        "end_line": 596,
+        "line": 545,
         "path": "sdk/python/bittensor/intents/registration.py",
-        "start_byte": 22227
+        "start_byte": 22383
       },
       "python_class": "SwapHotkey"
     },
@@ -7231,7 +7231,7 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 3372,
             "end_line": 81,
             "line": 81,
@@ -7249,7 +7249,7 @@
           },
           "name": "target",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 3465,
             "end_line": 82,
             "line": 82,
@@ -7261,7 +7261,7 @@
       ],
       "name": "trim_null_subnet_batch",
       "provenance": {
-        "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+        "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
         "end_byte": 3782,
         "end_line": 90,
         "line": 63,
@@ -7281,7 +7281,7 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 1942,
             "end_line": 45,
             "line": 45,
@@ -7299,7 +7299,7 @@
           },
           "name": "max_n",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
             "end_byte": 2099,
             "end_line": 50,
             "line": 46,
@@ -7311,7 +7311,7 @@
       ],
       "name": "trim_subnet",
       "provenance": {
-        "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
+        "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
         "end_byte": 2402,
         "end_line": 58,
         "line": 19,
@@ -7563,12 +7563,12 @@
           },
           "name": "netuid",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-            "end_byte": 8882,
-            "end_line": 217,
-            "line": 215,
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
+            "end_byte": 9282,
+            "end_line": 222,
+            "line": 220,
             "path": "sdk/python/bittensor/intents/governance.py",
-            "start_byte": 8766
+            "start_byte": 9166
           },
           "required": true
         },
@@ -7581,24 +7581,24 @@
           },
           "name": "symbol",
           "provenance": {
-            "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-            "end_byte": 9077,
-            "end_line": 223,
-            "line": 218,
+            "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
+            "end_byte": 9477,
+            "end_line": 228,
+            "line": 223,
             "path": "sdk/python/bittensor/intents/governance.py",
-            "start_byte": 8887
+            "start_byte": 9287
           },
           "required": true
         }
       ],
       "name": "update_symbol",
       "provenance": {
-        "blob": "16aa92faf0386a65aa9f58ad51dca09042339f26",
-        "end_byte": 9417,
-        "end_line": 233,
-        "line": 198,
+        "blob": "a9a51e94cfd06df43f313ab99680029881fdc15e",
+        "end_byte": 9817,
+        "end_line": 238,
+        "line": 203,
         "path": "sdk/python/bittensor/intents/governance.py",
-        "start_byte": 8010
+        "start_byte": 8410
       },
       "python_class": "UpdateSymbol"
     },
@@ -7636,7 +7636,7 @@
     }
   ],
   "parity": {
-    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
-    "tag": "v494"
+    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "tag": "v495"
   }
 }

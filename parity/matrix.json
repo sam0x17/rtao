@@ -2071,6 +2071,11 @@
         "rtao": "generated"
       },
       {
+        "name": "TooManyWeightsForNullMechanism",
+        "oracle": "unverified",
+        "rtao": "generated"
+      },
+      {
         "name": "TooSoon",
         "oracle": "unverified",
         "rtao": "generated"
@@ -8391,7 +8396,7 @@
         "rust": [
           "vendor/upstream/extracted/owner_map.json (framework_rules.blocks_until_next_auto_epoch client projection)"
         ],
-        "synced_blob": "eb78dd66775314fe06fbcb47a7f511e94f0057aa"
+        "synced_blob": "7c9a2f5ddb41980a61fcb9bd90b520f9561fbac0"
       },
       {
         "kind": "extracted",
@@ -9180,7 +9185,7 @@
         "rust": [
           "`rtao_runtime::generated::calls`"
         ],
-        "synced_blob": "15cece82b7765bc9834b9b273de72697a6ef631e"
+        "synced_blob": "506016fd5024fd09169c26ebe0d6fc4f6ded317d"
       },
       {
         "kind": "generated",
@@ -9202,7 +9207,7 @@
         "rust": [
           "`rtao_runtime::generated::errors::MODULE_ERRORS`"
         ],
-        "synced_blob": "243c5a7436421bb86efa18f3af2983f4154959a3"
+        "synced_blob": "7a2d9980039329fc7488198b19aca482ab36ef7f"
       },
       {
         "kind": "generated",
@@ -9224,7 +9229,7 @@
         "rust": [
           "`rtao_runtime::generated::storage`"
         ],
-        "synced_blob": "dbcf1d981d27bdcf38014eee8c2407b66c1ba3e1"
+        "synced_blob": "875f33c1cc3df702b1d00f70ead462088a1185c9"
       },
       {
         "kind": "n/a",
@@ -10375,7 +10380,7 @@
         "rust": [
           "`rtao_catalog::CHAIN_ERRORS` (description field)"
         ],
-        "synced_blob": "123a887ceb9f8446599b33736ac428861ea3b257"
+        "synced_blob": "849ea6e4b026514686a6285d058fb0b726881bc5"
       },
       {
         "kind": "generated",
@@ -10430,7 +10435,7 @@
         "rust": [
           "rtao_catalog::errors::{ErrorCode, CHAIN_ERRORS}; rtao_catalog::py"
         ],
-        "synced_blob": "aaa2b3e25da4a9cab6d18dbfcaf171b310d51883"
+        "synced_blob": "5e7d6f784fbdc14b3be1a2e919a9412a3681611e"
       },
       {
         "kind": "n/a",
@@ -10939,7 +10944,7 @@
         "rust": [
           "rtao_catalog::hyperparams::TABLE; rtao_primitives::{hyperparams,hyperparam_table,ratio}"
         ],
-        "synced_blob": "772977590e33f80c932eefa3611dbac6e425b3da"
+        "synced_blob": "c9636176716f6b994c8f3127aebdb75928879d81"
       },
       {
         "kind": "n/a",
@@ -11914,7 +11919,7 @@
         "rust": [
           "xtask/src/compat.rs"
         ],
-        "synced_blob": "9971d22eb120b10724c189ab52e2652e50fbf93e"
+        "synced_blob": "3f9acad44cbbf6338defb909a33181fe4a5077af"
       },
       {
         "kind": "oracle-only",
@@ -12049,7 +12054,7 @@
         "rust": [
           "rtao_testkit::fakes::FakeState"
         ],
-        "synced_blob": "05b1e82817671e41d2dcc8186d16f88d740fccce"
+        "synced_blob": "37df982b736d60c3d80376117d1dd93a1f86fa99"
       },
       {
         "kind": "extracted",
@@ -12533,7 +12538,7 @@
           "vendor/upstream/catalog/errors.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "083823f25f609f890adf670da4ed72cd187515de"
+        "synced_blob": "eaf24c990f870fc8cb842ffaa48d8bff5e082d6e"
       },
       {
         "kind": "vendored",
@@ -12545,7 +12550,7 @@
           "vendor/upstream/catalog/intents.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "e271ceaf900e8491d95b6a4054d5f7a3dddc496a"
+        "synced_blob": "0fd47200daee1b8ffe80393d4eadc4c84a5e4ba0"
       },
       {
         "kind": "vendored",
@@ -12557,7 +12562,7 @@
           "vendor/upstream/catalog/reads.json",
           "xtask extract/catalog/specs produces the Rust catalog; xtask parity compares every source record"
         ],
-        "synced_blob": "5efa802d8c0d8bd28131721f30da6e4251b39498"
+        "synced_blob": "458e618cde33a479524276efe2b066b99d9e88da"
       },
       {
         "kind": "extracted",
@@ -14026,6 +14031,17 @@
           "pending: new upstream file at v494, not yet classified or ported"
         ],
         "synced_blob": "pending"
+      },
+      {
+        "kind": "ported",
+        "milestone": "port due",
+        "oracle": "unverified",
+        "python": "sdk/python/tests/unit/test_runtime_spec_version_at_block.py",
+        "rtao": "pending",
+        "rust": [
+          "pending: new upstream file at v495, not yet classified or ported"
+        ],
+        "synced_blob": "pending"
       }
     ],
     "intents": [
@@ -15341,8 +15357,8 @@
     ]
   },
   "pin": {
-    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
-    "tag": "v494"
+    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "tag": "v495"
   },
   "schema": 1,
   "status_semantics": {

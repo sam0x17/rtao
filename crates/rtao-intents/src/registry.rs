@@ -55,7 +55,19 @@ mod tests {
         let args = intent.to_json_dyn();
         assert_eq!(args["uids"], serde_json::json!([1, 2]));
         assert_eq!(args["weights"], serde_json::json!([2.0, 1.0]));
-        assert_eq!(intent.wraps().len(), 2);
+        assert_eq!(
+            intent
+                .wraps()
+                .iter()
+                .map(|call| (call.pallet, call.name))
+                .collect::<Vec<_>>(),
+            [
+                ("SubtensorModule", "set_mechanism_weights"),
+                ("SubtensorModule", "commit_timelocked_mechanism_weights"),
+                ("SubtensorModule", "set_mechanism_weights_for"),
+                ("SubtensorModule", "commit_timelocked_mechanism_weights_for"),
+            ]
+        );
         assert!(
             Registry
                 .from_tool(

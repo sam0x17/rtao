@@ -6,11 +6,11 @@
   ],
   "admission_hard_stop": {
     "source": {
-      "end_byte": 12824,
-      "end_line": 351,
-      "line": 348,
+      "end_byte": 24113,
+      "end_line": 608,
+      "line": 605,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 12653,
+      "start_byte": 23942,
       "symbol": "test_root_claim_too_heavy_is_a_hard_stop"
     },
     "value": [
@@ -30,11 +30,11 @@
   },
   "admission_inclusive": {
     "source": {
-      "end_byte": 18963,
-      "end_line": 532,
-      "line": 528,
+      "end_byte": 30252,
+      "end_line": 789,
+      "line": 785,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 18874,
+      "start_byte": 30163,
       "symbol": "test_admission_limit_is_inclusive_at_256"
     },
     "value": [
@@ -60,159 +60,159 @@
   },
   "allowance_units": {
     "source": {
-      "end_byte": 1712,
+      "end_byte": 1733,
       "end_line": 51,
       "line": 51,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 1670,
+      "start_byte": 1691,
       "symbol": "test_reserved_fallback_charges_the_fee_allowance_not_the_envelope"
     },
     "value": [
       256,
-      130,
+      258,
       2
     ]
   },
   "constants": {
     "_DEFAULT_THRESHOLD_RAO": {
       "source": {
-        "end_byte": 5389,
-        "end_line": 130,
-        "line": 130,
+        "end_byte": 11961,
+        "end_line": 260,
+        "line": 260,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 5382,
+        "start_byte": 11954,
         "symbol": "_DEFAULT_THRESHOLD_RAO"
       },
       "value": 500000
     },
     "_EXTENSION_FOLD_REF_TIME": {
       "source": {
-        "end_byte": 2429,
-        "end_line": 50,
-        "line": 50,
+        "end_byte": 4071,
+        "end_line": 75,
+        "line": 75,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 2419,
+        "start_byte": 4061,
         "symbol": "_EXTENSION_FOLD_REF_TIME"
       },
       "value": 60000000
     },
     "_FLUSH_BOUND_QUOTES": {
       "source": {
-        "end_byte": 2018,
-        "end_line": 43,
-        "line": 43,
+        "end_byte": 3660,
+        "end_line": 68,
+        "line": 68,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1997,
+        "start_byte": 3639,
         "symbol": "_FLUSH_BOUND_QUOTES"
       },
       "value": 2560
     },
     "_FLUSH_BOUND_ROWS": {
       "source": {
-        "end_byte": 2059,
-        "end_line": 44,
-        "line": 44,
+        "end_byte": 3701,
+        "end_line": 69,
+        "line": 69,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 2039,
+        "start_byte": 3681,
         "symbol": "_FLUSH_BOUND_ROWS"
       },
       "value": 512
     },
     "_MAX_BASKET_ROWS": {
       "source": {
-        "end_byte": 1974,
-        "end_line": 42,
-        "line": 42,
+        "end_byte": 3616,
+        "end_line": 67,
+        "line": 67,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1971,
+        "start_byte": 3613,
         "symbol": "_MAX_BASKET_ROWS"
       },
       "value": 256
     },
     "_MAX_ROOT_CLAIM_HOTKEY_WORK": {
       "source": {
-        "end_byte": 1810,
-        "end_line": 39,
-        "line": 39,
+        "end_byte": 2570,
+        "end_line": 50,
+        "line": 50,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1807,
+        "start_byte": 2567,
         "symbol": "_MAX_ROOT_CLAIM_HOTKEY_WORK"
       },
-      "value": 130
+      "value": 258
     },
     "_MAX_ROOT_CLAIM_WORK": {
       "source": {
-        "end_byte": 1776,
-        "end_line": 38,
-        "line": 38,
+        "end_byte": 2361,
+        "end_line": 47,
+        "line": 47,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1773,
+        "start_byte": 2358,
         "symbol": "_MAX_ROOT_CLAIM_WORK"
       },
       "value": 256
     },
     "_PERBILL": {
       "source": {
-        "end_byte": 1749,
-        "end_line": 37,
-        "line": 37,
+        "end_byte": 2334,
+        "end_line": 46,
+        "line": 46,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1736,
+        "start_byte": 2321,
         "symbol": "_PERBILL"
       },
       "value": 1000000000
     },
     "_ROCKSDB_READ_PS": {
       "source": {
-        "end_byte": 1588,
-        "end_line": 33,
-        "line": 33,
+        "end_byte": 2173,
+        "end_line": 42,
+        "line": 42,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1578,
+        "start_byte": 2163,
         "symbol": "_ROCKSDB_READ_PS"
       },
       "value": 25000000
     },
     "_ROCKSDB_WRITE_PS": {
       "source": {
-        "end_byte": 1620,
-        "end_line": 34,
-        "line": 34,
+        "end_byte": 2205,
+        "end_line": 43,
+        "line": 43,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1609,
+        "start_byte": 2194,
         "symbol": "_ROCKSDB_WRITE_PS"
       },
       "value": 100000000
     },
     "_ROOT_CLAIM_CAP_459_REF_TIME": {
       "source": {
-        "end_byte": 2391,
-        "end_line": 49,
-        "line": 49,
+        "end_byte": 4033,
+        "end_line": 74,
+        "line": 74,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 2376,
+        "start_byte": 4018,
         "symbol": "_ROOT_CLAIM_CAP_459_REF_TIME"
       },
       "value": 249916000000
     },
     "_ROOT_CLAIM_FEE_ALLOWANCE": {
       "source": {
-        "end_byte": 2170,
-        "end_line": 46,
-        "line": 46,
+        "end_byte": 3812,
+        "end_line": 71,
+        "line": 71,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 2169,
+        "start_byte": 3811,
         "symbol": "_ROOT_CLAIM_FEE_ALLOWANCE"
       },
       "value": 4
     },
     "_WEIGHT_FEE_PARTS": {
       "source": {
-        "end_byte": 1724,
-        "end_line": 36,
-        "line": 36,
+        "end_byte": 2309,
+        "end_line": 45,
+        "line": 45,
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "start_byte": 1717,
+        "start_byte": 2302,
         "symbol": "_WEIGHT_FEE_PARTS"
       },
       "value": 250000
@@ -221,20 +221,20 @@
   "eligibility_cases": {
     "test_coldkey_wide_admission_ignores_non_root_hotkeys": {
       "source": {
-        "end_byte": 20204,
-        "end_line": 568,
-        "line": 561,
+        "end_byte": 31493,
+        "end_line": 825,
+        "line": 818,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 19931,
+        "start_byte": 31220,
         "symbol": "test_coldkey_wide_admission_ignores_non_root_hotkeys"
       },
       "sources": [
         {
-          "end_byte": 20204,
-          "end_line": 568,
-          "line": 561,
+          "end_byte": 31493,
+          "end_line": 825,
+          "line": 818,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 19931
+          "start_byte": 31220
         }
       ],
       "value": {
@@ -257,27 +257,27 @@
     },
     "test_coldkey_wide_admission_keeps_unstaked_basket_claimant": {
       "source": {
-        "end_byte": 20873,
-        "end_line": 586,
-        "line": 586,
+        "end_byte": 32162,
+        "end_line": 843,
+        "line": 843,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 20794,
+        "start_byte": 32083,
         "symbol": "test_coldkey_wide_admission_keeps_unstaked_basket_claimant"
       },
       "sources": [
         {
-          "end_byte": 20873,
-          "end_line": 586,
-          "line": 586,
+          "end_byte": 32162,
+          "end_line": 843,
+          "line": 843,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 20794
+          "start_byte": 32083
         },
         {
-          "end_byte": 20952,
-          "end_line": 587,
-          "line": 587,
+          "end_byte": 32241,
+          "end_line": 844,
+          "line": 844,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 20878
+          "start_byte": 32167
         }
       ],
       "value": {
@@ -288,11 +288,11 @@
   },
   "extension_ref_time": {
     "source": {
-      "end_byte": 3197,
-      "end_line": 87,
-      "line": 87,
+      "end_byte": 3578,
+      "end_line": 91,
+      "line": 91,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 3187,
+      "start_byte": 3568,
       "symbol": "_EXTENSION_REF_TIME"
     },
     "value": 60000000
@@ -300,11 +300,11 @@
   "format": 1,
   "helper_threshold_bits": {
     "source": {
-      "end_byte": 6985,
-      "end_line": 186,
-      "line": 186,
+      "end_byte": 18274,
+      "end_line": 443,
+      "line": 443,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 6962,
+      "start_byte": 18251,
       "symbol": "_seed_claim_quote.RootClaimableThreshold"
     },
     "value": 2147483648000000
@@ -312,20 +312,20 @@
   "model_cases": {
     "test_coldkey_wide_empty_baskets_floor_to_hotkey_count": {
       "source": {
-        "end_byte": 6127,
-        "end_line": 160,
-        "line": 157,
+        "end_byte": 17416,
+        "end_line": 417,
+        "line": 414,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 6012,
+        "start_byte": 17301,
         "symbol": "test_coldkey_wide_empty_baskets_floor_to_hotkey_count"
       },
       "sources": [
         {
-          "end_byte": 6127,
-          "end_line": 160,
-          "line": 157,
+          "end_byte": 17416,
+          "end_line": 417,
+          "line": 414,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 6012
+          "start_byte": 17301
         }
       ],
       "value": [
@@ -343,33 +343,33 @@
     },
     "test_quote_prices_consolidated_rows_as_full_claim_units": {
       "source": {
-        "end_byte": 31151,
-        "end_line": 881,
-        "line": 877,
+        "end_byte": 42440,
+        "end_line": 1138,
+        "line": 1134,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 30994,
+        "start_byte": 42283,
         "symbol": "test_quote_prices_consolidated_rows_as_full_claim_units"
       },
       "sources": [
         {
-          "end_byte": 31151,
-          "end_line": 881,
-          "line": 877,
+          "end_byte": 42440,
+          "end_line": 1138,
+          "line": 1134,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 30994
+          "start_byte": 42283
         },
         {
-          "end_byte": 31326,
-          "end_line": 886,
-          "line": 882,
+          "end_byte": 42615,
+          "end_line": 1143,
+          "line": 1139,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 31169
+          "start_byte": 42458
         }
       ],
       "value": [
         {
           "base": 0,
-          "declared_work": 130,
+          "declared_work": 258,
           "hotkeys": 1,
           "redeem_holdings": 9,
           "reserve_limit": 0,
@@ -379,7 +379,7 @@
         },
         {
           "base": 0,
-          "declared_work": 130,
+          "declared_work": 258,
           "hotkeys": 1,
           "redeem_holdings": 3,
           "reserve_limit": 0,
@@ -391,20 +391,20 @@
     },
     "test_scan_only_uses_scan_ref_time": {
       "source": {
-        "end_byte": 5661,
-        "end_line": 147,
-        "line": 144,
+        "end_byte": 16950,
+        "end_line": 404,
+        "line": 401,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 5545,
+        "start_byte": 16834,
         "symbol": "test_scan_only_uses_scan_ref_time"
       },
       "sources": [
         {
-          "end_byte": 5661,
-          "end_line": 147,
-          "line": 144,
+          "end_byte": 16950,
+          "end_line": 404,
+          "line": 401,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 5545
+          "start_byte": 16834
         }
       ],
       "value": [
@@ -422,33 +422,33 @@
     },
     "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust": {
       "source": {
-        "end_byte": 25701,
-        "end_line": 724,
-        "line": 720,
+        "end_byte": 36990,
+        "end_line": 981,
+        "line": 977,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 25544,
+        "start_byte": 36833,
         "symbol": "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust"
       },
       "sources": [
         {
-          "end_byte": 25701,
-          "end_line": 724,
-          "line": 720,
+          "end_byte": 36990,
+          "end_line": 981,
+          "line": 977,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 25544
+          "start_byte": 36833
         },
         {
-          "end_byte": 25882,
-          "end_line": 729,
-          "line": 725,
+          "end_byte": 37171,
+          "end_line": 986,
+          "line": 982,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 25725
+          "start_byte": 37014
         }
       ],
       "value": [
         {
           "base": 0,
-          "declared_work": 130,
+          "declared_work": 258,
           "hotkeys": 1,
           "redeem_holdings": 3,
           "reserve_limit": 0,
@@ -458,7 +458,7 @@
         },
         {
           "base": 0,
-          "declared_work": 130,
+          "declared_work": 258,
           "hotkeys": 1,
           "redeem_holdings": 2,
           "reserve_limit": 0,
@@ -470,29 +470,29 @@
     },
     "test_single_hotkey_spent_caps_at_the_same_allowance": {
       "source": {
-        "end_byte": 6610,
-        "end_line": 173,
-        "line": 169,
+        "end_byte": 17899,
+        "end_line": 430,
+        "line": 426,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 6457,
+        "start_byte": 17746,
         "symbol": "test_single_hotkey_spent_caps_at_the_same_allowance"
       },
       "sources": [
         {
-          "end_byte": 6610,
-          "end_line": 173,
-          "line": 169,
+          "end_byte": 17899,
+          "end_line": 430,
+          "line": 426,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 6457
+          "start_byte": 17746
         }
       ],
       "value": [
         {
           "base": 0,
-          "declared_work": 130,
+          "declared_work": 258,
           "hotkeys": 1,
           "redeem_holdings": 32,
-          "reserve_limit": 130,
+          "reserve_limit": 258,
           "reserve_rao": null,
           "scan_holdings": 0,
           "selection_scans": 0
@@ -501,20 +501,20 @@
     },
     "test_spent_caps_at_the_fee_allowance": {
       "source": {
-        "end_byte": 4949,
-        "end_line": 126,
-        "line": 123,
+        "end_byte": 16238,
+        "end_line": 383,
+        "line": 380,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 4833,
+        "start_byte": 16122,
         "symbol": "test_spent_caps_at_the_fee_allowance"
       },
       "sources": [
         {
-          "end_byte": 4949,
-          "end_line": 126,
-          "line": 123,
+          "end_byte": 16238,
+          "end_line": 383,
+          "line": 380,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 4833
+          "start_byte": 16122
         }
       ],
       "value": [
@@ -532,20 +532,20 @@
     },
     "test_spent_keeps_non_weight_base_fee": {
       "source": {
-        "end_byte": 5267,
-        "end_line": 136,
-        "line": 133,
+        "end_byte": 16556,
+        "end_line": 393,
+        "line": 390,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 5152,
+        "start_byte": 16441,
         "symbol": "test_spent_keeps_non_weight_base_fee"
       },
       "sources": [
         {
-          "end_byte": 5267,
-          "end_line": 136,
-          "line": 133,
+          "end_byte": 16556,
+          "end_line": 393,
+          "line": 390,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 5152
+          "start_byte": 16441
         }
       ],
       "value": [
@@ -564,11 +564,11 @@
   },
   "network_population": {
     "source": {
-      "end_byte": 21619,
-      "end_line": 608,
-      "line": 608,
+      "end_byte": 32908,
+      "end_line": 865,
+      "line": 865,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 21531,
+      "start_byte": 32820,
       "symbol": "test_network_count_does_not_affect_admission"
     },
     "value": {
@@ -579,20 +579,20 @@
   },
   "node_quotes": {
     "source": {
-      "end_byte": 3581,
-      "end_line": 97,
-      "line": 88,
+      "end_byte": 4048,
+      "end_line": 103,
+      "line": 94,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 3213,
+      "start_byte": 3721,
       "symbol": "_NODE_QUOTES"
     },
     "value": [
       {
         "limits": [
-          130
+          "claim_root_with_hotkey"
         ],
         "name": "claim_root_with_hotkey",
-        "weight": 2051581040648,
+        "weight": 67379612996,
         "weight_fee": 8224263
       },
       {
@@ -605,11 +605,11 @@
       },
       {
         "limits": [
-          130,
+          "claim_root_with_hotkey",
           256
         ],
         "name": "batch_all[claim_root_with_hotkey, claim_root]",
-        "weight": 4528660932786,
+        "weight": 2544459505134,
         "weight_fee": 16481677
       }
     ]
@@ -617,11 +617,11 @@
   "payout_failures": {
     "test_admission_hard_stop_survives_unavailable_payout_preview": {
       "source": {
-        "end_byte": 15886,
-        "end_line": 442,
-        "line": 442,
+        "end_byte": 27175,
+        "end_line": 699,
+        "line": 699,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 15844,
+        "start_byte": 27133,
         "symbol": "test_admission_hard_stop_survives_unavailable_payout_preview"
       },
       "value": [
@@ -637,11 +637,11 @@
     },
     "test_reserve_hard_stop_survives_unavailable_payout_preview": {
       "source": {
-        "end_byte": 17042,
-        "end_line": 473,
-        "line": 473,
+        "end_byte": 28331,
+        "end_line": 730,
+        "line": 730,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 17000,
+        "start_byte": 28289,
         "symbol": "test_reserve_hard_stop_survives_unavailable_payout_preview"
       },
       "value": [
@@ -659,27 +659,27 @@
   "preview_cases": {
     "test_coldkey_quote_applies_the_threshold_to_the_dust_aware_payout": {
       "source": {
-        "end_byte": 27663,
-        "end_line": 781,
-        "line": 781,
+        "end_byte": 38952,
+        "end_line": 1038,
+        "line": 1038,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 27591,
+        "start_byte": 38880,
         "symbol": "test_coldkey_quote_applies_the_threshold_to_the_dust_aware_payout"
       },
       "sources": [
         {
-          "end_byte": 27663,
-          "end_line": 781,
-          "line": 781,
+          "end_byte": 38952,
+          "end_line": 1038,
+          "line": 1038,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 27591
+          "start_byte": 38880
         },
         {
-          "end_byte": 27793,
-          "end_line": 783,
-          "line": 783,
+          "end_byte": 39082,
+          "end_line": 1040,
+          "line": 1040,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 27723
+          "start_byte": 39012
         }
       ],
       "value": [
@@ -705,20 +705,20 @@
     },
     "test_quote_counts_consolidation_even_when_the_claim_is_below_threshold": {
       "source": {
-        "end_byte": 31974,
-        "end_line": 904,
-        "line": 904,
+        "end_byte": 43263,
+        "end_line": 1161,
+        "line": 1161,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 31893,
+        "start_byte": 43182,
         "symbol": "test_quote_counts_consolidation_even_when_the_claim_is_below_threshold"
       },
       "sources": [
         {
-          "end_byte": 31974,
-          "end_line": 904,
-          "line": 904,
+          "end_byte": 43263,
+          "end_line": 1161,
+          "line": 1161,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 31893
+          "start_byte": 43182
         }
       ],
       "value": [
@@ -735,20 +735,20 @@
     },
     "test_quote_prices_consolidated_rows_as_full_claim_units": {
       "source": {
-        "end_byte": 30041,
-        "end_line": 851,
-        "line": 849,
+        "end_byte": 41330,
+        "end_line": 1108,
+        "line": 1106,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 29926,
+        "start_byte": 41215,
         "symbol": "test_quote_prices_consolidated_rows_as_full_claim_units"
       },
       "sources": [
         {
-          "end_byte": 30041,
-          "end_line": 851,
-          "line": 849,
+          "end_byte": 41330,
+          "end_line": 1108,
+          "line": 1106,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 29926
+          "start_byte": 41215
         }
       ],
       "value": [
@@ -765,20 +765,20 @@
     },
     "test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop": {
       "source": {
-        "end_byte": 26428,
-        "end_line": 746,
-        "line": 746,
+        "end_byte": 37717,
+        "end_line": 1003,
+        "line": 1003,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 26364,
+        "start_byte": 37653,
         "symbol": "test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop"
       },
       "sources": [
         {
-          "end_byte": 26428,
-          "end_line": 746,
-          "line": 746,
+          "end_byte": 37717,
+          "end_line": 1003,
+          "line": 1003,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 26364
+          "start_byte": 37653
         }
       ],
       "value": [
@@ -795,20 +795,20 @@
     },
     "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust": {
       "source": {
-        "end_byte": 24753,
-        "end_line": 699,
-        "line": 699,
+        "end_byte": 36042,
+        "end_line": 956,
+        "line": 956,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 24677,
+        "start_byte": 35966,
         "symbol": "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust"
       },
       "sources": [
         {
-          "end_byte": 24753,
-          "end_line": 699,
-          "line": 699,
+          "end_byte": 36042,
+          "end_line": 956,
+          "line": 956,
           "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-          "start_byte": 24677
+          "start_byte": 35966
         }
       ],
       "value": [
@@ -825,29 +825,29 @@
     }
   },
   "provenance": {
-    "commit": "a68c6e8c65411a842fbf69269dc385aa13041391",
+    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
     "inputs": [
       {
-        "blob": "94ee9459724c56ca3344f81fe9f49822ccad1e06",
+        "blob": "d7a10cf714c0d807bc4450792c719d2fff1e4758",
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "sha256": "48e482492ba9299de2215e27c6bd6094500613b667eb8551a127e9e4b70389f2"
+        "sha256": "d7d412ea40bae99bd4ce3b681927ca1af38ac31c33995e49e484a3d9c73969d9"
       },
       {
-        "blob": "f11df3715189489c7b228d7f8480a8852329b408",
+        "blob": "0c2814db22c339a93f22a8346a338d5366517d72",
         "path": "sdk/python/bittensor/intents/_root_claim_fee.py",
-        "sha256": "6ab6392876994a1910b8668cb7f577fb9d138bd7d6a04e80099b26efef49cedc"
+        "sha256": "a900ac4146f1936f70dc9ba219c2e56088bcf76ea19e919b1efd5b3425013223"
       }
     ],
-    "tag": "v494"
+    "tag": "v495"
   },
   "seed_cases": {
     "test_carrier_hard_stop_survives_unavailable_payout_preview": {
       "source": {
-        "end_byte": 18327,
-        "end_line": 510,
-        "line": 505,
+        "end_byte": 29616,
+        "end_line": 767,
+        "line": 762,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 18182,
+        "start_byte": 29471,
         "symbol": "test_carrier_hard_stop_survives_unavailable_payout_preview"
       },
       "value": {
@@ -865,11 +865,11 @@
     },
     "test_coldkey_quote_applies_the_threshold_to_the_dust_aware_payout": {
       "source": {
-        "end_byte": 27379,
-        "end_line": 775,
-        "line": 770,
+        "end_byte": 38668,
+        "end_line": 1032,
+        "line": 1027,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 27197,
+        "start_byte": 38486,
         "symbol": "test_coldkey_quote_applies_the_threshold_to_the_dust_aware_payout"
       },
       "value": {
@@ -890,11 +890,11 @@
     },
     "test_coldkey_quote_does_not_scan_validator_without_owed_shares": {
       "source": {
-        "end_byte": 12056,
-        "end_line": 323,
-        "line": 318,
+        "end_byte": 23345,
+        "end_line": 580,
+        "line": 575,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 11892,
+        "start_byte": 23181,
         "symbol": "test_coldkey_quote_does_not_scan_validator_without_owed_shares"
       },
       "value": {
@@ -914,11 +914,11 @@
     },
     "test_coldkey_quote_separates_eligible_and_below_threshold_hotkeys": {
       "source": {
-        "end_byte": 11287,
-        "end_line": 298,
-        "line": 293,
+        "end_byte": 22576,
+        "end_line": 555,
+        "line": 550,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 11105,
+        "start_byte": 22394,
         "symbol": "test_coldkey_quote_separates_eligible_and_below_threshold_hotkeys"
       },
       "value": {
@@ -939,11 +939,11 @@
     },
     "test_coldkey_threshold_is_applied_per_hotkey_not_to_aggregate": {
       "source": {
-        "end_byte": 10512,
-        "end_line": 273,
-        "line": 268,
+        "end_byte": 21801,
+        "end_line": 530,
+        "line": 525,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 10330,
+        "start_byte": 21619,
         "symbol": "test_coldkey_threshold_is_applied_per_hotkey_not_to_aggregate"
       },
       "value": {
@@ -964,11 +964,11 @@
     },
     "test_coldkey_wide_admission_ignores_non_root_hotkeys": {
       "source": {
-        "end_byte": 19926,
-        "end_line": 560,
-        "line": 554,
+        "end_byte": 31215,
+        "end_line": 817,
+        "line": 811,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 19736,
+        "start_byte": 31025,
         "symbol": "test_coldkey_wide_admission_ignores_non_root_hotkeys"
       },
       "value": {
@@ -988,11 +988,11 @@
     },
     "test_coldkey_wide_admission_keeps_unstaked_basket_claimant": {
       "source": {
-        "end_byte": 20789,
-        "end_line": 585,
-        "line": 580,
+        "end_byte": 32078,
+        "end_line": 842,
+        "line": 837,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 20644,
+        "start_byte": 31933,
         "symbol": "test_coldkey_wide_admission_keeps_unstaked_basket_claimant"
       },
       "value": {
@@ -1010,11 +1010,11 @@
     },
     "test_quote_counts_consolidation_even_when_the_claim_is_below_threshold": {
       "source": {
-        "end_byte": 31656,
-        "end_line": 898,
-        "line": 893,
+        "end_byte": 42945,
+        "end_line": 1155,
+        "line": 1150,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 31513,
+        "start_byte": 42802,
         "symbol": "test_quote_counts_consolidation_even_when_the_claim_is_below_threshold"
       },
       "value": {
@@ -1032,11 +1032,11 @@
     },
     "test_quote_falls_back_to_full_entitlement_without_the_preview_api": {
       "source": {
-        "end_byte": 28609,
-        "end_line": 811,
-        "line": 806,
+        "end_byte": 39898,
+        "end_line": 1068,
+        "line": 1063,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 28466,
+        "start_byte": 39755,
         "symbol": "test_quote_falls_back_to_full_entitlement_without_the_preview_api"
       },
       "value": {
@@ -1054,11 +1054,11 @@
     },
     "test_quote_prices_consolidated_rows_as_full_claim_units": {
       "source": {
-        "end_byte": 29821,
-        "end_line": 845,
-        "line": 840,
+        "end_byte": 41110,
+        "end_line": 1102,
+        "line": 1097,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 29672,
+        "start_byte": 40961,
         "symbol": "test_quote_prices_consolidated_rows_as_full_claim_units"
       },
       "value": {
@@ -1076,11 +1076,11 @@
     },
     "test_reserve_hard_stop_survives_unavailable_payout_preview": {
       "source": {
-        "end_byte": 17311,
-        "end_line": 481,
-        "line": 476,
+        "end_byte": 28600,
+        "end_line": 738,
+        "line": 733,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 17166,
+        "start_byte": 28455,
         "symbol": "test_reserve_hard_stop_survives_unavailable_payout_preview"
       },
       "value": {
@@ -1098,11 +1098,11 @@
     },
     "test_shielded_claim_reserves_free_tao_for_inner_and_carrier": {
       "source": {
-        "end_byte": 14238,
-        "end_line": 399,
-        "line": 394,
+        "end_byte": 25527,
+        "end_line": 656,
+        "line": 651,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 14093,
+        "start_byte": 25382,
         "symbol": "test_shielded_claim_reserves_free_tao_for_inner_and_carrier"
       },
       "value": {
@@ -1120,11 +1120,11 @@
     },
     "test_shielded_root_claim_refuses_too_heavy_work_before_signing": {
       "source": {
-        "end_byte": 13756,
-        "end_line": 383,
-        "line": 378,
+        "end_byte": 25045,
+        "end_line": 640,
+        "line": 635,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 13609,
+        "start_byte": 24898,
         "symbol": "test_shielded_root_claim_refuses_too_heavy_work_before_signing"
       },
       "value": {
@@ -1142,11 +1142,11 @@
     },
     "test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop": {
       "source": {
-        "end_byte": 26259,
-        "end_line": 742,
-        "line": 737,
+        "end_byte": 37548,
+        "end_line": 999,
+        "line": 994,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 26118,
+        "start_byte": 37407,
         "symbol": "test_single_hotkey_quote_reports_an_all_dust_claim_as_a_noop"
       },
       "value": {
@@ -1164,11 +1164,11 @@
     },
     "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust": {
       "source": {
-        "end_byte": 24491,
-        "end_line": 694,
-        "line": 689,
+        "end_byte": 35780,
+        "end_line": 951,
+        "line": 946,
         "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-        "start_byte": 24346,
+        "start_byte": 35635,
         "symbol": "test_single_hotkey_quote_uses_the_dust_aware_preview_on_mixed_dust"
       },
       "value": {
@@ -1187,11 +1187,11 @@
   },
   "shielded_heavy": {
     "source": {
-      "end_byte": 16262,
-      "end_line": 452,
-      "line": 446,
+      "end_byte": 27551,
+      "end_line": 709,
+      "line": 703,
       "path": "sdk/python/tests/unit/test_root_claim_fee.py",
-      "start_byte": 16062,
+      "start_byte": 27351,
       "symbol": "test_admission_hard_stop_survives_unavailable_payout_preview"
     },
     "value": {
