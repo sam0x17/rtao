@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testnet runtime 495 recorded automatically
+
+- Testnet finalized spec 495 (`:code` `0x7f4f60f27f1cbdb92a8413d8280217789229f54189e48a501ada2d25f4c7edf7`) at block 8516370; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `additive`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45440871330)). No upstream source is recorded: upstream has published no v495 release. The parity pin is unchanged.
+
 - Require `url` 2.5.9 or later to address [RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html).
 
 ### Finney runtime 494

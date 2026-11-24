@@ -2,7 +2,7 @@
   "cargo": "cargo 1.100.0 (3acc79c0c 2026-11-05)",
   "compiler": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
   "host": "x86_64-unknown-linux-gnu",
-  "measured_unix_seconds": 1795460142,
+  "measured_unix_seconds": 1795539326,
   "method": {
     "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
     "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -12,7 +12,7 @@
     {
       "core_host_enabled": false,
       "default_features": false,
-      "feature_graph_sha256": "17865afccd8e28e1a9e8d3271c4924f3e4fb11744efae81e3ab066c7277336fa",
+      "feature_graph_sha256": "41dfd86936eea87de2f03d7973ffe7ad423936eb114b1881accedae9d7415410",
       "features": [],
       "normal_build_packages": 229,
       "package": "rtao-core",
@@ -252,7 +252,7 @@
     {
       "core_host_enabled": false,
       "default_features": false,
-      "feature_graph_sha256": "5d884e15f2631cbf70cc5d8fd3cf0023508b307039aa82978cee81604fc0ab40",
+      "feature_graph_sha256": "aa2be1cae41ee587c55736ad788c589906197df5c2a7cdc99049589b5db0b9b8",
       "features": [
         "validator"
       ],
@@ -632,7 +632,7 @@
     {
       "core_host_enabled": false,
       "default_features": false,
-      "feature_graph_sha256": "059c462e74db85ae25d21db3b63535858c9ea8e4bb9d546fd4a47029926fd0d8",
+      "feature_graph_sha256": "9a9982a5e66c5fe88446e54c92b70889dd8f2f72469447d7d7c3c668a9ea24eb",
       "features": [
         "miner"
       ],
@@ -1016,7 +1016,7 @@
     {
       "core_host_enabled": true,
       "default_features": false,
-      "feature_graph_sha256": "8efc8413a4c281623b138d0fe984e62160ffe02c683e40f5c1e03b1eef31aa9b",
+      "feature_graph_sha256": "17b75c613695d685e611c36c8553635275017fd31c051d0e4940bef9c0e6696e",
       "features": [
         "owner"
       ],
@@ -1486,7 +1486,7 @@
     },
     "dependency_inputs_sha256": "d07fc263b41bb722413e2b62a626f53436e49109c08e4fcf2950e8da9044b681",
     "dirty": true,
-    "head_commit": "083e89ccce635abc17d19e3a9a4bf05c89f88a02"
+    "head_commit": "2b123174c81739539d88e597597032af458bb4ee"
   },
   "target": "aarch64-apple-darwin"
 }
