@@ -35,11 +35,10 @@ polkadot_sdk = { sp-core = "37.0.0", sp-crypto-hashing = "0.1.0", sp-debug-deriv
 
 [publish.macros]
 package = "rtao-upstream-macros"
-version = "0.490.0"
+version = "0.490.1"
 repo = "https://github.com/RaoFoundation/subtensor.git"
 rev = "d967d13588834f4f5aaa8ef4c8fc1a865d581462"
 path = "support/macros"
-checksum = "af6512f4f282a44776829c7f9a90a91502fdb84e4698f73001242a08460f159f"
 
 [publish.fips204]
 package = "rtao-upstream-fips204"
@@ -75,11 +74,10 @@ checksum = "5dba56a0245cf22b2bd6a5e5503b4f480ff888a2fa40061f128862a2da6c79bf"
 
 [publish.core]
 package = "rtao-upstream-core"
-version = "0.490.0"
+version = "0.490.1"
 repo = "https://github.com/sam0x17/subtensor.git"
 rev = "d7fd8762625a93b9837cde28d496b0819a976f0e"
 path = "sdk/bittensor-core"
-checksum = "954983f3870ef1e2d504316116cfa6aa309be06330af01df7dd13571a627fe53"
 
 [parity]
 tag = "v495"

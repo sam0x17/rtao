@@ -1032,9 +1032,20 @@ impl Context_<'_> {
                     fork.original
                 ));
             }
-            Target::Registry(version) => {
+            Target::Registry(mut version) => {
                 if package != name {
                     out.insert("package", package.as_str().into());
+                }
+                if self.fork.key == "macros" && package == "ahash" {
+                    const PIN: &str = "0.8.12";
+                    ensure!(
+                        semver::VersionReq::parse(&version)?.matches(&semver::Version::parse(PIN)?),
+                        "subtensor-macros requires ahash {version}, incompatible with the frozen layout hash pin {PIN}"
+                    );
+                    version = format!("={PIN}");
+                    notes.push(format!(
+                        "[dependencies]: ahash pinned to {version} to preserve the upstream freeze_struct layout hashes"
+                    ));
                 }
                 out.insert("version", version.as_str().into());
             }
