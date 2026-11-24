@@ -137,7 +137,7 @@ async fn checked(
         }
     }
     let (min, max_row_len) =
-        if is_null && snapshot.block().runtime.spec_version() >= NULL_ROW_CAP_SPEC {
+        if is_null && snapshot.state_runtime().await?.spec_version() >= NULL_ROW_CAP_SPEC {
             let (mechanisms, subnet_n) = snapshot
                 .fetch((
                     st::MECHANISM_COUNT_CURRENT.at((netuid,)),

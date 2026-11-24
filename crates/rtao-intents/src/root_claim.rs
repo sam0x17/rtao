@@ -151,6 +151,8 @@ async fn admission<V: View + ?Sized>(
     claimant: AccountId,
     hotkey: Option<AccountId>,
 ) -> Result<Admission, IntentError> {
+    let snapshot = view.pin().await?;
+    let view = &snapshot;
     let (selected, selection_scans) = if let Some(hotkey) = hotkey {
         (vec![hotkey], 0)
     } else {
@@ -196,7 +198,7 @@ async fn admission<V: View + ?Sized>(
         .try_collect()
         .await?;
     let (limit, queued_new) = match hotkey {
-        Some(hotkey) if view.runtime().await?.spec_version() >= FUND_SIZED_CLAIM_SPEC => {
+        Some(hotkey) if snapshot.state_runtime().await?.spec_version() >= FUND_SIZED_CLAIM_SPEC => {
             let held: BTreeSet<_> = holdings[0].iter().copied().collect();
             let deposits = view.storage_iter(
                 &storage::subtensor_module::PENDING_BASKET_DEPOSITS,

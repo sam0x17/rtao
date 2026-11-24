@@ -9259,7 +9259,7 @@
           "crates/rtao-jsonrpc/src/session.rs",
           "crates/rtao-client/src/decode.rs"
         ],
-        "synced_blob": "90f15f25ff356a12ff86547a284b50d99811c47a"
+        "synced_blob": "a203feb1dceedd9185c5b9093c59d4ae60d64b25"
       },
       {
         "kind": "ported",
@@ -9366,7 +9366,7 @@
           "crates/rtao-core-ext/src/ops/extrinsic_lookup.rs",
           "crates/rtao-client/src/decode.rs"
         ],
-        "synced_blob": "fc711dde049857e0770d5f4bad37dc6bb50bb6f9"
+        "synced_blob": "bd271c2c7c89aa56e16bbc697b550ae7cf3ccf43"
       },
       {
         "kind": "n/a",
@@ -11503,7 +11503,7 @@
           "rtao_reads::reads::m6_accounts::{channel_commitment, commit_burn}",
           "rtao_reads::reads::weights::mech_weight_delegate"
         ],
-        "synced_blob": "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35"
+        "synced_blob": "4b21f21cd483c73ab1926d1d30dc56f252d5679c"
       },
       {
         "kind": "ported",

@@ -1039,6 +1039,15 @@ impl Client {
             runtime = self.inner.cache.runtime_at(at) => runtime,
         }
     }
+    pub(crate) async fn state_runtime_at(&self, at: H256) -> Result<RuntimeHandle, ClientError> {
+        self.ensure_open()?;
+        tokio::select! {
+            biased;
+            () = self.closed() => Err(rtao_jsonrpc::RpcError::Closed.into()),
+            runtime = self.inner.cache.runtime_at_state(at) => runtime,
+        }
+    }
+
     /// Recheck the node's head runtime before preparing or attaching a signature.
     pub async fn refresh_runtime(&self) -> Result<RuntimeHandle, ClientError> {
         self.refresh_runtime_version()

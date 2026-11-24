@@ -348,8 +348,7 @@ pub async fn channel_commitment<V: View + ?Sized>(
     }
     let mut revealed = Vec::with_capacity(history.len());
     for (bytes, block) in history {
-        let text = super::subnets::utf8_text(to_corpus_json(&bytes_dynamic(&bytes)))?;
-        let JsonValue::String(data) = text else {
+        let JsonValue::String(data) = to_corpus_json(&bytes_dynamic(&bytes)) else {
             return Err(surface(
                 "Commitments.ChannelRevealedCommitments",
                 "reveal text is not a string",

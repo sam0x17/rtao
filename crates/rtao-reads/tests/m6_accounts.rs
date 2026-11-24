@@ -89,7 +89,7 @@ async fn channel_commitment_decodes_pinned_registration_and_reveal_history() {
     assert_eq!(
         serde_json::to_value(&value).unwrap()["revealed"],
         json!([
-            {"data":"hi", "block":101}, {"data":"0xff", "block":102}
+            {"data":"0x6869", "block":101}, {"data":"0xff", "block":102}
         ])
     );
     assert_eq!(observed.block_hashes(), BTreeSet::from([hash]));

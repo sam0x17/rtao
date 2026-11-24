@@ -122,6 +122,13 @@ impl Snapshot {
     pub fn block(&self) -> &PinnedBlock {
         &self.block
     }
+    /// Resolve the runtime stored in this block's state, which executes its successor.
+    ///
+    /// The runtime on [`Self::block`] instead describes execution of this block.
+    pub async fn state_runtime(&self) -> Result<RuntimeHandle, ClientError> {
+        self.client.state_runtime_at(self.block.hash).await
+    }
+
     /// Borrow the shared client that owns this view's transport.
     pub fn client(&self) -> &Client {
         &self.client

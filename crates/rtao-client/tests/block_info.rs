@@ -306,6 +306,7 @@ async fn block_execution_uses_parent_runtime_during_upgrade() {
     let old_call = timestamp_extrinsic(&state, 1700000000000);
     serve(&mut state, vec![old_call]);
     let parent_runtime = state.runtime.clone();
+    let previous_spec = parent_runtime.spec_version;
     state.set_runtime_at(parent_hash, parent_runtime);
     let mut metadata = frame_metadata::RuntimeMetadataPrefixed::decode(
         &mut state.runtime.metadata_bytes.as_slice(),
@@ -346,6 +347,14 @@ async fn block_execution_uses_parent_runtime_during_upgrade() {
     let info = client.block_info(Some(100)).await.unwrap().unwrap();
     assert_eq!(info.extrinsics[0]["call"]["call_function"], "set");
     assert_eq!(info.timestamp.timestamp_millis(), 1700000000000);
+    let previous = client.at(BlockRef::Number(99)).await.unwrap();
+    let upgraded = client.at(BlockRef::Number(100)).await.unwrap();
+    assert_eq!(
+        previous.state_runtime().await.unwrap().spec_version(),
+        previous_spec
+    );
+    assert_eq!(upgraded.block().runtime.spec_version(), previous_spec);
+    assert_eq!(upgraded.state_runtime().await.unwrap().spec_version(), 479);
     let parent = chain.mutate_state(|state| state.block_hash(99).unwrap());
     // Connection-time symbol discovery can already cache this parent runtime.
     // The decoded old call above remains the evidence for execution metadata.

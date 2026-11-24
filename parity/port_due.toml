@@ -45,22 +45,6 @@ tag = "v495"
 symbols = []
 
 [[file]]
-py = "sdk/python/bittensor/_substrate.py"
-kind = "ported"
-from = "90f15f25ff356a12ff86547a284b50d99811c47a"
-to = "a203feb1dceedd9185c5b9093c59d4ae60d64b25"
-tag = "v495"
-symbols = ["bittensor._substrate.RpcSubstrate", "bittensor._substrate.RpcSubstrate.spec_version", "bittensor._substrate.Substrate", "bittensor._substrate.Substrate.spec_version"]
-
-[[file]]
-py = "sdk/python/bittensor/_transport/interface.py"
-kind = "ported"
-from = "fc711dde049857e0770d5f4bad37dc6bb50bb6f9"
-to = "bd271c2c7c89aa56e16bbc697b550ae7cf3ccf43"
-tag = "v495"
-symbols = ["bittensor._transport.interface.SubstrateConnection", "bittensor._transport.interface.SubstrateConnection.runtime_spec_version"]
-
-[[file]]
 py = "sdk/python/bittensor/cli/commands/misc.py"
 kind = "ported"
 from = "d1e70356c68e48b9ceb2ae559e1b2e473d4f125a"
@@ -227,14 +211,6 @@ from = "fded4d4c5796b1f0c82f6422350e03897baffd18"
 to = "05178aa666a4ae134e827dff37a04cbe3a1297e9"
 tag = "v494"
 symbols = []
-
-[[file]]
-py = "sdk/python/bittensor/reads/identity.py"
-kind = "ported"
-from = "e4340a2f3dad9ae57495fd5c8f7ee5a9307daa35"
-to = "4b21f21cd483c73ab1926d1d30dc56f252d5679c"
-tag = "v495"
-symbols = ["bittensor.reads.identity.channel_commitment"]
 
 [[file]]
 py = "sdk/python/bittensor/reads/subnets.py"
