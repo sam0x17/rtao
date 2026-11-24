@@ -141,28 +141,12 @@ tag = "v491"
 symbols = ["bittensor.cli.stake_picker._stake_owner"]
 
 [[file]]
-py = "sdk/python/bittensor/intents/governance.py"
-kind = "ported"
-from = "16aa92faf0386a65aa9f58ad51dca09042339f26"
-to = "a9a51e94cfd06df43f313ab99680029881fdc15e"
-tag = "v495"
-symbols = ["bittensor.intents.governance.SetMechanismCount"]
-
-[[file]]
 py = "sdk/python/bittensor/intents/proxy.py"
 kind = "ported"
 from = "bdbf035ee7db391e1b6b0ce9e70b27966c97de18"
 to = "781f7a8f14261edc31e4ef11f248cbcec7cbb997"
 tag = "v491"
 symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.PROXY_TYPE_HELP", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
-
-[[file]]
-py = "sdk/python/bittensor/intents/weights.py"
-kind = "ported"
-from = "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c"
-to = "9ba54a8a1829b32a83deae27a6a2f56c527b0a41"
-tag = "v494"
-symbols = ["bittensor.intents.weights.CommitWeightHash", "bittensor.intents.weights.CommitWeightHash.build", "bittensor.intents.weights.CommitWeightHash.commit_hash", "bittensor.intents.weights.CommitWeightHash.for_hotkey", "bittensor.intents.weights.CommitWeightHash.mechid", "bittensor.intents.weights.CommitWeightHash.netuid", "bittensor.intents.weights.CommitWeightHash.op", "bittensor.intents.weights.CommitWeightHash.signer", "bittensor.intents.weights.CommitWeightHash.summary", "bittensor.intents.weights.CommitWeightHash.warnings", "bittensor.intents.weights.CommitWeightHash.wraps", "bittensor.intents.weights.CommitWeights", "bittensor.intents.weights.CommitWeights.build", "bittensor.intents.weights.CommitWeights.for_hotkey", "bittensor.intents.weights.CommitWeights.warnings", "bittensor.intents.weights.CommitWeights.wraps", "bittensor.intents.weights.FOR_HOTKEY_HELP", "bittensor.intents.weights.RevealWeights", "bittensor.intents.weights.RevealWeights.build", "bittensor.intents.weights.RevealWeights.for_hotkey", "bittensor.intents.weights.RevealWeights.mechid", "bittensor.intents.weights.RevealWeights.warnings", "bittensor.intents.weights.RevealWeights.wraps", "bittensor.intents.weights.SetMechWeightDelegate", "bittensor.intents.weights.SetMechWeightDelegate.build", "bittensor.intents.weights.SetMechWeightDelegate.delegate", "bittensor.intents.weights.SetMechWeightDelegate.mechid", "bittensor.intents.weights.SetMechWeightDelegate.netuid", "bittensor.intents.weights.SetMechWeightDelegate.op", "bittensor.intents.weights.SetMechWeightDelegate.signer", "bittensor.intents.weights.SetMechWeightDelegate.summary", "bittensor.intents.weights.SetMechWeightDelegate.verify", "bittensor.intents.weights.SetMechWeightDelegate.wraps", "bittensor.intents.weights.SetWeights", "bittensor.intents.weights.SetWeights.build", "bittensor.intents.weights.SetWeights.for_hotkey", "bittensor.intents.weights.SetWeights.warnings", "bittensor.intents.weights.SetWeights.wraps", "bittensor.intents.weights.TOTAL_NULL_WEIGHT_BUDGET", "bittensor.intents.weights._Preflight", "bittensor.intents.weights._Preflight.max_row_len", "bittensor.intents.weights._build_timelocked", "bittensor.intents.weights._conform", "bittensor.intents.weights._delegate_warning", "bittensor.intents.weights._ensure_delegate", "bittensor.intents.weights._for_call", "bittensor.intents.weights._preflight", "bittensor.intents.weights._reveal_call", "bittensor.intents.weights._weight_keys", "bittensor.intents.weights.ss58_decode"]
 
 [[file]]
 py = "sdk/python/bittensor/namespaces.pyi"
@@ -179,11 +163,3 @@ from = "b327a7e65000b30bd4e0de9fb6f15e04a2cf1477"
 to = "ac777b7f0eb9ae56dee3aba76787dce7251c79ee"
 tag = "v494"
 symbols = ["tests.unit.test_cli_commands.test_colored_help_preserves_literal_long_and_short_options"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_null_weights.py"
-kind = "ported"
-from = "1124806dc21da09bacae14cd7e4ba90951de924a"
-to = "51cd1e5900ec798b5a76d9bd48e75fe9cd25f411"
-tag = "v495"
-symbols = ["tests.unit.test_null_weights.test_conform_enforces_the_null_row_cap", "tests.unit.test_null_weights.test_null_effective_minimum_allows_capped_row_and_rejects_shorter_row", "tests.unit.test_null_weights.test_null_row_above_the_cap_is_rejected_before_signing_or_encrypting", "tests.unit.test_null_weights.test_weight_preflight_effective_minimum_matches_runtime", "tests.unit.test_null_weights.test_weight_preflight_row_cap_matches_runtime"]

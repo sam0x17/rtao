@@ -883,15 +883,15 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
         uids: vec![Uid(1), Uid(2)],
         values: vec![0, 17],
     };
-    assert!(prepare_row(raw(), &state, Uid(0), NetUid(1), &graph).is_err());
+    assert!(prepare_row(raw(), &state, Uid(0), NetUid(1), &graph, None).is_err());
     state.null_consensus = true;
     state.max_weights_limit = u16::MAX;
     assert_eq!(
-        prepare_row(raw(), &state, Uid(0), NetUid(1), &graph)?,
+        prepare_row(raw(), &state, Uid(0), NetUid(1), &graph, None)?,
         (vec![Uid(1), Uid(2)], vec![0, 17])
     );
     state.permits[1] = true;
-    assert!(prepare_row(raw(), &state, Uid(0), NetUid(1), &graph).is_err());
+    assert!(prepare_row(raw(), &state, Uid(0), NetUid(1), &graph, None).is_err());
     state.permits[1] = false;
     for bad in [f64::NAN, f64::INFINITY, -1.0] {
         assert!(
@@ -903,7 +903,8 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
                 &state,
                 Uid(0),
                 NetUid(1),
-                &graph
+                &graph,
+                None
             )
             .is_err()
         );
@@ -917,7 +918,8 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
             &state,
             Uid(0),
             NetUid(1),
-            &graph
+            &graph,
+            None
         )
         .is_err()
     );
@@ -930,7 +932,8 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
             &state,
             Uid(0),
             NetUid(1),
-            &graph
+            &graph,
+            None
         )
         .is_err()
     );
@@ -952,7 +955,8 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
             &state,
             Uid(0),
             NetUid(1),
-            &graph
+            &graph,
+            None
         )?,
         (vec![Uid(2)], vec![65535])
     );
@@ -966,7 +970,8 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
             &state,
             Uid(0),
             NetUid(1),
-            &graph
+            &graph,
+            None
         )
         .is_err()
     );
@@ -979,7 +984,8 @@ async fn raw_proof_and_validation_precede_clipping_and_preserve_exact_null_rows(
             &state,
             Uid(0),
             NetUid(1),
-            &graph
+            &graph,
+            None
         )?,
         (vec![Uid(0)], vec![65535])
     );
@@ -1002,17 +1008,17 @@ async fn raw_shared_preparation_enforces_chain_count_and_exact_share() -> anyhow
         values,
     };
     assert_eq!(
-        prepare_row(row(vec![0, 17]), &state, Uid(0), NetUid(1), &graph)?,
+        prepare_row(row(vec![0, 17]), &state, Uid(0), NetUid(1), &graph, None)?,
         (vec![Uid(1), Uid(2)], vec![0, 17]),
         "chain length counts zero pairs without mutating raw input"
     );
     assert_eq!(
-        prepare_row(row(vec![3, 1]), &state, Uid(0), NetUid(1), &graph)?,
+        prepare_row(row(vec![3, 1]), &state, Uid(0), NetUid(1), &graph, None)?,
         (vec![Uid(1), Uid(2)], vec![3, 1]),
         "raw rows retain exact integers instead of max-upscaling them"
     );
     state.max_weights_limit = 32_767;
-    let error = prepare_row(row(vec![100, 1]), &state, Uid(0), NetUid(1), &graph)
+    let error = prepare_row(row(vec![100, 1]), &state, Uid(0), NetUid(1), &graph, None)
         .expect_err("raw preparation enforces the configured maximum share");
     assert!(
         error
@@ -1023,15 +1029,81 @@ async fn raw_shared_preparation_enforces_chain_count_and_exact_share() -> anyhow
     // A one-unit smaller configured limit is refused too.
     state.max_weights_limit = 32_768;
     assert_eq!(
-        prepare_row(row(vec![32_768, 32_767]), &state, Uid(0), NetUid(1), &graph)?,
+        prepare_row(
+            row(vec![32_768, 32_767]),
+            &state,
+            Uid(0),
+            NetUid(1),
+            &graph,
+            None
+        )?,
         (vec![Uid(1), Uid(2)], vec![32_768, 32_767])
     );
     assert!(
-        prepare_row(row(vec![32_769, 32_766]), &state, Uid(0), NetUid(1), &graph).is_err(),
+        prepare_row(
+            row(vec![32_769, 32_766]),
+            &state,
+            Uid(0),
+            NetUid(1),
+            &graph,
+            None
+        )
+        .is_err(),
         "one greater maximum at the same total exceeds the exact share boundary"
     );
     state.max_weights_limit = 32_767;
-    assert!(prepare_row(row(vec![32_768, 32_767]), &state, Uid(0), NetUid(1), &graph).is_err());
+    assert!(
+        prepare_row(
+            row(vec![32_768, 32_767]),
+            &state,
+            Uid(0),
+            NetUid(1),
+            &graph,
+            None
+        )
+        .is_err()
+    );
+    client.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn null_mechanism_row_cap_preserves_raw_zero_pairs_and_clamps_the_minimum()
+-> anyhow::Result<()> {
+    let (_, client) = fixture().await?;
+    let best = client.at(BlockRef::Best).await?;
+    let mut state = WeightPreflight::fetch(&best, NetUid(1), MechId(0), HOTKEY).await?;
+    state.null_consensus = true;
+    state.min_allowed_weights = 1024;
+    state.population = 256;
+    let cap = active_null_row_cap(&best, state.null_consensus, MechId(16)).await?;
+    assert_eq!(cap, Some(156));
+    let graph = graph()?;
+    let raw = |len| {
+        let mut values = vec![7; len];
+        values[len - 1] = 0;
+        WeightsInput::RawU16 {
+            uids: (0..len as u16).map(Uid).collect(),
+            values,
+        }
+    };
+    let prepare = |input| prepare_row(input, &state, Uid(0), NetUid(1), &graph, cap);
+    let at_cap = prepare(raw(156))?;
+    assert_eq!(at_cap.0.len(), 156);
+    assert_eq!(at_cap.1.last(), Some(&0));
+    assert!(
+        prepare(raw(157))
+            .unwrap_err()
+            .to_string()
+            .contains("cap of 156 entries")
+    );
+    let mut weights = vec![1.0; 157];
+    weights[156] = 0.0;
+    let normalized = prepare(WeightsInput::Parallel {
+        uids: (0..157).map(Uid).collect(),
+        weights,
+    })?;
+    assert_eq!(normalized.0.len(), 156);
     client.close().await;
     Ok(())
 }
@@ -1051,7 +1123,7 @@ async fn raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs(
     };
     for values in [vec![65_534, 1, 1], vec![65_534, 1, 0], vec![17, 0, 0]] {
         assert_eq!(
-            prepare_row(row(values.clone()), &state, Uid(0), NetUid(1), &graph)?,
+            prepare_row(row(values.clone()), &state, Uid(0), NetUid(1), &graph, None)?,
             (vec![Uid(0), Uid(1), Uid(2)], values),
             "min(10, population=3) counts all three supplied pairs"
         );
@@ -1065,7 +1137,8 @@ async fn raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs(
             &state,
             Uid(0),
             NetUid(1),
-            &graph
+            &graph,
+            None
         )
         .is_err()
     );
@@ -1079,7 +1152,8 @@ async fn raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs(
             &state,
             Uid(0),
             NetUid(1),
-            &graph
+            &graph,
+            None
         )?,
         (vec![Uid(0)], vec![7])
     );
@@ -1094,7 +1168,8 @@ async fn raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs(
             &state,
             Uid(0),
             NetUid(0),
-            &graph
+            &graph,
+            None
         )
         .is_err()
     );
@@ -1108,7 +1183,8 @@ async fn raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs(
             &state,
             Uid(0),
             NetUid(0),
-            &graph
+            &graph,
+            None
         )?,
         (vec![Uid(0)], vec![7]),
         "the chain maximum-share self exemption itself is root-independent"
@@ -1123,7 +1199,8 @@ async fn raw_shared_preparation_caps_count_to_population_and_retains_zero_pairs(
                 &state,
                 Uid(0),
                 netuid,
-                &graph
+                &graph,
+                None
             )
             .is_err()
         );
@@ -1157,6 +1234,7 @@ async fn raw_shared_preparation_rejects_structurally_invalid_rows_without_rewrit
             Uid(0),
             NetUid(1),
             &graph,
+            None,
         )
         .expect_err("invalid raw vector");
         assert!(error.to_string().contains(diagnostic));

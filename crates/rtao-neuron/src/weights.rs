@@ -23,7 +23,8 @@ pub use reveal::{EpochNotice, PendingReveal, RevealMissReason, RevealOutcome, Re
 use rtao_client::{BlockHeader, BlockRef, Client, Finality, Snapshot};
 use rtao_core::{DynValue, codec::Value, timelock::epoch_schedule::EpochScheduleState};
 use rtao_intents::weights::{
-    CommitSizeLimit, ConformState, TimelockCommitRequest, TimelockCommitter, conform,
+    CommitSizeLimit, ConformState, NULL_ROW_CAP_SPEC, TimelockCommitRequest, TimelockCommitter,
+    conform, null_row_cap,
 };
 use rtao_primitives::{AccountId, IntoCoreValue, MechId, NetUid, NetUidStorageIndex, Uid};
 use rtao_runtime::storage::subtensor_module as st;
@@ -1882,10 +1883,11 @@ impl WeightScheduler {
                 return Ok(());
             }
         };
-        let prepared = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph);
         // The guard decides from the preflight's block, never the last-good
         // graph (D-098).
         let at = Snapshot::new(cx.client.clone(), preflight.at.clone());
+        let cap = active_null_row_cap(&at, preflight.null_consensus, MechId(mechanisms)).await?;
+        let prepared = prepare_row(input.clone(), &preflight, uid, cx.netuid, &graph, cap);
         let view = match &prepared {
             Ok(row) => Some(OwnerView::read(&at, cx.netuid, row, uid, hotkey, owner).await?),
             Err(_) => None,
@@ -2093,7 +2095,8 @@ impl WeightScheduler {
                         "mechanism no longer exists after the rejected commitment"
                     );
                     let graph = cx.metagraph.load();
-                    let row = prepare_row(input.clone(), &state, uid, cx.netuid, &graph)?;
+                    let cap = active_null_row_cap(&fresh, state.null_consensus, count).await?;
+                    let row = prepare_row(input.clone(), &state, uid, cx.netuid, &graph, cap)?;
                     let current_owner = *current_owner.raw();
                     let view = OwnerView::read(&fresh, cx.netuid, &row, uid, hotkey, current_owner)
                         .await?;
@@ -2405,12 +2408,25 @@ fn cadence_opportunity(
         }
     }
 }
+async fn active_null_row_cap(
+    snapshot: &Snapshot,
+    null_consensus: bool,
+    mechanisms: MechId,
+) -> anyhow::Result<Option<u16>> {
+    if null_consensus && snapshot.state_runtime().await?.spec_version() >= NULL_ROW_CAP_SPEC {
+        Ok(Some(null_row_cap(mechanisms)))
+    } else {
+        Ok(None)
+    }
+}
+
 fn prepare_row(
     input: WeightsInput,
     state: &WeightPreflight,
     uid: Uid,
     netuid: NetUid,
     graph: &rtao_metagraph::Metagraph,
+    cap: Option<u16>,
 ) -> anyhow::Result<(Vec<Uid>, Vec<u16>)> {
     let (uids, weights, raw) = match input {
         WeightsInput::ByUid(row) => {
@@ -2464,7 +2480,11 @@ fn prepare_row(
         uids.iter().all(|dest| dest.0 < state.population),
         "weight destination UID is outside the current subnet population"
     );
-    if raw {
+    let minimum = state
+        .min_allowed_weights
+        .min(state.population)
+        .min(cap.unwrap_or(u16::MAX));
+    let row = if raw {
         // Pinned Null direct dispatch preserves zeros and checks length before
         // max/sum. The raw API promises those exact bytes, unlike Python's
         // positive-only conform path; never normalize or filter this vector.
@@ -2479,7 +2499,6 @@ fn prepare_row(
             "all raw weights are zero"
         );
         let self_weight = uids == [uid];
-        let minimum = state.min_allowed_weights.min(state.population);
         anyhow::ensure!(
             (netuid.0 != 0 && self_weight) || values.len() >= usize::from(minimum),
             "raw row is below the chain minimum destination count"
@@ -2491,19 +2510,27 @@ fn prepare_row(
                 || maximum * u128::from(u16::MAX) <= total * u128::from(state.max_weights_limit),
             "raw weights exceed the configured maximum share; change integer ratios or the subnet limit"
         );
-        return Ok((uids, values));
+        (uids, values)
+    } else {
+        conform(
+            &uids,
+            &weights,
+            ConformState {
+                uid,
+                min_allowed_weights: minimum,
+                max_weight_limit: state.max_weights_limit,
+            },
+            netuid,
+            false,
+        )?
+    };
+    if let Some(cap) = cap {
+        anyhow::ensure!(
+            row.0.len() <= usize::from(cap),
+            "Null weight row exceeds the current mechanism cap of {cap} entries"
+        );
     }
-    Ok(conform(
-        &uids,
-        &weights,
-        ConformState {
-            uid,
-            min_allowed_weights: state.min_allowed_weights.min(state.population),
-            max_weight_limit: state.max_weights_limit,
-        },
-        netuid,
-        false,
-    )?)
+    Ok(row)
 }
 /// Who holds which UID at one block, as the self/owner guard sees it
 /// (D-093, D-098).

@@ -13,13 +13,10 @@ use rtao_runtime::{calls::subtensor_module as calls, storage::subtensor_module a
 use rtao_tx::{BuildCx, Built, ChainError, Intent, IntentError, PreflightCx};
 use serde_json::json;
 
-use super::{ConformState, TimelockCommitRequest, WeightsError};
+use super::{ConformState, NULL_ROW_CAP_SPEC, TimelockCommitRequest, WeightsError, null_row_cap};
 use crate::{
     CommitWeightHash, CommitWeights, RevealWeights, SetMechWeightDelegate, SetWeights, WeightsArg,
 };
-
-const NULL_ROW_CAP_SPEC: u32 = 495;
-const NULL_TOTAL_WEIGHTS: u16 = 2500;
 
 struct CheckedState {
     conform: ConformState,
@@ -42,7 +39,7 @@ impl CheckedState {
         {
             return Err(IntentError::Chain(ChainError::with_code(
                 format!(
-                    "Null subnet {netuid} accepts at most {cap} weights in one row at its current mechanism count; {} are nonzero after normalization.",
+                    "Null subnet {netuid} accepts at most {cap} weights in one row at its current mechanism count (2500 // mechanism count, at least 1); {} are nonzero after normalization.",
                     row.0.len(),
                 ),
                 Some("TooManyWeightsForNullMechanism".into()),
@@ -144,7 +141,7 @@ async fn checked(
                     st::SUBNETWORK_N.at((netuid,)),
                 ))
                 .await?;
-            let cap = (NULL_TOTAL_WEIGHTS / u16::from(mechanisms.0.max(1))).max(1);
+            let cap = null_row_cap(mechanisms);
             (min.min(cap).min(subnet_n), Some(cap))
         } else {
             (min, None)
@@ -207,6 +204,27 @@ async fn authorized_target(
         ));
     }
     Ok(target)
+}
+
+async fn delegate_warnings<V: View + ?Sized>(
+    cx: &PreflightCx<'_, V>,
+    netuid: NetUid,
+    mechid: MechId,
+    for_hotkey: Option<&str>,
+) -> Result<Vec<String>, IntentError> {
+    let Some(hotkey) = for_hotkey else {
+        return Ok(vec![]);
+    };
+    let snapshot = View::pin(cx.view).await?;
+    let (_, delegate) = delegate_at(&snapshot, netuid, mechid, hotkey).await?;
+    if delegate == Some(cx.dispatch_origin) {
+        return Ok(vec![]);
+    }
+    let delegate = delegate.map_or_else(|| "none".to_owned(), |account| account.to_ss58(42));
+    Ok(vec![format!(
+        "{} is not the current weight delegate for {hotkey} on netuid {netuid}, mechanism {mechid} (delegate: {delegate}); the chain will reject the call",
+        cx.dispatch_origin.to_ss58(42),
+    )])
 }
 
 async fn weight_context<V: View + ?Sized>(
@@ -430,6 +448,10 @@ impl Intent for SetWeights {
         &self,
         cx: &PreflightCx<'_, V>,
     ) -> Result<Vec<String>, IntentError> {
+        if self.for_hotkey.is_some() {
+            return delegate_warnings(cx, self.netuid, self.mechid, self.for_hotkey.as_deref())
+                .await;
+        }
         if self.raw_u16 {
             return Ok(vec![]);
         }
@@ -475,6 +497,10 @@ impl Intent for CommitWeights {
         &self,
         cx: &PreflightCx<'_, V>,
     ) -> Result<Vec<String>, IntentError> {
+        if self.for_hotkey.is_some() {
+            return delegate_warnings(cx, self.netuid, self.mechid, self.for_hotkey.as_deref())
+                .await;
+        }
         if self.raw_u16 {
             return Ok(vec![]);
         }
@@ -538,6 +564,13 @@ impl Intent for RevealWeights {
         };
         Ok(Built::new(call.compose(cx.runtime)?))
     }
+
+    async fn warnings<V: View + ?Sized>(
+        &self,
+        cx: &PreflightCx<'_, V>,
+    ) -> Result<Vec<String>, IntentError> {
+        delegate_warnings(cx, self.netuid, self.mechid, self.for_hotkey.as_deref()).await
+    }
 }
 
 impl CommitWeightHash {
@@ -581,21 +614,7 @@ impl Intent for CommitWeightHash {
         &self,
         cx: &PreflightCx<'_, V>,
     ) -> Result<Vec<String>, IntentError> {
-        let Some(hotkey) = self.for_hotkey.as_deref() else {
-            return Ok(vec![]);
-        };
-        let snapshot = View::pin(cx.view).await?;
-        let (_, delegate) = delegate_at(&snapshot, self.netuid, self.mechid, hotkey).await?;
-        if delegate == Some(cx.dispatch_origin) {
-            return Ok(vec![]);
-        }
-        let delegate = delegate.map_or_else(|| "none".to_owned(), |account| account.to_ss58(42));
-        Ok(vec![format!(
-            "{} is not the current weight delegate for {hotkey} on netuid {}, mechanism {} (delegate: {delegate}); the chain will reject the call",
-            cx.dispatch_origin.to_ss58(42),
-            self.netuid,
-            self.mechid
-        )])
+        delegate_warnings(cx, self.netuid, self.mechid, self.for_hotkey.as_deref()).await
     }
 }
 
@@ -982,29 +1001,95 @@ mod tests {
         );
     }
 
+    // pyt: unit/test_null_weights.py::test_weight_preflight_effective_minimum_matches_runtime
+    // pyt: unit/test_null_weights.py::test_weight_preflight_row_cap_matches_runtime
+    #[tokio::test]
+    async fn weight_preflight_clamps_only_null_minimums_and_caps() {
+        for (null, mechanisms, subnet_n, minimum, cap) in [
+            (true, 0, 100, 100, Some(2500)),
+            (true, 1, 100, 100, Some(2500)),
+            (true, 2, 2500, 1024, Some(1250)),
+            (true, 3, 2500, 833, Some(833)),
+            (true, 16, 256, 156, Some(156)),
+            (false, 1, 100, 1024, None),
+            (false, 16, 100, 1024, None),
+        ] {
+            let (snapshot, chain) = fixture(null, false).await;
+            chain.mutate_state(|state| {
+                state
+                    .seed(&st::MIN_ALLOWED_WEIGHTS, (NETUID,), 1024u16)
+                    .unwrap();
+                state
+                    .seed(&st::MECHANISM_COUNT_CURRENT, (NETUID,), MechId(mechanisms))
+                    .unwrap();
+                state.seed(&st::SUBNETWORK_N, (NETUID,), subnet_n).unwrap();
+            });
+            let state = checked(&snapshot, HOTKEY, NETUID, MECHID).await.unwrap();
+            assert_eq!(state.conform.min_allowed_weights, minimum);
+            assert_eq!(state.max_row_len, cap);
+        }
+    }
+
+    // pyt: unit/test_null_weights.py::test_null_row_above_the_cap_is_rejected_before_signing_or_encrypting
     #[tokio::test]
     async fn null_row_cap_checks_nonzero_weights_before_call_or_encryption() {
-        let (snapshot, chain) = fixture(true, false).await;
-        chain.mutate_state(|state| {
-            state.seed(&st::SUBNETWORK_N, (NETUID,), 2500u16).unwrap();
-        });
-        let mut weights = vec![1.0; 1251];
-        let error = build(&input(&weights), &snapshot).await.unwrap_err();
-        assert_eq!(error.code(), ErrorCode::LimitExceeded);
+        for enabled in [false, true] {
+            let (snapshot, chain) = fixture(true, enabled).await;
+            chain.mutate_state(|state| {
+                state
+                    .seed(&st::MIN_ALLOWED_WEIGHTS, (NETUID,), 1024u16)
+                    .unwrap();
+                state
+                    .seed(&st::MECHANISM_COUNT_CURRENT, (NETUID,), MechId(16))
+                    .unwrap();
+                state.seed(&st::SUBNETWORK_N, (NETUID,), 256u16).unwrap();
+            });
+            let too_short = build(&input(&[1.0; 155]), &snapshot).await.unwrap_err();
+            assert!(too_short.to_string().contains("at least 156 weights"));
 
-        let (snapshot, chain) = fixture(true, true).await;
-        chain.mutate_state(|state| {
-            state.seed(&st::SUBNETWORK_N, (NETUID,), 2500u16).unwrap();
-        });
-        let error = build(&input(&weights), &snapshot).await.unwrap_err();
-        assert_eq!(error.code(), ErrorCode::LimitExceeded);
-
-        weights[1250] = 0.0;
-        let (snapshot, chain) = fixture(true, false).await;
-        chain.mutate_state(|state| {
-            state.seed(&st::SUBNETWORK_N, (NETUID,), 2500u16).unwrap();
-        });
-        assert!(build(&input(&weights), &snapshot).await.is_ok());
+            let mut raw = input(&[7.0; 157]);
+            raw.raw_u16 = true;
+            let commit = CommitWeights {
+                netuid: NETUID,
+                mechid: MECHID,
+                uids: raw.uids.clone(),
+                weights: raw.weights.clone(),
+                version_key: raw.version_key,
+                for_hotkey: None,
+                raw_u16: false,
+                commit_reveal_version: 4,
+            };
+            let view = RecordingView::new(snapshot);
+            let snapshot = View::pin(&view).await.unwrap();
+            for error in [
+                build(&raw, &snapshot).await.unwrap_err(),
+                build(&input(&[1.0; 157]), &snapshot).await.unwrap_err(),
+                build(&commit, &snapshot).await.unwrap_err(),
+            ] {
+                let IntentError::Chain(error) = error else {
+                    panic!("expected the Null cap error")
+                };
+                assert_eq!(error.code, ErrorCode::LimitExceeded);
+                assert_eq!(
+                    error.name.as_deref(),
+                    Some("TooManyWeightsForNullMechanism")
+                );
+            }
+            assert!(
+                !view
+                    .touches()
+                    .iter()
+                    .any(|touch| touch.item == "RevealPeriodEpochs")
+            );
+            assert!(build(&input(&[1.0; 156]), &snapshot).await.is_ok());
+            let mut values = [7.0; 157];
+            values[156] = 0.0;
+            let zero_tail = SetWeights {
+                raw_u16: true,
+                ..input(&values)
+            };
+            assert!(build(&zero_tail, &snapshot).await.is_ok());
+        }
     }
 
     #[tokio::test]
@@ -1262,6 +1347,9 @@ mod tests {
 
     #[tokio::test]
     async fn delegated_weights_check_the_exact_target_and_origin() {
+        use rtao_client::DynView;
+        use rtao_tx::DynIntent;
+
         let (snapshot, fake) = fixture(false, false).await;
         let target = AccountId([9; 32]);
         let mut api_input = NETUID.0.to_le_bytes().to_vec();
@@ -1319,10 +1407,57 @@ mod tests {
         .unwrap();
         assert_eq!(built.call.as_bytes(), expected.as_bytes());
 
+        let commit = CommitWeights {
+            netuid: NETUID,
+            mechid: MECHID,
+            uids: set.uids.clone(),
+            weights: set.weights.clone(),
+            version_key: set.version_key,
+            for_hotkey: set.for_hotkey.clone(),
+            raw_u16: false,
+            commit_reveal_version: 4,
+        };
+        let hash = CommitWeightHash {
+            netuid: NETUID,
+            mechid: MECHID,
+            for_hotkey: set.for_hotkey.clone(),
+            commit_hash: format!("0x{}", "ab".repeat(32)),
+        };
+        let intents: [&dyn DynIntent; 4] = [&set, &commit, &reveal, &hash];
+        let warnings_context = |spec| PreflightCx {
+            view: &snapshot as &dyn DynView,
+            runtime: &runtime,
+            clock: &FixedClock,
+            spec,
+            client: snapshot.client(),
+            dispatch_origin: HOTKEY,
+            fee_payer: HOTKEY,
+            call: &built.call,
+        };
+        for intent in intents {
+            assert!(
+                intent
+                    .warnings_dyn(&warnings_context(intent.spec()))
+                    .await
+                    .unwrap()
+                    .is_empty()
+            );
+        }
         let mut wrong = vec![1];
         wrong.extend([5; 32]);
-        for reply in [wrong, vec![0]] {
+        for (reply, current_delegate) in [
+            (wrong, AccountId([5; 32]).to_ss58(42)),
+            (vec![0], "none".into()),
+        ] {
             fake.mutate_state(|state| state.seed_runtime_encoded(method, api_input.clone(), reply));
+            for intent in intents {
+                let warnings = intent
+                    .warnings_dyn(&warnings_context(intent.spec()))
+                    .await
+                    .unwrap();
+                assert_eq!(warnings.len(), 1);
+                assert!(warnings[0].contains(&format!("(delegate: {current_delegate})")));
+            }
             assert_eq!(
                 build(&set, &snapshot).await.unwrap_err().code(),
                 ErrorCode::NotAuthorized,

@@ -11094,7 +11094,7 @@
           "rtao_intents::staking_burn::StakeBurn",
           "rtao_intents::generated::{interfaces, passthrough}"
         ],
-        "synced_blob": "16aa92faf0386a65aa9f58ad51dca09042339f26"
+        "synced_blob": "a9a51e94cfd06df43f313ab99680029881fdc15e"
       },
       {
         "kind": "ported",
@@ -11268,7 +11268,7 @@
           "crates/rtao-intents/src/weights/intents.rs",
           "crates/rtao-intents/src/arguments.rs"
         ],
-        "synced_blob": "033e453a7a6dcc5760ad0fa2a3c7c79da4a81c4c"
+        "synced_blob": "9ba54a8a1829b32a83deae27a6a2f56c527b0a41"
       },
       {
         "kind": "ported",
@@ -12370,7 +12370,7 @@
           "crates/rtao-intents/src/weights/null_weights_tests.rs",
           "crates/rtao-cli/tests/null_weights_file.rs"
         ],
-        "synced_blob": "1124806dc21da09bacae14cd7e4ba90951de924a"
+        "synced_blob": "51cd1e5900ec798b5a76d9bd48e75fe9cd25f411"
       },
       {
         "kind": "ported",

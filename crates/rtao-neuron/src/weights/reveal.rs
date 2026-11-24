@@ -1330,8 +1330,15 @@ async fn first_check(
     if pending.uids.iter().any(|uid| uid.0 >= population) {
         return Ok(Some(RevealMissReason::Uid));
     }
-    if pending.uids.len() > usize::from(population)
-        || (!self_only && pending.uids.len() < usize::from(min.min(population)))
+    let mut maximum = population;
+    if null_consensus && snapshot.block().runtime.spec_version() >= super::NULL_ROW_CAP_SPEC {
+        let mechanisms =
+            super::reads::storage(snapshot, &st::MECHANISM_COUNT_CURRENT, (pending.netuid,))
+                .await?;
+        maximum = maximum.min(super::null_row_cap(mechanisms));
+    }
+    if pending.uids.len() > usize::from(maximum)
+        || (!self_only && pending.uids.len() < usize::from(min.min(maximum)))
     {
         return Ok(Some(RevealMissReason::Length));
     }
@@ -1818,6 +1825,57 @@ mod tests {
                 .render()
                 .contains("rtao_weights_reveal_missed_total")
         );
+        client.close().await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reveal_length_diagnostic_applies_the_null_mechanism_cap() -> anyhow::Result<()> {
+        let (chain, client, mut watcher, _) = slipped().await?;
+        let netuid = NetUid(1);
+        chain.mutate_state(|state| -> anyhow::Result<()> {
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "SubnetEpochConsensus",
+                (netuid,),
+                "Null",
+            )?;
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "SubnetworkN",
+                (netuid,),
+                256u16,
+            )?;
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "MinAllowedWeights",
+                (netuid,),
+                1024u16,
+            )?;
+            seed_at(
+                state,
+                120,
+                "SubtensorModule",
+                "MechanismCountCurrent",
+                (netuid,),
+                MechId(16),
+            )
+        })?;
+        let snapshot = client.at(BlockRef::Number(120)).await?;
+        let pending = watcher.pending.first_mut().expect("recorded commitment");
+        pending.uids = (0..157).map(Uid).collect();
+        assert_eq!(
+            first_check(&snapshot, pending).await?,
+            Some(RevealMissReason::Length)
+        );
+        pending.uids.pop();
+        assert_eq!(first_check(&snapshot, pending).await?, None);
         client.close().await;
         Ok(())
     }
