@@ -213,11 +213,14 @@ impl Request {
             _ => return Err(CliError::input(format!("unknown proxy command {name:?}"))),
         };
         let tx = TxRequest::from_matches(ctx, op, leaf, history)?;
+        // Proxy.proxy_announced identifies its own real account. The signing
+        // account submits it directly, even if the CLI defaults to a proxy.
+        let proxy_override = (name == "execute").then(|| "self".to_owned());
         Ok(Self {
             kind: RequestKind::Transaction {
                 tx,
                 after,
-                proxy_override: None,
+                proxy_override,
             },
         })
     }
@@ -1179,6 +1182,8 @@ mod tests {
             "remove_proxies",
             "--force-proxy-type",
             "Any",
+            "--proxy-for",
+            &delegate,
             "--yes",
         ])?;
         let (mut ctx, _, _) = context(&parsed, Books::default(), false, &[])?;
@@ -1190,6 +1195,11 @@ mod tests {
         assert_eq!(transaction(&request)?.args["inner_args"], json!({}));
         assert_eq!(transaction(&request)?.args["force_proxy_type"], "Any");
         assert!(ctx.globals.force_proxy_type.is_none());
+        assert_eq!(ctx.globals.proxy_for.as_deref(), Some(delegate.as_str()));
+        let RequestKind::Transaction { proxy_override, .. } = &request.kind else {
+            return Err("expected transaction".into());
+        };
+        assert_eq!(proxy_override.as_deref(), Some("self"));
         for spelling in ["any", "Staking ", "unknown"] {
             assert!(parse(&["rtao", "proxy", "create", "--proxy-type", spelling]).is_err());
         }
