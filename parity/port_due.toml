@@ -21,14 +21,6 @@ tag = "v494"
 symbols = []
 
 [[file]]
-py = "pallets/subtensor/src/subnets/weights.rs"
-kind = "ported"
-from = "9ea06ff70d143f238e50fa6d270df4276d5fa6f6"
-to = "d65116644324bc7fafcb7d2db9f403d44fec0bb2"
-tag = "v494"
-symbols = []
-
-[[file]]
 py = "pallets/subtensor/src/utils/rate_limiting.rs"
 kind = "ported"
 from = "7c50fd80383b16eb7c647afb075185e2982cb4db"

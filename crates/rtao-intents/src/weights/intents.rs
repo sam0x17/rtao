@@ -34,20 +34,24 @@ impl CheckedState {
     ) -> Result<(Vec<Uid>, Vec<u16>), IntentError> {
         let row =
             super::conform(uids, weights, self.conform, netuid, raw_u16).map_err(math_error)?;
-        if let Some(cap) = self.max_row_len
-            && row.0.len() > usize::from(cap)
-        {
-            return Err(IntentError::Chain(ChainError::with_code(
-                format!(
-                    "Null subnet {netuid} accepts at most {cap} weights in one row at its current mechanism count (2500 // mechanism count, at least 1); {} are nonzero after normalization.",
-                    row.0.len(),
-                ),
-                Some("TooManyWeightsForNullMechanism".into()),
-                ErrorCode::LimitExceeded,
-            )));
+        if let Some(cap) = self.max_row_len {
+            check_null_row_len(netuid, row.0.len(), cap)?;
         }
         Ok(row)
     }
+}
+
+fn check_null_row_len(netuid: NetUid, len: usize, cap: u16) -> Result<(), IntentError> {
+    if len <= usize::from(cap) {
+        return Ok(());
+    }
+    Err(IntentError::Chain(ChainError::with_code(
+        format!(
+            "Null subnet {netuid} accepts at most {cap} weights in one row at its current mechanism count (2500 // mechanism count, at least 1); the row encodes {len} weights."
+        ),
+        Some("TooManyWeightsForNullMechanism".into()),
+        ErrorCode::LimitExceeded,
+    )))
 }
 
 struct CommitRow {
@@ -529,23 +533,50 @@ impl Intent for RevealWeights {
                 "All weights are zero; nothing to reveal.".into(),
             ));
         }
-        let uids = row.0.into_iter().map(|uid| uid.0).collect();
-        let call = match self.for_hotkey.as_deref() {
-            Some(hotkey) => {
-                let snapshot = View::pin(cx.view).await?;
-                let signer = cx.hotkey_address(None)?;
-                let target =
-                    authorized_target(&snapshot, signer, self.netuid, self.mechid, hotkey).await?;
-                calls::reveal_mechanism_weights_for(
-                    self.netuid,
-                    self.mechid,
-                    target,
-                    uids,
-                    row.1,
-                    self.salt.clone(),
-                    self.version_key,
-                )
+        // Every permitted mechanism count is a positive u8. Rows that fit
+        // even at its upper bound need no state reads for the cap.
+        let check_cap = row.0.len() > usize::from(null_row_cap(MechId(u8::MAX)));
+        let target = if check_cap || self.for_hotkey.is_some() {
+            let snapshot = View::pin(cx.view).await?;
+            let target = match self.for_hotkey.as_deref() {
+                Some(hotkey) => Some(
+                    authorized_target(
+                        &snapshot,
+                        cx.hotkey_address(None)?,
+                        self.netuid,
+                        self.mechid,
+                        hotkey,
+                    )
+                    .await?,
+                ),
+                None => None,
+            };
+            if check_cap && snapshot.state_runtime().await?.spec_version() >= NULL_ROW_CAP_SPEC {
+                let mode = snapshot
+                    .storage(&st::SUBNET_EPOCH_CONSENSUS, (self.netuid,))
+                    .await?;
+                if null_mode(&mode.to_json(), true) {
+                    let mechanisms = snapshot
+                        .storage(&st::MECHANISM_COUNT_CURRENT, (self.netuid,))
+                        .await?;
+                    check_null_row_len(self.netuid, row.0.len(), null_row_cap(mechanisms))?;
+                }
             }
+            target
+        } else {
+            None
+        };
+        let uids = row.0.into_iter().map(|uid| uid.0).collect();
+        let call = match target {
+            Some(target) => calls::reveal_mechanism_weights_for(
+                self.netuid,
+                self.mechid,
+                target,
+                uids,
+                row.1,
+                self.salt.clone(),
+                self.version_key,
+            ),
             None if self.mechid != MechId(0) => calls::reveal_mechanism_weights(
                 self.netuid,
                 self.mechid,
@@ -1090,6 +1121,80 @@ mod tests {
             };
             assert!(build(&zero_tail, &snapshot).await.is_ok());
         }
+    }
+
+    #[tokio::test]
+    async fn legacy_reveals_apply_the_null_row_cap_from_the_activation_state() {
+        use std::sync::Arc;
+
+        let (snapshot, chain) = fixture(true, true).await;
+        let delegate_target = AccountId([9; 32]);
+        chain.mutate_state(|state| {
+            let previous = Arc::new(
+                rtao_core::runtime::Runtime::parse(
+                    &state.runtime.metadata_bytes,
+                    NULL_ROW_CAP_SPEC - 1,
+                    state.runtime.transaction_version,
+                    42,
+                )
+                .unwrap(),
+            );
+            for height in [97, 98] {
+                state.set_runtime_at(state.block_hash(height).unwrap(), previous.clone());
+            }
+            state
+                .seed(&st::MECHANISM_COUNT_CURRENT, (NETUID,), MechId(16))
+                .unwrap();
+            let mut input = NETUID.0.to_le_bytes().to_vec();
+            input.push(MECHID.0);
+            input.extend(delegate_target.0);
+            let mut output = vec![1];
+            output.extend(HOTKEY.0);
+            state.seed_runtime_encoded(
+                "SubnetRegistrationRuntimeApi_get_mech_weight_delegate",
+                input,
+                output,
+            );
+        });
+        let prior = snapshot.client().at(BlockRef::Number(98)).await.unwrap();
+        let activation = snapshot.client().at(BlockRef::Number(99)).await.unwrap();
+        assert_eq!(
+            activation.block().runtime.spec_version(),
+            NULL_ROW_CAP_SPEC - 1
+        );
+        assert!(activation.state_runtime().await.unwrap().spec_version() >= NULL_ROW_CAP_SPEC);
+
+        let mut reveal = RevealWeights {
+            netuid: NETUID,
+            mechid: MECHID,
+            uids: (0..157).map(Uid).collect(),
+            weights: vec![Ratio::new(1.0).unwrap(); 157],
+            salt: vec![7],
+            version_key: 123,
+            for_hotkey: None,
+        };
+        assert!(build(&reveal, &prior).await.is_ok());
+        let (yuma, yuma_chain) = fixture(false, true).await;
+        yuma_chain.mutate_state(|state| {
+            state
+                .seed(&st::MECHANISM_COUNT_CURRENT, (NETUID,), MechId(16))
+                .unwrap();
+        });
+        assert!(build(&reveal, &yuma).await.is_ok());
+        for target in [None, Some(delegate_target.to_ss58(42))] {
+            reveal.for_hotkey = target;
+            let error = build(&reveal, &activation).await.unwrap_err();
+            let IntentError::Chain(error) = error else {
+                panic!("expected the Null cap error")
+            };
+            assert_eq!(error.code, ErrorCode::LimitExceeded);
+            assert_eq!(
+                error.name.as_deref(),
+                Some("TooManyWeightsForNullMechanism")
+            );
+        }
+        reveal.weights[156] = Ratio::new(0.0).unwrap();
+        assert!(build(&reveal, &activation).await.is_ok());
     }
 
     #[tokio::test]

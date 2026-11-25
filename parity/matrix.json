@@ -8550,7 +8550,7 @@
           "crates/rtao-neuron/src/weights.rs",
           "crates/rtao-neuron/src/weights/{reveal,submit}.rs"
         ],
-        "synced_blob": "9ea06ff70d143f238e50fa6d270df4276d5fa6f6"
+        "synced_blob": "d65116644324bc7fafcb7d2db9f403d44fec0bb2"
       },
       {
         "kind": "ported",
