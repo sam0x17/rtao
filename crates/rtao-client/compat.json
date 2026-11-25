@@ -10,7 +10,7 @@
         "cargo": "cargo 1.100.0 (3acc79c0c 2026-11-05)",
         "compiler": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
         "host": "x86_64-unknown-linux-gnu",
-        "measured_unix_seconds": 1795547422,
+        "measured_unix_seconds": 1795640088,
         "method": {
           "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
           "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -20,7 +20,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "2f1cb981e8a77f0df96796ae320470223917aeefb98e167804e1ab367e0d05e2",
+            "feature_graph_sha256": "c36ef79124f2fcdcd59c297b728b2498ed69dc306616f79b760a656b4b2ffc5c",
             "features": [],
             "normal_build_packages": 229,
             "package": "rtao-core",
@@ -180,10 +180,10 @@
               "rfc6979 v0.4.0",
               "rtao-core v0.1.2 ($WORKSPACE/crates/rtao-core)",
               "rtao-core-ext v0.1.2 ($WORKSPACE/crates/rtao-core-ext)",
-              "rtao-upstream-core v0.490.0 ($WORKSPACE/upstream/core)",
+              "rtao-upstream-core v0.490.1 ($WORKSPACE/upstream/core)",
               "rtao-upstream-fips204 v0.490.0 ($WORKSPACE/upstream/fips204)",
               "rtao-upstream-hashed v0.490.0 ($WORKSPACE/upstream/hashed)",
-              "rtao-upstream-macros v0.490.0 (proc-macro) ($WORKSPACE/upstream/macros)",
+              "rtao-upstream-macros v0.490.1 (proc-macro) ($WORKSPACE/upstream/macros)",
               "rtao-upstream-tle v0.490.0 ($WORKSPACE/upstream/tle)",
               "rtao-upstream-w3f-bls v0.490.0 ($WORKSPACE/upstream/w3f-bls)",
               "rustc_version v0.4.1",
@@ -260,7 +260,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "c9306763d087c6a59c9a62ae6abfb456b050a36a21c9898b153d31d43fee0662",
+            "feature_graph_sha256": "f9b21e66683ee7bfbf2ea2ad7e4b4e62f9224112a61e0d4a8ebd4be75a34dc6f",
             "features": [
               "validator"
             ],
@@ -506,10 +506,10 @@
               "rtao-runtime v0.1.2 ($WORKSPACE/crates/rtao-runtime)",
               "rtao-signer v0.1.2 ($WORKSPACE/crates/rtao-signer)",
               "rtao-tx v0.1.2 ($WORKSPACE/crates/rtao-tx)",
-              "rtao-upstream-core v0.490.0 ($WORKSPACE/upstream/core)",
+              "rtao-upstream-core v0.490.1 ($WORKSPACE/upstream/core)",
               "rtao-upstream-fips204 v0.490.0 ($WORKSPACE/upstream/fips204)",
               "rtao-upstream-hashed v0.490.0 ($WORKSPACE/upstream/hashed)",
-              "rtao-upstream-macros v0.490.0 (proc-macro) ($WORKSPACE/upstream/macros)",
+              "rtao-upstream-macros v0.490.1 (proc-macro) ($WORKSPACE/upstream/macros)",
               "rtao-upstream-tle v0.490.0 ($WORKSPACE/upstream/tle)",
               "rtao-upstream-w3f-bls v0.490.0 ($WORKSPACE/upstream/w3f-bls)",
               "rtao-wallet v0.1.2 ($WORKSPACE/crates/rtao-wallet)",
@@ -640,7 +640,7 @@
           {
             "core_host_enabled": false,
             "default_features": false,
-            "feature_graph_sha256": "13a6992b8a57bc392d694adf2f21290c25cd5b5bc9a723256d9ea137cd530264",
+            "feature_graph_sha256": "36d7be1daa8d9738358f3524caee5eae13d366cd30041257f175385f5268538b",
             "features": [
               "miner"
             ],
@@ -889,10 +889,10 @@
               "rtao-runtime v0.1.2 ($WORKSPACE/crates/rtao-runtime)",
               "rtao-signer v0.1.2 ($WORKSPACE/crates/rtao-signer)",
               "rtao-tx v0.1.2 ($WORKSPACE/crates/rtao-tx)",
-              "rtao-upstream-core v0.490.0 ($WORKSPACE/upstream/core)",
+              "rtao-upstream-core v0.490.1 ($WORKSPACE/upstream/core)",
               "rtao-upstream-fips204 v0.490.0 ($WORKSPACE/upstream/fips204)",
               "rtao-upstream-hashed v0.490.0 ($WORKSPACE/upstream/hashed)",
-              "rtao-upstream-macros v0.490.0 (proc-macro) ($WORKSPACE/upstream/macros)",
+              "rtao-upstream-macros v0.490.1 (proc-macro) ($WORKSPACE/upstream/macros)",
               "rtao-upstream-tle v0.490.0 ($WORKSPACE/upstream/tle)",
               "rtao-upstream-w3f-bls v0.490.0 ($WORKSPACE/upstream/w3f-bls)",
               "rtao-wallet v0.1.2 ($WORKSPACE/crates/rtao-wallet)",
@@ -1024,7 +1024,7 @@
           {
             "core_host_enabled": true,
             "default_features": false,
-            "feature_graph_sha256": "4f44c06f414e4b00b3ce242c86306c48ccf16875270a42c9f938a5d4091f33bc",
+            "feature_graph_sha256": "e126e460ad1b75c2b6aea69378048be0cf7042726c77ad73240f60114c2823eb",
             "features": [
               "owner"
             ],
@@ -1312,10 +1312,10 @@
               "rtao-runtime v0.1.2 ($WORKSPACE/crates/rtao-runtime)",
               "rtao-signer v0.1.2 ($WORKSPACE/crates/rtao-signer)",
               "rtao-tx v0.1.2 ($WORKSPACE/crates/rtao-tx)",
-              "rtao-upstream-core v0.490.0 ($WORKSPACE/upstream/core)",
+              "rtao-upstream-core v0.490.1 ($WORKSPACE/upstream/core)",
               "rtao-upstream-fips204 v0.490.0 ($WORKSPACE/upstream/fips204)",
               "rtao-upstream-hashed v0.490.0 ($WORKSPACE/upstream/hashed)",
-              "rtao-upstream-macros v0.490.0 (proc-macro) ($WORKSPACE/upstream/macros)",
+              "rtao-upstream-macros v0.490.1 (proc-macro) ($WORKSPACE/upstream/macros)",
               "rtao-upstream-tle v0.490.0 ($WORKSPACE/upstream/tle)",
               "rtao-upstream-w3f-bls v0.490.0 ($WORKSPACE/upstream/w3f-bls)",
               "rtao-wallet v0.1.2 ($WORKSPACE/crates/rtao-wallet)",
@@ -1463,8 +1463,8 @@
         "schema": 1,
         "source": {
           "dependency_inputs": {
-            "Cargo.lock": "6b07751a084aa25f137fc54e5c40e6d8a65d37f44a3704e695229b2e2944ddec",
-            "Cargo.toml": "4689f573d5eb96731601ee78268a5044090b6cfb71fd1779524f5e5089aacd0f",
+            "Cargo.lock": "9ee006c6d61895b50dfe2947d24e783e9a3c83d029cc1f9a7bd0b3b4280f43f5",
+            "Cargo.toml": "0e6abe46a617019f2083118491c2c0586747c62352aa5c2733ff3a0364184086",
             "crates/rtao-arena/Cargo.toml": "b65a3acbbcd90d186c46e3db776336665a38fea5b2cbac7a6cccf8f2ae1833ea",
             "crates/rtao-btauth/Cargo.toml": "650c1ccaa7c178499fb6c63aa3da6a21c03fbeec578c244ba176dc8b7c5a4a5f",
             "crates/rtao-catalog/Cargo.toml": "82ea6c2ca4ac486e020b9c51b07334c7e8f744d8bdfaf118653e187d22928510",
@@ -1489,16 +1489,16 @@
             "crates/rtao-tx/Cargo.toml": "f3010c454a0707f25fb70a285c43c7ed87b68f5fb9ba79344bd19a16c45dfd1e",
             "crates/rtao-wallet/Cargo.toml": "776cb4e3136f13758185e38af4746181e385e1283a6b5233bd45752fbbf69dbe",
             "crates/rtao/Cargo.toml": "1718e111f0bbef655f5c2ec8ecbadf658aba15a2c590e0bc331ceaa3a2143b9b",
-            "upstream.toml": "2dede9dc9d282132f411e5ad5f88c7bcdfd3329c5b9a17d8c34934230f9e3d18",
+            "upstream.toml": "82eacf4075538833db08efe25cfa78f06193d6f805d6b2a3219e31eb5d06197a",
             "xtask/Cargo.toml": "3c4df51eadf75d7d87340251b4bdfc52d31c3ec0bda7c8861cf4a7f01c36b890"
           },
-          "dependency_inputs_sha256": "dacc170e8931a0313765c1346b30903313d5ad7b453a7ff1c6821d89cbcfdec2",
+          "dependency_inputs_sha256": "a2a6a1f1f013329645351d065e1964fc98b396a3e91a381186ec421f4c1e3362",
           "dirty": true,
-          "head_commit": "d96b85e44ca487b7f08e9c34dd83bcddb7420663"
+          "head_commit": "905c1573b9000904a95a3f935617d454731f05af"
         },
         "target": "aarch64-apple-darwin"
       },
-      "sha256": "736ad3952e18ced5e3c9ba56f10d4ec5162adeaedcbc8fd155ce60419ca5e874"
+      "sha256": "0204f2aca731057b2d24c1d3ec05beffb442170f982e25ad6011b61918140bc4"
     }
   ],
   "core": {

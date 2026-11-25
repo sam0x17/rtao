@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testnet runtime 496 recorded automatically
+
+- Testnet finalized spec 496 (`:code` `0x4f1a385d22c3e4aa8d04dc717c1330964e24505e2c60aca257591532aecdeb08`) at block 8524767; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `surface-unchanged`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45697970672)). Source: upstream commit `a8db66106167f12de261dbad7efccd4556c097e1`, whose v496 prerelease wasm is this `:code`. The parity pin is unchanged.
+
 ### Finney runtime 495
 
 - Pin the Finney SDK surface to upstream v495 at `e536e6bf4`. Verify the
