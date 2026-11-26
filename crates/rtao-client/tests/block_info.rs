@@ -1,3 +1,4 @@
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/snapshot.py @ 24e1fc7b12ea7ce9d390925dac602ba961997824 (Apache-2.0); modified by rtao.
 //! Public block lookups through metadata-backed fake chain transport.
 #![allow(clippy::unwrap_used, clippy::panic)] // Invalid fixtures must fail assertions.
 
@@ -355,6 +356,8 @@ async fn block_execution_uses_parent_runtime_during_upgrade() {
     );
     assert_eq!(upgraded.block().runtime.spec_version(), previous_spec);
     assert_eq!(upgraded.state_runtime().await.unwrap().spec_version(), 479);
+    assert_eq!(previous.spec_version().await.unwrap(), previous_spec);
+    assert_eq!(upgraded.spec_version().await.unwrap(), 479);
     let parent = chain.mutate_state(|state| state.block_hash(99).unwrap());
     // Connection-time symbol discovery can already cache this parent runtime.
     // The decoded old call above remains the evidence for execution metadata.

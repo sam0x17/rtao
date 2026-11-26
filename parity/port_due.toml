@@ -181,22 +181,6 @@ tag = "v494"
 symbols = []
 
 [[file]]
-py = "sdk/python/bittensor/snapshot.py"
-kind = "ported"
-from = "fad69f52a2ff5c2d8901acb3b9de774e34057482"
-to = "4f39783788d11557dcbf423bb468b4cacc8b07d4"
-tag = "v497"
-symbols = ["bittensor.snapshot.Snapshot", "bittensor.snapshot.Snapshot.spec_version"]
-
-[[file]]
-py = "sdk/python/bittensor/sync.py"
-kind = "ported"
-from = "67af9c8da82562f6b9258cd6ec58616b5d3d825d"
-to = "cf6b9ea077d0d5bca3823240868bd333a0481eba"
-tag = "v497"
-symbols = ["bittensor.sync.SyncSnapshot", "bittensor.sync.SyncSnapshot.spec_version"]
-
-[[file]]
 py = "sdk/python/tests/unit/test_cli.py"
 kind = "oracle-only"
 from = "7d24ce73f322515db1bebb0c81ec1f724ba879af"
@@ -211,11 +195,3 @@ from = "b327a7e65000b30bd4e0de9fb6f15e04a2cf1477"
 to = "ac777b7f0eb9ae56dee3aba76787dce7251c79ee"
 tag = "v494"
 symbols = ["tests.unit.test_cli_commands.test_colored_help_preserves_literal_long_and_short_options"]
-
-[[file]]
-py = "sdk/python/tests/unit/test_facades.py"
-kind = "ported"
-from = "b6ea3e5a59ba943a1caa8a7762d49921bb5c761a"
-to = "517c6003ff8c3cf16e7956e102f04ab49f87a4c0"
-tag = "v497"
-symbols = ["tests.unit.test_facades.AsyncMock", "tests.unit.test_facades.test_sync_snapshot_spec_version_uses_the_snapshots_block"]

@@ -1,5 +1,5 @@
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/interface.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/snapshot.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/snapshot.py @ 24e1fc7b12ea7ce9d390925dac602ba961997824 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_transport/storage.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_substrate.py @ d967d13588834f4f5aaa8ef4c8fc1a865d581462 (Apache-2.0); modified by rtao.
 //! Read views whose multi-request operations retain one block identity.
@@ -127,6 +127,14 @@ impl Snapshot {
     /// The runtime on [`Self::block`] instead describes execution of this block.
     pub async fn state_runtime(&self) -> Result<RuntimeHandle, ClientError> {
         self.client.state_runtime_at(self.block.hash).await
+    }
+
+    /// Read the runtime spec version in this snapshot's state.
+    ///
+    /// At an upgrade block this can differ from the runtime that executed
+    /// the block, exposed by [`Self::block`].
+    pub async fn spec_version(&self) -> Result<u32, ClientError> {
+        Ok(self.state_runtime().await?.spec_version())
     }
 
     /// Read storage using the runtime in this block's resulting state.

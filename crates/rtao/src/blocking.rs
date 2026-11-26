@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py @ 24e1fc7b12ea7ce9d390925dac602ba961997824 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/client.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/_subtensor.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/wallet_registration.py @ b6a81d144078eac18bd25c3af7cb31579bb670f3 (Apache-2.0); modified by rtao.
@@ -1098,6 +1098,12 @@ impl SyncSnapshot {
     /// The immutable block identity and its parent-selected runtime.
     pub fn block(&self) -> &PinnedBlock {
         &self.block
+    }
+
+    /// Read the runtime spec version in this snapshot's state.
+    pub fn spec_version(&self) -> Result<u32, Error> {
+        self.view
+            .with_view(|view| async move { view.pin().await?.spec_version().await })
     }
 
     /// Decode a channel registration using this snapshot's pinned metadata.

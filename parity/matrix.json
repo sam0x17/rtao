@@ -11655,9 +11655,11 @@
         "rust": [
           "rtao_client::view::{Snapshot,View,ViewExt}",
           "crates/rtao-client/tests/snapshot.rs",
-          "rtao_client::Snapshot::decode_commitment_registration"
+          "rtao_client::Snapshot::decode_commitment_registration",
+          "rtao_client::Snapshot::spec_version",
+          "crates/rtao-client/tests/block_info.rs"
         ],
-        "synced_blob": "fad69f52a2ff5c2d8901acb3b9de774e34057482"
+        "synced_blob": "4f39783788d11557dcbf423bb468b4cacc8b07d4"
       },
       {
         "kind": "n/a",
@@ -11680,7 +11682,7 @@
           "rtao::blocking::{SyncClient,SyncSnapshot,SyncView,Blocks,SyncMultisig}",
           "crates/rtao/tests/facade_contract.rs"
         ],
-        "synced_blob": "67af9c8da82562f6b9258cd6ec58616b5d3d825d"
+        "synced_blob": "cf6b9ea077d0d5bca3823240868bd333a0481eba"
       },
       {
         "kind": "ported",
@@ -12230,7 +12232,7 @@
           "crates/rtao/tests/facade_contract.rs",
           "xtask/src/facade_contract_tests.rs"
         ],
-        "synced_blob": "b6ea3e5a59ba943a1caa8a7762d49921bb5c761a"
+        "synced_blob": "517c6003ff8c3cf16e7956e102f04ab49f87a4c0"
       },
       {
         "kind": "ported",

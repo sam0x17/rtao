@@ -1,4 +1,4 @@
-// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_facades.py @ 850f2755bb05a3851f948489f0ab27b0645cebce (Apache-2.0); modified by rtao.
+// Derived from RaoFoundation/subtensor sdk/python/tests/unit/test_facades.py @ 24e1fc7b12ea7ce9d390925dac602ba961997824 (Apache-2.0); modified by rtao.
 // Derived from RaoFoundation/subtensor sdk/python/bittensor/sync.py @ a68c6e8c65411a842fbf69269dc385aa13041391 (Apache-2.0); modified by rtao.
 //! Compile-time correspondence for the pinned Python facade's async surface.
 //!
@@ -103,6 +103,7 @@ facade_contract! {
     "decode_commitment_registration" ["data"] => SyncSnapshot::decode_commitment_registration : fn(&SyncSnapshot, Vec<u8>) -> FacadeResult<CommitmentRegistration>;
     "constant" ["item"] => SyncSnapshot::constant : fn(&SyncSnapshot, String, String) -> FacadeResult<DynValue>;
     "read" ["name", "params"] => SyncSnapshot::read : fn(&SyncSnapshot, ReadName, JsonArguments) -> FacadeResult<serde_json::Value>;
+    "spec_version" [] => SyncSnapshot::spec_version : fn(&SyncSnapshot) -> FacadeResult<u32>;
     "timestamp" [] => SyncSnapshot::timestamp : fn(&SyncSnapshot) -> FacadeResult<SystemTime>;
     "block_time" [] => SyncSnapshot::block_time : fn(&SyncSnapshot) -> FacadeResult<f64>;
     "is_fast_blocks" [] => SyncSnapshot::is_fast_blocks : fn(&SyncSnapshot) -> FacadeResult<bool>;
@@ -118,6 +119,49 @@ fn finney_construction_and_close_stay_cold() -> TestResult {
     assert!(!client.is_started());
     client.close()?;
     assert!(!client.is_started());
+    Ok(())
+}
+
+// pyt: unit/test_facades.py::test_sync_snapshot_spec_version_uses_the_snapshots_block
+#[test]
+fn snapshot_spec_version_reads_pinned_state_at_an_upgrade() -> TestResult {
+    use rtao_client::{Client, ClientConfig, Network};
+    use rtao_core::runtime::Runtime;
+    use rtao_testkit::{FakeChain, FakeState, rpc::RpcClient};
+
+    let mut state = FakeState::try_default()?;
+    let previous_spec = state.runtime.spec_version;
+    let upgraded_spec = previous_spec + 1;
+    let hash = state.block_hash(42).ok_or("snapshot block missing")?;
+    let runtime = Runtime::parse(
+        &state.runtime.metadata_bytes,
+        upgraded_spec,
+        state.runtime.transaction_version,
+        state.runtime.ss58_format,
+    )?;
+    state.set_runtime_at(hash.clone(), Arc::new(runtime));
+    let chain = FakeChain::from_state(state);
+    let rpc = chain.clone();
+    let mut config = ClientConfig::new(Network::resolve_with("local", |_| None)?)?;
+    config.track_heads = false;
+    config.runtime_cache_dir = None;
+    config.config_store = None;
+    let client = SyncClient::with_connector(config, move |config| {
+        let rpc = rpc.clone();
+        async move { Client::from_rpc(RpcClient::new(rpc), config).await }
+    });
+    let snapshot = client.at(BlockRef::Number(42))?;
+    assert_eq!(snapshot.block().runtime.spec_version(), previous_spec);
+    assert_eq!(snapshot.spec_version()?, upgraded_spec);
+    assert_eq!(
+        client.at(BlockRef::Number(41))?.spec_version()?,
+        previous_spec
+    );
+    assert_eq!(client.at(BlockRef::Best)?.spec_version()?, previous_spec);
+    assert!(chain.requests().iter().any(|request| {
+        request.method == "state_getRuntimeVersion" && request.params == serde_json::json!([hash])
+    }));
+    client.close()?;
     Ok(())
 }
 
