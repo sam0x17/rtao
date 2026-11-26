@@ -67,6 +67,6 @@ Distinct package identities reached through normal and build edges, excluding de
 | `aarch64-apple-darwin` | `miner` | 371 | false | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 | `aarch64-apple-darwin` | `owner` | 424 | true | [measurement](docs/compat/build-weight/aarch64-apple-darwin.json) |
 
-Measured on `x86_64-unknown-linux-gnu` with `rustc 1.100.0 (0ef1bc386 2026-11-09)`, source `905c1573b9000904a95a3f935617d454731f05af` with dependency changes in the working tree; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
+Measured on `x86_64-unknown-linux-gnu` with `rustc 1.100.0 (0ef1bc386 2026-11-09)`, source `019fb4f06253aa0ea8c3e465a522d40c4879fa65` with dependency changes in the working tree; source-manifest and lock hashes, selected features, package inventories and measurement method are retained in the report.
 
 Regenerate in hosted `pr-gates` with `refresh_compat=true`, then review and adopt its source reports. Validation evidence comes from `pr-gates` with `validate_compat=true` and is adopted with `ci/compat/adopt.sh`. CI verifies the committed outputs offline with `cargo xtask compat --check`. Validation report requirements are documented in [docs/compat/README.md](docs/compat/README.md).

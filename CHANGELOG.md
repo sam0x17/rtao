@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Testnet runtime 497 recorded automatically
+
+- Testnet finalized spec 497 (`:code` `0x1ef826aebed0d77300b7da09d4e3b23ad507317d72c8c01d827537643dbf2c15`) at block 8526335; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `surface-unchanged`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45737950253)). Source: upstream commit `24e1fc7b12ea7ce9d390925dac602ba961997824`, whose v497 wasm is this `:code`. The parity pin is unchanged.
+
 ### Testnet runtime 496 recorded automatically
 
 - Testnet finalized spec 496 (`:code` `0x4f1a385d22c3e4aa8d04dc717c1330964e24505e2c60aca257591532aecdeb08`) at block 8524767; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `surface-unchanged`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45697970672)). Source: upstream commit `a8db66106167f12de261dbad7efccd4556c097e1`, whose v496 prerelease wasm is this `:code`. The parity pin is unchanged.
