@@ -677,6 +677,21 @@ pub fn read_state(availability_coldkey: &str) -> Result<FakeState, CoreError> {
     // Python's permissive fake returns empty values for these unseeded APIs.
     // Supply valid empty/zero native SCALE rather than bypassing the transport.
     for (api, method, value) in [
+        (
+            "SubnetRegistrationRuntimeApi",
+            "get_channel_commitment",
+            Value::Null,
+        ),
+        (
+            "SubnetRegistrationRuntimeApi",
+            "get_commit_burn",
+            Value::Null,
+        ),
+        (
+            "SubnetRegistrationRuntimeApi",
+            "get_mech_weight_delegate",
+            Value::Null,
+        ),
         ("SubnetInfoRuntimeApi", "get_metagraph", Value::Null),
         ("GammaRuntimeApi", "get_gamma_deposit", Value::Null),
         (
