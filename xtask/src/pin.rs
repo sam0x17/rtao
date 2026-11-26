@@ -443,6 +443,11 @@ pub(super) fn run(args: Vec<String>) -> Result<()> {
             crate::metadata_pin::verify(root, &next)?;
             None
         };
+        // A candidate may retain an older core (or both committed pins in
+        // polling mode). Its locked dependencies need not be present in the
+        // newly requested parity graph. Bootstrap every graph that the
+        // following offline identity verification will inspect.
+        prepare_check_cache(&repo, &next)?;
         verify_pin_identity(&repo, &next)?;
         // A moved core patch changes the core's lock source, which the
         // candidate re-resolves after this step (runtime-adopt's lock stage,
