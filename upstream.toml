@@ -82,18 +82,18 @@ path = "sdk/bittensor-core"
 checksum = "21cfb73ec1f1b7aae5be4e749c23fbd6396a9eeb9416d091e393f756255ec16e"
 
 [parity]
-tag = "v495"
-commit = "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900"
-spec_version = 495
-python_package_version = "11.3.6.dev0"
+tag = "v497"
+commit = "24e1fc7b12ea7ce9d390925dac602ba961997824"
+spec_version = 497
+python_package_version = "11.3.7.dev0"
 
 [localnet]
 image = "ghcr.io/raofoundation/subtensor-localnet"
-pinned = { tag = "sha-e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900", digest = "sha256:650880fc18f489c6fa47009a8dd21718bc08fb0768c59fb9941e322923cdd680" }
-mainnet = { tag = "mainnet", digest = "sha256:9719ea79926859964413633916146853f2722479d9e72a420dd0f0dbf525bb49" }
-testnet = { tag = "testnet", digest = "sha256:650880fc18f489c6fa47009a8dd21718bc08fb0768c59fb9941e322923cdd680" }
-devnet = { tag = "devnet", digest = "sha256:1a80ee1539d7ffa546debd722b88c94d581e26e67c4d4f175c938c7c2e2dfba4" }
-main = { tag = "main", digest = "sha256:e90cecdf492c1188f882c3d729ec9b09b3a3d0550c2fbac8a36a3989d61caca7" }
+pinned = { tag = "v497", digest = "sha256:4d7cc50477ce9bd0f86e758a977a94371c4dd0f8c1716e5cb597590083d142b3" }
+mainnet = { tag = "mainnet", digest = "sha256:4d7cc50477ce9bd0f86e758a977a94371c4dd0f8c1716e5cb597590083d142b3" }
+testnet = { tag = "testnet", digest = "sha256:174b5cf188db50a6a26e782c81416eaa4109cf27b39dfcb62847110dd08b06a2" }
+devnet = { tag = "devnet", digest = "sha256:90eaa14cfa40ce0d5cf383ee8377acc91defdaf6b5d3982a7db1cf04148ffae8" }
+main = { tag = "main", digest = "sha256:f77a3fabfe52db5e1be016f2f755e0aefb45e5032dc3422006425106f30da8ff" }
 
 [networks]
 
@@ -102,13 +102,13 @@ genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
 genesis_endpoint = "https://entrypoint-finney.opentensor.ai:443"
 
 [networks.finney.metadata]
-spec = 495
-code_hash = "0x7f4f60f27f1cbdb92a8413d8280217789229f54189e48a501ada2d25f4c7edf7"
-finalized_head = "0xa7dd8fc04d2af8f922685155421b7d1953188f9d4749ab30efa08b90d8a98b52"
-v15 = "vendor/metadata/finney/495.v15.scale"
-v15_sha256 = "c4fbaf6d9365096d42eecc1e279f16002d5a62bf95407b9e348df2693ca77659"
-v16 = "vendor/metadata/finney/495.v16.scale"
-v16_sha256 = "c369fcb9ea5a821199a1d2c1d08810356fcfb9ede17b9204eec6150d2b6953a6"
+spec = 497
+code_hash = "0x1ef826aebed0d77300b7da09d4e3b23ad507317d72c8c01d827537643dbf2c15"
+finalized_head = "0x10a8d541362504278da6cc01700259b2bda4b6e3a843cbd909430c625d543a25"
+v15 = "vendor/metadata/finney/497.v15.scale"
+v15_sha256 = "1ffb59d86a20e91a229149a8a1a01cc09333ed1480a7beb408b552c7d9e5c5fa"
+v16 = "vendor/metadata/finney/497.v16.scale"
+v16_sha256 = "25f5507b45db7b437fa055abe7b81e570576c63bc5c032dde18e564b3a64ef55"
 
 [networks.testnet]
 genesis = "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105"
@@ -130,7 +130,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "eco-tests/src/tests.rs" = { to = "vendor/upstream/src/eco-tests/src/tests.rs", sha256 = "f127a55157a0c9f9a746ebdafb8e367664c4c8e088440220cddfdbe1125ec3d9" }
 "eco-tests/src/tests_mentat_indexer.rs" = { to = "vendor/upstream/src/eco-tests/src/tests_mentat_indexer.rs", sha256 = "61604627b22b0c3e17789f88e2f5cec08b232239fa3c379c2ee242b0bb16bd68" }
 "eco-tests/src/tests_taocom_indexer.rs" = { to = "vendor/upstream/src/eco-tests/src/tests_taocom_indexer.rs", sha256 = "c3c5a26cde9461490b56b07259d6310abf48202cb1b4d6d96a13d3fe0e3b1cca" }
-"git:watched-tree" = { to = "vendor/upstream/tree.txt", sha256 = "04cd809914fcaaba72ba86da4f64a2274cedeb74815bd8148ead7492f0b6f89e" }
+"git:watched-tree" = { to = "vendor/upstream/tree.txt", sha256 = "f30cd9a8c4a1b618aca113def4cbc7dc250b497155e39f8df936667e0d31d655" }
 "pallets/admin-utils/src/lib.rs" = { to = "vendor/upstream/src/pallets/admin-utils/src/lib.rs", sha256 = "3585876cc41a4971f85f6df91d163b50e5119294e83f2a40022e92070a6f5aa9" }
 "pallets/subtensor/src/coinbase/reveal_commits.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/coinbase/reveal_commits.rs", sha256 = "33098bed261a1ad7c970c7e38c02c7446316c00483e945ef0a86dddb9485f683" }
 "pallets/subtensor/src/coinbase/run_coinbase.rs" = { to = "vendor/upstream/src/pallets/subtensor/src/coinbase/run_coinbase.rs", sha256 = "931958b2b219917c785cb89452ef4d0496e1c1d8fd31e89cfc8c8a1345cc70dc" }
@@ -179,7 +179,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "runtime/src/transaction_payment_wrapper.rs" = { to = "vendor/upstream/src/runtime/src/transaction_payment_wrapper.rs", sha256 = "6b0f9f320c4c6acfbea43356c4f6eff7dc7ecbffc1917a6bd5dccab640012bf8" }
 "sdk/bittensor-core-py/Cargo.toml" = { to = "vendor/upstream/src/sdk/bittensor-core-py/Cargo.toml", sha256 = "d74529e097176bf3f0560751a0d4e8408aa7d9c714526d6423df640b0e8649d9" }
 "sdk/bittensor-core-py/README.md" = { to = "vendor/upstream/src/sdk/bittensor-core-py/README.md", sha256 = "69e9c3c6ded2595a1e7501960cd480f0a7fc0da45d9b28a543524a572bf22780" }
-"sdk/bittensor-core-py/pyproject.toml" = { to = "vendor/upstream/src/sdk/bittensor-core-py/pyproject.toml", sha256 = "9969e865dcceac9d04b550b0dabe178c6aafd2c0ee036e2376ed2a9597927e7d" }
+"sdk/bittensor-core-py/pyproject.toml" = { to = "vendor/upstream/src/sdk/bittensor-core-py/pyproject.toml", sha256 = "02b4916f48fc5d7a8c1c8150a84ee8f79274d6847ecaa81c42f7b62fceff5836" }
 "sdk/bittensor-core-py/src/digest.rs" = { to = "vendor/upstream/src/sdk/bittensor-core-py/src/digest.rs", sha256 = "1ac01116de0fce26d9d1e6b76cbc08305b66c889e539f75dace4324fa30a6b57" }
 "sdk/bittensor-core-py/src/errors.rs" = { to = "vendor/upstream/src/sdk/bittensor-core-py/src/errors.rs", sha256 = "626b3574a7c1c6dc8352e44b1dea69ac6a60ccf9fee57aaa3e2a76d8fb5363b9" }
 "sdk/bittensor-core-py/src/keys.rs" = { to = "vendor/upstream/src/sdk/bittensor-core-py/src/keys.rs", sha256 = "8bf929703302bad6152af1ab586af26f0d033a2a974dcebfef2af54692e249c2" }
@@ -240,7 +240,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/bittensor/_generated/storage.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_generated/storage.py", sha256 = "c1a9c5da188db8b4522f68a4108b3561bc2c4f65a06ed1ce53d19a88697d9921" }
 "sdk/python/bittensor/_live.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_live.py", sha256 = "82788b1a42f38db51e2bbd24121f3287d959e745837261da353cf445fd762b66" }
 "sdk/python/bittensor/_pinned.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_pinned.py", sha256 = "520848a7ba62d954735ac1e497d96b66d8c1f86458b8bef3940d8964fdfb909b" }
-"sdk/python/bittensor/_substrate.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_substrate.py", sha256 = "88bf804dd8c8ab018683ea70652259cb7f2bb9cc6e71d1b0bf0185f91672ac0c" }
+"sdk/python/bittensor/_substrate.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_substrate.py", sha256 = "a5080a110cc4bbb77a25910b4063ef5548242fe45f1637ef7c278b1181b19707" }
 "sdk/python/bittensor/_subtensor.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_subtensor.py", sha256 = "1e7996b8ab2b50945c46d25186ce74ce88ba12775980d23732d3e6d139baff5b" }
 "sdk/python/bittensor/_transport/__init__.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/__init__.py", sha256 = "1843df314d85ceeb029e14ec3a84382ce4071676aaf32d3cdf7f42c5f7ac5f56" }
 "sdk/python/bittensor/_transport/codec.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/codec.py", sha256 = "218b62afd014c94c8f4c63c50d1d893b4a342d04b0e347feac81ffc48b7d1e33" }
@@ -248,7 +248,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/bittensor/_transport/contract.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/contract.py", sha256 = "086de9c2b7f142a2dc1bbe35e17c0a10bbdd7e4b93a04468f398453e2d8daf6f" }
 "sdk/python/bittensor/_transport/errors.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/errors.py", sha256 = "4efbed2a74ed56772247df987e7b6da85cfbd25ec716835398e1b1cda1fa843d" }
 "sdk/python/bittensor/_transport/extrinsics.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/extrinsics.py", sha256 = "18030c7c895c2d37a0ede8e44a6ce40271688ae975b1bf1ced0f52039263b246" }
-"sdk/python/bittensor/_transport/interface.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/interface.py", sha256 = "117c4d08f9cb7d3f4ad25f43c84a778dd7a868ed4596ac1f316600f3304ac0f2" }
+"sdk/python/bittensor/_transport/interface.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/interface.py", sha256 = "45959722db7120b4658445d3f5c59c2d04906707400aaac6d0df1341c00482ea" }
 "sdk/python/bittensor/_transport/lru.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/lru.py", sha256 = "a2faeced023162088223a5907ea34788f974dcd64bc9006a29dd8aaa8217f3a5" }
 "sdk/python/bittensor/_transport/protocols.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/protocols.py", sha256 = "ad0a06c05c7676e7c7f568c0825a14d36a2689b0c82aa8fffc80153b41c05f2f" }
 "sdk/python/bittensor/_transport/rpc.py" = { to = "vendor/upstream/src/sdk/python/bittensor/_transport/rpc.py", sha256 = "69c6c35273e39a5807ea83696aa1de28c9ecc86f028ee99011eb4110c5bb6e59" }
@@ -262,7 +262,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/bittensor/basket_index.py" = { to = "vendor/upstream/src/sdk/python/bittensor/basket_index.py", sha256 = "8ea04adcc4805bdc6795b207a5c554194d5dc5a3fcfc56c4cd902cd8d1a21b0b" }
 "sdk/python/bittensor/basket_index_data.py" = { to = "vendor/upstream/src/sdk/python/bittensor/basket_index_data.py", sha256 = "15209092fe916d9ecc773272e6320f6ada233242fbebc7ddb38e785c0b50d115" }
 "sdk/python/bittensor/cli/__init__.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/__init__.py", sha256 = "bb6e25845d1e322db24f469ea2335cfc9b4d6b60357c548da6b96e8f1a365df8" }
-"sdk/python/bittensor/cli/call.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/call.py", sha256 = "e713ff510e95f9dbc8569fd2adb3558bb9105a89a656a215082c406f1113f656" }
+"sdk/python/bittensor/cli/call.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/call.py", sha256 = "d2b2939be53adfae2592e8f64084c33025fde9f7f90c5cdd4d9d40ab43a4cd11" }
 "sdk/python/bittensor/cli/call_names.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/call_names.py", sha256 = "c80a97e7c1b519f698141c07561fc304e626680d85ecfa6aad7a38834156766a" }
 "sdk/python/bittensor/cli/commands/__init__.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/commands/__init__.py", sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }
 "sdk/python/bittensor/cli/commands/addresses.py" = { to = "vendor/upstream/src/sdk/python/bittensor/cli/commands/addresses.py", sha256 = "ffaa1033fb7ba235d280eda32f43b22ea65df770cea0982dd0d1e77177bbc929" }
@@ -430,7 +430,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/bittensor/metagraph.py" = { to = "vendor/upstream/src/sdk/python/bittensor/metagraph.py", sha256 = "cc15aefff85bd0f343e56e06816c4226d96695675362c9bd10dbe285c551edea" }
 "sdk/python/bittensor/mldsa.py" = { to = "vendor/upstream/src/sdk/python/bittensor/mldsa.py", sha256 = "5af10c3b36638e1d95f6f26004c56a00f4fa16209059dedda35336da7c85c34b" }
 "sdk/python/bittensor/mldsa_signing.py" = { to = "vendor/upstream/src/sdk/python/bittensor/mldsa_signing.py", sha256 = "fa6faa065cf7f81ee7922c3267f181dcac94f17a891981b88e68a85efd3d0c64" }
-"sdk/python/bittensor/multisig.py" = { to = "vendor/upstream/src/sdk/python/bittensor/multisig.py", sha256 = "581d85a2ce15cfe4ac28c58c1da3b8980f080389ae4da451ede1233741d6263b" }
+"sdk/python/bittensor/multisig.py" = { to = "vendor/upstream/src/sdk/python/bittensor/multisig.py", sha256 = "45ee596334669ac22660562a595fbc980dff76ee1e76e9a5d8282d6e2f310c4a" }
 "sdk/python/bittensor/namespaces.py" = { to = "vendor/upstream/src/sdk/python/bittensor/namespaces.py", sha256 = "c9c48669e227524ea4b502b2396a8802be7e2507e6f506ef32a3198290294602" }
 "sdk/python/bittensor/namespaces.pyi" = { to = "vendor/upstream/src/sdk/python/bittensor/namespaces.pyi", sha256 = "2a4fc6581a0c1a67e740ed9456034be8078200971c758bf64e71c449a28daaec" }
 "sdk/python/bittensor/pow_registration.py" = { to = "vendor/upstream/src/sdk/python/bittensor/pow_registration.py", sha256 = "af066716be449a4e283724e1e418c606158b7c5d62cb8a36cd7904a165599321" }
@@ -462,9 +462,9 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/bittensor/settings.py" = { to = "vendor/upstream/src/sdk/python/bittensor/settings.py", sha256 = "63dbe86ba2b151f95746d5d9673834e13299d129356666cf606730c6b93ce528" }
 "sdk/python/bittensor/shielding.py" = { to = "vendor/upstream/src/sdk/python/bittensor/shielding.py", sha256 = "7a8af1ac0859bae40bf59422b02d04edda6f9bb2c32e0f5f160c7ec62d02b988" }
 "sdk/python/bittensor/signing.py" = { to = "vendor/upstream/src/sdk/python/bittensor/signing.py", sha256 = "1b1f4cf386dfb68993551657d8a16a8d24f2989ed16d2166c17a61cb2a93f78e" }
-"sdk/python/bittensor/snapshot.py" = { to = "vendor/upstream/src/sdk/python/bittensor/snapshot.py", sha256 = "84b512d7423ea2f231d05e0cca351ccc9449847206973644ea7757c6919a1116" }
+"sdk/python/bittensor/snapshot.py" = { to = "vendor/upstream/src/sdk/python/bittensor/snapshot.py", sha256 = "8261144f95e7684b9339d4478a13bf94cc075fee87a6018294e90d351a3045f2" }
 "sdk/python/bittensor/sp_core.py" = { to = "vendor/upstream/src/sdk/python/bittensor/sp_core.py", sha256 = "a391c9a5b043a62248d75cc7f272ddc3a9204f2cdf56ccbd1ca6ea0a00c3fee8" }
-"sdk/python/bittensor/sync.py" = { to = "vendor/upstream/src/sdk/python/bittensor/sync.py", sha256 = "26a445a9434c8a71aeff23f7473086ed9b2579cead8596e3ebd11e9c8290dc2d" }
+"sdk/python/bittensor/sync.py" = { to = "vendor/upstream/src/sdk/python/bittensor/sync.py", sha256 = "f1d83620c3f262a7212d2e88efe2f651f81f2a83ec605be6f415718c09dbcea5" }
 "sdk/python/bittensor/timelock.py" = { to = "vendor/upstream/src/sdk/python/bittensor/timelock.py", sha256 = "9f8da405231045826aec39e31bde593c78ca1989d586af0794e50ff50517410a" }
 "sdk/python/bittensor/vault/__init__.py" = { to = "vendor/upstream/src/sdk/python/bittensor/vault/__init__.py", sha256 = "258ee7e8cc2dec9a8a0124fdb16a9eeda7fef88a98217f63ecc7c55234d17d44" }
 "sdk/python/bittensor/vault/qr.py" = { to = "vendor/upstream/src/sdk/python/bittensor/vault/qr.py", sha256 = "9a78633fa287e9725030617af6513500466a539d38cebd7e486ff9ca851c2e10" }
@@ -486,7 +486,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/completions/_btcli" = { to = "vendor/upstream/src/sdk/python/completions/_btcli", sha256 = "d7e68fce876e4ef62f6a36aa6a78e11599749cb680a6e0ece411bee512b7e81b" }
 "sdk/python/completions/btcli.bash" = { to = "vendor/upstream/src/sdk/python/completions/btcli.bash", sha256 = "a57fc61110175e876f96ed33a320eab2d606664d4a36125a7cd7bad194975fe4" }
 "sdk/python/completions/btcli.fish" = { to = "vendor/upstream/src/sdk/python/completions/btcli.fish", sha256 = "ebe746d230db0f4ae4861f826e85f8b9bf50a2385497c38337b151be8cdec0cc" }
-"sdk/python/pyproject.toml" = { to = "vendor/upstream/src/sdk/python/pyproject.toml", sha256 = "5a01e347a002ba8a71696c177bb91f9f95400f624cf9cb39e9a1a31c792f591f" }
+"sdk/python/pyproject.toml" = { to = "vendor/upstream/src/sdk/python/pyproject.toml", sha256 = "4704c6245eb326e5cf5ef9447767e77151037f12754bf54167c3c0cb4d90831a" }
 "sdk/python/scripts/build_basket_index.py" = { to = "vendor/upstream/src/sdk/python/scripts/build_basket_index.py", sha256 = "e28c06dd57cefbb4d496813ed195b25f6316828921654023f5b630433558d757" }
 "sdk/python/scripts/record_golden.py" = { to = "vendor/upstream/src/sdk/python/scripts/record_golden.py", sha256 = "675fc6167f1b5c759682d9c5fec1b856dcc503aaff58e4e34d756049c5621993" }
 "sdk/python/scripts/record_shape_corpus.py" = { to = "vendor/upstream/src/sdk/python/scripts/record_shape_corpus.py", sha256 = "caada598dcd4d473db863cb9aac65171cf598f90c8e1f0757541964d1a2d3c24" }
@@ -531,7 +531,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/tests/unit/test_announcement_cancel.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_announcement_cancel.py", sha256 = "c1d517b6d4561bc24072e28605f6a4a7566a4b19f87ea1f1ce09923f3aa7081f" }
 "sdk/python/tests/unit/test_balance_properties.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_balance_properties.py", sha256 = "f6f5c1fbb9ab5029b1849a15e8a61ecb030406be1cb30116f06d60a142de883a" }
 "sdk/python/tests/unit/test_channel_commitments_and_weight_delegates.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_channel_commitments_and_weight_delegates.py", sha256 = "403194220768ac3e0ae652e6d006678bee63579bdf9c1da481068861ccad5ca7" }
-"sdk/python/tests/unit/test_cli.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_cli.py", sha256 = "8e3539d6b52a5cc768141e0c90c31a556cc81400e9f7dbc4bd49b8589e8fd2e3" }
+"sdk/python/tests/unit/test_cli.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_cli.py", sha256 = "93fcec6f71763458691f2b90c3eb8db77aeabb0a3aeb422d6f58cd1973a4de23" }
 "sdk/python/tests/unit/test_cli_commands.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_cli_commands.py", sha256 = "26aeb35343283c133136a9f2361004622d7c50dc8ecbfd144620f768027fb942" }
 "sdk/python/tests/unit/test_cli_intent_prompts.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_cli_intent_prompts.py", sha256 = "c1c5320dd9034e0c81f92a4b33d16fc7ccd9c9a693228c43493acc03089726d2" }
 "sdk/python/tests/unit/test_cli_null_pruning.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_cli_null_pruning.py", sha256 = "fa70ee7d34c59afe294041e92face56dc8c3f9c59c0127712f8aa547c53d1c40" }
@@ -542,7 +542,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/tests/unit/test_evm_wallet_types.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_evm_wallet_types.py", sha256 = "c576684209d8b148cab011929df20383af3d663a013be5da3c3397c60216549c" }
 "sdk/python/tests/unit/test_extension_bridge.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_extension_bridge.py", sha256 = "1466fccb4001cd7be6f17d4450b33e0671caef0559080ec6daf0309d6eeb6481" }
 "sdk/python/tests/unit/test_extension_signer.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_extension_signer.py", sha256 = "d93b9d823145c1b274f78a94c07676d70e565178857fc59a09d743965a9046f1" }
-"sdk/python/tests/unit/test_facades.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_facades.py", sha256 = "c5065790426afb2d304513f469f03f5e4a868db69868b3af4277d973ca5c9a6d" }
+"sdk/python/tests/unit/test_facades.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_facades.py", sha256 = "194a071432d6b395a438926572a0e66f567290d7ff05ab38bb5b1f5e419e0039" }
 "sdk/python/tests/unit/test_falcon_accounts.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_falcon_accounts.py", sha256 = "63c79167a2441b2d4cdbf2c45f6d54c3ea6880699d614effbc32f01ef408a4df" }
 "sdk/python/tests/unit/test_fee_filters.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_fee_filters.py", sha256 = "5cdff66c2eed1fa9a0cf4f98edaa59b8ec799bbfeb3bfbdb5ab8d7d7acf7a90f" }
 "sdk/python/tests/unit/test_gamma.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_gamma.py", sha256 = "0d273322311734306844c001baeb5e78c30a26cba9da82e49328f1c4a5d3eb73" }
@@ -600,7 +600,7 @@ LICENSE = { to = "vendor/upstream/src/LICENSE", sha256 = "ce46a3c2599448e6989685
 "sdk/python/tests/unit/test_root_claim_fee.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_root_claim_fee.py", sha256 = "d7d412ea40bae99bd4ce3b681927ca1af38ac31c33995e49e484a3d9c73969d9" }
 "sdk/python/tests/unit/test_rpc.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_rpc.py", sha256 = "74862e5285cf1898e181eb3eaf68a0fe9ba60ef53aef7037b55a6fbb203be34c" }
 "sdk/python/tests/unit/test_runtime_spec_version_at_block.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_runtime_spec_version_at_block.py", sha256 = "245a78afd1dea60e2edf40b6d94dd06c1821384fe76ce62771381b6c82cd4a03" }
-"sdk/python/tests/unit/test_safe_composites.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_safe_composites.py", sha256 = "15db002240daf903e4158bd12678954325047d1632eccd1f41474f13b7b081af" }
+"sdk/python/tests/unit/test_safe_composites.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_safe_composites.py", sha256 = "be490c9edd767df5b25e301bbef985e25d0e2b592d9e6efda6a95b821c6db765" }
 "sdk/python/tests/unit/test_shape_corpus.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_shape_corpus.py", sha256 = "c1a641d582c6f17570e744e93b49e02349e05e1ae424b6c23e4f5375b88c857e" }
 "sdk/python/tests/unit/test_shield_fee.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_shield_fee.py", sha256 = "7940f74a7b9aab64950e5d3965516ad3e56306689685ca69fc25cf7abba04c59" }
 "sdk/python/tests/unit/test_shield_receipt_fees.py" = { to = "vendor/upstream/src/sdk/python/tests/unit/test_shield_receipt_fees.py", sha256 = "5b46e63304b7a918e3bd89bcffb1659abd6a3f59d01f586e45018cefa029ece0" }

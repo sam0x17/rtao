@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
     "path": "website/apps/bittensor-website/public/catalog/reads.json",
     "sha256": "54ac7313d6842c85308f3094c3569e9a9d7e7f2b20e263c91bb4398de5fcbd08",
-    "tag": "v495"
+    "tag": "v497"
   },
   "format": 1,
   "modules": {
@@ -19,8 +19,8 @@
     ]
   },
   "parity": {
-    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
-    "tag": "v495"
+    "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
+    "tag": "v497"
   },
   "reads": [
     {

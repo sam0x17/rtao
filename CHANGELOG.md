@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Finney runtime 497 adopted automatically
+
+- The parity pin moves from spec 495 to v497 (`24e1fc7b12ea7ce9d390925dac602ba961997824`, pinned as `v497`), the runtime Finney finalized at block 9588342 with `:code` `0x1ef826aebed0d77300b7da09d4e3b23ad507317d72c8c01d827537643dbf2c15`.
+- Live evidence: 4 public endpoints agree at the pinned block on genesis, spec, the `:code` hash (and the BLAKE2b-256 of its bytes) and the V15/V16 metadata digests; release wasm: matches.
+- Metadata drift 495 -> 497: `surface-unchanged`. Code generation, extracted tables and catalogs are regenerated from the pinned sources; watched sources changed: 11, of which 0 were reconciled automatically and 1 re-derived and checked. 27 hand port(s) remain due and are listed in `parity/port_due.toml` (`eco-tests/Cargo.toml`, `pallets/admin-utils/src/lib.rs`, `pallets/subtensor/src/utils/rate_limiting.rs`, `sdk/bittensor-core-py/pyproject.toml`, `sdk/python/bittensor/_substrate.py`, `sdk/python/bittensor/_transport/interface.py`, `sdk/python/bittensor/cli/call.py`, `sdk/python/bittensor/cli/commands/misc.py`, `sdk/python/bittensor/cli/commands/proxy.py`, `sdk/python/bittensor/cli/commands/subnets.py`, `sdk/python/bittensor/cli/commands/wallet.py`, `sdk/python/bittensor/cli/commands/weights.py`, `sdk/python/bittensor/cli/context.py`, `sdk/python/bittensor/cli/globals.py`, `sdk/python/bittensor/cli/main.py`, `sdk/python/bittensor/cli/multisig_helpers.py`, `sdk/python/bittensor/cli/root_helpers.py`, `sdk/python/bittensor/cli/stake_exit.py`, `sdk/python/bittensor/cli/stake_picker.py`, `sdk/python/bittensor/intents/proxy.py`, `sdk/python/bittensor/multisig.py`, `sdk/python/bittensor/namespaces.pyi`, `sdk/python/bittensor/snapshot.py`, `sdk/python/bittensor/sync.py`, `sdk/python/tests/unit/test_cli.py`, `sdk/python/tests/unit/test_cli_commands.py`, `sdk/python/tests/unit/test_facades.py`); strict parity names them until they are ported and blessed.
+- Core and its patch are unchanged.
+- Checked by the hosted runtime-adopt workflow ([run](https://github.com/sam0x17/rtao/actions/runs/45750029125)): pin source identity, live evidence, imports, extraction, regeneration, compatibility, probe pins, drift, parity, formatting, a workspace build, the runtime, reads, intents and client tests, and live reads with the built CLI. No oracle comparison, localnet e2e or image execution; the validated range is unchanged.
+
 ### Testnet runtime 497 recorded automatically
 
 - Testnet finalized spec 497 (`:code` `0x1ef826aebed0d77300b7da09d4e3b23ad507317d72c8c01d827537643dbf2c15`) at block 8526335; its V15/V16 metadata is indexed under `vendor/metadata/testnet/` (drift against the previous testnet row: `surface-unchanged`) and the probe pins are regenerated ([run](https://github.com/sam0x17/rtao/actions/runs/45737950253)). Source: upstream commit `24e1fc7b12ea7ce9d390925dac602ba961997824`, whose v497 wasm is this `:code`. The parity pin is unchanged.

@@ -11919,7 +11919,7 @@
         "rust": [
           "xtask/src/compat.rs"
         ],
-        "synced_blob": "3f9acad44cbbf6338defb909a33181fe4a5077af"
+        "synced_blob": "c19daf6fa6575a7478b134e2288c829579255fb6"
       },
       {
         "kind": "oracle-only",
@@ -15357,8 +15357,8 @@
     ]
   },
   "pin": {
-    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
-    "tag": "v495"
+    "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
+    "tag": "v497"
   },
   "schema": 1,
   "status_semantics": {

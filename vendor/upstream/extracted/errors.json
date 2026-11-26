@@ -1,9 +1,9 @@
 {
   "catalog": {
-    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
     "path": "website/apps/bittensor-website/public/catalog/errors.json",
     "sha256": "db8174313540c70c6a8106a7654894a62775bd42a7c2288bf470f55bfec0cd2a",
-    "tag": "v495"
+    "tag": "v497"
   },
   "classification_rules": {
     "end_line": 519,
@@ -36,24 +36,24 @@
   "classification_sources": [
     {
       "blob": "5e7d6f784fbdc14b3be1a2e919a9412a3681611e",
-      "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+      "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
       "path": "sdk/python/bittensor/error_map.py",
-      "tag": "v495"
+      "tag": "v497"
     },
     {
       "blob": "e07f33c7287a3472e6b4dd9ff56ddb74566648a9",
-      "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+      "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
       "path": "sdk/python/bittensor/result.py",
-      "tag": "v495"
+      "tag": "v497"
     }
   ],
   "enum": {
     "format": 1,
     "provenance": {
       "blob": "5e7d6f784fbdc14b3be1a2e919a9412a3681611e",
-      "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+      "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
       "path": "sdk/python/bittensor/error_map.py",
-      "tag": "v495"
+      "tag": "v497"
     },
     "values": {
       "ALREADY_EXISTS": {

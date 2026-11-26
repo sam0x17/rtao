@@ -185,6 +185,19 @@ token_symbol = "TAO"
 rfc0078_digest = "0xa2df8f7049efcf62ffa32c6c05e5d4ccdd2d885b54790b16143cd4c488f4b1e8"
 
 [[runtimes]]
+network = "finney"
+spec = 497
+genesis = "0x2f0555cc76fc2840a25a6ea3b9637146806f1f44b090c175ffde2a7e5ab36c03"
+code_hash = "0x1ef826aebed0d77300b7da09d4e3b23ad507317d72c8c01d827537643dbf2c15"
+commit = "24e1fc7b12ea7ce9d390925dac602ba961997824"
+v15_sha256 = "1ffb59d86a20e91a229149a8a1a01cc09333ed1480a7beb408b552c7d9e5c5fa"
+spec_name = "node-subtensor"
+base58_prefix = 42
+decimals = 9
+token_symbol = "TAO"
+rfc0078_digest = "0x961aac7a9b327ae94bd3bc5e8fe4ede3d26d1fa24292ec94b4b86879372602ae"
+
+[[runtimes]]
 network = "testnet"
 spec = 478
 genesis = "0x8f9cf856bf558a14440e75569c9e58594757048d7b3a84b5d25f6bd978263105"

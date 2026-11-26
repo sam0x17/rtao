@@ -425,6 +425,16 @@ The Rust root-claim and Null weight preflights use the rules of the
 runtime at the pinned block. The remaining hand ports are listed in
 `parity/port_due.toml`.
 
+## 2026-11-26: Finney runtime 497 adopted automatically
+
+The hosted runtime-adopt workflow observed Finney finalize spec 497 at block
+9588342 (`0x0b153482017ee2835824e4703490c8fb0f019305ab099444bd7a85b3e03b68ed`), `:code` `0x1ef826aebed0d77300b7da09d4e3b23ad507317d72c8c01d827537643dbf2c15`, confirmed it from 4 public
+endpoints (release wasm: matches), and advanced parity from spec 495 to
+`v497` (`24e1fc7b12ea7ce9d390925dac602ba961997824`, pin source `v497`). Metadata drift is `surface-unchanged`. The
+porting report lists 11 changed watched sources: 0 auto-blessed,
+1 re-derived and checked. 27 hand port(s) remain due and are listed in `parity/port_due.toml` (`eco-tests/Cargo.toml`, `pallets/admin-utils/src/lib.rs`, `pallets/subtensor/src/utils/rate_limiting.rs`, `sdk/bittensor-core-py/pyproject.toml`, `sdk/python/bittensor/_substrate.py`, `sdk/python/bittensor/_transport/interface.py`, `sdk/python/bittensor/cli/call.py`, `sdk/python/bittensor/cli/commands/misc.py`, `sdk/python/bittensor/cli/commands/proxy.py`, `sdk/python/bittensor/cli/commands/subnets.py`, `sdk/python/bittensor/cli/commands/wallet.py`, `sdk/python/bittensor/cli/commands/weights.py`, `sdk/python/bittensor/cli/context.py`, `sdk/python/bittensor/cli/globals.py`, `sdk/python/bittensor/cli/main.py`, `sdk/python/bittensor/cli/multisig_helpers.py`, `sdk/python/bittensor/cli/root_helpers.py`, `sdk/python/bittensor/cli/stake_exit.py`, `sdk/python/bittensor/cli/stake_picker.py`, `sdk/python/bittensor/intents/proxy.py`, `sdk/python/bittensor/multisig.py`, `sdk/python/bittensor/namespaces.pyi`, `sdk/python/bittensor/snapshot.py`, `sdk/python/bittensor/sync.py`, `sdk/python/tests/unit/test_cli.py`, `sdk/python/tests/unit/test_cli_commands.py`, `sdk/python/tests/unit/test_facades.py`); strict parity names them until they are ported and blessed. Core and its patch are unchanged. The validated range
+is unchanged. Workflow run: <https://github.com/sam0x17/rtao/actions/runs/45750029125>.
+
 ## Recording the next change
 
 The `runtime-adopt` workflow appends an entry itself when it adopts a Finney

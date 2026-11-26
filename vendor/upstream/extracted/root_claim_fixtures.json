@@ -825,7 +825,7 @@
     }
   },
   "provenance": {
-    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
     "inputs": [
       {
         "blob": "d7a10cf714c0d807bc4450792c719d2fff1e4758",
@@ -838,7 +838,7 @@
         "sha256": "a900ac4146f1936f70dc9ba219c2e56088bcf76ea19e919b1efd5b3425013223"
       }
     ],
-    "tag": "v495"
+    "tag": "v497"
   },
   "seed_cases": {
     "test_carrier_hard_stop_survives_unavailable_payout_preview": {

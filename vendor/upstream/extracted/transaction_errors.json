@@ -2,16 +2,16 @@
   "format": 1,
   "provenance": {
     "blob": "0b735429b0e11a172e6079ca7ba561cd7d350cfb",
-    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
     "path": "common/src/transaction_error.rs",
-    "tag": "v495"
+    "tag": "v497"
   },
   "python_mirror": {
     "provenance": {
       "blob": "5e7d6f784fbdc14b3be1a2e919a9412a3681611e",
-      "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+      "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
       "path": "sdk/python/bittensor/error_map.py",
-      "tag": "v495"
+      "tag": "v497"
     },
     "source": {
       "end_line": 584,

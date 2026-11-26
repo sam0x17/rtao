@@ -1,9 +1,9 @@
 {
   "aggregator": {
     "blob": "18a23b884c58a5b002a73376cde6a12438d98590",
-    "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+    "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
     "path": "sdk/python/bittensor/error_descriptions/__init__.py",
-    "tag": "v495"
+    "tag": "v497"
   },
   "catalog_equality": "checked",
   "descriptions": {
@@ -13,9 +13,9 @@
       "line": 6,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AccountNotAuthorized": {
@@ -24,9 +24,9 @@
       "line": 31,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AccountPolicyViolation": {
@@ -35,9 +35,9 @@
       "line": 6,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AccountRejectsLockedAlpha": {
@@ -46,9 +46,9 @@
       "line": 18,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AccountRejectsStakingHotkeyGrowth": {
@@ -57,9 +57,9 @@
       "line": 6,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ActiveLockExists": {
@@ -68,9 +68,9 @@
       "line": 24,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ActivityCutoffFactorMilliOutOfBounds": {
@@ -79,9 +79,9 @@
       "line": 30,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ActivityCutoffTooLow": {
@@ -90,9 +90,9 @@
       "line": 35,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AddStakeBurnRateLimitExceeded": {
@@ -101,9 +101,9 @@
       "line": 40,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AdminActionProhibitedDuringWeightsWindow": {
@@ -112,9 +112,9 @@
       "line": 45,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AliasCollision": {
@@ -123,9 +123,9 @@
       "line": 37,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AllNetworksInImmunity": {
@@ -134,9 +134,9 @@
       "line": 50,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlphaHighTooLow": {
@@ -145,9 +145,9 @@
       "line": 56,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlphaLowOutOfRange": {
@@ -156,9 +156,9 @@
       "line": 61,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlreadyApproved": {
@@ -167,9 +167,9 @@
       "line": 20,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlreadyDeposited": {
@@ -178,9 +178,9 @@
       "line": 6,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlreadyFinalized": {
@@ -189,9 +189,9 @@
       "line": 6,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlreadyFinalizing": {
@@ -200,9 +200,9 @@
       "line": 11,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlreadyNoted": {
@@ -211,9 +211,9 @@
       "line": 6,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AlreadyStored": {
@@ -222,9 +222,9 @@
       "line": 25,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AmountTooLow": {
@@ -233,9 +233,9 @@
       "line": 67,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AnnouncedColdkeyHashDoesNotMatch": {
@@ -244,9 +244,9 @@
       "line": 76,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AnnouncementDepositInvariantViolated": {
@@ -255,9 +255,9 @@
       "line": 10,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ArithmeticOverflow": {
@@ -266,9 +266,9 @@
       "line": 6,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AuthenticationKindConflict": {
@@ -277,9 +277,9 @@
       "line": 41,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AuthorizationListTooLarge": {
@@ -288,9 +288,9 @@
       "line": 6,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "AutoEpochAlreadyImminent": {
@@ -299,9 +299,9 @@
       "line": 82,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BadEncKeyLen": {
@@ -310,9 +310,9 @@
       "line": 6,
       "provenance": {
         "blob": "8380ca0873a1f136012e28d2272e63eb1f17a8ed",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/mev_shield.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BalanceLow": {
@@ -321,9 +321,9 @@
       "line": 11,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BalanceWithdrawalError": {
@@ -332,9 +332,9 @@
       "line": 87,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketConcentrationCapExceeded": {
@@ -343,9 +343,9 @@
       "line": 748,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketDepositPending": {
@@ -354,9 +354,9 @@
       "line": 92,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketHasNoWeights": {
@@ -365,9 +365,9 @@
       "line": 99,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketLiquidityCapExceeded": {
@@ -376,9 +376,9 @@
       "line": 129,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketMinOutNotMet": {
@@ -387,9 +387,9 @@
       "line": 136,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketSameSubnet": {
@@ -398,9 +398,9 @@
       "line": 148,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketSwapBatchEmpty": {
@@ -409,9 +409,9 @@
       "line": 144,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketTradingDisabled": {
@@ -420,9 +420,9 @@
       "line": 153,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketTradingFrozen": {
@@ -431,9 +431,9 @@
       "line": 158,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BasketTurnoverBudgetExceeded": {
@@ -442,9 +442,9 @@
       "line": 164,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BeneficiaryDoesNotOwnHotkey": {
@@ -453,9 +453,9 @@
       "line": 104,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BetaBasketSeedInProgress": {
@@ -464,9 +464,9 @@
       "line": 173,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BlockDurationTooLong": {
@@ -475,9 +475,9 @@
       "line": 16,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BlockDurationTooShort": {
@@ -486,9 +486,9 @@
       "line": 21,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BondsMovingAverageMaxReached": {
@@ -497,9 +497,9 @@
       "line": 23,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BurnEmissionMustBeZero": {
@@ -508,9 +508,9 @@
       "line": 858,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BurnPriceLimitExceeded": {
@@ -519,9 +519,9 @@
       "line": 35,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "BurnRecycleEmissionAboveMaximum": {
@@ -530,9 +530,9 @@
       "line": 866,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CallDisabled": {
@@ -541,9 +541,9 @@
       "line": 180,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CallFiltered": {
@@ -552,9 +552,9 @@
       "line": 6,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CallUnavailable": {
@@ -563,9 +563,9 @@
       "line": 26,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CanNotSetRootNetworkWeights": {
@@ -574,9 +574,9 @@
       "line": 185,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CannotAddSelfAsDelegateDependency": {
@@ -585,9 +585,9 @@
       "line": 6,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CannotAffordLockCost": {
@@ -596,9 +596,9 @@
       "line": 190,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CannotBurnOrRecycleOnRootSubnet": {
@@ -607,9 +607,9 @@
       "line": 195,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CannotEndInPast": {
@@ -618,9 +618,9 @@
       "line": 31,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CannotReleaseYet": {
@@ -629,9 +629,9 @@
       "line": 11,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CannotUseSystemAccount": {
@@ -640,9 +640,9 @@
       "line": 200,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CapNotRaised": {
@@ -651,9 +651,9 @@
       "line": 36,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CapRaised": {
@@ -662,9 +662,9 @@
       "line": 41,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CapTooLow": {
@@ -673,9 +673,9 @@
       "line": 46,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ChainIdMismatch": {
@@ -684,9 +684,9 @@
       "line": 12,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ChangePending": {
@@ -695,9 +695,9 @@
       "line": 6,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ChannelMigrationPending": {
@@ -706,9 +706,9 @@
       "line": 44,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ChildParentInconsistency": {
@@ -717,9 +717,9 @@
       "line": 205,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CodeInUse": {
@@ -728,9 +728,9 @@
       "line": 11,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CodeInfoNotFound": {
@@ -739,9 +739,9 @@
       "line": 16,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CodeNotFound": {
@@ -750,9 +750,9 @@
       "line": 21,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CodeRejected": {
@@ -761,9 +761,9 @@
       "line": 26,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CodeTooLarge": {
@@ -772,9 +772,9 @@
       "line": 31,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdKeyAlreadyAssociated": {
@@ -783,9 +783,9 @@
       "line": 211,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeyCollateralIncomplete": {
@@ -794,9 +794,9 @@
       "line": 217,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeyCollateralPositionsFull": {
@@ -805,9 +805,9 @@
       "line": 223,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapAlreadyDisputed": {
@@ -816,9 +816,9 @@
       "line": 228,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapAnnounced": {
@@ -827,9 +827,9 @@
       "line": 233,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapAnnouncementNotFound": {
@@ -838,9 +838,9 @@
       "line": 239,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapClearTooEarly": {
@@ -849,9 +849,9 @@
       "line": 244,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapDestinationReservationNotFound": {
@@ -860,9 +860,9 @@
       "line": 1135,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapDestinationReserved": {
@@ -871,9 +871,9 @@
       "line": 1127,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapDisputed": {
@@ -882,9 +882,9 @@
       "line": 250,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapReannouncedTooEarly": {
@@ -893,9 +893,9 @@
       "line": 255,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapTooEarly": {
@@ -904,9 +904,9 @@
       "line": 260,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ColdkeySwapTooHeavy": {
@@ -915,9 +915,9 @@
       "line": 1073,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CollateralDrainRatioOutOfBounds": {
@@ -926,9 +926,9 @@
       "line": 6,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CollateralLockShareTooHigh": {
@@ -937,9 +937,9 @@
       "line": 12,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CommitPayloadTooLarge": {
@@ -948,9 +948,9 @@
       "line": 265,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CommitQueueFull": {
@@ -959,9 +959,9 @@
       "line": 270,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CommitRevealDisabled": {
@@ -970,9 +970,9 @@
       "line": 276,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CommitRevealEnabled": {
@@ -981,9 +981,9 @@
       "line": 281,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CommittingWeightsTooFast": {
@@ -992,9 +992,9 @@
       "line": 286,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ContractNotFound": {
@@ -1003,9 +1003,9 @@
       "line": 36,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ContractReverted": {
@@ -1014,9 +1014,9 @@
       "line": 41,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ContractTrapped": {
@@ -1025,9 +1025,9 @@
       "line": 46,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ContributionPeriodEnded": {
@@ -1036,9 +1036,9 @@
       "line": 51,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ContributionPeriodNotEnded": {
@@ -1047,9 +1047,9 @@
       "line": 56,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ContributionTooLow": {
@@ -1058,9 +1058,9 @@
       "line": 61,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CreateOriginNotAllowed": {
@@ -1069,9 +1069,9 @@
       "line": 16,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "CurrencyError": {
@@ -1080,9 +1080,9 @@
       "line": 16,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DeadAccount": {
@@ -1091,9 +1091,9 @@
       "line": 6,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DecodingFailed": {
@@ -1102,9 +1102,9 @@
       "line": 51,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DelegateDependencyAlreadyExists": {
@@ -1113,9 +1113,9 @@
       "line": 56,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DelegateDependencyNotFound": {
@@ -1124,9 +1124,9 @@
       "line": 61,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DelegateTakeTooHigh": {
@@ -1135,9 +1135,9 @@
       "line": 291,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DelegateTakeTooLow": {
@@ -1146,9 +1146,9 @@
       "line": 296,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DelegateTxRateLimitExceeded": {
@@ -1157,9 +1157,9 @@
       "line": 302,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DeltaZero": {
@@ -1168,9 +1168,9 @@
       "line": 11,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DepositCannotBeWithdrawn": {
@@ -1179,9 +1179,9 @@
       "line": 66,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DepositTooLow": {
@@ -1190,9 +1190,9 @@
       "line": 71,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Deprecated": {
@@ -1201,9 +1201,9 @@
       "line": 307,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DerivedAuthorityTooComplex": {
@@ -1212,9 +1212,9 @@
       "line": 49,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DescriptorMismatch": {
@@ -1223,9 +1223,9 @@
       "line": 12,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Disabled": {
@@ -1234,9 +1234,9 @@
       "line": 4,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DisabledTemporarily": {
@@ -1245,9 +1245,9 @@
       "line": 315,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DrandConnectionFailure": {
@@ -1256,9 +1256,9 @@
       "line": 6,
       "provenance": {
         "blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/drand.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Duplicate": {
@@ -1267,9 +1267,9 @@
       "line": 16,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DuplicateChild": {
@@ -1278,9 +1278,9 @@
       "line": 320,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DuplicateContract": {
@@ -1289,9 +1289,9 @@
       "line": 66,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DuplicateOffenceReport": {
@@ -1300,9 +1300,9 @@
       "line": 11,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DuplicateOrderInBatch": {
@@ -1311,9 +1311,9 @@
       "line": 17,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DuplicateUids": {
@@ -1322,9 +1322,9 @@
       "line": 325,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "DynamicTempoBlockedByCommitReveal": {
@@ -1333,9 +1333,9 @@
       "line": 330,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EmissionSlotsNotAscending": {
@@ -1344,9 +1344,9 @@
       "line": 906,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EmissionWeightIndexDuplicated": {
@@ -1355,9 +1355,9 @@
       "line": 846,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EmissionWeightIndexOutOfRange": {
@@ -1366,9 +1366,9 @@
       "line": 841,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EmissionWeightsDoNotSumToOne": {
@@ -1377,9 +1377,9 @@
       "line": 850,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EmissionWeightsLengthMismatch": {
@@ -1388,9 +1388,9 @@
       "line": 836,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EmissionWeightsNotSettableOnRoot": {
@@ -1399,9 +1399,9 @@
       "line": 901,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Entered": {
@@ -1410,9 +1410,9 @@
       "line": 21,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EpochTriggerAlreadyPending": {
@@ -1421,9 +1421,9 @@
       "line": 336,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EvmKeyAssociateRateLimitExceeded": {
@@ -1432,9 +1432,9 @@
       "line": 341,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "EvmKeyAssociationLimitExceeded": {
@@ -1443,9 +1443,9 @@
       "line": 347,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ExistentialDeposit": {
@@ -1454,9 +1454,9 @@
       "line": 16,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ExistingVestingSchedule": {
@@ -1465,9 +1465,9 @@
       "line": 21,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Exited": {
@@ -1476,9 +1476,9 @@
       "line": 26,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ExpectedBeneficiaryOrigin": {
@@ -1487,9 +1487,9 @@
       "line": 352,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Expendability": {
@@ -1498,9 +1498,9 @@
       "line": 26,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ExpiredWeightCommit": {
@@ -1509,9 +1509,9 @@
       "line": 357,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FailedToExtractRuntimeVersion": {
@@ -1520,9 +1520,9 @@
       "line": 11,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FailedToSchedule": {
@@ -1531,9 +1531,9 @@
       "line": 6,
       "provenance": {
         "blob": "2550d37086ef7894513d87fd32a3ba7b5f29acc1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/scheduler.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FaucetDisabled": {
@@ -1542,9 +1542,9 @@
       "line": 363,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FeeOverflow": {
@@ -1553,9 +1553,9 @@
       "line": 21,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FeeRateTooHigh": {
@@ -1564,9 +1564,9 @@
       "line": 6,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FirstEmissionBlockNumberAlreadySet": {
@@ -1575,9 +1575,9 @@
       "line": 368,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FreeCommitmentDisabled": {
@@ -1586,9 +1586,9 @@
       "line": 39,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "FundsNotSettled": {
@@ -1597,9 +1597,9 @@
       "line": 76,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaDepositDailySpendCapExceeded": {
@@ -1608,9 +1608,9 @@
       "line": 1118,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaDepositDailySpendCapMismatch": {
@@ -1619,9 +1619,9 @@
       "line": 1106,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaDepositDoesNotExist": {
@@ -1630,9 +1630,9 @@
       "line": 1095,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaDepositNotEmpty": {
@@ -1641,9 +1641,9 @@
       "line": 1099,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaDepositSpenderMismatch": {
@@ -1652,9 +1652,9 @@
       "line": 1103,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaDisabled": {
@@ -1663,9 +1663,9 @@
       "line": 1084,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaEmissionAboveMaximum": {
@@ -1674,9 +1674,9 @@
       "line": 911,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaEmissionNotSettableOnLeasedSubnet": {
@@ -1685,9 +1685,9 @@
       "line": 923,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GammaEmissionTargetNotWhitelisted": {
@@ -1696,9 +1696,9 @@
       "line": 915,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GasLimitTooHigh": {
@@ -1707,9 +1707,9 @@
       "line": 26,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GasLimitTooLow": {
@@ -1718,9 +1718,9 @@
       "line": 30,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GasPriceTooLow": {
@@ -1729,9 +1729,9 @@
       "line": 35,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GenerationExhausted": {
@@ -1740,9 +1740,9 @@
       "line": 33,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "GrandpaChangeDelayMustBeZero": {
@@ -1751,9 +1751,9 @@
       "line": 18,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotKeyAccountNotExists": {
@@ -1762,9 +1762,9 @@
       "line": 373,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotKeyAlreadyDelegate": {
@@ -1773,9 +1773,9 @@
       "line": 378,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotKeyAlreadyRegisteredInSubNet": {
@@ -1784,9 +1784,9 @@
       "line": 383,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotKeyNotRegisteredInNetwork": {
@@ -1795,9 +1795,9 @@
       "line": 388,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotKeyNotRegisteredInSubNet": {
@@ -1806,9 +1806,9 @@
       "line": 395,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotKeySetTxRateLimitExceeded": {
@@ -1817,9 +1817,9 @@
       "line": 401,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotKeySwapOnSubnetIntervalNotPassed": {
@@ -1828,9 +1828,9 @@
       "line": 406,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "HotkeyOwnerPolicyViolation": {
@@ -1839,9 +1839,9 @@
       "line": 13,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "IncorrectCommitRevealVersion": {
@@ -1850,9 +1850,9 @@
       "line": 411,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "IncorrectPartialFillAmount": {
@@ -1861,9 +1861,9 @@
       "line": 22,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "IncorrectWeightVersionKey": {
@@ -1872,9 +1872,9 @@
       "line": 416,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Indeterministic": {
@@ -1883,9 +1883,9 @@
       "line": 71,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InputForwarded": {
@@ -1894,9 +1894,9 @@
       "line": 77,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InputLengthsUnequal": {
@@ -1905,9 +1905,9 @@
       "line": 421,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InsufficientAlphaBalance": {
@@ -1916,9 +1916,9 @@
       "line": 426,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InsufficientBalance": {
@@ -1927,9 +1927,9 @@
       "line": 32,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InsufficientGammaBalance": {
@@ -1938,9 +1938,9 @@
       "line": 1114,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InsufficientInputAmount": {
@@ -1949,9 +1949,9 @@
       "line": 11,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InsufficientLiquidity": {
@@ -1960,9 +1960,9 @@
       "line": 431,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InsufficientStakeForLock": {
@@ -1971,9 +1971,9 @@
       "line": 436,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InsufficientTaoBalance": {
@@ -1982,9 +1982,9 @@
       "line": 441,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidAuthorizationMode": {
@@ -1993,9 +1993,9 @@
       "line": 158,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidBatchLength": {
@@ -2004,9 +2004,9 @@
       "line": 1063,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidCallFlags": {
@@ -2015,9 +2015,9 @@
       "line": 82,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidChainId": {
@@ -2026,9 +2026,9 @@
       "line": 41,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidChild": {
@@ -2037,9 +2037,9 @@
       "line": 446,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidChildkeyTake": {
@@ -2048,9 +2048,9 @@
       "line": 451,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidCrowdloanId": {
@@ -2059,9 +2059,9 @@
       "line": 83,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidDerivedAccount": {
@@ -2070,9 +2070,9 @@
       "line": 6,
       "provenance": {
         "blob": "2f51dcdec088fadb3a74df779a9cd5260003e11c",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/utility.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidDerivedAccountId": {
@@ -2081,9 +2081,9 @@
       "line": 21,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidDerivedAuthority": {
@@ -2092,9 +2092,9 @@
       "line": 45,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidDifficulty": {
@@ -2103,9 +2103,9 @@
       "line": 456,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidEquivocationProof": {
@@ -2114,9 +2114,9 @@
       "line": 16,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidFinalizationConfig": {
@@ -2125,9 +2125,9 @@
       "line": 88,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidIdentity": {
@@ -2136,9 +2136,9 @@
       "line": 461,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidIpAddress": {
@@ -2147,9 +2147,9 @@
       "line": 467,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidIpType": {
@@ -2158,9 +2158,9 @@
       "line": 472,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidKeyOwnershipProof": {
@@ -2169,9 +2169,9 @@
       "line": 22,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidLeaseBeneficiary": {
@@ -2180,9 +2180,9 @@
       "line": 476,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidLiquidityValue": {
@@ -2191,9 +2191,9 @@
       "line": 16,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidNextCommitment": {
@@ -2202,9 +2202,9 @@
       "line": 28,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidNonce": {
@@ -2213,9 +2213,9 @@
       "line": 46,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidOrigin": {
@@ -2224,9 +2224,9 @@
       "line": 93,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidPort": {
@@ -2235,9 +2235,9 @@
       "line": 481,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidRecoveredPublicKey": {
@@ -2246,9 +2246,9 @@
       "line": 485,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidRevealCommitHashNotMatch": {
@@ -2257,9 +2257,9 @@
       "line": 490,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidRevealRound": {
@@ -2268,9 +2268,9 @@
       "line": 496,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidRootClaimThreshold": {
@@ -2279,9 +2279,9 @@
       "line": 501,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidRoundNumber": {
@@ -2290,9 +2290,9 @@
       "line": 11,
       "provenance": {
         "blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/drand.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidSafeAccountId": {
@@ -2301,9 +2301,9 @@
       "line": 11,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidSchedule": {
@@ -2312,9 +2312,9 @@
       "line": 87,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidSeal": {
@@ -2323,9 +2323,9 @@
       "line": 506,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidSignature": {
@@ -2334,9 +2334,9 @@
       "line": 6,
       "provenance": {
         "blob": "e5dd05341b7377d324125c326052155bc9255fe1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/ethereum.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidSpecName": {
@@ -2345,9 +2345,9 @@
       "line": 16,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidTickRange": {
@@ -2356,9 +2356,9 @@
       "line": 21,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidValue": {
@@ -2367,9 +2367,9 @@
       "line": 511,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidVotingPowerEmaAlpha": {
@@ -2378,9 +2378,9 @@
       "line": 518,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "InvalidWorkBlock": {
@@ -2389,9 +2389,9 @@
       "line": 523,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "IssuanceDeactivated": {
@@ -2400,9 +2400,9 @@
       "line": 38,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "KeepStakeBlockedByCollateral": {
@@ -2411,9 +2411,9 @@
       "line": 528,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LeaseCannotEndInThePast": {
@@ -2422,9 +2422,9 @@
       "line": 535,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LeaseDoesNotExist": {
@@ -2433,9 +2433,9 @@
       "line": 540,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LeaseHasNoEndBlock": {
@@ -2444,9 +2444,9 @@
       "line": 545,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LeaseHasNotEnded": {
@@ -2455,9 +2455,9 @@
       "line": 550,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LeaseNetuidNotFound": {
@@ -2466,9 +2466,9 @@
       "line": 555,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LeasedSubnetOwnerCutBelowMinimum": {
@@ -2477,9 +2477,9 @@
       "line": 877,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LimitOrdersDisabled": {
@@ -2488,9 +2488,9 @@
       "line": 27,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LinkedAmountResolvedToZero": {
@@ -2499,9 +2499,9 @@
       "line": 114,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LinkedOutputAssetMismatch": {
@@ -2510,9 +2510,9 @@
       "line": 104,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LinkedOutputExpired": {
@@ -2521,9 +2521,9 @@
       "line": 109,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LinkedOutputNotPrunable": {
@@ -2532,9 +2532,9 @@
       "line": 127,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LinkedOutputSignerMismatch": {
@@ -2543,9 +2543,9 @@
       "line": 100,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LiquidAlphaDisabled": {
@@ -2554,9 +2554,9 @@
       "line": 560,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LiquidityRestrictions": {
@@ -2565,9 +2565,9 @@
       "line": 43,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LockHotkeyMismatch": {
@@ -2576,9 +2576,9 @@
       "line": 565,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "LockIdOverFlow": {
@@ -2587,9 +2587,9 @@
       "line": 573,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxAllowedUIdsLessThanCurrentUIds": {
@@ -2598,9 +2598,9 @@
       "line": 28,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxAllowedUidsGreaterThanDefaultMaxAllowedUids": {
@@ -2609,9 +2609,9 @@
       "line": 33,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxAllowedUidsLessThanMinAllowedUids": {
@@ -2620,9 +2620,9 @@
       "line": 37,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxCallDepthReached": {
@@ -2631,9 +2631,9 @@
       "line": 92,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxContributionReached": {
@@ -2642,9 +2642,9 @@
       "line": 98,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxContributorsReached": {
@@ -2653,9 +2653,9 @@
       "line": 103,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxDelegateDependenciesReached": {
@@ -2664,9 +2664,9 @@
       "line": 97,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxValidatorsLargerThanMaxUIds": {
@@ -2675,9 +2675,9 @@
       "line": 41,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxWeightExceeded": {
@@ -2686,9 +2686,9 @@
       "line": 579,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaxWeightTooLow": {
@@ -2697,9 +2697,9 @@
       "line": 30,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MaximumContributionTooLow": {
@@ -2708,9 +2708,9 @@
       "line": 108,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MechanismDoesNotExist": {
@@ -2719,9 +2719,9 @@
       "line": 584,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MigrationInProgress": {
@@ -2730,9 +2730,9 @@
       "line": 102,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MinAllowedUidsGreaterThanCurrentUids": {
@@ -2741,9 +2741,9 @@
       "line": 46,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MinAllowedUidsGreaterThanMaxAllowedUids": {
@@ -2752,9 +2752,9 @@
       "line": 51,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MinerEmissionBelowMinimum": {
@@ -2763,9 +2763,9 @@
       "line": 896,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MinimumContributionTooHigh": {
@@ -2774,9 +2774,9 @@
       "line": 113,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MinimumContributionTooLow": {
@@ -2785,9 +2785,9 @@
       "line": 118,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MinimumThreshold": {
@@ -2796,9 +2796,9 @@
       "line": 35,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "MultiBlockMigrationsOngoing": {
@@ -2807,9 +2807,9 @@
       "line": 21,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Named": {
@@ -2818,9 +2818,9 @@
       "line": 12,
       "provenance": {
         "blob": "2550d37086ef7894513d87fd32a3ba7b5f29acc1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/scheduler.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NeedWaitingMoreBlocksToStarCall": {
@@ -2829,9 +2829,9 @@
       "line": 590,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NegativeSigmoidSteepness": {
@@ -2840,9 +2840,9 @@
       "line": 56,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NetworkDissolveAlreadyQueued": {
@@ -2851,9 +2851,9 @@
       "line": 595,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NetworkTxRateLimitExceeded": {
@@ -2862,9 +2862,9 @@
       "line": 600,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NeuronNoValidatorPermit": {
@@ -2873,9 +2873,9 @@
       "line": 606,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NewColdKeyIsHotkey": {
@@ -2884,9 +2884,9 @@
       "line": 618,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NewHotKeyIsSameWithOld": {
@@ -2895,9 +2895,9 @@
       "line": 623,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NewHotKeyNotCleanForRootSwap": {
@@ -2906,9 +2906,9 @@
       "line": 628,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoApprovalsNeeded": {
@@ -2917,9 +2917,9 @@
       "line": 39,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoChainExtension": {
@@ -2928,9 +2928,9 @@
       "line": 107,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoContribution": {
@@ -2939,9 +2939,9 @@
       "line": 123,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoDeposit": {
@@ -2950,9 +2950,9 @@
       "line": 31,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoExistingLock": {
@@ -2961,9 +2961,9 @@
       "line": 633,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoLinkedOutput": {
@@ -2972,9 +2972,9 @@
       "line": 95,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoMigrationPerformed": {
@@ -2983,9 +2983,9 @@
       "line": 112,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoNeuronIdAvailable": {
@@ -2994,9 +2994,9 @@
       "line": 638,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoPermission": {
@@ -3005,9 +3005,9 @@
       "line": 26,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoSelfProxy": {
@@ -3016,9 +3016,9 @@
       "line": 31,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoTimepoint": {
@@ -3027,9 +3027,9 @@
       "line": 44,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoWeightsCommitFound": {
@@ -3038,9 +3038,9 @@
       "line": 643,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NonAssociatedColdKey": {
@@ -3049,9 +3049,9 @@
       "line": 648,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NonDefaultComposite": {
@@ -3060,9 +3060,9 @@
       "line": 26,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NonZeroRefCount": {
@@ -3071,9 +3071,9 @@
       "line": 31,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NoneValue": {
@@ -3082,9 +3082,9 @@
       "line": 16,
       "provenance": {
         "blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/drand.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotAllowed": {
@@ -3093,9 +3093,9 @@
       "line": 51,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotAuthorized": {
@@ -3104,9 +3104,9 @@
       "line": 11,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotConfigured": {
@@ -3115,9 +3115,9 @@
       "line": 36,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughAlphaOutToRecycle": {
@@ -3126,9 +3126,9 @@
       "line": 654,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughBalanceToPaySwapColdKey": {
@@ -3137,9 +3137,9 @@
       "line": 659,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughBalanceToPaySwapHotKey": {
@@ -3148,9 +3148,9 @@
       "line": 664,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughBalanceToStake": {
@@ -3159,9 +3159,9 @@
       "line": 669,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughStake": {
@@ -3170,9 +3170,9 @@
       "line": 675,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughStakeToSetChildkeys": {
@@ -3181,9 +3181,9 @@
       "line": 680,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughStakeToSetWeights": {
@@ -3192,9 +3192,9 @@
       "line": 685,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotEnoughStakeToWithdraw": {
@@ -3203,9 +3203,9 @@
       "line": 690,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotFound": {
@@ -3214,9 +3214,9 @@
       "line": 50,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotGammaDepositSpender": {
@@ -3225,9 +3225,9 @@
       "line": 1111,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotMechWeightDelegate": {
@@ -3236,9 +3236,9 @@
       "line": 612,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotNoted": {
@@ -3247,9 +3247,9 @@
       "line": 17,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotOwner": {
@@ -3258,9 +3258,9 @@
       "line": 56,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotPermittedOnRootSubnet": {
@@ -3269,9 +3269,9 @@
       "line": 61,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotProxy": {
@@ -3280,9 +3280,9 @@
       "line": 36,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotReadyToDissolve": {
@@ -3291,9 +3291,9 @@
       "line": 128,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotRegistered": {
@@ -3302,9 +3302,9 @@
       "line": 16,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotRequested": {
@@ -3313,9 +3313,9 @@
       "line": 22,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotRootSubnet": {
@@ -3324,9 +3324,9 @@
       "line": 697,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NotSubnetOwner": {
@@ -3335,9 +3335,9 @@
       "line": 702,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "NothingAuthorized": {
@@ -3346,9 +3346,9 @@
       "line": 36,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderAccountMissing": {
@@ -3357,9 +3357,9 @@
       "line": 144,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderAlreadyProcessed": {
@@ -3368,9 +3368,9 @@
       "line": 32,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderBatchTooLarge": {
@@ -3379,9 +3379,9 @@
       "line": 153,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderCancelled": {
@@ -3390,9 +3390,9 @@
       "line": 37,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderExpired": {
@@ -3401,9 +3401,9 @@
       "line": 42,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderNetUidMismatch": {
@@ -3412,9 +3412,9 @@
       "line": 47,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderNonceUsed": {
@@ -3423,9 +3423,9 @@
       "line": 135,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderNotApproved": {
@@ -3434,9 +3434,9 @@
       "line": 149,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OrderSignerFrozen": {
@@ -3445,9 +3445,9 @@
       "line": 131,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OutOfBounds": {
@@ -3456,9 +3456,9 @@
       "line": 117,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OutOfGas": {
@@ -3467,9 +3467,9 @@
       "line": 122,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OutOfTransientStorage": {
@@ -3478,9 +3478,9 @@
       "line": 127,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OutputBufferTooSmall": {
@@ -3489,9 +3489,9 @@
       "line": 132,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Overflow": {
@@ -3500,9 +3500,9 @@
       "line": 707,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "OwnerEmissionAboveMaximum": {
@@ -3511,9 +3511,9 @@
       "line": 872,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "POWRegistrationDisabled": {
@@ -3522,9 +3522,9 @@
       "line": 67,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PalletHotkeyNotRegistered": {
@@ -3533,9 +3533,9 @@
       "line": 52,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PartialFillNotSupportedForLinkedAmount": {
@@ -3544,9 +3544,9 @@
       "line": 118,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PartialFillNotSupportedForProvider": {
@@ -3555,9 +3555,9 @@
       "line": 122,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PartialFillsNotEnabled": {
@@ -3566,9 +3566,9 @@
       "line": 58,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PauseFailed": {
@@ -3577,9 +3577,9 @@
       "line": 28,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PaymentOverflow": {
@@ -3588,9 +3588,9 @@
       "line": 56,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PreLogExists": {
@@ -3599,9 +3599,9 @@
       "line": 12,
       "provenance": {
         "blob": "e5dd05341b7377d324125c326052155bc9255fe1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/ethereum.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PriceConditionNotMet": {
@@ -3610,9 +3610,9 @@
       "line": 63,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PriceLimitExceeded": {
@@ -3621,9 +3621,9 @@
       "line": 26,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ProportionOverflow": {
@@ -3632,9 +3632,9 @@
       "line": 713,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "PulseVerificationError": {
@@ -3643,9 +3643,9 @@
       "line": 21,
       "provenance": {
         "blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/drand.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RandomSubjectTooLong": {
@@ -3654,9 +3654,9 @@
       "line": 137,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RecycleEmissionMustBeZero": {
@@ -3665,9 +3665,9 @@
       "line": 862,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ReentranceDenied": {
@@ -3676,9 +3676,9 @@
       "line": 142,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Reentrancy": {
@@ -3687,9 +3687,9 @@
       "line": 61,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RegistrationDepositTooHigh": {
@@ -3698,9 +3698,9 @@
       "line": 53,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RegistrationNotPermittedOnRootSubnet": {
@@ -3709,9 +3709,9 @@
       "line": 718,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RegistrationPriceLimitExceeded": {
@@ -3720,9 +3720,9 @@
       "line": 723,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RelayerMissMatch": {
@@ -3731,9 +3731,9 @@
       "line": 69,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RelayerRequiredForPartialFill": {
@@ -3742,9 +3742,9 @@
       "line": 74,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Requested": {
@@ -3753,9 +3753,9 @@
       "line": 27,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RequireSudo": {
@@ -3764,9 +3764,9 @@
       "line": 6,
       "provenance": {
         "blob": "1d2422a2b08e19a21aa07b79b3de54e9a10a255f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/sudo.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RescheduleNoChange": {
@@ -3775,9 +3775,9 @@
       "line": 17,
       "provenance": {
         "blob": "2550d37086ef7894513d87fd32a3ba7b5f29acc1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/scheduler.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ReservesOutOfBalance": {
@@ -3786,9 +3786,9 @@
       "line": 31,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ReservesTooLow": {
@@ -3797,9 +3797,9 @@
       "line": 36,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ResumeFailed": {
@@ -3808,9 +3808,9 @@
       "line": 33,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RevealPeriodTooLarge": {
@@ -3819,9 +3819,9 @@
       "line": 728,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RevealPeriodTooSmall": {
@@ -3830,9 +3830,9 @@
       "line": 733,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RevealTooEarly": {
@@ -3841,9 +3841,9 @@
       "line": 738,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RootClaimTooHeavy": {
@@ -3852,9 +3852,9 @@
       "line": 109,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RootNetUidNotAllowed": {
@@ -3863,9 +3863,9 @@
       "line": 79,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RootNetworkDoesNotExist": {
@@ -3874,9 +3874,9 @@
       "line": 743,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RootStakeLocked": {
@@ -3885,9 +3885,9 @@
       "line": 762,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RootWeightCapExceeded": {
@@ -3896,9 +3896,9 @@
       "line": 124,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "RootWeightSettingDisabled": {
@@ -3907,9 +3907,9 @@
       "line": 756,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SafeDerivationFailed": {
@@ -3918,9 +3918,9 @@
       "line": 6,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SameAutoStakeHotkeyAlreadySet": {
@@ -3929,9 +3929,9 @@
       "line": 769,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SameNetuid": {
@@ -3940,9 +3940,9 @@
       "line": 774,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SenderInSignatories": {
@@ -3951,9 +3951,9 @@
       "line": 61,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ServiceDoesNotExist": {
@@ -3962,9 +3962,9 @@
       "line": 1123,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ServingRateLimitExceeded": {
@@ -3973,9 +3973,9 @@
       "line": 779,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SettingWeightsTooFast": {
@@ -3984,9 +3984,9 @@
       "line": 784,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SignatoriesOutOfOrder": {
@@ -3995,9 +3995,9 @@
       "line": 66,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SlippageTooHigh": {
@@ -4006,9 +4006,9 @@
       "line": 789,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SpaceLimitExceeded": {
@@ -4017,9 +4017,9 @@
       "line": 11,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SpecVersionNeedsToIncrease": {
@@ -4028,9 +4028,9 @@
       "line": 41,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StakeTooLowForRoot": {
@@ -4039,9 +4039,9 @@
       "line": 795,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StakeUnavailable": {
@@ -4050,9 +4050,9 @@
       "line": 801,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StakingRateLimitExceeded": {
@@ -4061,9 +4061,9 @@
       "line": 808,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StartCallNotReady": {
@@ -4072,9 +4072,9 @@
       "line": 813,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StateChangeDenied": {
@@ -4083,9 +4083,9 @@
       "line": 148,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StorageDepositLimitExhausted": {
@@ -4094,9 +4094,9 @@
       "line": 153,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StorageDepositNotEnoughFunds": {
@@ -4105,9 +4105,9 @@
       "line": 158,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "StorageOverflow": {
@@ -4116,9 +4116,9 @@
       "line": 26,
       "provenance": {
         "blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/drand.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SubNetRegistrationDisabled": {
@@ -4127,9 +4127,9 @@
       "line": 818,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SubnetBuybackRateLimitExceeded": {
@@ -4138,9 +4138,9 @@
       "line": 825,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SubnetDoesNotExist": {
@@ -4149,9 +4149,9 @@
       "line": 72,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SubnetLimitReached": {
@@ -4160,9 +4160,9 @@
       "line": 830,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SubnetNotExists": {
@@ -4171,9 +4171,9 @@
       "line": 927,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SubtokenDisabled": {
@@ -4182,9 +4182,9 @@
       "line": 932,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SwapInputTooLarge": {
@@ -4193,9 +4193,9 @@
       "line": 41,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SwapReturnedZero": {
@@ -4204,9 +4204,9 @@
       "line": 84,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SymbolAlreadyInUse": {
@@ -4215,9 +4215,9 @@
       "line": 937,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "SymbolDoesNotExist": {
@@ -4226,9 +4226,9 @@
       "line": 941,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TaoUsdPriceUnavailable": {
@@ -4237,9 +4237,9 @@
       "line": 1079,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TargetBlockNumberInPast": {
@@ -4248,9 +4248,9 @@
       "line": 22,
       "provenance": {
         "blob": "2550d37086ef7894513d87fd32a3ba7b5f29acc1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/scheduler.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TempoOutOfBounds": {
@@ -4259,9 +4259,9 @@
       "line": 946,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TerminatedInConstructor": {
@@ -4270,9 +4270,9 @@
       "line": 163,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TerminatedWhileReentrant": {
@@ -4281,9 +4281,9 @@
       "line": 168,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ThresholdTooHigh": {
@@ -4292,9 +4292,9 @@
       "line": 16,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TimelockRevealFailedNotAllowed": {
@@ -4303,9 +4303,9 @@
       "line": 26,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooBig": {
@@ -4314,9 +4314,9 @@
       "line": 32,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooFew": {
@@ -4325,9 +4325,9 @@
       "line": 37,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooFewSignatories": {
@@ -4336,9 +4336,9 @@
       "line": 71,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooMany": {
@@ -4347,9 +4347,9 @@
       "line": 41,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyApprovedOrders": {
@@ -4358,9 +4358,9 @@
       "line": 140,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyCalls": {
@@ -4369,9 +4369,9 @@
       "line": 11,
       "provenance": {
         "blob": "2f51dcdec088fadb3a74df779a9cd5260003e11c",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/utility.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyChildren": {
@@ -4380,9 +4380,9 @@
       "line": 951,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyFieldsInCommitmentInfo": {
@@ -4391,9 +4391,9 @@
       "line": 16,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyFreezes": {
@@ -4402,9 +4402,9 @@
       "line": 48,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyGammaDeposits": {
@@ -4413,9 +4413,9 @@
       "line": 1090,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyGammaShares": {
@@ -4424,9 +4424,9 @@
       "line": 920,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyHolds": {
@@ -4435,9 +4435,9 @@
       "line": 53,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyPendingExtrinsics": {
@@ -4446,9 +4446,9 @@
       "line": 11,
       "provenance": {
         "blob": "8380ca0873a1f136012e28d2272e63eb1f17a8ed",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/mev_shield.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyRegistrationsThisBlock": {
@@ -4457,9 +4457,9 @@
       "line": 955,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyRegistrationsThisInterval": {
@@ -4468,9 +4468,9 @@
       "line": 960,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyReserves": {
@@ -4479,9 +4479,9 @@
       "line": 58,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManySignatories": {
@@ -4490,9 +4490,9 @@
       "line": 76,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyStakingHotkeys": {
@@ -4501,9 +4501,9 @@
       "line": 1068,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyTopics": {
@@ -4512,9 +4512,9 @@
       "line": 173,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyUIDsPerMechanism": {
@@ -4523,9 +4523,9 @@
       "line": 965,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyUnrevealedCommits": {
@@ -4534,9 +4534,9 @@
       "line": 977,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooManyWeightsForNullMechanism": {
@@ -4545,9 +4545,9 @@
       "line": 971,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TooSoon": {
@@ -4556,9 +4556,9 @@
       "line": 38,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TransactionMustComeFromEOA": {
@@ -4567,9 +4567,9 @@
       "line": 67,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TransactorAccountShouldBeHotKey": {
@@ -4578,9 +4578,9 @@
       "line": 986,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TransferDisallowed": {
@@ -4589,9 +4589,9 @@
       "line": 991,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TransferFailed": {
@@ -4600,9 +4600,9 @@
       "line": 178,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TrimmingWouldExceedMaxImmunePercentage": {
@@ -4611,9 +4611,9 @@
       "line": 996,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TxChildkeyTakeRateLimitExceeded": {
@@ -4622,9 +4622,9 @@
       "line": 1002,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "TxRateLimitExceeded": {
@@ -4633,9 +4633,9 @@
       "line": 1007,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UidMapCouldNotBeCleared": {
@@ -4644,9 +4644,9 @@
       "line": 1013,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UidVecContainInvalidOne": {
@@ -4655,9 +4655,9 @@
       "line": 1018,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UidsLengthExceedUidsInSubNet": {
@@ -4666,9 +4666,9 @@
       "line": 1023,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UnableToRecoverPublicKey": {
@@ -4677,9 +4677,9 @@
       "line": 1028,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Unannounced": {
@@ -4688,9 +4688,9 @@
       "line": 41,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Unauthorized": {
@@ -4699,9 +4699,9 @@
       "line": 46,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Undefined": {
@@ -4710,9 +4710,9 @@
       "line": 72,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Underflow": {
@@ -4721,9 +4721,9 @@
       "line": 134,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UnexpectedTimepoint": {
@@ -4732,9 +4732,9 @@
       "line": 80,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UnexpectedUnreserveLeftover": {
@@ -4743,9 +4743,9 @@
       "line": 21,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UnlockAmountTooHigh": {
@@ -4754,9 +4754,9 @@
       "line": 1033,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Unproxyable": {
@@ -4765,9 +4765,9 @@
       "line": 47,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "Unreachable": {
@@ -4776,9 +4776,9 @@
       "line": 16,
       "provenance": {
         "blob": "8380ca0873a1f136012e28d2272e63eb1f17a8ed",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/mev_shield.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UnsupportedDescriptor": {
@@ -4787,9 +4787,9 @@
       "line": 8,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "UnverifiedPulse": {
@@ -4798,9 +4798,9 @@
       "line": 31,
       "provenance": {
         "blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/drand.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ValidatorEmissionAboveMaximum": {
@@ -4809,9 +4809,9 @@
       "line": 882,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ValidatorEmissionTooLowToPreserveRoot": {
@@ -4820,9 +4820,9 @@
       "line": 886,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ValueNotInBounds": {
@@ -4831,9 +4831,9 @@
       "line": 77,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ValueTooLarge": {
@@ -4842,9 +4842,9 @@
       "line": 183,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "VestingBalance": {
@@ -4853,9 +4853,9 @@
       "line": 63,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "VotingPowerTrackingNotEnabled": {
@@ -4864,9 +4864,9 @@
       "line": 1038,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WaitingForDissolvedSubnetCleanup": {
@@ -4875,9 +4875,9 @@
       "line": 1043,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WeightExceedsAbsoluteMax": {
@@ -4886,9 +4886,9 @@
       "line": 21,
       "provenance": {
         "blob": "8380ca0873a1f136012e28d2272e63eb1f17a8ed",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/mev_shield.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WeightVecLengthIsLow": {
@@ -4897,9 +4897,9 @@
       "line": 1048,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WeightVecNotEqualSize": {
@@ -4908,9 +4908,9 @@
       "line": 1053,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WithdrawFailed": {
@@ -4919,9 +4919,9 @@
       "line": 77,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WrongCommitment": {
@@ -4930,9 +4930,9 @@
       "line": 24,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WrongGeneration": {
@@ -4941,9 +4941,9 @@
       "line": 20,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "WrongTimepoint": {
@@ -4952,9 +4952,9 @@
       "line": 85,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "XCMDecodeFailed": {
@@ -4963,9 +4963,9 @@
       "line": 188,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ZeroBalanceAfterWithdrawn": {
@@ -4974,9 +4974,9 @@
       "line": 1058,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     "ZeroShareInBatch": {
@@ -4985,9 +4985,9 @@
       "line": 90,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     }
   },
@@ -4998,9 +4998,9 @@
       "entries": 15,
       "provenance": {
         "blob": "41b10e1ebb661ffb47b2872c9320bef18843aead",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/admin_utils.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5008,9 +5008,9 @@
       "entries": 12,
       "provenance": {
         "blob": "a3a4736e499c382d43657fb95d5e00b1cc982700",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/balances.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5018,9 +5018,9 @@
       "entries": 9,
       "provenance": {
         "blob": "3132e8cb42508e4ca4f89c95a0626f6eb56f7619",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/commitments.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5028,9 +5028,9 @@
       "entries": 37,
       "provenance": {
         "blob": "e87ff1eba477ed90d6a441ddc1415165c1e09109",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/contracts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5038,9 +5038,9 @@
       "entries": 26,
       "provenance": {
         "blob": "7a9f9c61e9d81e67c76d6a7b5f6a079ccd60d745",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/crowdloan.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5048,9 +5048,9 @@
       "entries": 6,
       "provenance": {
         "blob": "743f6d5fe00e21b95532a786cb1efc4141ca93dc",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/drand.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5058,9 +5058,9 @@
       "entries": 15,
       "provenance": {
         "blob": "cbea62b7f510d1cc7754225295f3dba835d00378",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/evm.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5068,9 +5068,9 @@
       "entries": 2,
       "provenance": {
         "blob": "e5dd05341b7377d324125c326052155bc9255fe1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/ethereum.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5078,9 +5078,9 @@
       "entries": 7,
       "provenance": {
         "blob": "5b2cacc4069e17bc24c57aed5407393eda410034",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/grandpa.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5088,9 +5088,9 @@
       "entries": 13,
       "provenance": {
         "blob": "d6b565de183df0f99e3f60bc3f0de2dd91fc6f57",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/hashed_accounts.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5098,9 +5098,9 @@
       "entries": 32,
       "provenance": {
         "blob": "6334e4e3d38e46f0445999acb1038aa6c04ee178",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/limit_orders.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5108,9 +5108,9 @@
       "entries": 4,
       "provenance": {
         "blob": "8380ca0873a1f136012e28d2272e63eb1f17a8ed",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/mev_shield.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5118,9 +5118,9 @@
       "entries": 17,
       "provenance": {
         "blob": "5579be51c38d110a2c706cf8ebc62080d45fdeaa",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/multisig.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5128,9 +5128,9 @@
       "entries": 8,
       "provenance": {
         "blob": "385e534298b1584f09c1cf5d784dce705687a65f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/preimage.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5138,9 +5138,9 @@
       "entries": 9,
       "provenance": {
         "blob": "b6418534e9f7e1aa6964782886b60036aa12bf69",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/proxy.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5148,9 +5148,9 @@
       "entries": 7,
       "provenance": {
         "blob": "69657026b6a07c7685d50109fe9232a13dfd0702",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/safe_mode.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5158,9 +5158,9 @@
       "entries": 4,
       "provenance": {
         "blob": "2550d37086ef7894513d87fd32a3ba7b5f29acc1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/scheduler.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5168,9 +5168,9 @@
       "entries": 210,
       "provenance": {
         "blob": "849ea6e4b026514686a6285d058fb0b726881bc5",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/subtensor.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5178,9 +5178,9 @@
       "entries": 1,
       "provenance": {
         "blob": "1d2422a2b08e19a21aa07b79b3de54e9a10a255f",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/sudo.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5188,9 +5188,9 @@
       "entries": 8,
       "provenance": {
         "blob": "cf2efcf7d0ea85975fff8e03dcab9815ab8e7a39",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/swap.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5198,9 +5198,9 @@
       "entries": 9,
       "provenance": {
         "blob": "15b34dec595d5f93076414967326d30433b01ba1",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/system.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     },
     {
@@ -5208,9 +5208,9 @@
       "entries": 2,
       "provenance": {
         "blob": "2f51dcdec088fadb3a74df779a9cd5260003e11c",
-        "commit": "e536e6bf4bfa58f1ec4506dff0147e1f9b1c1900",
+        "commit": "24e1fc7b12ea7ce9d390925dac602ba961997824",
         "path": "sdk/python/bittensor/error_descriptions/utility.py",
-        "tag": "v495"
+        "tag": "v497"
       }
     }
   ]

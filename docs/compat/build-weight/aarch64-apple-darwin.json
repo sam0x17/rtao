@@ -2,7 +2,7 @@
   "cargo": "cargo 1.100.0 (3acc79c0c 2026-11-05)",
   "compiler": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
   "host": "x86_64-unknown-linux-gnu",
-  "measured_unix_seconds": 1795658655,
+  "measured_unix_seconds": 1795664713,
   "method": {
     "command": "cargo tree --locked --target <target> -p <package> --no-default-features --features <features> --edges normal,build --prefix none --format {p}",
     "count": "distinct package name/version/source identities; repeated-node suffix removed; local root normalized to $WORKSPACE; dev edges excluded",
@@ -1481,12 +1481,12 @@
       "crates/rtao-tx/Cargo.toml": "f3010c454a0707f25fb70a285c43c7ed87b68f5fb9ba79344bd19a16c45dfd1e",
       "crates/rtao-wallet/Cargo.toml": "776cb4e3136f13758185e38af4746181e385e1283a6b5233bd45752fbbf69dbe",
       "crates/rtao/Cargo.toml": "1718e111f0bbef655f5c2ec8ecbadf658aba15a2c590e0bc331ceaa3a2143b9b",
-      "upstream.toml": "82eacf4075538833db08efe25cfa78f06193d6f805d6b2a3219e31eb5d06197a",
+      "upstream.toml": "cc8c37840f118acf3b795e1b48ffed12635dc39e2b0c267684ddd6651d64829f",
       "xtask/Cargo.toml": "3c4df51eadf75d7d87340251b4bdfc52d31c3ec0bda7c8861cf4a7f01c36b890"
     },
-    "dependency_inputs_sha256": "a2a6a1f1f013329645351d065e1964fc98b396a3e91a381186ec421f4c1e3362",
+    "dependency_inputs_sha256": "ba8f4697952875dddbede368030d62c110e63d4f6cf9c4af26d1fab9168efbaa",
     "dirty": true,
-    "head_commit": "019fb4f06253aa0ea8c3e465a522d40c4879fa65"
+    "head_commit": "19d0964ee19f898e2c6490df967d54adacd62c1c"
   },
   "target": "aarch64-apple-darwin"
 }

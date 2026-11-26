@@ -32,9 +32,33 @@ symbols = []
 py = "sdk/bittensor-core-py/pyproject.toml"
 kind = "oracle-only"
 from = "86a4b245728c20c99911323303a85179d42ed86d"
-to = "16cf3ce578cf45eed0a3301d2db07fbcff7123a6"
+to = "3e82e0ef6f00746ca264de23e74487ebefe212a3"
 tag = "v495"
 symbols = []
+
+[[file]]
+py = "sdk/python/bittensor/_substrate.py"
+kind = "ported"
+from = "a203feb1dceedd9185c5b9093c59d4ae60d64b25"
+to = "86786abf72c45a93d3f8e2239e68b20af9c40a2d"
+tag = "v497"
+symbols = ["bittensor._substrate.RpcSubstrate", "bittensor._substrate.RpcSubstrate.submit_multisig", "bittensor._substrate.Substrate", "bittensor._substrate.Substrate.submit_multisig"]
+
+[[file]]
+py = "sdk/python/bittensor/_transport/interface.py"
+kind = "ported"
+from = "bd271c2c7c89aa56e16bbc697b550ae7cf3ccf43"
+to = "2565144697a6684ce4aa70bcf94af6a01545cfaf"
+tag = "v497"
+symbols = ["bittensor._transport.interface.SubstrateConnection", "bittensor._transport.interface.SubstrateConnection._sign_hashed", "bittensor._transport.interface.SubstrateConnection._sign_stateless_mldsa", "bittensor._transport.interface.SubstrateConnection.create_multisig_extrinsic", "bittensor._transport.interface.SubstrateConnection.create_signed_extrinsic", "bittensor._transport.interface.SubstrateConnection.sign_without_nonce_tracking", "bittensor._transport.interface._SigningRuntimeMismatch", "bittensor._transport.interface._require_spec_version"]
+
+[[file]]
+py = "sdk/python/bittensor/cli/call.py"
+kind = "ported"
+from = "e47a4149465fa6f147b5c6701a43097111fb2c66"
+to = "6ae07d8ea0fb94ab95ce496521cae0020a775586"
+tag = "v497"
+symbols = ["bittensor.cli.call._checked_hash", "bittensor.cli.call._multisig_timepoint", "bittensor.cli.call.call", "bittensor.cli.call.re"]
 
 [[file]]
 py = "sdk/python/bittensor/cli/commands/misc.py"
@@ -141,6 +165,14 @@ tag = "v491"
 symbols = ["bittensor.intents.proxy.AddProxy", "bittensor.intents.proxy.AddProxy.__post_init__", "bittensor.intents.proxy.AddProxy.from_hotkey", "bittensor.intents.proxy.AnnounceProxyCall", "bittensor.intents.proxy.AnnounceProxyCall.build", "bittensor.intents.proxy.AnnounceProxyCall.call_hash", "bittensor.intents.proxy.AnnounceProxyCall.op", "bittensor.intents.proxy.AnnounceProxyCall.real_ss58", "bittensor.intents.proxy.AnnounceProxyCall.signer", "bittensor.intents.proxy.AnnounceProxyCall.summary", "bittensor.intents.proxy.AnnounceProxyCall.warnings", "bittensor.intents.proxy.AnnounceProxyCall.wraps", "bittensor.intents.proxy.ExecuteProxyAnnounced", "bittensor.intents.proxy.ExecuteProxyAnnounced.__post_init__", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_data", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_call_semantics", "bittensor.intents.proxy.ExecuteProxyAnnounced.announced_spec_version", "bittensor.intents.proxy.ExecuteProxyAnnounced.build", "bittensor.intents.proxy.ExecuteProxyAnnounced.expected_call_hash", "bittensor.intents.proxy.ExecuteProxyAnnounced.requires_build_for_policy", "bittensor.intents.proxy.PROXY_TYPE_HELP", "bittensor.intents.proxy.RejectProxyAnnouncement", "bittensor.intents.proxy.RejectProxyAnnouncement.build", "bittensor.intents.proxy.RejectProxyAnnouncement.call_hash", "bittensor.intents.proxy.RejectProxyAnnouncement.delegate_ss58", "bittensor.intents.proxy.RejectProxyAnnouncement.op", "bittensor.intents.proxy.RejectProxyAnnouncement.signer", "bittensor.intents.proxy.RejectProxyAnnouncement.summary", "bittensor.intents.proxy.RejectProxyAnnouncement.wraps", "bittensor.intents.proxy.RemoveProxyAnnouncement", "bittensor.intents.proxy.RemoveProxyAnnouncement.build", "bittensor.intents.proxy.RemoveProxyAnnouncement.call_hash", "bittensor.intents.proxy.RemoveProxyAnnouncement.op", "bittensor.intents.proxy.RemoveProxyAnnouncement.real_ss58", "bittensor.intents.proxy.RemoveProxyAnnouncement.signer", "bittensor.intents.proxy.RemoveProxyAnnouncement.summary", "bittensor.intents.proxy.RemoveProxyAnnouncement.wraps", "bittensor.intents.proxy._announced_call_requires_direct", "bittensor.intents.proxy._announced_mev_policy", "bittensor.intents.proxy._short_hash", "bittensor.intents.proxy.compose_announceable_call"]
 
 [[file]]
+py = "sdk/python/bittensor/multisig.py"
+kind = "ported"
+from = "d71ba45340b9a019ac0f14bb7ad6e4bbba5e66a3"
+to = "bf3a458ee60e9e6b1986d4a39574242ee04d3dd3"
+tag = "v497"
+symbols = ["bittensor.multisig.Multisig", "bittensor.multisig.Multisig.approve"]
+
+[[file]]
 py = "sdk/python/bittensor/namespaces.pyi"
 kind = "n/a"
 from = "fded4d4c5796b1f0c82f6422350e03897baffd18"
@@ -149,9 +181,41 @@ tag = "v494"
 symbols = []
 
 [[file]]
+py = "sdk/python/bittensor/snapshot.py"
+kind = "ported"
+from = "fad69f52a2ff5c2d8901acb3b9de774e34057482"
+to = "4f39783788d11557dcbf423bb468b4cacc8b07d4"
+tag = "v497"
+symbols = ["bittensor.snapshot.Snapshot", "bittensor.snapshot.Snapshot.spec_version"]
+
+[[file]]
+py = "sdk/python/bittensor/sync.py"
+kind = "ported"
+from = "67af9c8da82562f6b9258cd6ec58616b5d3d825d"
+to = "cf6b9ea077d0d5bca3823240868bd333a0481eba"
+tag = "v497"
+symbols = ["bittensor.sync.SyncSnapshot", "bittensor.sync.SyncSnapshot.spec_version"]
+
+[[file]]
+py = "sdk/python/tests/unit/test_cli.py"
+kind = "oracle-only"
+from = "7d24ce73f322515db1bebb0c81ec1f724ba879af"
+to = "b00a9047139fd59e59799fcb826b591a12c0a914"
+tag = "v497"
+symbols = ["tests.unit.test_cli.ComposedCall", "tests.unit.test_cli.FakeSubstrate", "tests.unit.test_cli.TestTransactions", "tests.unit.test_cli.TestTransactions.test_pinned_raw_call_never_falls_back_to_another_wallet", "tests.unit.test_cli.TestTransactions.test_pinned_raw_call_resolves_explicit_preset_signer", "tests.unit.test_cli.TestTransactions.test_raw_call_refuses_mismatched_reviewed_hash", "tests.unit.test_cli.Text", "tests.unit.test_cli.test_raw_pinned_approval_checks_spec_even_if_hash_matches"]
+
+[[file]]
 py = "sdk/python/tests/unit/test_cli_commands.py"
 kind = "ported"
 from = "b327a7e65000b30bd4e0de9fb6f15e04a2cf1477"
 to = "ac777b7f0eb9ae56dee3aba76787dce7251c79ee"
 tag = "v494"
 symbols = ["tests.unit.test_cli_commands.test_colored_help_preserves_literal_long_and_short_options"]
+
+[[file]]
+py = "sdk/python/tests/unit/test_facades.py"
+kind = "ported"
+from = "b6ea3e5a59ba943a1caa8a7762d49921bb5c761a"
+to = "517c6003ff8c3cf16e7956e102f04ab49f87a4c0"
+tag = "v497"
+symbols = ["tests.unit.test_facades.AsyncMock", "tests.unit.test_facades.test_sync_snapshot_spec_version_uses_the_snapshots_block"]
