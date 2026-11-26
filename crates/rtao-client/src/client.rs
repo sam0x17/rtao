@@ -1517,6 +1517,10 @@ mod tests {
             .await
             .unwrap();
         let old_runtime = View::runtime(&client).await.unwrap();
+        let old_transaction_version = old_runtime.transaction_version();
+        // Advance both versions from the pinned fixture.
+        let upgraded_spec = old_runtime.spec_version().checked_add(1).unwrap();
+        let upgraded_transaction = old_transaction_version.checked_add(1).unwrap();
         let descriptor = &rtao_runtime::constants::system::BLOCK_HASH_COUNT;
         let old_constant = client.constant(descriptor).await.unwrap();
         let old_call = rtao_runtime::calls::system::remark(vec![])
@@ -1552,13 +1556,18 @@ mod tests {
                 .seed_constant("System", "BlockHashCount", json!(old_constant + 1))
                 .unwrap();
             state.runtime = Arc::new(
-                rtao_core::runtime::Runtime::parse(&state.runtime.metadata_bytes, 479, 2, 42)
-                    .unwrap(),
+                rtao_core::runtime::Runtime::parse(
+                    &state.runtime.metadata_bytes,
+                    upgraded_spec,
+                    upgraded_transaction,
+                    42,
+                )
+                .unwrap(),
             );
         });
         raw.publish_method(
             "state_subscribeRuntimeVersion",
-            json!({"specVersion":479, "transactionVersion":2}),
+            json!({"specVersion":upgraded_spec, "transactionVersion":upgraded_transaction}),
         )
         .unwrap();
         tokio::time::timeout(Duration::from_secs(5), async {
@@ -1566,8 +1575,8 @@ mod tests {
             // This never fetches metadata or polls an in-flight refresh for it.
             loop {
                 if let Some(runtime) = client.inner.cache.peek_head().await
-                    && runtime.spec_version() == 479
-                    && runtime.transaction_version() == 2
+                    && runtime.spec_version() == upgraded_spec
+                    && runtime.transaction_version() == upgraded_transaction
                 {
                     break;
                 }
@@ -1575,8 +1584,8 @@ mod tests {
             }
             let requests_before_observation = raw.requests().len();
             let runtime = View::runtime(&client).await.unwrap();
-            assert_eq!(runtime.spec_version(), 479);
-            assert_eq!(runtime.transaction_version(), 2);
+            assert_eq!(runtime.spec_version(), upgraded_spec);
+            assert_eq!(runtime.transaction_version(), upgraded_transaction);
             assert_ne!(
                 runtime.core().metadata_bytes,
                 old_runtime.core().metadata_bytes
@@ -1592,7 +1601,7 @@ mod tests {
                 old_runtime.spec_version(),
                 rtao_testkit::fixtures::pinned_finney_metadata().unwrap().1
             );
-            assert_eq!(old_runtime.transaction_version(), 1);
+            assert_eq!(old_runtime.transaction_version(), old_transaction_version);
             assert_eq!(
                 raw.requests().len(),
                 requests_before_observation,

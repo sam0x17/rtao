@@ -1589,6 +1589,14 @@ async fn runtime_upgrade_after_inner_signature_refuses_carrier_broadcast() {
     let (client, fake, signer) = fixture().await;
     let signed = signer.signed.clone();
     let inner_call = call(&client, 1).await;
+    let upgraded_transaction = fake
+        .state()
+        .lock()
+        .unwrap()
+        .runtime
+        .transaction_version
+        .checked_add(1)
+        .unwrap();
     fake.mutate_state(|state| {
         state.set_handler("state_getRuntimeVersion", move |state, request| {
             if signed.lock().unwrap().len() == 1 {
@@ -1596,7 +1604,7 @@ async fn runtime_upgrade_after_inner_signature_refuses_carrier_broadcast() {
                     rtao_core::runtime::Runtime::parse(
                         &state.runtime.metadata_bytes,
                         state.runtime.spec_version,
-                        2,
+                        upgraded_transaction,
                         state.runtime.ss58_format,
                     )
                     .unwrap(),
